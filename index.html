@@ -4433,6 +4433,9 @@ th.conv-sort.active { color: var(--team-1); }
 .do-uniq-header { margin-top: 14px; padding: 8px 2px 4px; border-top: 1px solid rgba(255,255,255,0.09); font-size: 11px; font-weight: 800; letter-spacing: 0.08em; color: var(--text-1); }
 .do-uniq-sub { display: block; font-size: 9.5px; font-weight: 500; letter-spacing: 0; color: var(--text-2); font-style: italic; margin-top: 1px; }
 .do-group-uniq { border-left: 2px solid rgba(63,168,100,0.22); padding-left: 6px; }
+.do-uniq-swap { margin-left: auto; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border-sub); background: rgba(255,255,255,0.05); color: var(--text-1); cursor: pointer; }
+.do-uniq-swap:hover { border-color: var(--green, #3fa864); color: var(--green, #3fa864); }
+.do-group-uniq .do-pos { display: flex; align-items: center; gap: 6px; }
 .do-row-uniq .do-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .do-empty-slot { font-size: 11px; color: var(--text-2); font-style: italic; padding: 4px 10px 8px; line-height: 1.5; }
 .do-slotbtn { background: none; border: none; color: var(--text-2); opacity: 0.3; font-size: 12px;
@@ -12667,14 +12670,26 @@ var _CFB = (() => {
     const hasJoker = !!((_b = activeDepth.SLOT) == null ? void 0 : _b.length) || slotClaimed;
     const posOrder = Object.keys(posSlots).sort((a, b) => (a === "SLOT" ? hasJoker ? -1 : 1 : 0) - (b === "SLOT" ? hasJoker ? -1 : 1 : 0));
     for (const pos of posOrder) {
-      const group = posSlots[pos];
-      const pool = (MESH_AUTO_POOL[pos] ? MESH_AUTO_POOL[pos](activeDepth) : activeDepth[pos] || []).slice();
+      // FB priority: the RUNNING slots (HB / primary back) claim from the RB pool BEFORE
+      // the lead-block FB slot, so your best back plays running back and the FB spot is
+      // filled from whoever's left. A 2nd-string RB who's your top FB plays FULLBACK —
+      // until the starter rests/gets hurt, when he slides up to HB and the next man takes FB.
+      const isFbSlot = (s) => s.role === "FB-Lead" || s.label === "FB" || s.label === "B";
+      const group = posSlots[pos].slice().sort((a, b) => (isFbSlot(a) ? 1 : 0) - (isFbSlot(b) ? 1 : 0));
+      let pool = (MESH_AUTO_POOL[pos] ? MESH_AUTO_POOL[pos](activeDepth) : activeDepth[pos] || []).slice();
       // For a MESHED unique slot (a pool drawn from multiple base positions — FB/WING/
       // ABACK/WILDCAT/JETMAN), the concatenated pool isn't rating-ordered across the
-      // groups. Sort it best-first so the field auto-fills with the highest-rated
-      // eligible body — matching "go with the highest ratings" and the depth-chart list.
+      // groups. A user OVERRIDE (activeDepth[pos]) stays on TOP in its chosen order; the
+      // rest sort best-first so the field auto-fills with the highest-rated eligible body.
       if (ratingById && MESH_AUTO_POOL[pos]) {
-        pool.sort((a, b) => (ratingById[b] || 0) - (ratingById[a] || 0));
+        const override = activeDepth[pos] || [];
+        const oSet = new Set(override);
+        // dedupe, keeping first occurrence (override prefix already leads)
+        const seen = /* @__PURE__ */ new Set();
+        pool = pool.filter((id) => (seen.has(id) ? false : (seen.add(id), true)));
+        const head = pool.filter((id) => oSet.has(id));
+        const tail = pool.filter((id) => !oSet.has(id)).sort((a, b) => (ratingById[b] || 0) - (ratingById[a] || 0));
+        pool = [...head, ...tail];
       }
       byPos[pos] = [];
       for (const s of group) {
@@ -12688,17 +12703,24 @@ var _CFB = (() => {
         used.add(want);
       }
       let cursor = 0;
+      const fbOverride = (pos === "RB" && Array.isArray(activeDepth.FB)) ? activeDepth.FB : null;
       for (const s of group) {
         if (bySlot[s.id]) {
           byPos[pos].push(bySlot[s.id]);
           continue;
         }
-        while (cursor < pool.length && used.has(pool[cursor])) cursor++;
-        const pick2 = cursor < pool.length ? pool[cursor] : null;
-        if (pick2) {
-          used.add(pick2);
-          cursor++;
+        let pick2 = null;
+        // A hand-picked FB (depthOrder.FB → activeDepth.FB) fills the FB slot if he's still
+        // available (i.e. not already claimed by a running slot — RB depth wins).
+        if (fbOverride && isFbSlot(s)) {
+          pick2 = fbOverride.find((id) => !used.has(id) && allActive.has(id)) || null;
         }
+        if (!pick2) {
+          while (cursor < pool.length && used.has(pool[cursor])) cursor++;
+          pick2 = cursor < pool.length ? pool[cursor] : null;
+          if (pick2) cursor++;
+        }
+        if (pick2) used.add(pick2);
         bySlot[s.id] = pick2 || null;
         if (pick2) byPos[pos].push(pick2);
       }
@@ -12882,11 +12904,14 @@ var _CFB = (() => {
           var _a;
           return ((_a = d.SLOT) == null ? void 0 : _a.length) ? d.SLOT : d.WR || [];
         },
-        ABACK: (d) => [...d.RB || [], ...d.WR || [], ...d.TE || []],
-        WING: (d) => [...d.RB || [], ...d.TE || []],
-        WILDCAT: (d) => [...d.RB || [], ...d.WR || []],
+        // For the exotic mesh spots, a user OVERRIDE (d[pos], seeded from depthOrder[pos])
+        // takes precedence — his hand-picked man plays it everywhere — then the rest of the
+        // eligible pool falls in behind, de-duped.
+        ABACK: (d) => [...(d.ABACK || []), ...d.RB || [], ...d.WR || [], ...d.TE || []],
+        WING: (d) => [...(d.WING || []), ...d.RB || [], ...d.TE || []],
+        WILDCAT: (d) => [...(d.WILDCAT || []), ...d.RB || [], ...d.WR || []],
         // QBs by hand only — never auto-drafted out wide
-        JETMAN: (d) => [...d.RB || [], ...d.WR || []]
+        JETMAN: (d) => [...(d.JETMAN || []), ...d.RB || [], ...d.WR || []]
       };
     }
   });
@@ -24048,7 +24073,16 @@ var _CFB = (() => {
       }
       const token = (_b = state.pendingHalftime) == null ? void 0 : _b.token;
       if ((liveWatchOn() || state.ui.autoRun) && token && unwatchedPlayCount(token) > 0) {
-        state.ui.liveWatch = { stage: "call" };
+        // No between-plays chalkboard replay for the player's call: the previous play's
+        // result is already in the call feed / play-by-play. Skip straight to the call
+        // sheet (boardDone). Auto-run still watches the board.
+        const skipBoard = !state.ui.autoRun;
+        if (skipBoard) {
+          // The board normally advances _watchedPlays; since we bypass it, mark the plays
+          // watched here so the feed doesn't re-show them and the loop stays clean.
+          token._watchedPlays = tokenAllPlays(token).length;
+        }
+        state.ui.liveWatch = { stage: "call", boardDone: skipBoard };
       } else if (stop.type === "fourthdown") {
         state.ui.showFourthDown = true;
       } else {
@@ -25292,8 +25326,54 @@ var _CFB = (() => {
     if (key === "simpleTempo") { const t = gp.baseTempo || "Normal"; return t === "Hurry" ? "fast" : t === "Chew" ? "slow" : "normal"; }
     return "balanced";
   }
+  function renderFormationPackageCard(gp) {
+    // Formation selection kept available in SIMPLE mode (same grid + weights as advanced,
+    // reusing the same data-formation-id / data-fw-index handlers).
+    const offFormations = normalizeFormations(gp.offFormations, gp.offFormation);
+    const selectedIds = new Set(offFormations.map((f) => f.id));
+    return `
+    <div class="card">
+      <div class="card-header"><span class="card-title">FORMATIONS</span><span class="card-subtitle muted">${selectedIds.size}/5 selected</span></div>
+      <div class="gameplan-group">
+        <div class="gp-tip tip-info">▸ Pick 1–5 formations — they decide who's on the field and your play-action, screen, RPO and motion rates. One = a strong identity; more = harder to scout.</div>
+        <div class="gp-row">
+          <label class="gp-label">Formation Package <span class="gp-hint">(pick 1–5)</span></label>
+          <div class="formation-grid">
+            ${ALL_FORMATIONS.map((fid) => {
+      const f = FORMATIONS[fid];
+      const pkg = FORMATION_PACKAGES[fid];
+      const selected = offFormations.some((x) => x.id === fid);
+      const personnelStr = pkg ? formatPersonnel(pkg) : "";
+      return `
+              <div class="formation-card${selected ? " selected" : ""}" data-formation-id="${fid}">
+                <div class="fc-header"><span class="fc-name">${escapeHtml(fid)}</span>${selected ? `<span class="fc-check">✓</span>` : ""}</div>
+                <div class="fc-personnel muted">${personnelStr}</div>
+                <div class="fc-desc muted">${escapeHtml(f.desc || "")}</div>
+              </div>`;
+    }).join("")}
+          </div>
+        </div>
+        ${selectedIds.size > 0 ? `
+        <div class="gp-row">
+          <label class="gp-label">Usage Weights</label>
+          <div class="formation-weights">
+            ${offFormations.map((entry, i) => `
+              <div class="fw-row">
+                <span class="fw-label">${escapeHtml(entry.id)}</span>
+                <input class="gp-slider fw-slider" type="range" data-fw-index="${i}" min="5" max="95" value="${entry.weight}" />
+                <span class="fw-pct" id="fw-pct-${i}">${Math.round(entry.weight)}%</span>
+              </div>`).join("")}
+            <div class="fw-bar">
+              ${offFormations.map((e) => `<div class="fw-seg" style="width:${e.weight}%;background:var(--green);opacity:${0.5 + offFormations.indexOf(e) * 0.25}"></div>`).join("")}
+            </div>
+          </div>
+        </div>` : ""}
+      </div>
+    </div>`;
+  }
   function renderSimpleDials(gp) {
     return `
+    ${renderFormationPackageCard(gp)}
     <div class="card">
       <div class="card-header"><span class="card-title">TEAM IDENTITY</span><span class="card-sub">the sim handles the rest</span></div>
       <div class="gameplan-group">
@@ -25869,6 +25949,34 @@ var _CFB = (() => {
     const pass = Math.round((PASS_TENDENCY[gp.tendency] || 0.5) * 100);
     const tendOpts = Object.keys(PASS_TENDENCY).map((t) => [t, t]);
     const fourthShort = { "Very Conservative": "V.Cons", "Conservative": "Cons", "Moderate": "Mod", "Aggressive": "Aggr", "Very Aggressive": "V.Aggr" };
+    // SIMPLE mode: collapse to the big identity knobs only (plus formation selection),
+    // hiding the granular sliders/chips (protection, QB aggression, screens, edge, tackling,
+    // run commit, option key, LOS freedom).
+    if (gameplanIsSimple()) {
+      const dpth = gp.passDepth || { short: 40, medium: 40, deep: 20 };
+      const dcur = dpth.deep >= 35 ? "deep" : dpth.short >= 55 ? "quick" : "balanced";
+      const passRow = chipRow("Passing Attack", dcur, [["quick", "Quick Game"], ["balanced", "Balanced"], ["deep", "Attack Deep"]], "__htDepth", () => `${dpth.short}/${dpth.medium}/${dpth.deep}`).replace(/data-gp-set="__htDepth" data-gp-val="/g, 'data-ht-depth="');
+      return `${renderFormationPackageCard(gp)}
+    <div class="card ht-adjust">
+      <div class="card-header"><span class="card-title">ADJUSTMENTS</span>
+        <span class="card-sub">the big knobs \xB7 switch to Advanced for full control</span></div>
+      <div class="ht-adj-col"><div class="ht-adj-side">OFFENSE</div>
+        ${chipRow("Play Tendency", gp.tendency, tendOpts, "tendency", () => `RUN ${100 - pass} / ${pass} PASS`)}
+        ${chipRow("Tempo", gp.baseTempo || "Normal", [["Chew", "Chew"], ["Normal", "Normal"], ["Hurry", "Hurry"]], "baseTempo")}
+        ${passRow}
+        ${chipRow("4th Down", gp.fourthDown || "Moderate", ["Very Conservative", "Conservative", "Moderate", "Aggressive", "Very Aggressive"].map((f) => [f, fourthShort[f]]), "fourthDown")}
+      </div>
+      <div class="ht-adj-col"><div class="ht-adj-side">DEFENSE</div>
+        ${chipRow("Safety Shell", gp.covShell || "balanced", [["single", "1-High"], ["balanced", "Mix"], ["two", "2-High"]], "covShell")}
+        ${chipRow("Coverage Style", gp.covStyle || "balanced", [["man", "Man"], ["balanced", "Mix"], ["zone", "Zone"]], "covStyle")}
+        ${chipRow("Cushion", gp.pressLevel || "balanced", [["press", "Press"], ["balanced", "Mix"], ["off", "Off"]], "pressLevel")}
+        <div class="ht-adj-row">
+          <div class="ht-adj-head"><span class="ht-adj-label">Blitz Rate</span><span class="ht-adj-cur" id="blitz-val">${(_a = gp.blitzPct) != null ? _a : 20}%</span></div>
+          <input class="gp-slider" type="range" id="blitz-pct" min="0" max="60" value="${(_b = gp.blitzPct) != null ? _b : 20}" />
+        </div>
+      </div>
+    </div>`;
+    }
     return `<div class="card ht-adjust">
       <div class="card-header"><span class="card-title">HALFTIME ADJUSTMENTS</span>
         <span class="card-sub">big knobs only \xB7 fine detail lives on Situations &amp; Depth</span></div>
@@ -27475,6 +27583,23 @@ var _CFB = (() => {
         </div>
       </div>
 
+      ${(() => {
+        const ra = (s.recruitAssist === "assist" || s.recruitAssist === "full") ? s.recruitAssist : "off";
+        const RA = [
+          ["off", "Off", "You run recruiting yourself \u2014 full control of the board."],
+          ["assist", "Assist", "Your staff covers your roster needs; you handle the rest. Override anytime."],
+          ["full", "Full", "Your staff builds and closes the whole class, hands-off."]
+        ];
+        return `
+      <div class="ob-setting-row">
+        <div class="ob-setting-label">Recruiting Assist</div>
+        <div class="ob-setting-desc">How much of recruiting your staff handles for you. Love recruiting? Leave it off. Change it anytime in the Assist tab.</div>
+        <div class="gp-options" style="flex-wrap:wrap;margin-top:6px">
+          ${RA.map(([v, l, d]) => `<button class="gp-option gp-option-sm${ra === v ? " active" : ""}" data-ob-assist="${v}" title="${d}">${l}</button>`).join("")}
+        </div>
+      </div>`;
+      })()}
+
       <button class="btn-primary ob-next" id="ob-next-0" style="margin-top:16px">LET'S GO \u2192</button>
       <div class="ob-alt"><a href="#" id="ob-legacy-link">\u2026or take over an existing program instead</a></div>
     </div>
@@ -27855,6 +27980,11 @@ var _CFB = (() => {
     document.querySelectorAll("[data-ob-gpmode]").forEach((btn) => btn.addEventListener("click", () => {
       if (!state.settings) state.settings = {};
       state.settings.gameplanMode = btn.dataset.obGpmode;
+      rerender();
+    }));
+    document.querySelectorAll("[data-ob-assist]").forEach((btn) => btn.addEventListener("click", () => {
+      if (!state.settings) state.settings = {};
+      state.settings.recruitAssist = btn.dataset.obAssist;
       rerender();
     }));
     (_c = document.getElementById("ob-next-0")) == null ? void 0 : _c.addEventListener("click", () => {
@@ -31307,6 +31437,44 @@ var _CFB = (() => {
   var depthTab = "offense";
   var activeOffFormation = null;
   var picker = null;
+  var uniqSwap = null;
+  function renderUniqSwapPicker(school) {
+    const u = UNIQUE_DEPTH_OFF.find((x) => x.pos === uniqSwap);
+    if (!u) return "";
+    const all = uniqueDepthTop(school, u, 999);
+    const override = ((school.depthOrder || {})[u.pos] || []);
+    const currentId = override[0] || (all[0] && all[0].p.id) || null;
+    const overridden = override.length > 0;
+    return `
+    <div class="picker-overlay" data-uniq-swap-close="bg">
+      <div class="picker-panel" data-uniq-swap-close="stop">
+        <div class="picker-head">
+          <div>
+            <div class="picker-title">${escapeHtml(u.label)}</div>
+            <div class="picker-sub">${u.from.join("/")} \xB7 all eligible by fit \xB7 plays here in every formation with this spot</div>
+          </div>
+          <button class="picker-x" data-uniq-swap-close="x">✕</button>
+        </div>
+        <div class="picker-list">
+          <div class="picker-item picker-auto${overridden ? "" : " active"}" data-uniq-pick="__auto__">
+            <span class="picker-name">Auto (best fit)</span>
+            <span class="picker-tag">default</span>
+          </div>
+          ${all.map(({ p, fit }) => `
+            <div class="picker-item${overridden && p.id === currentId ? " active" : ""}" data-uniq-pick="${p.id}">
+              <span class="picker-name">${escapeHtml(fullName(p))}</span>
+              <span class="picker-meta">
+                <span class="pos-chip pos-${p.position}">${p.position}</span>
+                <span class="class-badge class-${p.classYear.toLowerCase()}">${p.classYear}</span>
+                <span class="fs-rating ${ratingColor(Math.round(fit))}">${Math.round(fit)}</span>
+              </span>
+            </div>`).join("")}
+          ${all.length === 0 ? '<div class="empty-hint">No eligible players.</div>' : ""}
+        </div>
+      </div>
+    </div>
+  `;
+  }
   function renderDepthChart(embed = false) {
     const school = getPlayerSchool();
     const gp = (school == null ? void 0 : school.gameplan) || {};
@@ -31349,6 +31517,7 @@ var _CFB = (() => {
       ${depthTab === "st" ? renderST(school) : ""}
 
       ${picker ? renderPicker2(school) : ""}
+      ${uniqSwap ? renderUniqSwapPicker(school) : ""}
     </div>
   `;
   }
@@ -31559,11 +31728,22 @@ var _CFB = (() => {
   var UNIQUE_DEPTH_DEF = [];
   function uniqueDepthTop(school, entry, n = 5) {
     // Top-N best-fit players for a unique slot, ranked by its role rating, drawn from
-    // every eligible base position and de-duped. "If they vary, go with highest ratings."
+    // every eligible base position. A user OVERRIDE (depthOrder[pos]) floats hand-picked
+    // players to the top in the chosen order; the rest fall in by fit. Applies everywhere.
     const roster = (school == null ? void 0 : school.roster) || [];
     const pool = roster.filter((p) => entry.from.includes(p.position) && p.injuryGamesOut === 0);
     const scored = pool.map((p) => ({ p, fit: roleRating(p, entry.role) }));
     scored.sort((a, b) => b.fit - a.fit);
+    const override = ((school == null ? void 0 : school.depthOrder) || {})[entry.pos] || [];
+    if (override.length) {
+      const rank = new Map(override.map((id, i) => [id, i]));
+      scored.sort((a, b) => {
+        const ra = rank.has(a.p.id) ? rank.get(a.p.id) : Infinity;
+        const rb = rank.has(b.p.id) ? rank.get(b.p.id) : Infinity;
+        if (ra !== rb) return ra - rb;
+        return b.fit - a.fit;
+      });
+    }
     return scored.slice(0, n);
   }
   function slotLabelsByPlayer(school, side) {
@@ -31649,7 +31829,7 @@ var _CFB = (() => {
           const lbl = hit && hit.pos === pos && typeof hit.label === "string" ? hit.label.trim() : "";
           return lbl ? `<span class="do-slot" title="Lines up at ${escapeHtml(lbl)} in your ${side === "offense" ? escapeHtml(activeOffFormation) : escapeHtml(((_a3 = school.gameplan) == null ? void 0 : _a3.defBaseFront) || "4-3")}">${escapeHtml(lbl)}</span>` : `<span class="do-rank">${i + 1}</span>`;
         })()}
-                  <span class="do-name">${escapeHtml(fullName(p))}</span>
+                  <span class="do-name"><span class="player-link" data-pcard="${p.id}">${escapeHtml(fullName(p))}</span></span>
                   <span class="class-badge class-${p.classYear.toLowerCase()}">${p.classYear}</span>
                   ${(() => {
           var _a3;
@@ -31682,14 +31862,15 @@ var _CFB = (() => {
         const rows = top.map(({ p, fit }, i) => `
           <div class="do-row do-row-uniq${i === 0 ? " do-starter" : ""}">
             <span class="do-rank">${i + 1}</span>
-            <span class="do-name">${escapeHtml(fullName(p))}</span>
+            <span class="do-name"><span class="player-link" data-pcard="${p.id}">${escapeHtml(fullName(p))}</span></span>
             <span class="pos-chip pos-${p.position}" style="font-size:9px;padding:1px 5px">${p.position}</span>
             <span class="class-badge class-${p.classYear.toLowerCase()}">${p.classYear}</span>
             <span class="do-rating" style="color:${ratingColor(Math.round(fit))}" title="${escapeHtml((archetypeLabel(u.role) || u.role) + " fit — how well he plays this exotic spot. Overall " + Math.round(p.compositeRating) + ".")}">${Math.round(fit)}</span>
+            ${i > 0 ? `<button class="do-up" data-uniq-up="${u.pos}" data-pid="${p.id}" title="Make him your ${escapeHtml(u.label)} — he plays this spot whenever a formation calls for it">▲</button>` : '<span class="do-up-spacer"></span>'}
           </div>`).join("");
         return `
           <div class="do-group do-group-uniq">
-            <div class="do-pos"><span class="pos-chip pos-${u.pos}">${escapeHtml(u.label)}</span>${noteHtml}</div>
+            <div class="do-pos"><span class="pos-chip pos-${u.pos}">${escapeHtml(u.label)}</span>${noteHtml}<button class="do-uniq-swap" data-uniq-swap="${u.pos}" title="Choose who plays ${escapeHtml(u.label)} — full list by rating">Swap ⇄</button></div>
             ${rows}
           </div>`;
       }).filter(Boolean).join("");
@@ -32098,8 +32279,14 @@ var _CFB = (() => {
     const slotRanked = (((_b = school == null ? void 0 : school.depthOrder) == null ? void 0 : _b.SLOT) || []).filter((id) => eligible(byId.get(id)));
     const slotSet = new Set(slotRanked);
     depth.SLOT = [...slotRanked, ...slotPool.filter((id) => !slotSet.has(id))];
+    // Seed the exotic mesh positions from their depthOrder OVERRIDE, so a hand-picked
+    // FB/Wildcat/Jet man plays that spot everywhere it appears. Filtered to eligible.
+    for (const upos of ["FB", "ABACK", "WING", "WILDCAT", "JETMAN"]) {
+      const ov = (((school == null ? void 0 : school.depthOrder) || {})[upos] || []).filter((id) => eligible(byId.get(id)));
+      if (ov.length) depth[upos] = ov;
+    }
     for (const pos of Object.keys(depth)) {
-      if (pos === "SLOT") continue;
+      if (pos === "SLOT" || ["FB", "ABACK", "WING", "WILDCAT", "JETMAN"].includes(pos)) continue;
       const listed = new Set(((_c = school == null ? void 0 : school.depthChart) == null ? void 0 : _c[pos]) || []);
       const ranked = depth[pos].filter((id) => listed.has(id));
       const extras = depth[pos].filter((id) => !listed.has(id)).sort((a, b) => {
@@ -32246,6 +32433,50 @@ var _CFB = (() => {
         rerender();
       });
     });
+    document.querySelectorAll("[data-uniq-up]").forEach((btn) => btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const school2 = getPlayerSchool();
+      const upos = btn.dataset.uniqUp, pid = btn.dataset.pid;
+      const u = UNIQUE_DEPTH_OFF.find((x) => x.pos === upos);
+      if (!u) return;
+      const cur = uniqueDepthTop(school2, u, 999).map((x) => x.p.id);
+      const i = cur.indexOf(pid);
+      if (i > 0) {
+        [cur[i - 1], cur[i]] = [cur[i], cur[i - 1]];
+        school2.depthOrder = school2.depthOrder || {};
+        school2.depthOrder[upos] = cur;
+      }
+      rerender();
+    }));
+    document.querySelectorAll("[data-uniq-swap]").forEach((btn) => btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      uniqSwap = btn.dataset.uniqSwap;
+      rerender();
+    }));
+    document.querySelectorAll("[data-uniq-pick]").forEach((el) => el.addEventListener("click", () => {
+      const school2 = getPlayerSchool();
+      const upos = uniqSwap;
+      const pid = el.dataset.uniqPick;
+      const u = UNIQUE_DEPTH_OFF.find((x) => x.pos === upos);
+      if (u) {
+        school2.depthOrder = school2.depthOrder || {};
+        if (pid === "__auto__") {
+          delete school2.depthOrder[upos];
+        } else {
+          const rest = uniqueDepthTop(school2, u, 999).map((x) => x.p.id).filter((id) => id !== pid);
+          school2.depthOrder[upos] = [pid, ...rest];
+        }
+      }
+      uniqSwap = null;
+      rerender();
+    }));
+    document.querySelectorAll("[data-uniq-swap-close]").forEach((el) => el.addEventListener("click", (e) => {
+      const kind = el.dataset.uniqSwapClose;
+      if (kind === "stop") { e.stopPropagation(); return; }
+      if (kind === "bg" && e.target !== el) return;
+      uniqSwap = null;
+      rerender();
+    }));
     document.querySelectorAll("[data-share-slider]").forEach((sl) => {
       sl.addEventListener("input", () => {
         const entry = gp.fieldAssignments.offense[activeOffFormation];
@@ -38551,11 +38782,15 @@ var _CFB = (() => {
     const _pkg = FORMATION_PACKAGES[_selFormId] || FORMATION_PACKAGES["Pro Set"] || {};
     const _wrCount = (_pkg.WR || 0) + (_pkg.SLOT || 0);
     const _drillCat = state.ui.callDrill || null;
-    // Concept list for a category, filtered to the chosen formation's WR count.
+    // Concept list for a category, filtered to the chosen formation's WR count AND to
+    // the plays that actually EXIST in your gameplan — a concept dialed to 0 in your
+    // playbook (conceptWeights[nm] <= 0) is removed, so it never shows on the sheet.
     const conceptsFor = (grp) => {
       var _a2;
       const names = ((_a2 = ctx2.conceptsByGroup) == null ? void 0 : _a2[grp]) || [];
       return names.filter((nm) => {
+        var _a3;
+        if (weights && ((_a3 = weights[nm]) != null ? _a3 : 50) <= 0) return false;
         const c = PASS_CONCEPTS[nm];
         if (c && c.minWR && _wrCount < c.minWR) return false;
         return true;
