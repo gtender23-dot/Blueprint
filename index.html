@@ -3079,6 +3079,13 @@ input[type="range"] { accent-color: var(--team-1); }
   font-size: 10px; font-weight: 800; color: var(--green);
   min-width: 26px; text-align: center; font-variant-numeric: tabular-nums;
 }
+.fs-featured { margin-top: 3px; text-align: center; color: var(--gold, #ffd54a); font-size: 12px; line-height: 1; }
+/* Simple-mode game-plan panel (replaces the granular dials) */
+.simple-gp-card { margin-top: 10px; }
+.simple-gp-row { padding: 10px 2px; border-top: 1px solid var(--border-sub); }
+.simple-gp-row:first-of-type { border-top: none; }
+.simple-gp-label { font-size: 14px; font-weight: 800; color: var(--text-0); }
+.simple-gp-desc { font-size: 11.5px; color: var(--text-2); line-height: 1.45; margin: 2px 0 7px; }
 
 /* On-field blitz-share stepper (mirrors .fs-share, red accent) */
 .fs-blitz {
@@ -4423,6 +4430,10 @@ th.conv-sort.active { color: var(--team-1); }
 .pos-JETMAN  { background: rgba(63,168,100,0.18); color: var(--green, #3fa864); }
 
 .do-group-slot { border-left: 2px solid rgba(63,168,100,0.3); }
+.do-uniq-header { margin-top: 14px; padding: 8px 2px 4px; border-top: 1px solid rgba(255,255,255,0.09); font-size: 11px; font-weight: 800; letter-spacing: 0.08em; color: var(--text-1); }
+.do-uniq-sub { display: block; font-size: 9.5px; font-weight: 500; letter-spacing: 0; color: var(--text-2); font-style: italic; margin-top: 1px; }
+.do-group-uniq { border-left: 2px solid rgba(63,168,100,0.22); padding-left: 6px; }
+.do-row-uniq .do-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .do-empty-slot { font-size: 11px; color: var(--text-2); font-style: italic; padding: 4px 10px 8px; line-height: 1.5; }
 .do-slotbtn { background: none; border: none; color: var(--text-2); opacity: 0.3; font-size: 12px;
   cursor: pointer; padding: 0 4px; }
@@ -5951,6 +5962,8 @@ var _CFB = (() => {
         // seasons a converted player develops slower at the new spot
         POS_CHANGE_DEV_MULT: 0.75,
         // growth multiplier while learning the new position
+        SIMPLE_QBRUN_PCT: 12,
+        // simple-mode "QB Involved in run game" maps to this qbRunPct (designed QB runs)
         XP_CONVERT_HIT: 6,
         // Evaluator XP when a converted player starts next season
         DEV_FOCUS_MULT: 1.5,
@@ -12656,6 +12669,13 @@ var _CFB = (() => {
     for (const pos of posOrder) {
       const group = posSlots[pos];
       const pool = (MESH_AUTO_POOL[pos] ? MESH_AUTO_POOL[pos](activeDepth) : activeDepth[pos] || []).slice();
+      // For a MESHED unique slot (a pool drawn from multiple base positions — FB/WING/
+      // ABACK/WILDCAT/JETMAN), the concatenated pool isn't rating-ordered across the
+      // groups. Sort it best-first so the field auto-fills with the highest-rated
+      // eligible body — matching "go with the highest ratings" and the depth-chart list.
+      if (ratingById && MESH_AUTO_POOL[pos]) {
+        pool.sort((a, b) => (ratingById[b] || 0) - (ratingById[a] || 0));
+      }
       byPos[pos] = [];
       for (const s of group) {
         const want = assignments == null ? void 0 : assignments[s.id];
@@ -31291,6 +31311,9 @@ var _CFB = (() => {
     const school = getPlayerSchool();
     const gp = (school == null ? void 0 : school.gameplan) || {};
     ensureFieldAssignments(gp);
+    // In simple mode, keep the derived sim fields (shares/blitzers/qbRun) in sync with
+    // the plain presets on every render, so the sim always reads real values.
+    if (gameplanIsSimple() && school) applySimplePlan(school);
     const selectedOff = Object.keys(OFF_FIELD_LAYOUTS);
     if (!activeOffFormation || !selectedOff.includes(activeOffFormation)) {
       activeOffFormation = selectedOff[0] || "Pro Set";
@@ -31368,8 +31391,143 @@ var _CFB = (() => {
       </div>
     </div>
 
-    ${renderShareBar(catchSlots, entry.shares, shareTotal, school, bySlot)}
+    ${gameplanIsSimple() ? renderSimpleOffPanel(school, gp, catchSlots, entry, bySlot) : renderShareBar(catchSlots, entry.shares, shareTotal, school, bySlot)}
     ${renderDepthOrder(school, "offense")}
+  `;
+  }
+  function applySimplePlan(school) {
+    // Derive the real per-player fields the sim reads (target shares, RB carry split,
+    // qbRunPct, blitz shares) from the plain-language SIMPLE presets. Runs whenever a
+    // preset changes, and once on load in simple mode, so the sim always has real values.
+    const gp = school == null ? void 0 : school.gameplan;
+    if (!gp) return;
+    ensureFieldAssignments(gp);
+    const sg = gp.simple || (gp.simple = {});
+    const roster = school.roster || [];
+    const activeDepth = buildActiveDepth(school);
+    const ratingById = buildRatingById(school);
+
+    // 1) TARGET SHARE — auto by rating across each formation's catch slots; if a FEATURED
+    //    slot is chosen, bump it to the featured threshold and rebalance the rest.
+    for (const fid of Object.keys(OFF_FIELD_LAYOUTS)) {
+      const layout = OFF_FIELD_LAYOUTS[fid];
+      const e = gp.fieldAssignments.offense[fid] || (gp.fieldAssignments.offense[fid] = { slots: {}, shares: {} });
+      if (!e.shares) e.shares = {};
+      const resolved = resolveOffField(fid, e.slots, e.shares, activeDepth, ratingById, posById(school));
+      const bySlot = (resolved && resolved.bySlot) || {};
+      const catchSlots = layout.slots.filter((s) => s.catch);
+      // base weight = player's rating in that slot (auto = talent gets the looks)
+      const wById = {};
+      let tot = 0;
+      for (const s of catchSlots) {
+        const pid = bySlot[s.id];
+        const r = pid ? ratingById[pid] || 40 : 0;
+        wById[s.id] = r;
+        tot += r;
+      }
+      const keys = catchSlots.map((s) => s.id);
+      if (tot <= 0) { normalizeShares(e.shares, keys); continue; }
+      for (const s of catchSlots) e.shares[s.id] = Math.round(wById[s.id] / tot * 20) * 5;
+      normalizeShares(e.shares, keys);
+      // featured man: push his slot to 30% and rebalance
+      if (sg.featuredSlot && sg.featuredSlot !== "__even" && keys.includes(sg.featuredSlot)) {
+        setSplitRebalanced(e.shares, keys, sg.featuredSlot, 30);
+      }
+    }
+
+    // 2) RB CARRY SPLIT — workhorse/dual/committee by rating; auto clears the override.
+    const rbIds = (activeDepth.RB || []).slice(0, 4);
+    gp.rbCarryShares = gp.rbCarryShares || {};
+    for (const id of Object.keys(gp.rbCarryShares)) delete gp.rbCarryShares[id];
+    const style = sg.rushStyle || "auto";
+    if (style !== "auto" && rbIds.length) {
+      const ranked = rbIds.slice().sort((a, b) => (ratingById[b] || 0) - (ratingById[a] || 0));
+      let splits = [];
+      if (style === "workhorse") splits = [80, 20];
+      else if (style === "dual") splits = [55, 45];
+      else splits = [40, 30, 20, 10]; // committee
+      let assigned = 0;
+      ranked.forEach((id, i) => {
+        if (i < splits.length) { gp.rbCarryShares[id] = splits[i]; assigned += splits[i]; }
+      });
+      // hand any rounding remainder to the lead back
+      const drift = 100 - Object.values(gp.rbCarryShares).reduce((s, v) => s + v, 0);
+      if (drift && ranked[0]) gp.rbCarryShares[ranked[0]] += drift;
+    }
+
+    // 3) QB RUN GAME — a plain on/off that maps to a sensible qbRunPct.
+    gp.qbRunPct = sg.qbRun ? (C.SIMPLE_QBRUN_PCT || 12) : 0;
+
+    // 4) BLITZERS — auto-designate the top-rated eligible rushers by aggressiveness.
+    const front = gp.defBaseFront || "4-3";
+    const de = gp.fieldAssignments.defense[front] || (gp.fieldAssignments.defense[front] = { slots: {}, blitzShares: {} });
+    de.blitzShares = de.blitzShares || {};
+    for (const k of Object.keys(de.blitzShares)) delete de.blitzShares[k];
+    const eligible = DEF_BLITZ_ELIGIBLE[front] || [];
+    const dr = resolveDefField(front, de.slots, {}, activeDepth, ratingById, posById(school));
+    const dBySlot = (dr && dr.bySlot) || {};
+    const aggr = sg.blitzAggr || "balanced";
+    const nBlitz = aggr === "conservative" ? 0 : aggr === "aggressive" ? 3 : 1;
+    if (nBlitz > 0) {
+      const ranked = eligible
+        .map((sid) => ({ sid, pid: dBySlot[sid] }))
+        .filter((x) => x.pid)
+        .sort((a, b) => (ratingById[b.pid] || 0) - (ratingById[a.pid] || 0))
+        .slice(0, nBlitz);
+      for (const { sid } of ranked) de.blitzShares[sid] = 100;
+    }
+  }
+  function renderSimpleOffPanel(school, gp, catchSlots, entry, bySlot) {
+    const roster = (school == null ? void 0 : school.roster) || [];
+    const sg = gp.simple || (gp.simple = {});
+    // 1) FEATURED receiver — plain pick of who the QB leans on (or spread it evenly).
+    const featuredSlot = sg.featuredSlot || "__even";
+    const catchOpts = catchSlots.map((s) => {
+      const pid = bySlot[s.id];
+      const p = pid ? roster.find((pl) => pl.id === pid) : null;
+      return { id: s.id, label: s.label, name: p ? shortName(p) : "—" };
+    });
+    // 2) RUSHING style preset.
+    const rushStyle = sg.rushStyle || "auto";
+    const RUSH = [
+      ["auto", "Auto", "Sim splits by scheme"],
+      ["workhorse", "Workhorse", "One back carries the load"],
+      ["dual", "Dual", "Two backs share the work"],
+      ["committee", "Committee", "Spread across the room"]
+    ];
+    // 3) QB run involvement.
+    const qbRun = (gp.qbRunPct || 0) > 0 || sg.qbRun === true;
+    return `
+    <div class="card simple-gp-card">
+      <div class="card-header"><span class="card-title">SIMPLE GAME PLAN</span>
+        <span class="card-sub">plain calls \xB7 the sim handles the fine detail</span></div>
+
+      <div class="simple-gp-row">
+        <div class="simple-gp-label">Featured Receiver</div>
+        <div class="simple-gp-desc">Who the QB leans on. Featured men get the volume — and get bracketed.</div>
+        <div class="gp-options" style="flex-wrap:wrap">
+          <button class="gp-option gp-option-sm${featuredSlot === "__even" ? " active" : ""}" data-simple-featured="__even">Spread it</button>
+          ${catchOpts.map((c) => `<button class="gp-option gp-option-sm${featuredSlot === c.id ? " active" : ""}" data-simple-featured="${c.id}">${escapeHtml(c.label)} \xB7 ${escapeHtml(c.name)}</button>`).join("")}
+        </div>
+      </div>
+
+      <div class="simple-gp-row">
+        <div class="simple-gp-label">Rushing Split</div>
+        <div class="simple-gp-desc">How you divide the carries among your backs.</div>
+        <div class="gp-options" style="flex-wrap:wrap">
+          ${RUSH.map(([v, l, d]) => `<button class="gp-option gp-option-sm${rushStyle === v ? " active" : ""}" data-simple-rush="${v}" title="${d}">${l}</button>`).join("")}
+        </div>
+      </div>
+
+      <div class="simple-gp-row">
+        <div class="simple-gp-label">QB in the Run Game</div>
+        <div class="simple-gp-desc">Designed QB runs — keepers, draws, option. Great with a mobile QB.</div>
+        <div class="gp-mode-toggle">
+          <button class="gp-mode-btn${!qbRun ? " active" : ""}" data-simple-qbrun="off">Pocket</button>
+          <button class="gp-mode-btn${qbRun ? " active" : ""}" data-simple-qbrun="on">Involved</button>
+        </div>
+      </div>
+    </div>
   `;
   }
   var SLOT_ELIGIBLE = ["WR", "TE", "RB"];
@@ -31379,6 +31537,35 @@ var _CFB = (() => {
     defense: ["DE", "DT", "OLB", "LB", "CB", "S"],
     st: ["K", "P"]
   };
+  // Unique / formation-specific positions — these only exist in SOME formations, so
+  // they're listed as their own groups at the BOTTOM of the depth chart. Each shows the
+  // top-5 best-FIT players (ranked by the slot's role rating) drawn from any eligible
+  // base position. They're MESHED: a player still appears in his normal position group,
+  // and only lines up here when a formation with this slot is on the field.
+  //   pos   = the field-slot pos tag (matches OFF_FIELD_LAYOUTS[...].slots[].pos)
+  //   label = display name for the depth group
+  //   role  = the role rating to rank the top-5 by (best fit for this exotic job)
+  //   from  = eligible base positions (mirrors SLOT_ELIGIBLE_POS)
+  //   forms = formations this slot appears in (for the "plays here in X" note)
+  var UNIQUE_DEPTH_OFF = [
+    { pos: "FB", label: "FULLBACK", role: "FB-Lead", from: ["RB"], forms: ["Power-I", "Wishbone", "Flexbone", "Wildcat"] },
+    { pos: "WING", label: "WISHBONE HB", role: "RB-Power", from: ["RB", "TE"], forms: ["Wishbone"] },
+    { pos: "ABACK", label: "FLEXBONE A-BACK", role: "RB-Scat", from: ["RB", "WR", "TE"], forms: ["Flexbone"] },
+    { pos: "WILDCAT", label: "WILDCAT BACK", role: "RB-Power", from: ["RB", "WR", "QB"], forms: ["Wildcat"] },
+    { pos: "JETMAN", label: "JET MOTION", role: "RB-Scat", from: ["WR", "RB"], forms: ["Wildcat"] }
+  ];
+  // Defense has no exotic personnel packages the way offense does — every base D
+  // position is already listed. (Kept as a hook in case a future front adds one.)
+  var UNIQUE_DEPTH_DEF = [];
+  function uniqueDepthTop(school, entry, n = 5) {
+    // Top-N best-fit players for a unique slot, ranked by its role rating, drawn from
+    // every eligible base position and de-duped. "If they vary, go with highest ratings."
+    const roster = (school == null ? void 0 : school.roster) || [];
+    const pool = roster.filter((p) => entry.from.includes(p.position) && p.injuryGamesOut === 0);
+    const scored = pool.map((p) => ({ p, fit: roleRating(p, entry.role) }));
+    scored.sort((a, b) => b.fit - a.fit);
+    return scored.slice(0, n);
+  }
   function slotLabelsByPlayer(school, side) {
     var _a, _b, _c, _d, _e, _f;
     const gp = school == null ? void 0 : school.gameplan;
@@ -31439,7 +31626,7 @@ var _CFB = (() => {
         var _a2, _b2;
         const p = school.roster.find((x) => x.id === id);
         if (!p) return "";
-        const committee = side === "offense" && pos === "RB" && i < 4 ? (() => {
+        const committee = !gameplanIsSimple() && side === "offense" && pos === "RB" && i < 4 ? (() => {
           var _a3, _b3, _c;
           const rbTop = (((_a3 = school.depthChart) == null ? void 0 : _a3.RB) || []).slice(0, 4);
           const anyDialed = rbTop.some((rid) => {
@@ -31481,6 +31668,34 @@ var _CFB = (() => {
       }).join("")}
           </div>`;
     }).join("")}
+    ${(() => {
+      const uniq = side === "offense" ? UNIQUE_DEPTH_OFF : UNIQUE_DEPTH_DEF;
+      if (!uniq.length) return "";
+      const curForm = side === "offense" ? activeOffFormation : ((school.gameplan || {}).defBaseFront || "4-3");
+      const blocks = uniq.map((u) => {
+        const top = uniqueDepthTop(school, u, 5);
+        if (!top.length) return "";
+        const live = u.forms.includes(curForm);
+        const noteHtml = live
+          ? `<span class="do-slot-note on">plays in ${escapeHtml(curForm)}</span>`
+          : `<span class="do-slot-note">only in ${escapeHtml(u.forms.join(", "))}</span>`;
+        const rows = top.map(({ p, fit }, i) => `
+          <div class="do-row do-row-uniq${i === 0 ? " do-starter" : ""}">
+            <span class="do-rank">${i + 1}</span>
+            <span class="do-name">${escapeHtml(fullName(p))}</span>
+            <span class="pos-chip pos-${p.position}" style="font-size:9px;padding:1px 5px">${p.position}</span>
+            <span class="class-badge class-${p.classYear.toLowerCase()}">${p.classYear}</span>
+            <span class="do-rating" style="color:${ratingColor(Math.round(fit))}" title="${escapeHtml((archetypeLabel(u.role) || u.role) + " fit — how well he plays this exotic spot. Overall " + Math.round(p.compositeRating) + ".")}">${Math.round(fit)}</span>
+          </div>`).join("");
+        return `
+          <div class="do-group do-group-uniq">
+            <div class="do-pos"><span class="pos-chip pos-${u.pos}">${escapeHtml(u.label)}</span>${noteHtml}</div>
+            ${rows}
+          </div>`;
+      }).filter(Boolean).join("");
+      if (!blocks) return "";
+      return `<div class="do-uniq-header">FORMATION-SPECIFIC SPOTS <span class="do-uniq-sub">top fits \xB7 they play here only when the formation calls for it</span></div>${blocks}`;
+    })()}
     </div>
   `;
   }
@@ -31496,13 +31711,14 @@ var _CFB = (() => {
     const dropEligible = new Set(DEF_DROP_ELIGIBLE[baseFront] || []);
     const blitzShares = entry.blitzShares || {};
     const blitzerCount = Object.values(blitzShares).filter((v) => v > 0).length;
+    const simple = gameplanIsSimple();
     return `
     <div class="fielded-formation-picker">
       <span class="ff-front-label">Base Front: <strong>${baseFront}</strong></span>
       <span class="ff-hint">Change your base front on Game Plan \xB7 situational subs are automatic</span>
     </div>
 
-    <div class="gp-tip tip-info">\u25B8 Tap a slot to assign. The \u26A1 dial on each defender is his BLITZ SHARE \u2014 his odds of joining the rush when a blitz fires. A blitzing LB or DB abandons his coverage to come \u2014 sacks on one end, busted coverage on the other.${baseFront === "3-4" ? " Your OLBs carry the \u{1F6E1} DROP dial instead: how often the edge man bails into coverage rather than rushing (default 18%). When his drop meets a blitzer firing behind it, that's a FIRE ZONE \u2014 same rush count, angles the protection never saw." : " Linemen always rush."}</div>
+    ${simple ? `<div class="gp-tip tip-info">\u25B8 Tap a slot to change who lines up there. Blitzers are picked automatically \u2014 your best pass-rushers come when a blitz fires. Set how aggressive below.</div>` : `<div class="gp-tip tip-info">\u25B8 Tap a slot to assign. The \u26A1 dial on each defender is his BLITZ SHARE \u2014 his odds of joining the rush when a blitz fires. A blitzing LB or DB abandons his coverage to come \u2014 sacks on one end, busted coverage on the other.${baseFront === "3-4" ? " Your OLBs carry the \u{1F6E1} DROP dial instead: how often the edge man bails into coverage rather than rushing (default 18%). When his drop meets a blitzer firing behind it, that's a FIRE ZONE \u2014 same rush count, angles the protection never saw." : " Linemen always rush."}</div>`}
 
     <div class="field-card def-field">
       <div class="field-turf def-turf">
@@ -31521,12 +31737,34 @@ var _CFB = (() => {
       </div>
     </div>
 
-    <div class="blitz-legend">
+    ${simple ? renderSimpleDefPanel(school, gp) : `<div class="blitz-legend">
       <span class="blitz-dot"></span> Per-slot rush share \u2014 each defender's independent chance to blitz when a blitz fires.
       Set how often blitzes fire on <a data-nav="gameplan" class="link">Game Plan \xB7 Defense</a>.
       <strong>${blitzerCount}</strong> defender${blitzerCount !== 1 ? "s" : ""} with share &gt; 0.
-    </div>
+    </div>`}
     ${renderDepthOrder(school, "defense")}
+  `;
+  }
+  function renderSimpleDefPanel(school, gp) {
+    const sg = gp.simple || (gp.simple = {});
+    const aggr = sg.blitzAggr || "balanced";
+    const AGG = [
+      ["conservative", "Conservative", "Rush 4 \u2014 keep everyone in coverage"],
+      ["balanced", "Balanced", "Occasional pressure from your best rusher"],
+      ["aggressive", "Aggressive", "Send extra rushers often \u2014 sacks or busts"]
+    ];
+    return `
+    <div class="card simple-gp-card">
+      <div class="card-header"><span class="card-title">SIMPLE GAME PLAN</span>
+        <span class="card-sub">blitzers auto-picked by rating</span></div>
+      <div class="simple-gp-row">
+        <div class="simple-gp-label">Pressure</div>
+        <div class="simple-gp-desc">How aggressively you bring extra rushers. The sim sends your highest-rated pass-rushers when a blitz fires.</div>
+        <div class="gp-options" style="flex-wrap:wrap">
+          ${AGG.map(([v, l, d]) => `<button class="gp-option gp-option-sm${aggr === v ? " active" : ""}" data-simple-blitz="${v}" title="${d}">${l}</button>`).join("")}
+        </div>
+      </div>
+    </div>
   `;
   }
   function renderST(school) {
@@ -31633,8 +31871,11 @@ var _CFB = (() => {
     const fx = (slot.x * 100).toFixed(1);
     const fy = (slot.y * 100).toFixed(1);
     const injured = p && p.injuryGamesOut > 0;
-    const shareBadge = opts.side === "offense" && slot.catch ? renderShareControl(slot, opts.entry) : "";
-    const blitzControl = opts.side === "defense" && opts.blitzEligible ? renderBlitzControl(slot, opts.blitzShares) : opts.side === "defense" && opts.dropEligible ? renderDropControl(slot, opts.blitzShares) : "";
+    const simple = gameplanIsSimple();
+    // SIMPLE MODE: hide the per-player +/- dials on the field. Target share, blitz share
+    // and RB carry split are all auto-derived by rating from the simple presets instead.
+    const shareBadge = !simple && opts.side === "offense" && slot.catch ? renderShareControl(slot, opts.entry) : (opts.side === "offense" && slot.catch && simple ? renderSimpleShareBadge(slot, opts.entry) : "");
+    const blitzControl = simple ? "" : (opts.side === "defense" && opts.blitzEligible ? renderBlitzControl(slot, opts.blitzShares) : opts.side === "defense" && opts.dropEligible ? renderDropControl(slot, opts.blitzShares) : "");
     const isBlitzing = opts.side === "defense" && ((_a = opts.blitzShares) == null ? void 0 : _a[slot.id]) > 0;
     return `
     <div class="field-slot${p ? "" : " unassigned"}${isBlitzing ? " blitzing" : ""}"
@@ -31728,6 +31969,14 @@ var _CFB = (() => {
       <button class="fs-share-btn" data-share-step="1" data-slot="${slot.id}">+</button>
     </div>
   `;
+  }
+  function renderSimpleShareBadge(slot, entry) {
+    var _a;
+    // Read-only in simple mode: just flag the featured man (the top target). The actual
+    // % is auto-derived by rating; the coach only picks WHO is featured, in the list below.
+    const featured = ((_a = entry.shares) == null ? void 0 : _a[slot.id]) || 0;
+    if (featured >= 25) return `<div class="fs-featured" title="Featured target \u2014 the sim funnels the ball here (defenses bracket him)">\u2605</div>`;
+    return "";
   }
   function renderShareBar(catchSlots, shares, shareTotal, school, bySlot) {
     const roster = (school == null ? void 0 : school.roster) || [];
@@ -32060,6 +32309,30 @@ var _CFB = (() => {
       }
       rerender();
     });
+    document.querySelectorAll("[data-simple-featured]").forEach((btn) => btn.addEventListener("click", () => {
+      gp.simple = gp.simple || {};
+      gp.simple.featuredSlot = btn.dataset.simpleFeatured;
+      applySimplePlan(school);
+      rerender();
+    }));
+    document.querySelectorAll("[data-simple-rush]").forEach((btn) => btn.addEventListener("click", () => {
+      gp.simple = gp.simple || {};
+      gp.simple.rushStyle = btn.dataset.simpleRush;
+      applySimplePlan(school);
+      rerender();
+    }));
+    document.querySelectorAll("[data-simple-qbrun]").forEach((btn) => btn.addEventListener("click", () => {
+      gp.simple = gp.simple || {};
+      gp.simple.qbRun = btn.dataset.simpleQbrun === "on";
+      applySimplePlan(school);
+      rerender();
+    }));
+    document.querySelectorAll("[data-simple-blitz]").forEach((btn) => btn.addEventListener("click", () => {
+      gp.simple = gp.simple || {};
+      gp.simple.blitzAggr = btn.dataset.simpleBlitz;
+      applySimplePlan(school);
+      rerender();
+    }));
     (_c = document.getElementById("btn-save-depth")) == null ? void 0 : _c.addEventListener("click", () => {
       school.depthChart = buildDepthChart(school.roster, school.gameplan, school.depthOrder);
       saveNow().then((ok) => notify(ok ? "Depth chart saved!" : "Save FAILED \u2014 storage full or blocked.", ok ? "success" : "error"));
