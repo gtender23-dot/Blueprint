@@ -3582,6 +3582,10 @@ input[type="range"] { accent-color: var(--team-1); }
 .ob-kicker { font-size:11px; font-weight:800; letter-spacing:0.18em; color:var(--green); }
 .ob-headline { font-size:22px; font-weight:900; color:var(--text-0); line-height:1.25; margin:0; }
 .ob-flavor { font-size:13px; color:var(--text-1); line-height:1.5; margin:0; }
+.ob-setting-row { margin-top:14px; padding-top:14px; border-top:1px solid var(--border-sub); }
+.ob-setting-row:first-of-type { border-top:none; }
+.ob-setting-label { font-size:14px; font-weight:800; color:var(--text-0); }
+.ob-setting-desc { font-size:11.5px; color:var(--text-2); line-height:1.45; margin-top:3px; }
 .ob-section-label { font-size:11px; font-weight:800; letter-spacing:0.14em; color:var(--text-2); margin-top:6px; }
 
 .ob-name-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -27326,10 +27330,12 @@ var _CFB = (() => {
   ];
   function renderNewGame() {
     if (legacyMode) return renderLegacy();
+    // Seed the coach name from the chosen profile (the name step is gone — that was
+    // redundant with the coach system). Stay on step 0, which is now the ground-rules
+    // (difficulty + game-planning) screen.
     if (state._coachProfileName && obStep === 0 && !ob.first && !ob.last) {
       ob.first = state._coachProfileName.first;
       ob.last = state._coachProfileName.last;
-      obStep = 1;
     }
     return `
     <div class="newgame ob">
@@ -27419,22 +27425,37 @@ var _CFB = (() => {
     </div>`;
   }
   function stepSignature() {
+    const s = state.settings || (state.settings = {});
+    const diffRow = (key, label, desc) => `
+      <div class="ob-setting-row">
+        <div class="ob-setting-label">${label}</div>
+        <div class="ob-setting-desc">${desc}</div>
+        <div class="gp-options" style="flex-wrap:wrap;margin-top:6px">
+          ${[["freshman", "Freshman"], ["varsity", "Varsity"], ["allamerican", "All-American"], ["heisman", "Heisman"]].map(([v, l]) => `
+            <button class="gp-option gp-option-sm${(s[key] || "varsity") === v ? " active" : ""}" data-ob-diff-key="${key}" data-ob-diff-val="${v}">${l}</button>`).join("")}
+        </div>
+      </div>`;
+    const gpMode = s.gameplanMode === "simple" ? "simple" : "advanced";
     return `
     <div class="ob-step">
-      <div class="ob-kicker">STEP 1 \u2014 THE SIGNATURE</div>
-      <h2 class="ob-headline">Every dynasty starts with a name on a contract.</h2>
-      <p class="ob-flavor">Thirty years from now they'll put it on the stadium. For today, just make it legible.</p>
-      <div class="ob-name-row">
-        <div class="form-section">
-          <label class="form-label">FIRST NAME</label>
-          <input class="form-input" id="ob-first" type="text" placeholder="First" maxlength="16" autocomplete="off" value="${escapeHtml(ob.first)}" />
-        </div>
-        <div class="form-section">
-          <label class="form-label">LAST NAME</label>
-          <input class="form-input" id="ob-last" type="text" placeholder="Last" maxlength="16" autocomplete="off" value="${escapeHtml(ob.last)}" />
+      <div class="ob-kicker">STEP 1 \u2014 THE GROUND RULES</div>
+      <h2 class="ob-headline">Set the terms, Coach ${escapeHtml(ob.last || "")}.</h2>
+      <p class="ob-flavor">How hard the world pushes back, and how much of the chalkboard you want to run yourself. You can change all of this later in Settings.</p>
+
+      ${diffRow("difficulty", "On-Field Difficulty", "How well AI opponents EXECUTE in your games. Varsity is the pure game; Heisman means every opponent plays its best game of the year, every week.")}
+      ${diffRow("diffCoaching", "AI Coaching IQ", "How sharp opposing STAFFS are against you \u2014 weekly game-planning and halftime counters. Higher = they read your film harder and adjust faster.")}
+      ${diffRow("diffRecruiting", "Recruiting Difficulty", "How hard rival programs push in recruiting battles. Higher = rivals spend faster and fight harder for contested kids.")}
+
+      <div class="ob-setting-row">
+        <div class="ob-setting-label">Game Planning</div>
+        <div class="ob-setting-desc">Simple: a few big, plain-language dials \u2014 the sim handles the details. Advanced: full control of every scheme knob, situational grid, and play design.</div>
+        <div class="gp-mode-toggle" style="margin-top:6px">
+          <button class="gp-mode-btn${gpMode === "simple" ? " active" : ""}" data-ob-gpmode="simple">Simple</button>
+          <button class="gp-mode-btn${gpMode === "advanced" ? " active" : ""}" data-ob-gpmode="advanced">Advanced</button>
         </div>
       </div>
-      <button class="btn-primary ob-next" id="ob-next-0">SIGN IT \u2192</button>
+
+      <button class="btn-primary ob-next" id="ob-next-0" style="margin-top:16px">LET'S GO \u2192</button>
       <div class="ob-alt"><a href="#" id="ob-legacy-link">\u2026or take over an existing program instead</a></div>
     </div>
   `;
@@ -27806,11 +27827,22 @@ var _CFB = (() => {
       legacyMode = true;
       rerender();
     });
+    document.querySelectorAll("[data-ob-diff-key]").forEach((btn) => btn.addEventListener("click", () => {
+      if (!state.settings) state.settings = {};
+      state.settings[btn.dataset.obDiffKey] = btn.dataset.obDiffVal;
+      rerender();
+    }));
+    document.querySelectorAll("[data-ob-gpmode]").forEach((btn) => btn.addEventListener("click", () => {
+      if (!state.settings) state.settings = {};
+      state.settings.gameplanMode = btn.dataset.obGpmode;
+      rerender();
+    }));
     (_c = document.getElementById("ob-next-0")) == null ? void 0 : _c.addEventListener("click", () => {
-      saveNameInputs();
-      if (!ob.first || !ob.last) {
-        alert("First AND last name, Coach \u2014 it's going on the contract.");
-        return;
+      // Name now comes from the chosen coach profile \u2014 no signing step. Fall back to a
+      // sensible default only if somehow no profile name was set.
+      if (!ob.first && !ob.last) {
+        if (state._coachProfileName) { ob.first = state._coachProfileName.first; ob.last = state._coachProfileName.last; }
+        else { ob.first = "Coach"; ob.last = "Player"; }
       }
       obStep = 1;
       rerender();
