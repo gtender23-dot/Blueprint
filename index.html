@@ -7171,19 +7171,19 @@ var _CFB = (() => {
         "Otto",
         "Barry",
         "Lloyd",
-        "Nick",
-        "Urban",
-        "Les",
-        "Kirk",
-        "Mack",
+        "Hal",
+        "Wendell",
+        "Dean",
+        "Clint",
+        "Marty",
         "Gary",
-        "Jimbo",
-        "Dabo",
-        "Lane",
+        "Bo",
+        "Rollie",
+        "Duffy",
         "Brent",
         "Kyle",
-        "Kliff",
-        "Lincoln",
+        "Chuck",
+        "Sterling",
         "Ryan",
         "Josh",
         "Matt",
@@ -7262,7 +7262,7 @@ var _CFB = (() => {
         "Ozanne",
         "Kilpatrick",
         "Vroman",
-        "Satterfield",
+        "Satterlee",
         "Amsden",
         "Threadgill",
         "Boykin",
@@ -7524,8 +7524,6 @@ var _CFB = (() => {
         "Dan",
         "Bill",
         "Greg",
-        "Kirby",
-        "Lane",
         "Marcus",
         "Tony",
         "Rex",
@@ -7533,34 +7531,52 @@ var _CFB = (() => {
         "Wade",
         "Gus",
         "Chip",
-        "Lincoln",
-        "Dabo",
         "Mel",
         "Brent",
         "Todd",
-        "Jerry"
+        "Jerry",
+        "Doug",
+        "Ron",
+        "Carl",
+        "Wes",
+        "Neil",
+        "Trent",
+        "Marcus",
+        "Devin",
+        "Grady",
+        "Reggie",
+        "Bruce",
+        "Hank"
       ];
       LAST = [
         "Sullivan",
-        "Grantham",
         "Kelly",
-        "Pruitt",
-        "Venables",
-        "Aranda",
-        "Leach",
-        "Norvell",
-        "Gattis",
-        "Sarkisian",
-        "Elko",
-        "Steele",
-        "Kiffin",
-        "Monken",
-        "Cignetti",
-        "Rhule",
-        "Drinkwitz",
-        "Napier",
-        "Golding",
-        "Banks"
+        "Banks",
+        "Holt",
+        "Merritt",
+        "Prescott",
+        "Ashford",
+        "Whitaker",
+        "Coleman",
+        "Hargrove",
+        "Sutton",
+        "Ramsey",
+        "Delgado",
+        "Ferris",
+        "Wagner",
+        "Nolan",
+        "Boone",
+        "Escobar",
+        "Vaughn",
+        "Tanner",
+        "Malone",
+        "Redding",
+        "Sabatini",
+        "Okafor",
+        "Larkin",
+        "Prewett",
+        "Cardwell",
+        "Byrne"
       ];
       OC_RATINGS = ["qbRunDesign", "passGame", "runGame"];
       DC_RATINGS = ["blitzDesign", "coverage", "runFits"];
@@ -9383,7 +9399,7 @@ var _CFB = (() => {
   }
   function setRecruitDifficulty(level) {
     var _a;
-    _recDiffMult = (_a = { freshman: 0.75, varsity: 1, allamerican: 1.2, heisman: 1.4 }[level != null ? level : "varsity"]) != null ? _a : 1;
+    _recDiffMult = (_a = { freshman: 0.75, varsity: 1, allamerican: 1.2, legend: 1.4 }[level != null ? level : "varsity"]) != null ? _a : 1;
   }
   function driftRivals(recruit, distMult = 1, aiCtx = null) {
     var _a, _b, _c;
@@ -11254,22 +11270,22 @@ var _CFB = (() => {
         { id: "HPL", region: "Midwest", name: "Heartland Premier League", short: "HPL", division: "D1", conferenceClass: "power", lat: 40, lng: -93, r: 3 },
         // Mid-Major (5) — solid programs, prestige 1-3★ baseline, clamp [1,4]
         { id: "MCC", region: "MountainWest", name: "Mountain Collegiate Conference", short: "MCC", division: "D1", conferenceClass: "midMajor", lat: 40, lng: -112, r: 3 },
-        { id: "SBC", region: "DeepSouth", name: "Sun Belt Collegiate", short: "SBC", division: "D1", conferenceClass: "midMajor", lat: 31, lng: -90, r: 2.5 },
+        { id: "SBC", region: "DeepSouth", name: "Bayou Athletic Conference", short: "SBC", division: "D1", conferenceClass: "midMajor", lat: 31, lng: -90, r: 2.5 },
         { id: "NIC", region: "Northeast", name: "Northeast Intercollegiate", short: "NIC", division: "D1", conferenceClass: "midMajor", lat: 42.5, lng: -72.5, r: 2 },
         { id: "GSL", region: "Southwest", name: "Gulf States League", short: "GSL", division: "D1", conferenceClass: "midMajor", lat: 30, lng: -95, r: 2.5 },
         { id: "GLC", region: "GreatLakes", name: "Great Lakes Collegiate", short: "GLC", division: "D1", conferenceClass: "midMajor", lat: 42, lng: -84, r: 2 }
       ];
       D2_CONFS = [
         // 10 D2 conferences (was 9 — added GPI for §B.2 ~100/div target)
-        { id: "RMA", region: "MountainWest", name: "Rocky Mountain Athletic", short: "RMA", division: "D2", lat: 40.5, lng: -108, r: 3 },
+        { id: "RMA", region: "MountainWest", name: "High Country Athletic", short: "RMA", division: "D2", lat: 40.5, lng: -108, r: 3 },
         { id: "CCA", region: "Midwest", name: "Central Collegiate Athletic", short: "CCA", division: "D2", lat: 41, lng: -90, r: 2.5 },
         { id: "MIA", region: "GreatLakes", name: "Midwest Intercollegiate Athletic", short: "MIA", division: "D2", lat: 42, lng: -88, r: 2 },
-        { id: "GNW", region: "PacificNW", name: "Great Northwest Conference", short: "GNW", division: "D2", lat: 46, lng: -122, r: 3 },
-        { id: "SSC", region: "MidSouth", name: "Southern States Conference", short: "SSC", division: "D2", lat: 34.5, lng: -88, r: 2.5 },
-        { id: "CCC", region: "California", name: "California Collegiate Athletic", short: "CCC", division: "D2", lat: 36.3, lng: -119.6, r: 2.5 },
+        { id: "GNW", region: "PacificNW", name: "Evergreen Athletic League", short: "GNW", division: "D2", lat: 46, lng: -122, r: 3 },
+        { id: "SSC", region: "MidSouth", name: "Magnolia Athletic Conference", short: "SSC", division: "D2", lat: 34.5, lng: -88, r: 2.5 },
+        { id: "CCC", region: "California", name: "Coastal Valley Conference", short: "CCC", division: "D2", lat: 36.3, lng: -119.6, r: 2.5 },
         { id: "NEC", region: "Northeast", name: "New England Collegiate", short: "NEC", division: "D2", lat: 43, lng: -71.5, r: 2 },
         { id: "UML", region: "UpperMidwest", name: "Upper Midwest League", short: "UML", division: "D2", lat: 46.5, lng: -96, r: 3 },
-        { id: "LSC", region: "Southwest", name: "Lone Star Collegiate", short: "LSC", division: "D2", lat: 30.5, lng: -98, r: 2.8 },
+        { id: "LSC", region: "Southwest", name: "Frontier Athletic Conference", short: "LSC", division: "D2", lat: 30.5, lng: -98, r: 2.8 },
         { id: "GPI", region: "Plains", name: "Great Plains Intercollegiate", short: "GPI", division: "D2", lat: 39.5, lng: -97.5, r: 2.5 }
       ];
       D3_CONFS = [
@@ -11278,14 +11294,14 @@ var _CFB = (() => {
         // re-adds PacificNW coverage — D3 previously had NOTHING west of the
         // Plains, so a CA D3 program's "local" rival was 1,300 miles away.
         { id: "AMC", region: "MidAtlantic", name: "Allegheny Mountain Collegiate", short: "AMC", division: "D3", lat: 41, lng: -78, r: 2 },
-        { id: "HCA", region: "Plains", name: "Heartland Collegiate Athletic", short: "HCA", division: "D3", lat: 40.5, lng: -97, r: 2.5 },
+        { id: "HCA", region: "Plains", name: "Prairie Athletic League", short: "HCA", division: "D3", lat: 40.5, lng: -97, r: 2.5 },
         { id: "E8C", region: "Northeast", name: "Empire Collegiate Athletic", short: "E8C", division: "D3", lat: 42.5, lng: -76.5, r: 2 },
-        { id: "SCA", region: "Southeast", name: "Southern Collegiate Athletic", short: "SCA", division: "D3", lat: 35, lng: -82, r: 2.5 },
-        { id: "NCA", region: "GreatLakes", name: "North Coast Athletic", short: "NCA", division: "D3", lat: 41.5, lng: -82, r: 1.8 },
+        { id: "SCA", region: "Southeast", name: "Piedmont Athletic Conference", short: "SCA", division: "D3", lat: 35, lng: -82, r: 2.5 },
+        { id: "NCA", region: "GreatLakes", name: "Lakeshore Collegiate League", short: "NCA", division: "D3", lat: 41.5, lng: -82, r: 1.8 },
         { id: "TXI", region: "Southwest", name: "Texas Intercollegiate", short: "TXI", division: "D3", lat: 31.4, lng: -97.5, r: 2.5 },
-        { id: "IIA", region: "UpperMidwest", name: "Iowa Intercollegiate Athletic", short: "IIA", division: "D3", lat: 42, lng: -93, r: 2 },
-        { id: "GSA", region: "California", name: "Golden State Athletic", short: "GSA", division: "D3", lat: 36.6, lng: -119.9, r: 2.5 },
-        { id: "CAS", region: "PacificNW", name: "Cascade Collegiate Conference", short: "CAS", division: "D3", lat: 45.2, lng: -120.5, r: 3 }
+        { id: "IIA", region: "UpperMidwest", name: "Cornbelt Collegiate", short: "IIA", division: "D3", lat: 42, lng: -93, r: 2 },
+        { id: "GSA", region: "California", name: "Sierra Collegiate Athletic", short: "GSA", division: "D3", lat: 36.6, lng: -119.9, r: 2.5 },
+        { id: "CAS", region: "PacificNW", name: "Timberline Collegiate", short: "CAS", division: "D3", lat: 45.2, lng: -120.5, r: 3 }
       ];
       PRESTIGE_WEIGHTS = {
         power: [[6, 15], [5, 35], [4, 50]],
@@ -12174,7 +12190,25 @@ var _CFB = (() => {
         { n: "Mavericks", e: "\u{1F920}" },
         { n: "Buccaneers", e: "\u2693" },
         { n: "Pioneers", e: "\u{1F9ED}" },
-        { n: "Wolverines", e: "\u{1F43E}" }
+        { n: "Wolverines", e: "\u{1F43E}" },
+        { n: "Vikings", e: "\u{1F6E1}\ufe0f" },
+        { n: "Ravens", e: "\u{1F426}\u200d\u2b1b" },
+        { n: "Coyotes", e: "\u{1F43A}" },
+        { n: "Thunderbirds", e: "\u{1F985}" },
+        { n: "Rangers", e: "\u{1F920}" },
+        { n: "Colonels", e: "\u{1F396}\ufe0f" },
+        { n: "Wildhawks", e: "\u{1F985}" },
+        { n: "Ironhawks", e: "\u{1F985}" },
+        { n: "Silverbacks", e: "\u{1F98D}" },
+        { n: "Rhinos", e: "\u{1F98F}" },
+        { n: "Elk", e: "\u{1FACE}" },
+        { n: "Diamondbacks", e: "\u{1F40D}" },
+        { n: "Wranglers", e: "\u{1F920}" },
+        { n: "Highlanders", e: "\u{1F3F4}\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}" },
+        { n: "Comets", e: "\u2604\ufe0f" },
+        { n: "Vipers", e: "\u{1F40D}" },
+        { n: "Aviators", e: "\u2708\ufe0f" },
+        { n: "Ridgebacks", e: "\u{1F415}" }
       ];
       NICKS_REGIONAL = {
         Southeast: [
@@ -12195,13 +12229,17 @@ var _CFB = (() => {
           { n: "Gators", e: "\u{1F40A}" },
           { n: "Pelicans", e: "\u{1F426}" },
           { n: "Southerners", e: "\u{1F3BA}" },
-          { n: "Tornadoes", e: "\u{1F32A}\uFE0F" }
+          { n: "Tornadoes", e: "\u{1F32A}\uFE0F" },
+          { n: "Cottonmouths", e: "\u{1F40D}" },
+          { n: "Delta Kings", e: "\u{1F451}" },
+          { n: "Marsh Hawks", e: "\u{1F985}" },
+          { n: "Cypress Cats", e: "\u{1F408}" }
         ],
         MidSouth: [
           { n: "Colonels", e: "\u{1F396}\uFE0F" },
-          { n: "Racers", e: "\u{1F3C7}" },
-          { n: "Hilltoppers", e: "\u26F0\uFE0F" },
-          { n: "Governors", e: "\u{1F3DB}\uFE0F" },
+          { n: "Bluegrass", e: "\u{1F3C7}" },
+          { n: "Ridgerunners", e: "\u26F0\uFE0F" },
+          { n: "Statesmen", e: "\u{1F3DB}\uFE0F" },
           { n: "Blazers", e: "\u{1F525}" },
           { n: "Red Wolves", e: "\u{1F43A}" },
           { n: "Thoroughbreds", e: "\u{1F40E}" }
@@ -12233,22 +12271,25 @@ var _CFB = (() => {
         GreatLakes: [
           { n: "Rockets", e: "\u{1F680}" },
           { n: "Flashes", e: "\u26A1" },
-          { n: "Zips", e: "\u{1F45F}" },
+          { n: "Steelhawks", e: "\u{1F985}" },
           { n: "Polar Bears", e: "\u2744\uFE0F" },
           { n: "Muskies", e: "\u{1F41F}" },
-          { n: "Student Princes", e: "\u{1F451}" },
+          { n: "Ironclads", e: "\u{1F6E1}\uFE0F" },
           { n: "Vulcans", e: "\u{1F528}" },
-          { n: "Comets", e: "\u2604\uFE0F" }
+          { n: "Comets", e: "\u2604\uFE0F" },
+          { n: "Freighters", e: "\u{1F6A2}" }
         ],
         Midwest: [
-          { n: "Salukis", e: "\u{1F415}" },
           { n: "Redbirds", e: "\u{1F426}" },
           { n: "Leathernecks", e: "\u{1F396}\uFE0F" },
-          { n: "Ichabods", e: "\u{1F3A9}" },
-          { n: "Gorillas", e: "\u{1F98D}" },
           { n: "Mules", e: "\u{1F434}" },
           { n: "Prairie Fire", e: "\u{1F525}" },
-          { n: "Fighting Scots", e: "\u2694\uFE0F" }
+          { n: "Fighting Scots", e: "\u2694\uFE0F" },
+          { n: "Cornhawks", e: "\u{1F985}" },
+          { n: "Plowmen", e: "\u{1F33E}" },
+          { n: "Rivermen", e: "\u{1F6F6}" },
+          { n: "Grangers", e: "\u{1F33E}" },
+          { n: "Cyclers", e: "\u{1F32A}\uFE0F" }
         ],
         UpperMidwest: [
           { n: "Bison", e: "\u{1F9AC}" },
@@ -12258,7 +12299,7 @@ var _CFB = (() => {
           { n: "Dragons", e: "\u{1F409}" },
           { n: "Beavers", e: "\u{1F9AB}" },
           { n: "Pointers", e: "\u{1F415}" },
-          { n: "Blugolds", e: "\u{1F49B}" },
+          { n: "Blue & Gold", e: "\u{1F49B}" },
           { n: "Yellowjackets", e: "\u{1F41D}" },
           { n: "Norse", e: "\u2694\uFE0F" },
           { n: "Vikings", e: "\u2694\uFE0F" },
@@ -12269,9 +12310,12 @@ var _CFB = (() => {
           { n: "Threshers", e: "\u{1F33E}" },
           { n: "Antelopes", e: "\u{1F98C}" },
           { n: "Prairie Wolves", e: "\u{1F43A}" },
-          { n: "Swedes", e: "\u{1F49B}" },
+          { n: "Sodbusters", e: "\u{1F33E}" },
           { n: "Broncbusters", e: "\u{1F920}" },
-          { n: "Twisters", e: "\u{1F32A}\uFE0F" }
+          { n: "Twisters", e: "\u{1F32A}\uFE0F" },
+          { n: "Windmills", e: "\u{1F3D4}\uFE0F" },
+          { n: "Homesteaders", e: "\u{1F3E1}" },
+          { n: "Dust Devils", e: "\u{1F32A}\uFE0F" }
         ],
         MountainWest: [
           { n: "Miners", e: "\u26CF\uFE0F" },
@@ -12306,7 +12350,7 @@ var _CFB = (() => {
           { n: "Reef Sharks", e: "\u{1F988}" }
         ],
         Alaska: [
-          { n: "Nanooks", e: "\u{1F43B}\u200D\u2744\uFE0F" },
+          { n: "Frostbears", e: "\u{1F43B}\u200D\u2744\uFE0F" },
           { n: "Seawolves", e: "\u{1F43A}" },
           { n: "Malamutes", e: "\u{1F415}" },
           { n: "Sourdoughs", e: "\u26CF\uFE0F" },
@@ -12319,8 +12363,10 @@ var _CFB = (() => {
           { n: "Loggers", e: "\u{1FA93}" },
           { n: "Pilots", e: "\u2708\uFE0F" },
           { n: "Boxers", e: "\u{1F415}" },
-          { n: "Geoducks", e: "\u{1F30A}" },
+          { n: "Tidewater", e: "\u{1F30A}" },
           { n: "Evergreens", e: "\u{1F332}" },
+          { n: "Orcas", e: "\u{1F433}" },
+          { n: "Rainmakers", e: "\u{1F327}️" },
           { n: "Cascades", e: "\u26F0\uFE0F" },
           { n: "Lumberjacks", e: "\u{1FA93}" },
           { n: "Vikings", e: "\u2694\uFE0F" }
@@ -12328,14 +12374,16 @@ var _CFB = (() => {
         California: [
           { n: "Matadors", e: "\u{1F402}" },
           { n: "Gauchos", e: "\u{1F920}" },
-          { n: "Anteaters", e: "\u{1F41C}" },
+          { n: "Sea Lions", e: "\u{1F9AD}" },
           { n: "Otters", e: "\u{1F9A6}" },
           { n: "Dons", e: "\u{1F3A9}" },
-          { n: "Banana Slugs", e: "\u{1F34C}" },
+          { n: "Redwoods", e: "\u{1F332}" },
           { n: "Toreros", e: "\u{1F402}" },
           { n: "Leopards", e: "\u{1F406}" },
           { n: "Waves", e: "\u{1F30A}" },
-          { n: "Tritons", e: "\u{1F531}" }
+          { n: "Tritons", e: "\u{1F531}" },
+          { n: "Condors", e: "\u{1F985}" },
+          { n: "Surf", e: "\u{1F3C4}" }
         ]
       };
       NICKS_TECH = [
@@ -12345,7 +12393,15 @@ var _CFB = (() => {
         { n: "Ironmen", e: "\u{1F529}" },
         { n: "Rockets", e: "\u{1F680}" },
         { n: "Miners", e: "\u26CF\uFE0F" },
-        { n: "Beavers", e: "\u{1F9AB}" }
+        { n: "Beavers", e: "\u{1F9AB}" },
+        { n: "Steamfitters", e: "\u{1F528}" },
+        { n: "Voltage", e: "\u26A1" },
+        { n: "Foundrymen", e: "\u{1F525}" },
+        { n: "Machinists", e: "\u{1F6E0}\uFE0F" },
+        { n: "Circuits", e: "\u{1F50C}" },
+        { n: "Prospectors", e: "\u26CF\uFE0F" },
+        { n: "Blastmen", e: "\u{1F4A5}" },
+        { n: "Reactors", e: "\u2622\uFE0F" }
       ];
       NICKS_RELIGIOUS = [
         { n: "Saints", e: "\u{1F607}" },
@@ -12358,25 +12414,40 @@ var _CFB = (() => {
         { n: "Royals", e: "\u{1F451}" },
         { n: "Green Knights", e: "\u{1F6E1}\uFE0F" },
         { n: "Purple Knights", e: "\u{1F6E1}\uFE0F" },
-        { n: "Cardinals", e: "\u{1F534}" }
+        { n: "Cardinals", e: "\u{1F534}" },
+        { n: "Pilgrims", e: "\u{1F6B6}" },
+        { n: "Shepherds", e: "\u{1F411}" },
+        { n: "Gospels", e: "\u{1F4D6}" },
+        { n: "Templars", e: "\u2694\uFE0F" },
+        { n: "Chargers of Faith", e: "\u271D\uFE0F" },
+        { n: "Wardens", e: "\u{1F5DD}\uFE0F" },
+        { n: "Abbots", e: "\u271D\uFE0F" }
       ];
       NICKS_QUIRKY = [
-        { n: "Gorloks", e: "\u{1F47E}" },
-        { n: "Jumbos", e: "\u{1F418}" },
-        { n: "Ephs", e: "\u{1F4DA}" },
-        { n: "Bantams", e: "\u{1F414}" },
-        { n: "Camels", e: "\u{1F42A}" },
-        { n: "Muleriders", e: "\u{1F920}" },
-        { n: "Mammoths", e: "\u{1F9A3}" },
-        { n: "Little Giants", e: "\u{1F4AA}" },
+        { n: "Thunderducks", e: "\u{1F986}" },
+        { n: "Fighting Badgers", e: "\u{1F9A1}" },
+        { n: "Nightjars", e: "\u{1F426}" },
+        { n: "Ironhogs", e: "\u{1F417}" },
+        { n: "Screaming Weasels", e: "\u{1F43E}" },
+        { n: "Turnips", e: "\u{1FADB}" },
         { n: "Fighting Bees", e: "\u{1F41D}" },
-        { n: "Blue Hose", e: "\u{1F535}" },
-        { n: "Judges", e: "\u2696\uFE0F" },
-        { n: "Gales", e: "\u{1F4A8}" },
-        { n: "Poets", e: "\u{1F58B}\uFE0F" },
-        { n: "Kangaroos", e: "\u{1F998}" },
+        { n: "Mud Hens", e: "\u{1F414}" },
+        { n: "Gravediggers", e: "\u26CF\uFE0F" },
+        { n: "Prospectors", e: "\u26CF\uFE0F" },
+        { n: "Cartographers", e: "\u{1F5FA}\uFE0F" },
         { n: "Fighting Squirrels", e: "\u{1F43F}\uFE0F" },
-        { n: "Boll Weevils", e: "\u{1FAB2}" }
+        { n: "Kangaroos", e: "\u{1F998}" },
+        { n: "Whirlwinds", e: "\u{1F32A}\uFE0F" },
+        { n: "Battling Beavers", e: "\u{1F9AB}" },
+        { n: "Marmots", e: "\u{1F439}" },
+        { n: "Lamplighters", e: "\u{1F3EE}" },
+        { n: "Fighting Okra", e: "\u{1F33F}" },
+        { n: "Steamrollers", e: "\u{1F6A7}" },
+        { n: "Purple Herons", e: "\u{1FABF}" },
+        { n: "Woolly Rams", e: "\u{1F411}" },
+        { n: "Thundering Moose", e: "\u{1FACE}" },
+        { n: "Fightin' Pelicans", e: "\u{1F9A9}" },
+        { n: "Corn Stalkers", e: "\u{1F33D}" }
       ];
       NICK_AGGIES = { n: "Aggies", e: "\u{1F33E}" };
       COLOR_PAIRS = [
@@ -18830,7 +18901,7 @@ var _CFB = (() => {
       freshman: { eff: 0.02, thr: 0.55 },
       varsity: { eff: 0.04, thr: 0.45 },
       allamerican: { eff: 0.055, thr: 0.42 },
-      heisman: { eff: 0.07, thr: 0.38 }
+      legend: { eff: 0.07, thr: 0.38 }
     }[iq != null ? iq : "varsity"]) != null ? _a : { eff: 0.04, thr: 0.45 };
     if (!defGP || defGP._h2Counter) return;
     const counts = {};
@@ -19722,7 +19793,7 @@ var _CFB = (() => {
         freshman: -0.05,
         varsity: 0,
         allamerican: 0.03,
-        heisman: 0.06
+        legend: 0.06
       };
     }
   });
@@ -20983,7 +21054,7 @@ var _CFB = (() => {
         freshman: { skip: 0.45, mult: 0.6 },
         varsity: { skip: 0, mult: 1 },
         allamerican: { skip: 0, mult: 1.25 },
-        heisman: { skip: 0, mult: 1.5 }
+        legend: { skip: 0, mult: 1.5 }
       };
     }
   });
@@ -27601,7 +27672,7 @@ var _CFB = (() => {
         <div class="ob-setting-label">${label}</div>
         <div class="ob-setting-desc">${desc}</div>
         <div class="gp-options" style="flex-wrap:wrap;margin-top:6px">
-          ${[["freshman", "Freshman"], ["varsity", "Varsity"], ["allamerican", "All-American"], ["heisman", "Heisman"]].map(([v, l]) => `
+          ${[["freshman", "Freshman"], ["varsity", "Varsity"], ["allamerican", "All-American"], ["legend", "Legend"]].map(([v, l]) => `
             <button class="gp-option gp-option-sm${(s[key] || "varsity") === v ? " active" : ""}" data-ob-diff-key="${key}" data-ob-diff-val="${v}">${l}</button>`).join("")}
         </div>
       </div>`;
@@ -27612,7 +27683,7 @@ var _CFB = (() => {
       <h2 class="ob-headline">Set the terms, Coach ${escapeHtml(ob.last || "")}.</h2>
       <p class="ob-flavor">How hard the world pushes back, and how much of the chalkboard you want to run yourself. You can change all of this later in Settings.</p>
 
-      ${diffRow("difficulty", "On-Field Difficulty", "How well AI opponents EXECUTE in your games. Varsity is the pure game; Heisman means every opponent plays its best game of the year, every week.")}
+      ${diffRow("difficulty", "On-Field Difficulty", "How well AI opponents EXECUTE in your games. Varsity is the pure game; Legend means every opponent plays its best game of the year, every week.")}
       ${diffRow("diffCoaching", "AI Coaching IQ", "How sharp opposing STAFFS are against you \u2014 weekly game-planning and halftime counters. Higher = they read your film harder and adjust faster.")}
       ${diffRow("diffRecruiting", "Recruiting Difficulty", "How hard rival programs push in recruiting battles. Higher = rivals spend faster and fight harder for contested kids.")}
 
@@ -35800,17 +35871,17 @@ var _CFB = (() => {
       [
         "difficulty",
         "On-Field Difficulty",
-        "How well AI opponents EXECUTE in your games (league games between AI teams are never touched, so records and rankings stay honest). Freshman: they play below their talent. Varsity: the pure game. All-American: sharp enough to cancel a well-tuned gameplan at even talent. Heisman: every opponent plays its best game of the year, every week."
+        "How well AI opponents EXECUTE in your games (league games between AI teams are never touched, so records and rankings stay honest). Freshman: they play below their talent. Varsity: the pure game. All-American: sharp enough to cancel a well-tuned gameplan at even talent. Legend: every opponent plays its best game of the year, every week."
       ],
       [
         "diffCoaching",
         "AI Coaching IQ",
-        "How sharp opposing STAFFS are against you \u2014 weekly game-planning and halftime counters. Freshman staffs sometimes don\u2019t game-plan at all and react at half strength. All-American reads your film harder and counters off a smaller sample. Heisman staffs game-plan like pros: stronger keys, faster halftime adjustments. Only applies to teams playing YOU."
+        "How sharp opposing STAFFS are against you \u2014 weekly game-planning and halftime counters. Freshman staffs sometimes don\u2019t game-plan at all and react at half strength. All-American reads your film harder and counters off a smaller sample. Legend staffs game-plan like pros: stronger keys, faster halftime adjustments. Only applies to teams playing YOU."
       ],
       [
         "diffRecruiting",
         "Recruiting Difficulty",
-        "How hard rival programs push in recruiting battles. Freshman rivals spend soft. Varsity is the pure market. All-American and Heisman rivals push their boards harder and spend faster \u2014 you\u2019ll need real strategy (and budget) to win contested kids. The rules never change, only the pressure."
+        "How hard rival programs push in recruiting battles. Freshman rivals spend soft. Varsity is the pure market. All-American and Legend rivals push their boards harder and spend faster \u2014 you\u2019ll need real strategy (and budget) to win contested kids. The rules never change, only the pressure."
       ]
     ].map(([key, label, desc]) => `
           <div class="setting-row">
@@ -35819,7 +35890,7 @@ var _CFB = (() => {
               <div class="setting-desc">${desc}</div>
             </div>
             <div class="gp-options" style="flex-wrap:wrap">
-              ${[["freshman", "Freshman"], ["varsity", "Varsity"], ["allamerican", "All-American"], ["heisman", "Heisman"]].map(([v, l]) => `
+              ${[["freshman", "Freshman"], ["varsity", "Varsity"], ["allamerican", "All-American"], ["legend", "Legend"]].map(([v, l]) => `
                 <button class="gp-option gp-option-sm${(s[key] || "varsity") === v ? " active" : ""}" data-diff-key="${key}" data-diff-val="${v}">${l}</button>`).join("")}
             </div>
           </div>`).join("")}
