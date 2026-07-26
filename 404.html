@@ -5276,6 +5276,13 @@ var _CFB = (() => {
         COMP_QB_EXEC_CENTER: 91,
         COMP_QB_EXEC_SCALE: 0.0184,
         COMP_QB_EXEC_CAP: 0.06,
+        // QB arm: the zip/reach behind the throw. PWR drives a short ball into a tight
+        // window, STR carries a deep shot, medium blends the two. Centered at 50 (average
+        // arm neutral); ~+0.24 on the completion logit for a 90-armed QB, ~-0.12 for a 30.
+        COMP_ARM_SCALE: 0.006,
+        // A weak arm hangs a deep ball — underthrown shots get picked. On DEEP throws this
+        // scales INT rate off STR: a 30-STR QB ~+1.16x picks, a strong arm slightly fewer.
+        INT_ARM_SCALE: 0.008,
         // positive excursion cap above COMP_RECENTER — accuracy has a ceiling (elite QB comp% band 68-72)
         COMP_RECENTER: 0.32,
         // [TUNE Jul 2026: 0.37→0.32 — Phase-2 AI plans (fitted target shares/formations) added ~2 comp% league-wide; recentered back to D1 ~62-64]
@@ -6433,22 +6440,24 @@ var _CFB = (() => {
         P: -14.6
       };
       POS_WEIGHTS = {
-        // GENERATED from the contest table (average of each position's archetype
-        // roles) — edit tools/roleweights_from_contests.mjs, not this block.
-        CB: { SPD: 25, AGI: 16, PWR: 2, JMP: 8, HND: 3, TKL: 7, TEC: 13, AWR: 26 },
-        DE: { SPD: 19, AGI: 11, PWR: 13, STR: 17, JMP: 3, TKL: 20, TEC: 14, AWR: 3 },
-        DT: { SPD: 14, AGI: 6, PWR: 19, STR: 21, JMP: 3, TKL: 22, TEC: 14, AWR: 1 },
-        FB: { SPD: 3, AGI: 8, PWR: 16, STR: 13, HND: 14, SEC: 10, BLK: 13, TEC: 13, AWR: 10 },
+        // Base was generated from the contest table; hand-tuned (Jul 2026) to treat STR &
+        // PWR as ATHLETIC attributes — like SPD/AGI they now carry a baseline at every
+        // position (a strong, powerful athlete rates better anywhere), not just the
+        // trenches. SEC's overall weight was trimmed (it was over-weighted for ball-carriers).
+        CB: { SPD: 25, AGI: 16, PWR: 6, STR: 5, JMP: 8, HND: 3, TKL: 7, TEC: 12, AWR: 24 },
+        DE: { SPD: 19, AGI: 11, PWR: 14, STR: 17, JMP: 3, TKL: 20, TEC: 13, AWR: 3 },
+        DT: { SPD: 14, AGI: 6, PWR: 20, STR: 21, JMP: 3, TKL: 22, TEC: 13, AWR: 1 },
+        FB: { SPD: 3, AGI: 8, PWR: 16, STR: 14, HND: 13, SEC: 5, BLK: 13, TEC: 13, AWR: 10 },
         K: { STR: 50, TEC: 50 },
-        LB: { SPD: 25, AGI: 15, PWR: 6, STR: 4, JMP: 1, HND: 1, TKL: 19, TEC: 13, AWR: 16 },
-        OL: { SPD: 2, AGI: 17, PWR: 15, STR: 14, BLK: 28, TEC: 13, AWR: 11 },
-        OLB: { SPD: 26, AGI: 19, PWR: 4, STR: 6, JMP: 3, HND: 1, TKL: 17, TEC: 13, AWR: 11 },
+        LB: { SPD: 24, AGI: 15, PWR: 8, STR: 8, JMP: 1, HND: 1, TKL: 18, TEC: 12, AWR: 15 },
+        OL: { SPD: 2, AGI: 16, PWR: 16, STR: 15, BLK: 27, TEC: 12, AWR: 11 },
+        OLB: { SPD: 25, AGI: 18, PWR: 7, STR: 8, JMP: 3, HND: 1, TKL: 16, TEC: 12, AWR: 11 },
         P: { STR: 50, TEC: 50 },
-        QB: { SPD: 7, AGI: 7, STR: 17, SEC: 9, TEC: 25, AWR: 35 },
-        RB: { SPD: 19, AGI: 18, PWR: 9, STR: 5, HND: 12, SEC: 10, BLK: 1, TEC: 12, AWR: 14 },
-        S: { SPD: 25, AGI: 14, PWR: 3, STR: 1, JMP: 6, HND: 3, TKL: 12, TEC: 12, AWR: 24 },
-        TE: { SPD: 10, AGI: 13, PWR: 6, STR: 6, JMP: 7, HND: 25, BLK: 10, TEC: 13, AWR: 10 },
-        WR: { SPD: 22, AGI: 14, PWR: 1, STR: 1, JMP: 8, HND: 28, SEC: 6, BLK: 1, TEC: 12, AWR: 7 }
+        QB: { SPD: 7, AGI: 7, PWR: 11, STR: 15, SEC: 4, TEC: 23, AWR: 33 },
+        RB: { SPD: 19, AGI: 18, PWR: 11, STR: 8, HND: 12, SEC: 6, BLK: 1, TEC: 12, AWR: 13 },
+        S: { SPD: 25, AGI: 14, PWR: 6, STR: 5, JMP: 6, HND: 3, TKL: 12, TEC: 12, AWR: 23 },
+        TE: { SPD: 10, AGI: 13, PWR: 9, STR: 8, JMP: 7, HND: 24, BLK: 10, TEC: 12, AWR: 10 },
+        WR: { SPD: 22, AGI: 14, PWR: 6, STR: 5, JMP: 8, HND: 27, SEC: 3, BLK: 1, TEC: 12, AWR: 7 }
       };
       ROLE_WEIGHTS = {
         // GENERATED from the contest table — edit tools/roleweights_from_contests.mjs, not this block.
@@ -8470,6 +8479,17 @@ var _CFB = (() => {
         for (const a of K) attrs[a] = clamp2(attrs[a] + randInt3(10, 20), 1, 99);
         for (const a of M) attrs[a] = clamp2(attrs[a] - randInt3(6, 14), 1, 99);
       }
+    }
+    // STR & PWR are athletic attributes, in the same vein as SPD/AGI — but they're core
+    // for few/no positions, so they used to strand at the division base (PWR most of all:
+    // core for nobody, it generated ~20 pts below STR everywhere and looked broken in D3).
+    // Give them an athletic floor tied to the player's SPD/AGI so every position is at
+    // least a credible athlete, then correlate PWR with STR (a strong player is a powerful
+    // one). Power positions still dominate; skill positions get a believable, not elite, base.
+    {
+      const _athl = (attrs.SPD + attrs.AGI) / 2;
+      attrs.STR = clamp2(Math.round(Math.max(attrs.STR, base * 0.35 + _athl * 0.35 + randNorm(0, 6))), 1, 99);
+      attrs.PWR = clamp2(Math.round(0.45 * attrs.PWR + 0.55 * attrs.STR + randNorm(0, 5)), 1, 99);
     }
     const CAPPED_ATTRS = C.CAPPED_ATTRS || ["SPD", "AGI", "PWR", "STR", "JMP"];
     const physCap = (C.PHYS_CAP_BY_TIER && C.PHYS_CAP_BY_TIER[tier]) || 99;
@@ -16789,9 +16809,14 @@ var _CFB = (() => {
       (qb.attributes.TEC * 0.5 + qb.attributes.AWR * 0.5 - C.COMP_QB_EXEC_CENTER) * C.COMP_QB_EXEC_SCALE + C.COMP_RECENTER,
       C.COMP_RECENTER + C.COMP_QB_EXEC_CAP
     );
+    // Arm zip/reach by depth: PWR is the velocity behind a short throw (beats tight
+    // windows), STR is the arm to carry a deep shot; medium blends the two. Accuracy
+    // (qbExec) is still the primary driver — this is a secondary, depth-specific modifier.
+    const armAttr = passDepth === "short" ? qb.attributes.PWR : passDepth === "deep" ? qb.attributes.STR : (qb.attributes.STR + qb.attributes.PWR) / 2;
+    const armFactor = ((armAttr != null ? armAttr : 50) - 50) * C.COMP_ARM_SCALE;
     const dnaAirBoost = passDepth === "deep" ? (_passCtx.dnaAir || 0) * 0.01 : 0;
     const catchProb = clamp2(
-      logistic((sep - 0.42) * 5 + qbExec + sizeMismatch - (hurried ? C.HURRY_PENALTY : 0) - (bracketed ? 0.12 : 0) - (forced ? 0.45 : 0)) * (1 + dnaAirBoost),
+      logistic((sep - 0.42) * 5 + qbExec + armFactor + sizeMismatch - (hurried ? C.HURRY_PENALTY : 0) - (bracketed ? 0.12 : 0) - (forced ? 0.45 : 0)) * (1 + dnaAirBoost),
       // forcing into coverage: harder completion; airAttack DNA lifts deep-ball accuracy
       0.04,
       0.97
@@ -16812,8 +16837,12 @@ var _CFB = (() => {
     const aggrIntMult = clamp2(1 + (_passCtx.qbAggr - 50) / 100 * 0.5, 0.75, 1.3);
     const dnaBallSecMult = 1 - (_passCtx.dnaBallSec || 0) * 0.01;
     const dnaBallHawkMult = contested ? 1 + (_passCtx.dnaBallHawk || 0) * 0.01 : 1;
+    // Weak-arm deep balls hang and get picked: on a deep shot, INT rate scales off the QB's
+    // STR (his deep arm). Neutral at 50; a noodle arm throws more picks downfield, a cannon
+    // slightly fewer. Short/medium unaffected (accuracy, not arm, drives those turnovers).
+    const armIntMult = passDepth === "deep" ? clamp2(1 + (50 - ((qb == null ? void 0 : qb.attributes.STR) != null ? qb.attributes.STR : 50)) * C.INT_ARM_SCALE, 0.9, 1.45) : 1;
     const intProb = clamp2(
-      C.INT_READ_SCALE * (1 - sep) * defReadAbility / 55 * depthMult * qbIntMult * forcedIntMult * passKeyIntMult * styleIntMult * aggrIntMult * dnaBallSecMult * dnaBallHawkMult,
+      C.INT_READ_SCALE * (1 - sep) * defReadAbility / 55 * depthMult * qbIntMult * forcedIntMult * passKeyIntMult * styleIntMult * aggrIntMult * dnaBallSecMult * dnaBallHawkMult * armIntMult,
       3e-3,
       0.19
     );
