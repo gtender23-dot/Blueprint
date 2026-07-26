@@ -5079,6 +5079,54 @@ body.theme-school .data-table tr:hover td {
 .watch-board-collapsed .cs-footer { margin-top: auto; padding-top: 18px; }
 
   
+/* ── The Manual ─────────────────────────────────────────────────────────────
+   Long-form reading, on a phone as often as a desktop. So: a measure that
+   caps out around 68 characters, generous line height, and headings that
+   separate ideas without shouting. Nothing here is a card — a chapter is
+   prose, and boxing every paragraph would fight the reading. */
+.manual-intro { color: var(--text-2); font-size: 13px; line-height: 1.65; max-width: 62ch; margin: 0 0 18px; }
+.manual-note  { color: var(--text-2); font-size: 12px; font-style: italic; margin: 18px 0 0; }
+
+.manual-toc { display: flex; flex-direction: column; gap: 8px; }
+.manual-toc-item {
+  display: flex; align-items: flex-start; gap: 12px; width: 100%; text-align: left;
+  padding: 13px 14px; background: var(--card, rgba(255,255,255,0.03));
+  border: 1px solid var(--border-sub); border-radius: 10px; cursor: pointer;
+  color: inherit; font: inherit;
+}
+.manual-toc-item:hover { border-color: var(--team-1, var(--gold)); }
+.manual-toc-num  { font-size: 11px; font-weight: 700; color: var(--text-3, var(--text-2)); padding-top: 3px; min-width: 18px; }
+.manual-toc-icon { font-size: 17px; line-height: 1.2; }
+.manual-toc-text { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-width: 0; }
+.manual-toc-title { font-size: 14px; font-weight: 700; }
+.manual-toc-blurb { font-size: 12px; line-height: 1.5; color: var(--text-2); }
+.manual-toc-go   { color: var(--text-3, var(--text-2)); font-size: 15px; padding-top: 2px; }
+
+.manual-chapter-title { display: flex; align-items: center; gap: 9px; margin-top: 8px; }
+.manual-chapter-icon  { font-size: 22px; }
+
+.manual-chapter { max-width: 68ch; }
+.manual-section { margin: 0 0 26px; }
+.manual-heading {
+  font-size: 15px; font-weight: 700; margin: 0 0 9px;
+  color: var(--team-1, var(--gold)); letter-spacing: 0.01em;
+}
+.manual-body { font-size: 14px; line-height: 1.72; color: var(--text-1, inherit); }
+.manual-body b { font-weight: 700; }
+.manual-body i, .manual-body em { font-style: italic; color: var(--text-2); }
+
+.manual-pager {
+  display: flex; justify-content: space-between; gap: 10px;
+  margin-top: 26px; padding-top: 16px; border-top: 1px solid var(--border-sub);
+}
+
+@media (max-width: 700px) {
+  .manual-chapter { max-width: none; }
+  .manual-body    { font-size: 15px; }
+  .manual-pager   { flex-direction: column; }
+  .manual-pager .btn-ghost { width: 100%; }
+}
+
   </style>
 </head>
 <body>
@@ -5088,7 +5136,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "2f695040df";
+globalThis.__BUILD__ = "ceff64937e";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -25254,7 +25302,9 @@ var _CFB = (() => {
         </div>
         <div class="modal-body guide-body">
           <p class="guide-intro">The two-minute version of every system. You can't
-          break anything by skipping this \u2014 the game explains itself as you go.</p>
+          break anything by skipping this \u2014 the game explains itself as you go.
+          When you want the real mechanism rather than the summary, <b>The Manual</b>
+          (in the main menu) is the long version.</p>
           ${SECTIONS.map((s) => `
             <div class="guide-section">
               <div class="guide-head"><span class="guide-icon">${s.icon}</span>
@@ -35498,6 +35548,237 @@ var _CFB = (() => {
     });
   }
 
+  // js/ui/views/manual.js
+  init_state();
+  init_utils();
+
+  // js/ui/manual/reading-a-player.js
+  var chapter = {
+    id: "reading-a-player",
+    icon: "\u{1F50D}",
+    title: "Reading a Player",
+    blurb: "What overall actually measures, why role fit disagrees with it, and what the testing sheet is really telling you.",
+    sections: [
+      {
+        heading: "Overall is an opinion about a job",
+        body: `A player's <b>overall</b> is not a measure of the athlete. It is a measure of
+      how well his attributes fit the job his position asks him to do \u2014 and every position
+      asks for something different, so the same body rates differently depending on where
+      you line him up.
+
+      A quarterback is graded first on what he sees and how fast he processes it; his arm
+      matters, his legs matter least. A corner is graded first on speed, then on awareness,
+      then on the agility to change direction with a receiver \u2014 his tackling is a minor
+      note. A guard is graded first on blocking, then on the power and balance to hold up
+      against a bull rush. A receiver is graded first on his hands, then his speed.
+
+      This is why moving a player is not free and not fatal. A safety with a corner's
+      attribute shape rates well at corner. A safety who plays like a linebacker does not.
+      The number follows the job, not the man.`
+      },
+      {
+        heading: "Why the same number means the same thing everywhere",
+        body: `An overall is an average, and averages behave badly when the number of things
+      being averaged changes. A punter is graded on a handful of attributes; a tight end is
+      graded on many. Averaged straight, the tight end regresses toward the middle simply
+      because he is being asked about more things \u2014 and every tight end in football looks
+      mediocre while every punter looks like a star, for reasons that have nothing to do
+      with either of them.
+
+      So each position is shifted onto a common scale before you see it. A tight end and a
+      corner with the same overall are genuinely comparable. Within a position nothing is disturbed \u2014 the
+      order of your tight ends, and the gaps between them, are exactly what the raw math
+      said. Only the whole group moves.
+
+      One consequence worth knowing: because specialists are graded on so few things, their
+      raw numbers were the furthest off the common scale, and their correction is the
+      largest. Your kicker's overall has been pulled down harder than anyone's to make it
+      mean the same thing as everyone else's.`
+      },
+      {
+        heading: "Role fit: the same player, a different question",
+        body: `Overall asks "how good a corner is he?" A <b>role rating</b> asks something
+      narrower: how good a <i>press</i> corner is he? How good a <i>lead-blocking</i>
+      fullback, a <i>zone</i> guard, a <i>possession</i> receiver?
+
+      It is the same arithmetic with a different set of priorities. And because the
+      priorities differ, the answers differ. A receiver whose hands and body control are
+      exceptional but whose speed is ordinary will rate below a burner on overall and above
+      him on the fade \u2014 because the fade asks about tracking a ball in the air and winning
+      it at the catch point, and does not care much who got there faster.
+
+      This is the single most useful thing on the depth chart. When you tap a slot, the list
+      is sorted by fit for <i>that job</i>, not by overall. A lower-overall player at the
+      top of that list is not a mistake. He is the answer to a more specific question, and
+      the more specific question is the one the play is going to ask.`
+      },
+      {
+        heading: "Archetypes describe him now",
+        body: `An <b>archetype</b> \u2014 Scrambler, Mauler, Nose, Possession \u2014 is not a label your
+      player was born with and carries forever. It is read off his current attributes, every
+      time you look at it. Develop a receiver's hands and ball skills and he stops being a
+      deep threat and becomes a possession receiver, with no announcement and nothing to
+      switch.
+
+      The way it is read matters. A player is compared <i>only to himself</i>: not "is his
+      strength high?" but "is he stronger than he is fast?" That is why a small-school
+      roster still splits sensibly across every archetype instead of collapsing into one.
+      Judged against an absolute bar, a whole division of players who are all a bit below
+      average would come out the same type. Judged against himself, a back who is powerful
+      <i>for his own body</i> is a power back, and he plays like one.
+
+      This is not decoration. The archetype your player reads as is the one the simulation
+      uses when it decides how he behaves on a snap.`
+      },
+      {
+        heading: "Potential, and the thing that gates it",
+        body: `Every player carries a ceiling he will never be told about. What you can see is
+      the effort he brings to reaching it.
+
+      <b>Work Ethic</b> is the gate, and it is a hard one. A gifted, lazy player stalls well
+      short of what he could have been \u2014 you watch four years of a ceiling that never gets
+      touched. A grinder with a modest ceiling reaches it, all of it, and reaches it early.
+      Between two prospects with the same overall, the one who works is worth more every
+      time, and it is not close.
+
+      Work ethic does one more thing, quietly. Players from smaller programs carry a limit
+      on how far their raw physical tools can be built \u2014 but a genuinely relentless kid
+      earns headroom above that limit. It is not enough to turn a small-school body into a
+      blue-chip one. It is enough that the hardest worker in a small division can outgrow
+      what that division is supposed to produce, which is exactly the player you are hunting
+      for when you cannot outbid anyone.`
+      },
+      {
+        heading: "The testing sheet, and what it is not",
+        body: `You can see every one of a recruit's attributes before you spend a dollar on
+      him. What you cannot see, until you scout him, is his <b>true rating</b> \u2014 how those
+      attributes add up <i>for his position</i>.
+
+      That gap is the entire scouting game, and it is not a fog machine. Two honest numbers
+      sit underneath it. The first is what a naive eye sees: his attributes taken flat,
+      every one counted the same \u2014 the workout. The second is what actually plays: the same
+      attributes, weighted by the job. When those two disagree, you have found something.
+
+      A player whose flat average outruns his weighted rating is the <b>workout warrior</b>.
+      He tests beautifully. His best numbers are in the columns his position does not ask
+      about. He will be recruited hard by people reading the wrong row.
+
+      A player whose weighted rating outruns his flat average is the <b>gamer</b>. Nothing
+      on his sheet jumps. But the attributes he does have are precisely the ones his job
+      demands, and he will be better on Saturday than he looks on Wednesday.
+
+      Nothing is being hidden from you that is not also available to you. The tags are
+      shorthand for a judgement you could make yourself with the numbers already on the
+      screen \u2014 which is exactly what an <i>Evaluator</i> is for, and why the skill pays.`
+      },
+      {
+        heading: "What to actually do with all this",
+        body: `Recruit the shape, not the number. A prospect whose strengths line up with what
+      his position is graded on will rate higher every year he develops, because development
+      lands on attributes and attributes are what the rating reads.
+
+      Trust role fit over overall when you are filling a specific job, and trust overall when
+      you are asking who your best players are. They are different questions and the depth
+      chart answers both, in different places.
+
+      And treat work ethic as a rating, not a footnote. Everything else on the sheet is what
+      he is. Work ethic is how much of what he could be you will actually get to coach \u2014 and
+      how much of it is covered in <i>Building a Player</i>.`
+      }
+    ]
+  };
+
+  // js/ui/manual/index.js
+  var MANUAL_CHAPTERS = [
+    chapter
+  ];
+  var chapterById = (id) => MANUAL_CHAPTERS.find((c) => c.id === id) || null;
+
+  // js/ui/views/manual.js
+  function tocHtml() {
+    return `
+    <div class="view-manual">
+      <div class="view-header">
+        <div>
+          <h1 class="view-title">The Manual</h1>
+          <div class="view-subtitle">How this game actually works, in football terms</div>
+        </div>
+      </div>
+
+      <p class="manual-intro">Everything here is the real mechanism, not a summary of the
+      menus. What you will not find is a single coefficient \u2014 how heavily the simulation
+      weighs a thing is deliberately left for you to feel out over a career, because a game
+      you can solve from a reference page is not worth the career. Ordering and direction
+      are here. Arithmetic is not.</p>
+
+      <div class="manual-toc">
+        ${MANUAL_CHAPTERS.map((c, i) => `
+          <button class="manual-toc-item" data-manual-open="${c.id}">
+            <span class="manual-toc-num">${String(i + 1).padStart(2, "0")}</span>
+            <span class="manual-toc-icon">${c.icon}</span>
+            <span class="manual-toc-text">
+              <span class="manual-toc-title">${escapeHtml(c.title)}</span>
+              <span class="manual-toc-blurb">${escapeHtml(c.blurb)}</span>
+            </span>
+            <span class="manual-toc-go">\u2192</span>
+          </button>`).join("")}
+      </div>
+
+      ${MANUAL_CHAPTERS.length < 15 ? `
+        <p class="manual-note">More chapters are being written. The ones listed above are
+        finished.</p>` : ""}
+    </div>`;
+  }
+  function chapterHtml(c) {
+    const i = MANUAL_CHAPTERS.indexOf(c);
+    const prev = MANUAL_CHAPTERS[i - 1] || null;
+    const next = MANUAL_CHAPTERS[i + 1] || null;
+    return `
+    <div class="view-manual view-manual-read">
+      <div class="view-header">
+        <div>
+          <button class="btn-ghost btn-sm" id="btn-manual-back">\u2190 All chapters</button>
+          <h1 class="view-title manual-chapter-title">
+            <span class="manual-chapter-icon">${c.icon}</span> ${escapeHtml(c.title)}
+          </h1>
+        </div>
+      </div>
+
+      <article class="manual-chapter">
+        ${c.sections.map((s) => `
+          <section class="manual-section">
+            <h2 class="manual-heading">${escapeHtml(s.heading)}</h2>
+            <div class="manual-body">${s.body}</div>
+          </section>`).join("")}
+      </article>
+
+      <div class="manual-pager">
+        ${prev ? `<button class="btn-ghost btn-sm" data-manual-open="${prev.id}">\u2190 ${escapeHtml(prev.title)}</button>` : "<span></span>"}
+        ${next ? `<button class="btn-ghost btn-sm" data-manual-open="${next.id}">${escapeHtml(next.title)} \u2192</button>` : "<span></span>"}
+      </div>
+    </div>`;
+  }
+  function renderManual() {
+    const open = state.ui.manualChapter ? chapterById(state.ui.manualChapter) : null;
+    return open ? chapterHtml(open) : tocHtml();
+  }
+  function setupListeners12() {
+    var _a;
+    document.querySelectorAll("[data-manual-open]").forEach((el) => {
+      el.addEventListener("click", () => {
+        var _a2, _b, _c;
+        state.ui.manualChapter = el.dataset.manualOpen;
+        (_a2 = window.scrollTo) == null ? void 0 : _a2.call(window, 0, 0);
+        (_c = (_b = document.querySelector(".main-content")) == null ? void 0 : _b.scrollTo) == null ? void 0 : _c.call(_b, 0, 0);
+        rerender();
+      });
+    });
+    (_a = document.getElementById("btn-manual-back")) == null ? void 0 : _a.addEventListener("click", () => {
+      state.ui.manualChapter = null;
+      rerender();
+    });
+  }
+
   // js/ui/views/standings.js
   init_state();
   init_utils();
@@ -35730,7 +36011,7 @@ var _CFB = (() => {
     }
     return `${won ? "W" : "L"}${count}`;
   }
-  function setupListeners12() {
+  function setupListeners13() {
     document.querySelectorAll("[data-smode]").forEach((btn) => {
       btn.addEventListener("click", () => {
         standingsMode = btn.dataset.smode;
@@ -36272,7 +36553,7 @@ var _CFB = (() => {
       isHome: g.homeId === (school == null ? void 0 : school.id)
     }));
   }
-  function setupListeners13() {
+  function setupListeners14() {
     document.querySelectorAll("[data-stats-tab]").forEach((btn) => {
       btn.addEventListener("click", () => {
         statsTab = btn.dataset.statsTab;
@@ -36554,7 +36835,7 @@ var _CFB = (() => {
     </div>
   `;
   }
-  function setupListeners14() {
+  function setupListeners15() {
     var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
     document.querySelectorAll("[data-settings-tab]").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -36997,7 +37278,7 @@ var _CFB = (() => {
       </div>`;
     }).join("");
   }
-  function setupListeners15() {
+  function setupListeners16() {
     document.querySelectorAll("[data-hist-tab]").forEach((btn) => {
       btn.addEventListener("click", () => {
         activeTab2 = btn.dataset.histTab;
@@ -37271,7 +37552,7 @@ var _CFB = (() => {
     </div>
   `;
   }
-  function setupListeners16() {
+  function setupListeners17() {
     var _a, _b, _c;
     (_a = document.getElementById("btn-pp-to-library")) == null ? void 0 : _a.addEventListener("click", () => {
       const school2 = getPlayerSchool();
@@ -37736,7 +38017,7 @@ var _CFB = (() => {
         </div>`).join("")}
     </div>`;
   }
-  function setupListeners17() {
+  function setupListeners18() {
     var _a, _b, _c;
     document.querySelectorAll("[data-hire-market]").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -37937,6 +38218,7 @@ var _CFB = (() => {
     gameplan: renderGameplan,
     recruiting: renderRecruiting,
     settings: renderSettings,
+    manual: renderManual,
     scheduling: renderScheduling,
     // legacy ids kept so deep links / back-nav still resolve to the merged groups
     roster: renderTeamGroup,
@@ -37956,6 +38238,7 @@ var _CFB = (() => {
     { id: "recruiting", icon: "\u25CE", label: "Recruiting" },
     { id: "program", icon: "\u2726", label: "Coach's Office" },
     { id: "statsgroup", icon: "\u25CA", label: "Statistics" },
+    { id: "manual", icon: "\u{1F4D6}", label: "The Manual" },
     { id: "settings", icon: "\u2699", label: "Settings" }
   ];
   var TABBAR_ITEMS = [
@@ -39365,20 +39648,20 @@ var _CFB = (() => {
   function setupTeamGroupListeners() {
     wireGroupTabs();
     if (teamGroupTab === "depthchart") setupListeners9();
-    else if (teamGroupTab === "practice") setupListeners16();
+    else if (teamGroupTab === "practice") setupListeners17();
     else setupListeners7();
   }
   function setupProgramGroupListeners() {
     wireGroupTabs();
     if (programGroupTab === "schedule") setupListeners11();
-    else if (programGroupTab === "standings") setupListeners12();
-    else setupListeners17();
+    else if (programGroupTab === "standings") setupListeners13();
+    else setupListeners18();
   }
   function setupStatsGroupListeners() {
     wireGroupTabs();
     if (statsGroupTab === "awards") setupListeners4();
-    else if (statsGroupTab === "history") setupListeners15();
-    else setupListeners13();
+    else if (statsGroupTab === "history") setupListeners16();
+    else setupListeners14();
   }
   function setupViewListeners(view) {
     const listeners = {
@@ -39389,7 +39672,8 @@ var _CFB = (() => {
       scout: setupListeners8,
       gameplan: setupListeners,
       recruiting: setupListeners10,
-      settings: setupListeners14,
+      settings: setupListeners15,
+      manual: setupListeners12,
       scheduling: setupListeners5,
       // legacy ids route to their group listeners
       roster: setupTeamGroupListeners,
