@@ -1268,6 +1268,12 @@ th.col-drag-over {
 .group-body .view-header.embed-subtabs { margin-top: 0; }
 .group-body .group-subtitle { font-size: 12px; color: var(--text-2); margin-bottom: 12px; }
 @media (max-width: 700px) {
+  /* The recruit/player profile hero is a two-column flex with a FIXED 260px right rail
+     (YOUR INTEREST meter). On a phone that rail plus the left column overflows the
+     viewport and the interest meter runs off screen. Stack them and let the rail be full
+     width instead. */
+  .profile-hero { flex-direction: column; gap: 12px; }
+  .profile-right { flex: 1 1 auto; width: 100%; }
   .group-header { align-items: stretch; flex-direction: column; }
   .group-tabs { width: 100%; }
   .group-tabs .rec-tab { flex: 1 1 auto; text-align: center; padding: 10px 8px; }
@@ -5082,7 +5088,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "3c5c0f1683";
+globalThis.__BUILD__ = "4fcfa8f82a";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -13656,6 +13662,14 @@ var _CFB = (() => {
         if (fbOverride && isFbSlot(s)) {
           pick2 = fbOverride.find((id) => !used.has(id) && allActive.has(id)) || null;
         }
+        if (!pick2 && isFbSlot(s)) {
+          const tePool = (activeDepth.TE || []).filter((id) => !used.has(id) && allActive.has(id));
+          if (ratingById) tePool.sort((a, b) => {
+            var _a2, _b2;
+            return ((_a2 = ratingById[b]) != null ? _a2 : 0) - ((_b2 = ratingById[a]) != null ? _b2 : 0);
+          });
+          pick2 = tePool[0] || null;
+        }
         if (!pick2) {
           while (cursor < pool.length && used.has(pool[cursor])) cursor++;
           pick2 = cursor < pool.length ? pool[cursor] : null;
@@ -20444,6 +20458,8 @@ var _CFB = (() => {
     const report = ((pSchool == null ? void 0 : pSchool.roster) || []).map((p) => {
       var _a, _b, _c;
       return {
+        id: p.id,
+        // lets the camp report open the player card
         name: `${((_a = p.name) == null ? void 0 : _a.first) || ""} ${((_b = p.name) == null ? void 0 : _b.last) || ""}`.trim(),
         pos: p.position,
         classYear: p.classYear,
@@ -20592,7 +20608,7 @@ var _CFB = (() => {
     }
     const topOff = perf.filter((x) => x.o > 0).sort((a, b) => b.o - a.o).slice(0, 3);
     const topDef = perf.filter((x) => x.d > 0).sort((a, b) => b.d - a.d).slice(0, 3);
-    const breakouts = (data.campReport || []).filter((r) => r.gain >= C.RAISER_GAIN).slice(0, 6).map((r) => ({ name: r.name, pos: r.pos, gain: r.gain, attrGains: r.attrGains }));
+    const breakouts = (data.campReport || []).filter((r) => r.gain >= C.RAISER_GAIN).slice(0, 6).map((r) => ({ id: r.id, name: r.name, pos: r.pos, gain: r.gain, attrGains: r.attrGains }));
     const beforeComp = new Map(school.roster.map((p) => [p.id, Math.round(p.compositeRating || 0)]));
     const beforeAttrs = new Map(school.roster.map((p) => [p.id, __spreadValues({}, p.attributes)]));
     const coach = state2.playerCoach;
@@ -20607,6 +20623,8 @@ var _CFB = (() => {
     const devReport = school.roster.map((p) => {
       var _a, _b, _c;
       return {
+        id: p.id,
+        // lets the spring report open the player card
         name: `${((_a = p.name) == null ? void 0 : _a.first) || ""} ${((_b = p.name) == null ? void 0 : _b.last) || ""}`.trim(),
         pos: p.position,
         classYear: p.classYear,
@@ -21696,6 +21714,47 @@ var _CFB = (() => {
     }
     return "OFFSEASON";
   }
+  function calendarWeek(day) {
+    const d = Number(day) || 0;
+    if (d <= PHASES.PRESEASON.days[1]) {
+      const n2 = Math.max(1, d);
+      return {
+        kind: "preseason",
+        num: n2,
+        total: PHASES.PRESEASON.days[1],
+        label: `Preseason Week ${n2}`,
+        short: `PRE ${n2}`
+      };
+    }
+    if (d <= PHASES.CONFCHAMP.days[1]) {
+      const n2 = d - REG_WEEK_1_DAY + 1;
+      return {
+        kind: "regular",
+        num: n2,
+        total: REG_WEEK_COUNT,
+        label: `Week ${n2}`,
+        short: `W${n2}`
+      };
+    }
+    if (d <= PHASES.PLAYOFFS.days[1]) {
+      const n2 = d - PHASES.PLAYOFFS.days[0] + 1;
+      return {
+        kind: "postseason",
+        num: n2,
+        total: PHASES.PLAYOFFS.days[1] - PHASES.PLAYOFFS.days[0] + 1,
+        label: `Playoff Round ${n2}`,
+        short: `PLAYOFF ${n2}`
+      };
+    }
+    const n = d - PHASES.JOBS.days[0] + 1;
+    return {
+      kind: "offseason",
+      num: n,
+      total: PHASES.JOBS.days[1] - PHASES.JOBS.days[0] + 1,
+      label: "Offseason",
+      short: "OFF"
+    };
+  }
   function recruitAssistLevel(state2) {
     var _a, _b;
     const lvl = (_a = state2.settings) == null ? void 0 : _a.recruitAssist;
@@ -22096,6 +22155,7 @@ var _CFB = (() => {
       }
       if (state2.playerSchoolId) events.push({ type: "info", text: "\u{1F3CB}\uFE0F Practice checkpoint \u2014 the week's work shows: your practice plan just developed the roster." });
     }
+    resolveStaleGames(state2, day, events);
     const dayGames = (state2.schedule || []).filter((g) => g.day === day && !g.result);
     if (dayGames.length > 0) {
       const { results, halftimeGame } = simulateGameDay(dayGames, state2);
@@ -22403,6 +22463,38 @@ var _CFB = (() => {
         events.push({ type: "warning", text: `${name} played his ${C.REDSHIRT_MAX_GAMES + 1}th game \u2014 redshirt burned. His class clock resumes.` });
       }
     }
+  }
+  function recordIsShort(state2, school) {
+    var _a, _b;
+    const played = (state2.schedule || []).filter((g) => g.result && (g.homeId === school.id || g.awayId === school.id)).length;
+    const booked = (((_a = school.record) == null ? void 0 : _a.wins) || 0) + (((_b = school.record) == null ? void 0 : _b.losses) || 0);
+    return booked < played;
+  }
+  function resolveStaleGames(state2, day, events) {
+    const stale = (state2.schedule || []).filter((g) => g.day < day && !g.result);
+    if (!stale.length) return 0;
+    const playerDiv = getPlayerDivision(state2);
+    let healed = 0;
+    for (const game of stale) {
+      const home = state2.world.schools.find((s) => s.id === game.homeId);
+      const away = state2.world.schools.find((s) => s.id === game.awayId);
+      if (!home || !away) continue;
+      const isUserGame = game.homeId === state2.playerSchoolId || game.awayId === state2.playerSchoolId;
+      const h = gameDressed(home, state2.season);
+      const a = gameDressed(away, state2.season);
+      const result = home.division === playerDiv ? simulateGame(home, away, h.roster, a.roster, h.depth, a.depth, home.gameplan, away.gameplan) : cheapSimGame(home, away, state2.season);
+      game.result = isUserGame && home.division === playerDiv ? result : { homeScore: result.homeScore, awayScore: result.awayScore, winner: result.winner };
+      if (recordIsShort(state2, home) && recordIsShort(state2, away)) {
+        updateStandings(state2, { game, result });
+      }
+      events.push({ type: "game", result: game.result });
+      healed++;
+    }
+    const mine = stale.filter((g) => g.result && (g.homeId === state2.playerSchoolId || g.awayId === state2.playerSchoolId)).length;
+    if (mine) {
+      events.push({ type: "info", text: mine === 1 ? "A game was missing from your schedule and has now been played and recorded." : `${mine} games were missing from your schedule and have now been played and recorded.` });
+    }
+    return healed;
   }
   function simulateGameDay(games, state2) {
     var _a, _b;
@@ -23943,7 +24035,7 @@ var _CFB = (() => {
     }
     school._olLastFive = five;
   }
-  var PHASES, RECRUITING_OPEN, AUTO_BOARD_MAX, PLAYOFF_DIVS, RECORD_CATS, GRADE_LETTERS;
+  var PHASES, RECRUITING_OPEN, REG_WEEK_1_DAY, REG_WEEK_COUNT, weekLabel, weekShort, AUTO_BOARD_MAX, PLAYOFF_DIVS, RECORD_CATS, GRADE_LETTERS;
   var init_season = __esm({
     "js/engine/season.js"() {
       init_constants();
@@ -23973,6 +24065,10 @@ var _CFB = (() => {
         JOBS: { days: [24, 30], label: "Offseason" }
       };
       RECRUITING_OPEN = { start: 1, end: 19 };
+      REG_WEEK_1_DAY = PHASES.NONCONF.days[0];
+      REG_WEEK_COUNT = PHASES.CONFCHAMP.days[1] - REG_WEEK_1_DAY + 1;
+      weekLabel = (day) => calendarWeek(day).label;
+      weekShort = (day) => calendarWeek(day).short;
       AUTO_BOARD_MAX = 30;
       PLAYOFF_DIVS = ["D1", "D2", "D3"];
       RECORD_CATS = [
@@ -23999,6 +24095,7 @@ var _CFB = (() => {
     exportJSON: () => exportJSON,
     exportString: () => exportString,
     flushSaveSync: () => flushSaveSync,
+    gamePauseIsLive: () => gamePauseIsLive,
     importJSON: () => importJSON,
     listSaves: () => listSaves,
     loadGame: () => loadGame,
@@ -24010,7 +24107,7 @@ var _CFB = (() => {
     return value;
   }
   function rehydrate(saved) {
-    var _a;
+    var _a, _b;
     if (!((_a = saved == null ? void 0 : saved.world) == null ? void 0 : _a.schools)) return saved;
     const restore = (p) => {
       if (!p.stats) p.stats = emptyStats();
@@ -24032,6 +24129,20 @@ var _CFB = (() => {
       }
     }
     for (const r of saved.world.recruits || []) restore(r);
+    if (saved.pendingHalftime || ((_b = saved.ui) == null ? void 0 : _b.pendingKickoff)) {
+      saved.pendingHalftime = null;
+      saved._callModeToday = null;
+      saved._pregamePlan = null;
+      if (saved.ui) {
+        saved.ui.pendingKickoff = null;
+        saved.ui.liveWatch = null;
+        saved.ui.autoRun = false;
+        saved.ui.showHalftime = false;
+        saved.ui.showCallSheet = false;
+        saved.ui.showFourthDown = false;
+        saved.ui._finalWatched = null;
+      }
+    }
     return saved;
   }
   function dietSnapshot(snapshot) {
@@ -24070,6 +24181,10 @@ var _CFB = (() => {
       req.onerror = (e) => reject(e.target.error);
     });
   }
+  function gamePauseIsLive(state2) {
+    var _a;
+    return !!((state2 == null ? void 0 : state2.pendingHalftime) || ((_a = state2 == null ? void 0 : state2.ui) == null ? void 0 : _a.pendingKickoff));
+  }
   function buildSnapshot(state2) {
     const snapshot = JSON.parse(JSON.stringify(state2, saveDietReplacer));
     dietSnapshot(snapshot);
@@ -24079,6 +24194,7 @@ var _CFB = (() => {
   function flushSaveSync(state2, slot = "auto") {
     try {
       if (!state2 || !state2.world) return false;
+      if (gamePauseIsLive(state2)) return false;
       const snapshot = buildSnapshot(state2);
       localStorage.setItem(`cfb-flush-${slot}`, JSON.stringify({ timestamp: Date.now(), state: snapshot }));
       return true;
@@ -24087,6 +24203,7 @@ var _CFB = (() => {
     }
   }
   async function saveGame(state2, slot = "auto") {
+    if (gamePauseIsLive(state2)) return false;
     const snapshot = buildSnapshot(state2);
     const ts = Date.now();
     try {
@@ -24248,6 +24365,8 @@ var _CFB = (() => {
     getSchool: () => getSchool,
     getScoutSchool: () => getScoutSchool,
     getUpcomingGame: () => getUpcomingGame,
+    getWeekLabel: () => getWeekLabel,
+    getWeekShort: () => getWeekShort,
     liveWatchOn: () => liveWatchOn,
     loadFromSlot: () => loadFromSlot,
     navigate: () => navigate,
@@ -24591,6 +24710,12 @@ var _CFB = (() => {
     const school = getPlayerSchool();
     if (!school) return [];
     return state.world.schools.filter((s) => s.conf === school.conf).sort((a, b) => b.record.confWins - a.record.confWins || b.record.wins - a.record.wins);
+  }
+  function getWeekLabel() {
+    return weekLabel(state.day);
+  }
+  function getWeekShort() {
+    return weekShort(state.day);
   }
   function getPhaseLabel() {
     return { RECRUITING: "Recruiting Open", PRESEASON: "Preseason", NONCONF: "Non-Conference", CONFERENCE: "Conference", CONFCHAMP: "Conf. Championship", PLAYOFFS: "Playoffs", JOBS: "Offseason/Jobs", OFFSEASON: "Offseason" }[getPhase(state.day)] || "Offseason";
@@ -25551,7 +25676,7 @@ var _CFB = (() => {
                 ${save ? `
                   <div class="save-slot-info">
                     <div class="save-slot-school">${escapeHtml(save.school || "Unknown")}</div>
-                    <div class="save-slot-meta">Season ${save.season} \xB7 Week ${save.day}${hasRec ? ` \xB7 ${fmtRecord(save.record.wins, save.record.losses)}` : ""}</div>
+                    <div class="save-slot-meta">Season ${save.season} \xB7 ${weekLabel(save.day)}${hasRec ? ` \xB7 ${fmtRecord(save.record.wins, save.record.losses)}` : ""}</div>
                     <div class="save-slot-date">${formatDate(save.timestamp)}</div>
                   </div>
                 ` : `
@@ -25699,6 +25824,7 @@ var _CFB = (() => {
       init_state();
       init_utils();
       init_coach();
+      init_season();
       init_guide();
       init_coachprofile();
       init_logo();
@@ -25717,6 +25843,7 @@ var _CFB = (() => {
   init_constants();
   init_concepts();
   init_persistence();
+  init_season();
   init_player();
 
   // js/ui/views/gameplan.js
@@ -25784,22 +25911,18 @@ var _CFB = (() => {
     const school = getPlayerSchool();
     const gp = (school == null ? void 0 : school.gameplan) || {};
     const simple = gameplanIsSimple();
-    const modeToggle = `
-      <div class="gp-mode-toggle">
-        <button class="gp-mode-btn${simple ? " active" : ""}" data-gpmode="simple" title="A few big, plain-language dials \u2014 the sim handles the details">Simple</button>
-        <button class="gp-mode-btn${!simple ? " active" : ""}" data-gpmode="advanced" title="Full control of every scheme knob">Advanced</button>
-      </div>`;
+    if (simple && gameplanSection !== "st") gameplanSection = "simple";
+    if (!simple && gameplanSection === "simple") gameplanSection = "offense";
     if (simple) {
       return `
     <div class="view-gameplan">
       <div class="view-header">
         <div>
           <h1 class="view-title">Game Plan</h1>
-          <div class="view-subtitle">Simple mode \u2014 set your identity, the sim handles the scheme</div>
+          <div class="view-subtitle">Simple mode \u2014 set your identity, the sim handles the scheme. Want every knob? Settings &rsaquo; Game &rsaquo; Game Plan Detail.</div>
         </div>
         <button class="btn-primary" id="btn-save-gameplan">Save Plan</button>
       </div>
-      ${modeToggle}
       ${renderPlanSlots(school)}
       <div class="rec-tabs" style="margin-bottom:16px">
         <button class="rec-tab active" data-gpsection="simple">Team Identity</button>
@@ -25815,11 +25938,10 @@ var _CFB = (() => {
       <div class="view-header">
         <div>
           <h1 class="view-title">Game Plan</h1>
-          <div class="view-subtitle">Plan by situation \u2014 anything left on AUTO inherits your defaults</div>
+          <div class="view-subtitle">Plan by situation \u2014 anything left on AUTO inherits your defaults. Too many dials? Settings &rsaquo; Game &rsaquo; Game Plan Detail.</div>
         </div>
         <button class="btn-primary" id="btn-save-gameplan">Save Plan</button>
       </div>
-      ${modeToggle}
       ${renderPlanSlots(school)}
       <div class="rec-tabs" style="margin-bottom:16px">
         <button class="rec-tab${gameplanSection === "offense" ? " active" : ""}" data-gpsection="offense">Offense Defaults</button>
@@ -27799,15 +27921,6 @@ var _CFB = (() => {
         rerender();
       });
     });
-    document.querySelectorAll("[data-gpmode]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        if (!state.settings) state.settings = {};
-        state.settings.gameplanMode = btn.dataset.gpmode;
-        if (btn.dataset.gpmode === "simple" && gameplanSection !== "st") gameplanSection = "simple";
-        if (btn.dataset.gpmode === "advanced" && gameplanSection === "simple") gameplanSection = "offense";
-        rerender();
-      });
-    });
     document.querySelectorAll("[data-simpledial]").forEach((btn) => {
       btn.addEventListener("click", () => {
         applySimpleDial(gp, btn.dataset.simpledial, btn.dataset.simpleval);
@@ -29405,11 +29518,12 @@ var _CFB = (() => {
   init_world();
   init_offseason();
   init_constants();
+  init_season();
   init_utils();
   init_portal();
   var NC_DAYS = [5, 6, 7, 8];
   function slotLabel(day) {
-    return `Week ${day} Non-Conf`;
+    return `${weekLabel(day)} Non-Conf`;
   }
   function prestigePips(p, max = 5) {
     const filled = Math.min(Math.round(p), max);
@@ -29479,7 +29593,7 @@ var _CFB = (() => {
               <span class="offseason-detail">${c.miles} mi \xB7 ${c.school.prestige}\u2605</span>
               <button class="btn-ghost btn-sm sched-rival-btn" data-rival-id="${c.school.id}">Declare</button>
             </div>`).join("")}
-          <p class="scheduling-hint" style="margin:6px 0 2px">An annual trophy game on Week ${C.RIVALRY_DAY}${pre ? " \u2014 declared now, it joins this season\u2019s slate" : ""}.</p>
+          <p class="scheduling-hint" style="margin:6px 0 2px">An annual trophy game on ${weekLabel(C.RIVALRY_DAY)}${pre ? " \u2014 declared now, it joins this season\u2019s slate" : ""}.</p>
         </div>
       </div>`;
     }
@@ -29526,7 +29640,7 @@ var _CFB = (() => {
       const riv = state.rivalry;
       return `
       <div class="sched-slot sched-slot-locked">
-        <div class="sched-slot-day">Week ${day}</div>
+        <div class="sched-slot-day">${weekLabel(day)}</div>
         <div class="sched-slot-body">
           <div class="sched-slot-name">Rivalry: ${escapeHtml(riv.schoolName)}</div>
           <div class="sched-slot-detail muted">${escapeHtml(riv.trophy)} \xB7 reserved, venues alternate</div>
@@ -29638,7 +29752,7 @@ var _CFB = (() => {
         let msg = `Rivalry declared: ${res.rivalry.trophy} vs ${res.rivalry.schoolName}.`;
         if (isPreseasonMode()) {
           const inj = injectRivalryIntoSchedule(state);
-          msg += inj.ok ? ` The trophy game is on this season's slate (Week ${inj.day}).` : ` ${inj.reason}.`;
+          msg += inj.ok ? ` The trophy game is on this season's slate (${weekLabel(inj.day)}).` : ` ${inj.reason}.`;
         }
         notify(msg, "success");
         rerender();
@@ -29732,7 +29846,7 @@ var _CFB = (() => {
       if (res.ok) {
         const opp2 = getSchoolById(oppId);
         recomputeScheduleGuarantee();
-        notify(`Week ${day}: ${(opp2 == null ? void 0 : opp2.name) || "opponent"} is on the slate${res.displaced ? ` \u2014 ${res.displaced.join(" and ")} pair off instead` : ""}.`, "success");
+        notify(`${weekLabel(day)}: ${(opp2 == null ? void 0 : opp2.name) || "opponent"} is on the slate${res.displaced ? ` \u2014 ${res.displaced.join(" and ")} pair off instead` : ""}.`, "success");
         state.ui.params = __spreadProps(__spreadValues({}, state.ui.params), { schedulingPickerDay: null });
       } else {
         notify(res.reason, "warning");
@@ -29820,14 +29934,14 @@ var _CFB = (() => {
       const g = (state.schedule || []).find((g2) => g2.day === w && (g2.homeId === (school == null ? void 0 : school.id) || g2.awayId === (school == null ? void 0 : school.id)));
       if (!g) {
         if (w === PHASES.CONFCHAMP.days[1]) continue;
-        steps.push(`<span class="event-rail-step${w <= state.day ? " done" : ""}" title="Week ${w} \u2014 bye">W${w} BYE</span>`);
+        steps.push(`<span class="event-rail-step${w <= state.day ? " done" : ""}" title="${escapeHtml(weekLabel(w))} \u2014 bye">${escapeHtml(weekShort(w))} BYE</span>`);
         continue;
       }
       const isHome = g.homeId === (school == null ? void 0 : school.id);
       const opp = state.world.schools.find((s) => s.id === (isHome ? g.awayId : g.homeId));
       const ab = abbrevSchool(opp);
       const at = isHome ? "vs" : "@";
-      const tip = `Week ${w} ${at} ${(opp == null ? void 0 : opp.name) || "TBD"}`;
+      const tip = `${weekLabel(w)} ${at} ${(opp == null ? void 0 : opp.name) || "TBD"}`;
       if (g.result) {
         const won = g.result.winner === (school == null ? void 0 : school.id);
         const isHomeG = g.homeId === (school == null ? void 0 : school.id);
@@ -29835,7 +29949,7 @@ var _CFB = (() => {
         const their = isHomeG ? g.result.awayScore : g.result.homeScore;
         steps.push(`<span class="event-rail-step done ${won ? "win" : "loss"}" title="${escapeHtml(tip)} \u2014 ${won ? "W" : "L"} ${my}\u2013${their}">${won ? "W" : "L"} ${at} ${ab}</span>`);
       } else {
-        steps.push(`<span class="event-rail-step${w === upDay ? " current" : ""}" title="${escapeHtml(tip)}">W${w} ${at} ${ab}</span>`);
+        steps.push(`<span class="event-rail-step${w === upDay ? " current" : ""}" title="${escapeHtml(tip)}">${escapeHtml(weekShort(w))} ${at} ${ab}</span>`);
       }
     }
     return steps.join('<span class="event-rail-sep">\xB7</span>');
@@ -29913,7 +30027,7 @@ var _CFB = (() => {
       railHtml = [1, 2, 3, 4].map(
         (w) => `<span class="event-rail-step${w < week ? " done" : w === week ? " current" : ""}">W${w} ${escapeHtml((PRESEASON_WEEKS[w] || {}).label || "")}</span>`
       ).join('<span class="event-rail-sep">\u2192</span>') + '<span class="event-rail-sep">\u2192</span><span class="event-rail-step">Season Opener</span>';
-      kicker = `Preseason \xB7 Week ${week} of 4`;
+      kicker = `Preseason \xB7 Week ${week} of ${PHASES.PRESEASON.days[1]}`;
       title = focusMeta.label;
       sub = "Freshmen have arrived. Get the roster ready for kickoff.";
       body = preseasonStageBody(school, focusMeta);
@@ -29939,7 +30053,7 @@ var _CFB = (() => {
             <span class="dash-crest">${renderCrest(school, 34)}</span>
             ${escapeHtml((school == null ? void 0 : school.name) || "")} <span class="title-nick" style="color:${accent}">${escapeHtml((school == null ? void 0 : school.nick) || "")}</span>
           </h1>
-          <div class="view-subtitle">Season ${state.season} &middot; ${escapeHtml(getPhaseLabel())}</div>
+          <div class="view-subtitle">Season ${state.season} &middot; ${escapeHtml(dashCalendarLine())}</div>
         </div>
         <button class="btn-advance" id="btn-advance-day">${btnLabel}</button>
       </div>
@@ -29959,6 +30073,10 @@ var _CFB = (() => {
     ${state.ui.showRecruitStartWarn ? renderRecruitStartWarnModal() : ""}
   `;
   }
+  function dashCalendarLine() {
+    const w = calendarWeek(state.day);
+    return w.kind === "regular" ? `${w.label} \xB7 ${getPhaseLabel()}` : w.label;
+  }
   function gameWeekContent(school) {
     var _a, _b, _c, _d, _e, _f;
     const next = getUpcomingGame();
@@ -29966,7 +30084,7 @@ var _CFB = (() => {
     if (!next) {
       return {
         railHtml,
-        kicker: `${getPhaseLabel()} \xB7 Week ${state.day}`,
+        kicker: `${getPhaseLabel()} \xB7 ${weekLabel(state.day)} of ${REG_WEEK_COUNT}`,
         title: "Regular Season Complete",
         sub: "Championship selection week \u2014 the playoff field is announced when you advance.",
         body: `
@@ -29995,7 +30113,7 @@ var _CFB = (() => {
       railHtml,
       kicker: `Game Week \xB7 ${tag}`,
       title: `${isHome ? "vs" : "@"} ${oppRank ? `#${oppRank} ` : ""}${(opp == null ? void 0 : opp.name) || "TBD"}`,
-      sub: `Week ${next.day} \xB7 ${isHome ? "at home" : "on the road"} \xB7 they're ${fmtRecord(((_e = opp == null ? void 0 : opp.record) == null ? void 0 : _e.wins) || 0, ((_f = opp == null ? void 0 : opp.record) == null ? void 0 : _f.losses) || 0)}` + (byeAhead ? ` \xB7 bye week first \u2014 nothing to play until Week ${next.day}` : ""),
+      sub: `${weekLabel(next.day)} \xB7 ${isHome ? "at home" : "on the road"} \xB7 they're ${fmtRecord(((_e = opp == null ? void 0 : opp.record) == null ? void 0 : _e.wins) || 0, ((_f = opp == null ? void 0 : opp.record) == null ? void 0 : _f.losses) || 0)}` + (byeAhead ? ` \xB7 bye week first \u2014 nothing to play until ${weekLabel(next.day)}` : ""),
       body: gameWeekBody(next, school, opp, isHome)
     };
   }
@@ -30489,7 +30607,7 @@ var _CFB = (() => {
           <span class="offseason-label">${escapeHtml(riv.trophy)}</span>
           <span class="offseason-detail">vs <span class="team-link" data-scout-team="${riv.schoolId}">${escapeHtml(riv.schoolName)}</span> \xB7 ${riv.wins}\u2013${riv.losses}${riv.ties ? `\u2013${riv.ties}` : ""} \xB7 ${holder}</span>
         </div>
-        <p class="offseason-hint" style="margin:2px 0 8px">${riv.inherited && riv.since ? `They've played every year since ${riv.since}. Week ${C.RIVALRY_DAY} is the trophy game \u2014 home and away alternate. This one was here before you, and the town keeps the record.` : `Week ${C.RIVALRY_DAY} is reserved for the trophy game \u2014 home and away alternate.`}</p>`;
+        <p class="offseason-hint" style="margin:2px 0 8px">${riv.inherited && riv.since ? `They've played every year since ${riv.since}. ${weekLabel(C.RIVALRY_DAY)} is the trophy game \u2014 home and away alternate. This one was here before you, and the town keeps the record.` : `${weekLabel(C.RIVALRY_DAY)} is reserved for the trophy game \u2014 home and away alternate.`}</p>`;
       }
       return `
       ${rivBlock}
@@ -30742,7 +30860,7 @@ var _CFB = (() => {
     }
     return `
     ${body}
-    ${riv && rivGame ? `<p class="offseason-hint" style="margin-top:6px">${escapeHtml(riv.trophy)} vs <span class="team-link" data-scout-team="${riv.schoolId}">${escapeHtml(riv.schoolName)}</span> \xB7 Week ${rivGame.day}</p>` : ""}`;
+    ${riv && rivGame ? `<p class="offseason-hint" style="margin-top:6px">${escapeHtml(riv.trophy)} vs <span class="team-link" data-scout-team="${riv.schoolId}">${escapeHtml(riv.schoolName)}</span> \xB7 ${escapeHtml(weekLabel(rivGame.day))}</p>` : ""}`;
   }
   function attrGainChips(gains) {
     const entries = Object.entries(gains || {}).sort((a, b) => b[1] - a[1]);
@@ -30770,7 +30888,7 @@ var _CFB = (() => {
     <div class="cut-row" style="flex-wrap:wrap">
       <span class="pos-chip pos-${r.pos}">${r.pos}</span>
       <span class="cut-yr muted">${r.classYear}</span>
-      <span class="cut-name">${escapeHtml(r.name)}</span>
+      <span class="cut-name">${r.id ? `<span class="player-link" data-pcard="${r.id}">${escapeHtml(r.name)}</span>` : escapeHtml(r.name)}</span>
       <span class="offseason-detail">${r.before} \u2192 <b>${r.after}</b></span>
       <span style="min-width:36px;text-align:right;font-weight:700;color:${r.gain >= 0 ? "var(--green)" : "var(--red)"}">${r.gain >= 0 ? "+" : ""}${r.gain}</span>
       <div class="attr-gain-row">${attrGainChips(r.attrGains)}</div>
@@ -31787,6 +31905,7 @@ var _CFB = (() => {
   init_state();
   init_utils();
   init_constants();
+  init_season();
   var scoutTab = "ratings";
   var scoutSortCol = "compositeRating";
   var scoutSortDir = 1;
@@ -31946,7 +32065,7 @@ var _CFB = (() => {
       }
       return `
             <tr>
-              <td class="sched-day">D${g.day}</td>
+              <td class="sched-day">${weekShort(g.day)}</td>
               <td class="sched-ha">${isHome ? "vs" : "@"}</td>
               <td class="sched-opp">
                 <span class="team-link" data-scout-team="${oppId}">${escapeHtml((opp == null ? void 0 : opp.name) || "Unknown")}</span>
@@ -35294,7 +35413,7 @@ var _CFB = (() => {
     return `
     <div class="game-card card ${resultClass}${isCurrent ? " game-current" : ""}">
       <div class="game-card-day">
-        <div class="game-day-num">W${game.day}</div>
+        <div class="game-day-num">${weekShort(game.day)}</div>
         <div class="game-phase-label">${phaseLabel}</div>
         ${isCurrent ? '<div class="game-today-badge">TODAY</div>' : ""}
       </div>
@@ -35630,6 +35749,7 @@ var _CFB = (() => {
   // js/ui/views/stats.js
   init_state();
   init_utils();
+  init_season();
   var statsTab = "team";
   var leadersDiv = null;
   var leadersSubTab = "offense";
@@ -35841,7 +35961,7 @@ var _CFB = (() => {
       <div class="card">
         <div class="card-header"><span class="card-title">GAME-BY-GAME</span></div>
         <div class="table-scroll"><table class="data-table">
-          <thead><tr><th>Day</th><th>Opponent</th><th>Result</th><th>Score</th><th>Rush</th><th>Pass</th><th>Total</th></tr></thead>
+          <thead><tr><th>Week</th><th>Opponent</th><th>Result</th><th>Score</th><th>Rush</th><th>Pass</th><th>Total</th></tr></thead>
           <tbody>
             ${getMyGames(school).map(({ game, result, isHome }) => {
       const oppId = isHome ? game.awayId : game.homeId;
@@ -35852,7 +35972,7 @@ var _CFB = (() => {
       const mySt = isHome ? result.homeStats : result.awayStats;
       return `
                 <tr>
-                  <td>D${game.day}</td>
+                  <td>${weekShort(game.day)}</td>
                   <td>${isHome ? "vs" : "@"} <span class="team-link" data-scout-team="${oppId}">${escapeHtml((opp == null ? void 0 : opp.name) || "?")}</span></td>
                   <td><span class="result-badge ${won ? "result-win" : "result-loss"}">${won ? "W" : "L"}</span></td>
                   <td>${myScore} \u2013 ${oppScore}</td>
@@ -36335,6 +36455,17 @@ var _CFB = (() => {
 
           <div class="setting-row">
             <div class="setting-info">
+              <div class="setting-label">Game Plan Detail</div>
+              <div class="setting-desc">Simple: a few big, plain-language dials \u2014 you set the identity and the sim handles the scheme. Advanced: every situational knob, formation split and coverage default is yours. The simulation is identical either way; this only changes how much of it you drive.</div>
+            </div>
+            <div class="gp-options" style="flex-wrap:wrap">
+              ${[["simple", "Simple"], ["advanced", "Advanced"]].map(([v, l]) => `
+                <button class="gp-option gp-option-sm${(s.gameplanMode === "simple" ? "simple" : "advanced") === v ? " active" : ""}" data-gpmode="${v}">${l}</button>`).join("")}
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
               <div class="setting-label">Dark Mode</div>
               <div class="setting-desc">OFF (default): school-color mode \u2014 page, card and table backgrounds repaint in your program's colors. ON: the classic dark look</div>
             </div>
@@ -36560,6 +36691,13 @@ var _CFB = (() => {
       btn.addEventListener("click", () => {
         if (!state.settings) state.settings = {};
         state.settings[btn.dataset.diffKey] = btn.dataset.diffVal;
+        rerender();
+      });
+    });
+    document.querySelectorAll("[data-gpmode]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (!state.settings) state.settings = {};
+        state.settings.gameplanMode = btn.dataset.gpmode;
         rerender();
       });
     });
@@ -37511,7 +37649,7 @@ var _CFB = (() => {
     <div class="skill-row">
       <div class="skill-head">
         <span class="skill-name">${AWARD_LABEL[a.category] || a.category}</span>
-        ${a.scope === "weekly" ? `<span class="muted">Week ${a.day}</span>` : ""}
+        ${a.scope === "weekly" ? `<span class="muted">${escapeHtml(weekLabel(a.day))}</span>` : ""}
       </div>
       ${a.playerName ? `<div class="skill-meta muted">${escapeHtml(a.playerName)}</div>` : ""}
     </div>`;
@@ -37893,6 +38031,7 @@ var _CFB = (() => {
     }
     const school = getPlayerSchool();
     const phase = getPhaseLabel();
+    const week = getWeekShort();
     const unread = state.inbox.filter((m) => !m.read).length;
     const coach = state.playerCoach;
     root.innerHTML = `
@@ -37906,7 +38045,7 @@ var _CFB = (() => {
         <span class="topbar-crest">${school ? renderCrest(school, 26) : "\u2B21"}</span>
         <div class="topbar-id">
           <span class="topbar-nick">${school ? escapeHtml(school.nick || school.name || "BLUEPRINT").toUpperCase() : "BLUEPRINT"}</span>
-          <span class="topbar-meta">S${state.season} \xB7 W${state.day} \xB7 ${escapeHtml(phase)}</span>
+          <span class="topbar-meta">S${state.season} \xB7 ${escapeHtml(week)} \xB7 ${escapeHtml(phase)}</span>
         </div>
         <button class="btn-icon topbar-inbox" id="btn-inbox-top" title="Inbox">\u2709${unread > 0 ? `<span class="inbox-dot">${unread}</span>` : ""}</button>
       </header>
@@ -37917,7 +38056,7 @@ var _CFB = (() => {
         </div>
         ${school ? '<div class="team-stripe"><span></span><span></span><span></span></div>' : ""}
         <div class="season-badge">
-          <span class="season-label">S${state.season} \xB7 W${state.day}</span>
+          <span class="season-label">S${state.season} \xB7 ${escapeHtml(week)}</span>
           <span class="phase-label">${escapeHtml(phase)}</span>
         </div>
         <ul class="nav-list">
@@ -38035,7 +38174,7 @@ var _CFB = (() => {
           ${state.inbox.length === 0 ? '<p class="empty-state">No messages</p>' : state.inbox.map((m) => `
               <div class="inbox-msg${m.read ? "" : " unread"}">
                 <div class="msg-subject">${escapeHtml(m.subject)}</div>
-                <div class="msg-day">Week ${m.day}</div>
+                <div class="msg-day">${escapeHtml(weekShort(m.day))}</div>
                 <div class="msg-body">${escapeHtml(m.body)}</div>
               </div>
             `).join("")}
@@ -38163,7 +38302,7 @@ var _CFB = (() => {
             <span class="dash-crest">${renderCrest(school, 34)}</span>
             ${escapeHtml((school == null ? void 0 : school.name) || "")} <span class="title-nick" style="color:${accent}">${escapeHtml((school == null ? void 0 : school.nick) || "")}</span>
           </h1>
-          <div class="view-subtitle">Season ${state.season} &middot; Week ${state.day} &middot; Halftime</div>
+          <div class="view-subtitle">Season ${state.season} &middot; ${escapeHtml(getWeekLabel())} &middot; Halftime</div>
         </div>
         <div class="ht-resume-controls">
           <button class="cm-switch cm-switch-sm${((_e = state.settings) == null ? void 0 : _e.liveWatch) !== false ? " on" : ""}" id="ht-coachmode" role="switch" aria-checked="${((_f = state.settings) == null ? void 0 : _f.liveWatch) !== false}">
@@ -38879,7 +39018,7 @@ var _CFB = (() => {
                 ${save ? `
                   <div class="save-slot-info">
                     <div class="save-slot-school">${escapeHtml(save.school || "?")}</div>
-                    <div class="save-slot-meta">S${save.season} D${save.day} \xB7 ${formatDate2(save.timestamp)}</div>
+                    <div class="save-slot-meta">S${save.season} ${escapeHtml(weekShort(save.day))} \xB7 ${formatDate2(save.timestamp)}</div>
                   </div>
                   <div class="save-slot-overwrite">Click to overwrite</div>
                 ` : `
@@ -39014,7 +39153,7 @@ var _CFB = (() => {
       }
     });
     (_j = document.getElementById("btn-save")) == null ? void 0 : _j.addEventListener("click", async () => {
-      if (state.pendingHalftime || state.ui.pendingKickoff) {
+      if (gamePauseIsLive(state)) {
         notify("Finish the current game before saving.", "warning");
         return;
       }
