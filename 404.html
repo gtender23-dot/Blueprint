@@ -2077,6 +2077,17 @@ input[type="range"] { accent-color: var(--team-1); }
 
 .mm-footer { height: 20px; text-align: center; }
 .mm-version { font-size: 11px; color: var(--text-2); letter-spacing: 0.04em; }
+/* Build stamp — deliberately quiet, but always on screen. Matches the service-worker
+   cache name, so a stale build on a device is visible at a glance. */
+.mm-build {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.02em;
+  color: var(--text-2);
+  opacity: 0.55;
+}
 
 /* ── Save/Load slots ───────────────────────────────────────────────────── */
 .save-modal { max-width: 460px; }
@@ -5071,6 +5082,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
+globalThis.__BUILD__ = "3c5c0f1683";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -5171,10 +5183,6 @@ var _CFB = (() => {
         // [TUNE] 10 D2 confs → 100–120 D2 schools
         D3_CONF_SIZE: [10, 12],
         // [TUNE] 8 D3 confs → 80–96 D3 schools
-        NONCONF_HOME_AWAY_CAP: 3,
-        // [TUNE] max home or away non-conf games per team per season
-        MONEY_GAME_PROB: 0.1,
-        // [TUNE] AI probability of scheduling a cross-division money game
         CHEAP_SPREAD: 6,
         // [TUNE] logistic denominator for cheapSimGame strength comparison
         CHEAP_MARGIN_SD: 14,
@@ -5193,33 +5201,11 @@ var _CFB = (() => {
         // matter more per 1v1 matchup.  24 gives ~56% block win at +6 attr gap.
         REP_SCALE: 24,
         // Run outcome constants
-        RUN_BASE_YARDS: 1.8,
-        // yards at LOS before any blocking push
-        PUSH_PER_BLOCK_WIN: 1.4,
-        // yards per blocker who wins his rep
-        BREAKAWAY_SPD_FLOOR: 65,
-        // absolute SPD floor — below this a carrier essentially never breaks away
         QB_CARRIER_BONUS: 0.9,
         // yard/carry offset for QB carriers (RB-tuned anchors sit above QB attrs)
-        QB_BREAKAWAY_SPD_FLOOR: 58,
-        // lower absolute SPD floor for QB scrambles
-        BREAKAWAY_CHANCE_MAX: 0.42,
-        // breakaway chance at SPD 99; scales from ~0 at the floor
-        BREAKAWAY_CHANCE_EXP: 1.5,
-        // convexity of the chance curve (favors true burners over 70s-speed guys)
-        BREAKAWAY_BONUS_BASE: 6,
-        // bonus mean (yds) for a carrier right at the floor
-        BREAKAWAY_BONUS_PER_SPD: 0.9,
-        // extra bonus mean per SPD point above the floor (95 SPD ≈ +33)
-        BREAKAWAY_BONUS_SD_BASE: 4,
-        // bonus sd at the floor…
-        BREAKAWAY_BONUS_SD_FRAC: 0.45,
-        // …plus this fraction of the mean — fat tail so burners occasionally house it
         CARRY_FUMBLE_BASE: 0.01,
         // per-carry fumble risk on non-QB runs (risk parity vs passing)
         // Pass outcome constants
-        CATCH_SEP_SCALE: 3.5,
-        // how sharply separation → catch probability
         // Run Commit (situational box bias, −25..+25). Positive = sell out vs run:
         // defense plays stronger on run snaps but every receiver gains separation.
         // RUN_SCALE multiplies defUnit on run plays; COV_SCALE shifts separation/pt.
@@ -5255,8 +5241,6 @@ var _CFB = (() => {
         // on-field fatigue gain multiplier on Hurry snaps (offense) [TUNE Jul 2026: 1.35→1.60 — slower base clock means fewer Hurry snaps, tax needed a bump to stay visible]
         TEMPO_FATIGUE_DEF: 1.38,
         // same for the defense stuck on the field [TUNE Jul 2026: 1.20→1.38, same reason]
-        CATCH_TECH_SCALE: 0.012,
-        // QB TECH catch bonus per point above 50. (Restored
         // from a 0.008 experiment that over-cooled the average
         // passing game without fixing elite-pass win%.)
         // [Jul 2026] Superseded in catchResolution by the
@@ -5291,17 +5275,9 @@ var _CFB = (() => {
         // Breakaway pursuit relief: slow chase speed lowers the effective SPD floor.
         // REF ≈ D1 pursuit blend (deep DBs + LBs); relief 0 at/above REF, so D1 is
         // untouched. D3 pursuit (~60) hits the cap → a 60-SPD D3 back can break away.
-        BREAKAWAY_PURSUIT_REF: 84,
-        BREAKAWAY_PURSUIT_RELIEF: 0.8,
-        BREAKAWAY_PURSUIT_RELIEF_CAP: 19,
         // Pursuit execution: absolute rally/angle quality of the chase defense
         // (SPD/TKL/AWR blend). Below center, the run mean gets yards back — the
         // defensive mirror of TRENCH_EXEC. Zero at/above the D1 pursuit blend.
-        PURSUIT_EXEC_CENTER: 82,
-        PURSUIT_EXEC_SCALE: 0.022,
-        PURSUIT_EXEC_CAP: 0.8,
-        ROUTE_TECH_SCALE: 2e-3,
-        // WR route-running vs DB coverage technique. Applied
         // as a depth-weighted TECH-GAP (recTECH − defTECH) to
         // separation. NET ZERO at equal TECH (calibration-safe).
         // At a 25-pt TECH edge on a short route: +0.05 sep
@@ -5388,8 +5364,6 @@ var _CFB = (() => {
         // separation needed to enter vdeep band
         VDEEP_PROB: 0.44,
         // chance of vdeep yards given separation > threshold
-        YAC_BASE: 2.1,
-        // 1.8->2.1 Jul 2026: goal-line clamp stopped counting phantom overshoot yards on TD passes; restores them as real YAC
         PAT_RATE: 0.96,
         HOME_EDGE: 1.1,
         // ── Game-day form (Jul 2026) — the upset mechanic ────────────────────────
@@ -5500,7 +5474,6 @@ var _CFB = (() => {
         // Legacy (kept for non-rep parts: kicking, punting, OT fallback)
         SCALE_PLAY: 28,
         SCALE_PASS: 30,
-        RUN_SD: 3.5,
         PASS_YARDS: {
           short: { mean: 5, sd: 2 },
           medium: { mean: 10, sd: 3.4 },
@@ -5613,8 +5586,6 @@ var _CFB = (() => {
         // SPD/AGI/PWR/STR/JMP
         AGE_CURVE_COACHED: { FR: 1.2, SO: 1.2, JR: 1.15, SR: 1.1 },
         // HND/SEC/BLK/TKL/TEC/AWR + meta
-        AGE_CURVE: { FR: 1, SO: 1.15, JR: 1.3, SR: 1.35 },
-        // fallback (avg ramp) for non-attr uses
         WE_DEV_MIN: 0.7,
         WE_DEV_SCALE: 0.8,
         // [TUNE]
@@ -5702,8 +5673,6 @@ var _CFB = (() => {
         // reach the title game and lose
         BONUS_NC_WIN: 5e4,
         // win it all
-        BONUS_RIVALRY_WIN: 5e3,
-        // take the trophy game (player rivalry)
         // ── Transfer portal ───────────────────────────────────────────────────────
         // Offseason stage after Departures. AI players enter when buried on the
         // depth chart, when their coach left, or when the program is collapsing.
@@ -5762,16 +5731,8 @@ var _CFB = (() => {
           { over: 79, per: 180 }
         ],
         // progressive brackets: points above each threshold cost that band's $/pt
-        PORTAL_SWEETEN_MULT: 1,
-        // sweetening costs the same again, doubles weight
         PORTAL_AI_MAX_SIGNINGS: 3,
         // per AI school per window
-        PORTAL_FIT_PRESTIGE_W: 8,
-        // school prestige pull per star
-        PORTAL_FIT_NEED_W: 30,
-        // open starting job at their position
-        PORTAL_FIT_DIST_W: 12,
-        // same-region comfort
         // ── Auction rebuild (Jul 2026): the portal is a multi-round bidding WAR.
         // Everyone in the pool is a PLAYING-TIME seeker (buried / cratered) looking to
         // go somewhere he can START — nobody rises for a bigger stage. Depth-chart FIT
@@ -5814,7 +5775,6 @@ var _CFB = (() => {
         // contests bids into the ~$5–8k range on starters)
         PORTAL_AI_VAL_PER_PT: 250,
         // ...per rating point above PORTAL_MIN_RATING, ×role
-        BUDGET_CARRYOVER: 0.25,
         RECRUIT_ACTION_BASE: {
           scout: 3,
           game_visit: 14,
@@ -5884,7 +5844,6 @@ var _CFB = (() => {
         // now the core decision. Money burns: no refunds on a lost race.
         SHARE_GAIN_MAX: 26,
         // pts/wk for a lone (uncontested) suitor, ×SHARE_QUIET_BONUS
-        SHARE_PRESSURE_K: 0.55,
         // (legacy) how sharply share converted to gain — kept for reference
         SHARE_SWING: 48,
         // PARITY-RELATIVE swing: pts/wk = SHARE_SWING × (yourShare − fairShare).
@@ -5987,7 +5946,7 @@ var _CFB = (() => {
         // Reputation XP per program milestone (career wins, first title...) [TUNE]
         // ── Offseason Chunk 3: roster stages [TUNE] ──
         REDSHIRT_MAX_GAMES: 4,
-        // games a redshirt can play and keep the year (NCAA rule)
+        // games a redshirt can play and keep the year (league rule)
         WALKON_POOL_EXTRA_MIN: 2,
         // tryout candidates beyond open scholarships (min) — always a real choice
         WALKON_POOL_EXTRA_MAX: 4,
@@ -6039,13 +5998,9 @@ var _CFB = (() => {
         RIVALRY_DAY: 8,
         // reserved nonconf slot (last one — rivalry week)
         // ── AI recruiting rebuild [TUNE] ──
-        // Rolling commitments: per-tier weights for early (8–10), mid (11–14),
-        // late (15–19) commit windows. Was randInt(17,19) — everyone signed at once.
-        COMMIT_WINDOWS: {
-          high: [[8, 10, 25], [11, 14, 30], [15, 19, 45]],
-          mid: [[8, 10, 15], [11, 14, 35], [15, 19, 50]],
-          low: [[8, 10, 8], [11, 14, 27], [15, 19, 65]]
-        },
+        // (COMMIT_WINDOWS removed Jul 2026 — the pre-rolled commit calendar it drove was
+        //  replaced by battle-decided signing in resolveFunnel. See RECRUITING_LOCK_DAY,
+        //  RECRUITING_EARLY_FLOOR and the COMMIT_HOLD_* family, which are the live knobs.)
         AI_TARGETS_PER_SLOT: 5,
         // board depth per open scholarship — schools board FAR more than they can
         // sign because they lose most head-to-head battles; a thin board leaves open
@@ -6105,26 +6060,10 @@ var _CFB = (() => {
         AI_ENDGAME_WINNABLE: 1.6,
         // extra weight on winnable targets at full urgency
         // ── Early commitments ────────────────────────────────────────────────────
-        // A recruit nobody is really fighting over takes the offer in hand instead of
-        // waiting for a scheduled date. Leader must be able to close (player needs an
-        // offer out; an AI leader must not have a full class).
-        EARLY_COMMIT_WEEK: 5,
-        // earliest week a decisively-separated leader can close (race-first: a runaway
-        // race shouldn't wait for the scheduled date)
-        EARLY_COMMIT_MIN: 62,
-        // leader interest required for the early (big-separation) close
-        EARLY_COMMIT_SECOND_MAX: 40,
-        // every other suitor must be at/below this
-        // Sealing the deal: a leader with very high interest AND real separation
-        // closes immediately — first to build the gap wins, economics decide before
-        // two schools can saturate into an arbitrary tie.
-        SEAL_COMMIT_WEEK: 4,
-        // earliest week a separated leader can seal
-        SEAL_COMMIT_MIN: 70,
-        // leader interest required to seal (separation, not saturation, is the trigger
-        // — lowered from 92 for the parity-relative meter where 90+ is rare)
-        SEAL_COMMIT_GAP: 14,
-        // margin over second place required to seal the race
+        // The EARLY_COMMIT_* and SEAL_COMMIT_* families were removed Jul 2026 along with the
+        // scheduled-commit-date system they gated. Signing is now purely emergent: a leader
+        // closes when he clears commitThreshold() and holds a lead for COMMIT_HOLD_* weeks,
+        // when the field collapses, or at the RECRUITING_LOCK_DAY hard lock. See resolveFunnel.
         AI_GAIN_BASE: 0.45,
         // weekly interest gain floor per pursuing school
         AI_GAIN_FIT: 0.85,
@@ -6151,7 +6090,6 @@ var _CFB = (() => {
         XP_DIV_TITLE: 15,
         XP_UNDEFEATED: 10,
         // Reputation economy (Chunk 5 rebalance) [TUNE]
-        REP_OVERPERF_SCALE: 120,
         // (legacy) overperformance gap → rep xp; superseded by the grade-driven feed
         // ── Reputation driven by the season coach grade (roots treatment) ──
         REP_GRADE_SCALE: 90,
@@ -6217,7 +6155,7 @@ var _CFB = (() => {
         // Each start re-points a system that already exists at a program's real
         // generated history. No flavor-only modes: every number here is consumed.
         ASHES_SCHOLARSHIP_CAP: 14,
-        // NCAA probation: signable slots (vs ~25 normal)
+        // probation: signable slots (vs ~25 normal)
         ASHES_PROBATION_YEARS: 3,
         // seasons the reduction runs
         ASHES_JOBSEC_START: 82,
@@ -6283,13 +6221,9 @@ var _CFB = (() => {
         // min coordinator rating average to be a head-coach candidate — only standouts
         OFFER_CALL_PROB: 0.5,
         // chance a genuine opening you qualify for actually calls you [TUNE]
-        FIRED_SLACK: 6,
-        // extra downward slack when fired (accept a step down) [TUNE]
         // ── Promotion gate: sustained dominance, not a single good year (Chunk 9 §3) ──
         DOMINANCE_DELTA: 3,
         // wins over expectation that count as a "dominant" season [TUNE]
-        OFFER_STREAK_MIN: 2,
-        // consecutive dominant seasons before reach-up offers appear [TUNE]
         OFFER_COOLDOWN: 1,
         // seasons between offer waves if declined (prevents standing menu) [TUNE]
         // Commit threshold (§7.3). Spec intent: high Work Ethic commits FASTER (lower
@@ -6307,7 +6241,6 @@ var _CFB = (() => {
         COMMIT_FIELD_CAP: 5,
         // suitors-above-one at which relief fully phases out
         SEPARATION: 15,
-        DECLINE_THRESHOLD: 25,
         MAX_CAMPUS_VISITS: 5,
         // ── Battle-decided signing (rebuilt) ─────────────────────────────────────
         // Timing is emergent from the weekly contact battle — no pre-rolled calendar.
@@ -6337,11 +6270,9 @@ var _CFB = (() => {
         FUNNEL_TOP3_DAY: 15,
         // Funnel core (Phase 1 SP recruiting — §3)
         FUNNEL_SIZE: { top8: 8, top5: 5, top3: 3 },
-        RIVAL_COUNT: { min: 3, max: 6 },
         // Starting interest range for seeded rivals, by recruit visibility tier.
         RIVAL_INTEREST: { low: [5, 18], mid: [15, 30], high: [25, 42] },
         // Per-week interest drift range for rivals, by visibility tier.
-        RIVAL_DRIFT: { low: [0.4, 0.8], mid: [0.6, 1.2], high: [0.3, 1] },
         // Distance multiplier applied to rival drift each week (far rivals apply more pressure).
         RIVAL_DRIFT_DIST_MULT: { local: 0.7, near: 1, mid: 1.4, far: 2 },
         // visionRating thresholds that set a recruit's expectation tier.
@@ -6383,8 +6314,6 @@ var _CFB = (() => {
         REP_BROKEN: 5,
         REP_VIOLATION: 10,
         REP_RESCIND: 3,
-        REP_HEAL: 0.05,
-        REP_GRADES: ["F", "D-", "D", "D+", "C-", "C", "C+", "B-", "B", "B+", "A-", "A", "A+"],
         // Prestige (§12)
         PRESTIGE_W_WIN: 0.12,
         PRESTIGE_W_TITLE: 0.15,
@@ -6411,7 +6340,6 @@ var _CFB = (() => {
         // [TUNE] non-conf games per team (weeks 5–8)
         CONF_GAMES: 8,
         // [TUNE] conference games per team (partial, rotating — spec §B.3)
-        MAX_EXHIBITIONS: 3,
         // §17 Fatigue & Snap-% Rotation
         // Accumulation per snap on field:  gain = PER_SNAP × (STA_PIVOT / player.STA)
         // Recovery per snap on bench:      rec  = RECOVERY × (player.STA / STA_PIVOT)
@@ -6462,11 +6390,14 @@ var _CFB = (() => {
         DE: { SPD: 19, AGI: 11, PWR: 14, STR: 17, JMP: 3, TKL: 20, TEC: 13, AWR: 3 },
         DT: { SPD: 14, AGI: 6, PWR: 20, STR: 21, JMP: 3, TKL: 22, TEC: 13, AWR: 1 },
         FB: { SPD: 3, AGI: 8, PWR: 16, STR: 14, HND: 13, SEC: 5, BLK: 13, TEC: 13, AWR: 10 },
-        K: { STR: 50, TEC: 50 },
+        // Specialists: leg = STR + PWR (distance), accuracy = TEC + AWR (placement and
+        // composure). Keeps the old 50/50 leg-vs-accuracy split, just spread over the two
+        // attributes that actually drive each half in the sim.
+        K: { PWR: 25, STR: 25, TEC: 25, AWR: 25 },
         LB: { SPD: 24, AGI: 15, PWR: 8, STR: 8, JMP: 1, HND: 1, TKL: 18, TEC: 12, AWR: 15 },
         OL: { SPD: 2, AGI: 16, PWR: 16, STR: 15, BLK: 27, TEC: 12, AWR: 11 },
         OLB: { SPD: 25, AGI: 18, PWR: 7, STR: 8, JMP: 3, HND: 1, TKL: 16, TEC: 12, AWR: 11 },
-        P: { STR: 50, TEC: 50 },
+        P: { PWR: 25, STR: 25, TEC: 25, AWR: 25 },
         QB: { SPD: 7, AGI: 7, PWR: 11, STR: 15, SEC: 4, TEC: 23, AWR: 33 },
         RB: { SPD: 19, AGI: 18, PWR: 11, STR: 8, HND: 12, SEC: 6, BLK: 1, TEC: 12, AWR: 13 },
         S: { SPD: 25, AGI: 14, PWR: 6, STR: 5, JMP: 6, HND: 3, TKL: 12, TEC: 12, AWR: 23 },
@@ -6475,24 +6406,30 @@ var _CFB = (() => {
       };
       ROLE_WEIGHTS = {
         // GENERATED from the contest table — edit tools/roleweights_from_contests.mjs, not this block.
-        "Returner": { SPD: 41, AGI: 17, SEC: 14, TEC: 8, AWR: 20 },
-        "QB-Pocket": { SPD: 3, AGI: 3, STR: 19, SEC: 9, TEC: 28, AWR: 38 },
-        "QB-Dual": { SPD: 13, AGI: 13, STR: 13, SEC: 6, TEC: 23, AWR: 32 },
-        "QB-Gunslinger": { SPD: 3, AGI: 3, STR: 29, SEC: 6, TEC: 24, AWR: 35 },
-        "QB-Game-Manager": { SPD: 2, AGI: 2, STR: 11, SEC: 13, TEC: 31, AWR: 41 },
-        "QB-Scrambler": { SPD: 16, AGI: 16, STR: 11, SEC: 9, TEC: 21, AWR: 27 },
+        "Returner": { SPD: 39, AGI: 15, PWR: 4, STR: 2, SEC: 13, TEC: 9, AWR: 18 },
+        // Ball-carrier roles now include a share of the TRUCK contest, not just the juke.
+        // Every carrier goes through runOutcome -> breaksTackle, where tackleTruck is
+        // { PWR .55, STR .27, TEC .18 } — but these roles were built from tackleEvadeOff only,
+        // so no QB, scat back, returner or slot carried any PWR. Generated by
+        // tools/roleweights_from_contests.mjs. Measured effect on the field:
+        // a QB's power moves him 4.23 -> 5.02 yds/carry (tools/qb_power_rush_probe.mjs).
+        "QB-Pocket": { SPD: 3, AGI: 3, PWR: 1, STR: 19, SEC: 9, TEC: 27, AWR: 38 },
+        "QB-Dual": { SPD: 12, AGI: 12, PWR: 3, STR: 14, SEC: 6, TEC: 23, AWR: 30 },
+        "QB-Gunslinger": { SPD: 3, AGI: 3, PWR: 1, STR: 29, SEC: 6, TEC: 24, AWR: 34 },
+        "QB-Game-Manager": { SPD: 2, AGI: 2, PWR: 1, STR: 11, SEC: 12, TEC: 31, AWR: 41 },
+        "QB-Scrambler": { SPD: 15, AGI: 15, PWR: 4, STR: 12, SEC: 8, TEC: 20, AWR: 26 },
         "TE-Receiving": { SPD: 13, AGI: 12, PWR: 2, STR: 2, JMP: 9, HND: 37, BLK: 3, TEC: 12, AWR: 10 },
         "TE-Blocking": { SPD: 3, AGI: 12, PWR: 11, STR: 12, JMP: 4, HND: 16, BLK: 19, TEC: 13, AWR: 10 },
         "TE-Hybrid": { SPD: 10, AGI: 12, PWR: 6, STR: 6, JMP: 7, HND: 26, BLK: 10, TEC: 13, AWR: 10 },
-        "TE-Move": { SPD: 15, AGI: 17, PWR: 4, STR: 4, JMP: 6, HND: 26, BLK: 6, TEC: 13, AWR: 9 },
+        "TE-Move": { SPD: 14, AGI: 16, PWR: 6, STR: 5, JMP: 6, HND: 26, BLK: 6, TEC: 13, AWR: 8 },
         "RB-Power": { SPD: 8, AGI: 6, PWR: 24, STR: 13, HND: 6, SEC: 12, BLK: 3, TEC: 13, AWR: 15 },
-        "RB-Scat": { SPD: 26, AGI: 23, HND: 23, SEC: 7, TEC: 11, AWR: 10 },
+        "RB-Scat": { SPD: 26, AGI: 22, PWR: 3, STR: 1, HND: 21, SEC: 7, TEC: 11, AWR: 9 },
         "RB-Elusive": { SPD: 21, AGI: 27, PWR: 2, STR: 1, HND: 12, SEC: 9, TEC: 12, AWR: 16 },
         "RB-Workhorse": { SPD: 15, AGI: 12, PWR: 13, STR: 7, HND: 9, SEC: 14, BLK: 3, TEC: 11, AWR: 16 },
         "RB-Speed": { SPD: 27, AGI: 22, PWR: 4, STR: 2, HND: 11, SEC: 9, TEC: 11, AWR: 14 },
         "WR-Deep": { SPD: 44, AGI: 10, JMP: 10, HND: 21, SEC: 4, TEC: 8, AWR: 3 },
         "WR-Poss": { SPD: 13, AGI: 12, JMP: 8, HND: 39, SEC: 8, TEC: 12, AWR: 8 },
-        "WR-Slot": { SPD: 21, AGI: 25, HND: 27, SEC: 6, TEC: 15, AWR: 6 },
+        "WR-Slot": { SPD: 20, AGI: 23, PWR: 3, STR: 1, HND: 26, SEC: 6, TEC: 15, AWR: 6 },
         "WR-Physical": { SPD: 10, AGI: 9, PWR: 2, STR: 3, JMP: 13, HND: 31, SEC: 6, BLK: 4, TEC: 12, AWR: 10 },
         "WR-Fade": { SPD: 12, AGI: 8, PWR: 3, STR: 8, JMP: 26, HND: 28, SEC: 5, TEC: 6, AWR: 4 },
         "DE-Speed": { SPD: 24, AGI: 18, PWR: 6, STR: 13, JMP: 4, TKL: 18, TEC: 13, AWR: 4 },
@@ -6526,12 +6463,16 @@ var _CFB = (() => {
         "FB-Lead": { AGI: 6, PWR: 20, STR: 16, SEC: 10, BLK: 17, TEC: 13, AWR: 18 },
         "FB-HBack": { SPD: 5, AGI: 9, PWR: 13, STR: 10, HND: 25, SEC: 10, BLK: 10, TEC: 13, AWR: 5 },
         "FB-Hybrid": { SPD: 3, AGI: 8, PWR: 16, STR: 14, HND: 16, SEC: 10, BLK: 13, TEC: 14, AWR: 6 },
-        "K-Accuracy": { STR: 32, TEC: 68 },
-        "K-Power": { STR: 68, TEC: 32 },
-        "K-Balanced": { STR: 50, TEC: 50 },
-        "P-Directional": { STR: 34, TEC: 66 },
-        "P-Distance": { STR: 66, TEC: 34 },
-        "P-Balanced": { STR: 50, TEC: 50 }
+        // Specialist roles mirror the sim's kicking model: leg = STR+PWR, accuracy = TEC+AWR
+        // (attemptFG / puntDistance, both 50/50). Generated by tools/roleweights_from_contests.mjs
+        // from the kickLeg / kickAccuracy blends. Before this, K-Power was STR 68 / TEC 32 and
+        // rated a big leg identically to a weak one.
+        "K-Accuracy": { PWR: 16, STR: 16, TEC: 34, AWR: 34 },
+        "K-Power": { PWR: 34, STR: 34, TEC: 16, AWR: 16 },
+        "K-Balanced": { PWR: 25, STR: 25, TEC: 25, AWR: 25 },
+        "P-Directional": { PWR: 17, STR: 17, TEC: 33, AWR: 33 },
+        "P-Distance": { PWR: 33, STR: 33, TEC: 17, AWR: 17 },
+        "P-Balanced": { PWR: 25, STR: 25, TEC: 25, AWR: 25 }
       };
       FRONT_ROLES = {
         "4-3": { DE: ["DE-Speed", "DE-Power"], DT: ["DT-3tech", "DT-3tech"], OLB: ["OLB-Blitz", "OLB-Cover"], LB: ["LB-Thumper"], CB: ["CB-Press", "CB-Press"], S: ["S-Free", "S-Strong"] },
@@ -6917,8 +6858,8 @@ var _CFB = (() => {
         LB: { SPD: 26, STR: 26, TKL: 20 },
         CB: { SPD: 36, AGI: 32 },
         S: { SPD: 32, AGI: 28, TKL: 18 },
-        K: { STR: 30 },
-        P: { STR: 30 }
+        K: { STR: 30, PWR: 30 },
+        P: { STR: 30, PWR: 30 }
       };
       RECRUIT_CORE = {
         QB: { core: ["STR", "AWR", "TEC"], solid: [30, 35, 35], star: [40, 50, 40] },
@@ -6937,8 +6878,11 @@ var _CFB = (() => {
         LB: { core: ["STR", "TKL", "AWR", "TEC"], solid: [35, 35, 30, 26], star: [45, 45, 45, 36] },
         CB: { core: ["SPD", "AGI", "HND", "TEC", "JMP", "AWR"], solid: [40, 35, 25, 30, 24, 28], star: [55, 45, 40, 40, 34, 38] },
         S: { core: ["SPD", "TKL", "AWR", "TEC", "JMP"], solid: [35, 30, 35, 26, 22], star: [50, 40, 45, 36, 32] },
-        K: { core: ["STR", "TEC"], solid: [40, 40], star: [50, 50] },
-        P: { core: ["STR", "TEC"], solid: [40, 40], star: [50, 50] }
+        // PWR and AWR are core for specialists because the kicking model reads them. Leave
+        // them non-core and they spawn ~15-30 points below STR/TEC, which drops league FG%
+        // from ~74% to ~62% (tools/kicking_model_probe.mjs).
+        K: { core: ["STR", "PWR", "TEC", "AWR"], solid: [40, 40, 40, 40], star: [50, 50, 50, 50] },
+        P: { core: ["STR", "PWR", "TEC", "AWR"], solid: [40, 40, 40, 40], star: [50, 50, 50, 50] }
       };
       SIZE_BANDS = {
         // pos-level defaults (used when no archetype, e.g. FB/OL/K/P, or as fallback)
@@ -18210,20 +18154,20 @@ var _CFB = (() => {
   function attemptFG(kRoster, depth, kickDistance, dnaSpecialGrade = 0) {
     const kId = (depth["K"] || [])[0];
     const k = kId ? kRoster.find((p) => p.id === kId) : null;
-    const str = k ? k.attributes.STR : 40;
-    const tech = k ? k.attributes.TEC : 40;
-    const rangeCenter = 46 + (str - 50) * 0.22 + (dnaSpecialGrade || 0) * 0.4;
-    const accBonus = (tech - 50) * C.FG_TECH_SCALE + (dnaSpecialGrade || 0) * 0.01;
+    const leg = k ? 0.5 * (k.attributes.STR || 0) + 0.5 * (k.attributes.PWR || 0) : 40;
+    const acc2 = k ? 0.5 * (k.attributes.TEC || 0) + 0.5 * (k.attributes.AWR || 0) : 40;
+    const rangeCenter = 46 + (leg - 50) * 0.22 + (dnaSpecialGrade || 0) * 0.4;
+    const accBonus = (acc2 - 50) * C.FG_TECH_SCALE + (dnaSpecialGrade || 0) * 0.01;
     const prob = clamp2(logistic((rangeCenter - kickDistance) / 8.5 + accBonus), 0.01, 0.985);
     return Math.random() < prob;
   }
   function puntDistance(pRoster, depth) {
     const pId = (depth["P"] || [])[0];
     const p = pId ? pRoster.find((pl) => pl.id === pId) : null;
-    const str = p ? p.attributes.STR : 40;
-    const tech = p ? p.attributes.TEC : 40;
-    const meanDist = 38 + str * 0.12 + (tech - 50) * C.PUNT_TECH_SCALE;
-    const sigma = clamp2(7 - (tech - 50) * 0.05, 3, 8);
+    const leg = p ? 0.5 * (p.attributes.STR || 0) + 0.5 * (p.attributes.PWR || 0) : 40;
+    const acc2 = p ? 0.5 * (p.attributes.TEC || 0) + 0.5 * (p.attributes.AWR || 0) : 40;
+    const meanDist = 38 + leg * 0.12 + (acc2 - 50) * C.PUNT_TECH_SCALE;
+    const sigma = clamp2(7 - (acc2 - 50) * 0.05, 3, 8);
     return Math.max(25, Math.round(randNorm(meanDist, sigma)));
   }
   function fourthDownDecision(fieldPos, distance, distFromGoal, maxFG, canFG, fourthApproach, scoreMargin, secsLeft) {
@@ -25365,6 +25309,9 @@ var _CFB = (() => {
     renderMainMenu: () => renderMainMenu,
     setupListeners: () => setupListeners2
   });
+  function buildId() {
+    return typeof globalThis !== "undefined" && globalThis.__BUILD__ || "dev";
+  }
   function renderMainMenu() {
     const saves = state.ui.saves || [];
     const autoSave = saves.find((s) => s.slot === "auto");
@@ -25384,6 +25331,7 @@ var _CFB = (() => {
 
         <div class="mm-footer">
           <span class="mm-version">320+ Schools \xB7 29 Conferences \xB7 3 Divisions \xB7 Fixed D1 \xB7 Procedural D2/D3</span>
+          <span class="mm-build" title="Build ID. This is also the service-worker cache name \u2014 if a device is serving a stale build, this is how you spot it.">build ${buildId()}</span>
         </div>
       </div>
 
@@ -36942,24 +36890,23 @@ var _CFB = (() => {
   ];
   var PRACTICE_KEYS = Object.keys(PRACTICE_TOOLS);
   var POSITION_TOOLS = Object.fromEntries(POS_GROUPS.map((g) => [g.id, [...PRACTICE_KEYS]]));
-  var DEFAULT_POSITION_PLANS = {
-    // Phase 2 sheet (was stranded on ATH/ELU/GI/TECH — minutes on dead keys
-    // trained NOTHING). Every row sums to 100 across the 11 coachable drills.
-    QB: { SPD: 6, AGI: 8, STR: 16, SEC: 12, TEC: 28, AWR: 30 },
-    RB: { SPD: 16, AGI: 18, PWR: 12, STR: 8, HND: 8, SEC: 14, BLK: 4, TEC: 10, AWR: 10 },
-    FB: { SPD: 2, AGI: 4, PWR: 12, STR: 18, HND: 8, SEC: 10, BLK: 24, TEC: 9, AWR: 13 },
-    WR: { SPD: 20, AGI: 16, STR: 2, JMP: 10, HND: 24, SEC: 6, TEC: 12, AWR: 10 },
-    TE: { SPD: 8, AGI: 8, STR: 12, JMP: 8, HND: 18, SEC: 6, BLK: 16, TEC: 10, AWR: 14 },
-    OL: { AGI: 12, PWR: 4, STR: 22, BLK: 34, TEC: 12, AWR: 16 },
-    DE: { SPD: 14, AGI: 12, PWR: 14, STR: 20, TKL: 22, TEC: 10, AWR: 8 },
-    OLB: { SPD: 18, AGI: 16, PWR: 6, STR: 10, HND: 2, TKL: 22, TEC: 10, AWR: 16 },
-    DT: { SPD: 6, AGI: 8, PWR: 20, STR: 24, TKL: 22, TEC: 12, AWR: 8 },
-    LB: { SPD: 13, AGI: 11, PWR: 4, STR: 10, JMP: 4, HND: 4, TKL: 22, TEC: 14, AWR: 18 },
-    CB: { SPD: 20, AGI: 16, STR: 6, JMP: 8, HND: 8, TKL: 10, TEC: 10, AWR: 22 },
-    S: { SPD: 17, AGI: 13, STR: 6, JMP: 8, HND: 8, TKL: 15, TEC: 12, AWR: 21 },
-    K: { STR: 40, TEC: 44, AWR: 16 },
-    P: { STR: 38, TEC: 40, AWR: 22 }
-  };
+  function planFromWeights(pos) {
+    const w = POS_WEIGHTS[pos] || {};
+    const drills = Object.keys(PRACTICE_TOOLS).filter((d) => (w[d] || 0) > 0);
+    const total = drills.reduce((sum, d) => sum + w[d], 0);
+    if (!total) return {};
+    const parts = drills.map((d) => ({ d, exact: w[d] / total * TOTAL_MINUTES }));
+    const plan = {};
+    let used = 0;
+    for (const part of parts) {
+      plan[part.d] = Math.floor(part.exact);
+      used += plan[part.d];
+    }
+    const byRemainder = [...parts].sort((a, b) => b.exact % 1 - a.exact % 1);
+    for (let i = 0; used < TOTAL_MINUTES; i++, used++) plan[byRemainder[i % byRemainder.length].d]++;
+    return plan;
+  }
+  var DEFAULT_POSITION_PLANS = Object.fromEntries(POS_GROUPS.map((g) => [g.id, planFromWeights(g.id)]));
   var TOOL_DEFAULTS = {
     SPD: "Speed Training",
     AGI: "Agility Drills",
