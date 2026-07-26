@@ -9437,38 +9437,10 @@ var _CFB = (() => {
     const gap = Math.abs(recruitTier - prestige);
     return Math.max(0.1, 1 - gap * 0.3);
   }
-  function buildNarrowSchedule(commitDay) {
-    const span = commitDay - NARROW_START;
-    const step = Math.max(2, Math.round(span / 4));
-    const top8 = Math.min(NARROW_START + step, commitDay - 3);
-    const top5 = Math.min(Math.max(top8 + 2, NARROW_START + step * 2), commitDay - 2);
-    const top3 = Math.min(Math.max(top5 + 1, NARROW_START + step * 3), commitDay - 1);
-    return [
-      { stage: "top8", day: top8 },
-      { stage: "top5", day: top5 },
-      { stage: "top3", day: top3 },
-      { stage: "committed", day: commitDay }
-    ];
-  }
   function seedFunnelData(recruit, schools) {
     const vr = recruit.visionRating || 50;
     const tier = vr >= C.FUNNEL_TIER_HIGH ? "high" : vr >= C.FUNNEL_TIER_MID ? "mid" : "low";
-    const windows = C.COMMIT_WINDOWS[tier] || C.COMMIT_WINDOWS.mid;
-    let roll = Math.random() * windows.reduce((s, w) => s + w[2], 0);
-    let commitDay = 19;
-    for (const [lo, hi, w] of windows) {
-      roll -= w;
-      if (roll <= 0) {
-        commitDay = randInt3(lo, hi);
-        break;
-      }
-    }
     recruit.funnelStage = "open";
-    recruit.narrowSchedule = buildNarrowSchedule(commitDay);
-    {
-      const r = Math.random();
-      recruit.temperament = r < 0.5 ? "ready" : r < 0.8 ? "deliberate" : "showman";
-    }
     recruit.rivals = [];
     recruit._funnelTier = tier;
     rollWants(recruit);
@@ -9799,8 +9771,7 @@ var _CFB = (() => {
       //       went quiet / got cut. With nobody left to fight, the recruit settles
       //       quickly (a very short arm), even below the durable-lead margin.
       //   (3) HARD LOCK — on the final recruiting day, whoever leads signs (below).
-      // Presentation (temperament/showman ceremony) adds at most a 1-week flourish;
-      // it can never block a settled race.
+      // Timing is 100% the battle — no personality delay layer.
       if (seasonStarted && day < C.RECRUITING_LOCK_DAY) {
         const peEarly = (playerBoard || []).find((e) => e.recruitId === recruit.id);
         const poolEarly = buildFunnelPool(recruit, peEarly, playerSchoolId, playerDivision2);
@@ -9849,17 +9820,9 @@ var _CFB = (() => {
             // out / was cut). Settle fast — but still after holding for a week, so a
             // recruit seeded with one suitor doesn't insta-commit.
             const collapsed = contenders <= 1 && (recruit._leadWeeks || 0) >= 2;
-            if (durable || collapsed) {
-              const temp = recruit.temperament || "ready";
-              const ceremony = collapsed ? 0 : (temp === "showman" ? 1 : 0);
-              if (!recruit._armedDay) recruit._armedDay = day + ceremony;
-              if (day >= recruit._armedDay) earlyCommit = true;
-            } else {
-              recruit._armedDay = null;
-            }
+            if (durable || collapsed) earlyCommit = true;
           } else {
             recruit._leadWeeks = 0;
-            recruit._armedDay = null;
           }
         }
       }
@@ -24727,16 +24690,10 @@ var _CFB = (() => {
       }
       const token = (_b = state.pendingHalftime) == null ? void 0 : _b.token;
       if ((liveWatchOn() || state.ui.autoRun) && token && unwatchedPlayCount(token) > 0) {
-        // No between-plays chalkboard replay for the player's call: the previous play's
-        // result is already in the call feed / play-by-play. Skip straight to the call
-        // sheet (boardDone). Auto-run still watches the board.
-        const skipBoard = !state.ui.autoRun;
-        if (skipBoard) {
-          // The board normally advances _watchedPlays; since we bypass it, mark the plays
-          // watched here so the feed doesn't re-show them and the loop stays clean.
-          token._watchedPlays = tokenAllPlays(token).length;
-        }
-        state.ui.liveWatch = { stage: "call", boardDone: skipBoard };
+        // Watch the play(s) animate on the chalkboard, then go STRAIGHT to the next
+        // call sheet — no interstitial "Continue" screen (that pause is what the
+        // between-plays cleanup removed; see the watch-finish auto-advance below).
+        state.ui.liveWatch = { stage: "call", boardDone: false };
       } else if (stop.type === "fourthdown") {
         state.ui.showFourthDown = true;
       } else {
@@ -25269,10 +25226,10 @@ var _CFB = (() => {
     <b>testing sheet</b> (RAS, 40, vert) are visible \u2014 but his <b>true rating
     and potential stay hidden until you scout him</b>. RAS is a hypothesis, not
     a verdict: <b>\u26A0 raw</b> tests better than he plays, <b>\u{1F3C8} gamer</b> plays
-    better than he tests. And closing is about the KID, not the calendar: sell
-    him past his threshold with an offer in hand and <b>\u{1F525} types commit that
-    week</b>, \u{1F914} types announce within a few, \u{1F3A9} types hold for the hat ceremony.
-    Verbals are final \u2014 every early close frees money for the next name.`
+    better than he tests. Closing is a <b>battle</b>, not a calendar: out-work and
+    out-bid his other suitors, and once you've built a clear, lasting lead he
+    commits \u2014 blowouts settle fast, dogfights go to the wire. Verbals are final
+    \u2014 every close frees money for the next name.`
         },
         {
           icon: "\u{1F4CB}",
@@ -33949,16 +33906,7 @@ var _CFB = (() => {
     const playerInterest = playerEntry && !playerEntry.eliminated ? playerEntry.interest || 0 : null;
     const margin = playerInterest != null && cutVal != null ? Math.round(playerInterest - cutVal) : null;
     const leader = pool[0] || null;
-    const nextEvent = (recruit.narrowSchedule || []).find((e) => e.day >= (state.day || 0) && (stage === "open" ? true : e.stage !== "top8" || stage === "open"));
-    const upcoming = (recruit.narrowSchedule || []).filter((e) => e.day >= (state.day || 0));
-    const nextDay = upcoming.length ? upcoming[0].day : null;
-    const commitDay = (_g = (_f = (recruit.narrowSchedule || []).find((e) => e.stage === "committed")) == null ? void 0 : _f.day) != null ? _g : null;
     const scouted = hasScouted(state.playerCoach, recruit.id) || !!((_h = state.settings) == null ? void 0 : _h.revealScouting);
-    // Timing is now battle-driven \u2014 there's no fixed commit date. Show the recruit's
-    // DECISIVENESS tendency (how quickly they'll pull the trigger once a clear leader
-    // emerges) rather than a promised week.
-    const decisive = recruit.temperament === "showman" ? "Savors the recruitment" : recruit.temperament === "deliberate" ? "Takes his time" : "Decides quickly";
-    const timing = !scouted ? commitDay == null ? "" : commitDay <= 10 ? "Early mover" : commitDay <= 14 ? "Mid-cycle" : "Late decider" : decisive;
     return {
       stage,
       stageLabel: STAGE_LABEL[stage] || stage,
@@ -33968,9 +33916,6 @@ var _CFB = (() => {
       margin,
       leader,
       nextLabel: NEXT_LABEL[stage] || "",
-      nextDay,
-      commitDay,
-      timing,
       scouted,
       pool
     };
@@ -34030,10 +33975,6 @@ var _CFB = (() => {
     const stageHeader = `<div class="funnel-status-header">
     <span class="funnel-status-label">FUNNEL STAGE</span>
     ${funnelStageChip(recruit.funnelStage, entry == null ? void 0 : entry.eliminated)}
-    ${(() => {
-      const i = cutLineInfo(recruit, entry);
-      return i.timing ? `<span class="funnel-timing" style="font-size:10px;opacity:.75;margin-left:6px">Decides ${i.timing}</span>` : "";
-    })()}
   </div>`;
     if (entry == null ? void 0 : entry.eliminated) {
       return `${stageHeader}<div class="cutline-text cutline-eliminated" style="margin-top:6px">Eliminated \u2014 no longer considering your program</div>`;
@@ -34259,15 +34200,6 @@ var _CFB = (() => {
     return list;
   }
   var POS_GAP_BASE = { QB: -1, RB: 13, FB: 1, WR: 1, TE: -4, OL: -3, DE: 7, DT: -1, OLB: -2, LB: -3, CB: 6, S: -2, K: -1, P: 0 };
-  function temperamentTag(r, scouted) {
-    var _a;
-    if (!scouted || !r.temperament) return "";
-    if (r.temperament === "ready")
-      return ' <span class="build-tag tag-ready" title="Decides fast \u2014 hit his threshold with an offer in hand and he commits that week">\u{1F525} decides fast</span>';
-    if (r.temperament === "deliberate")
-      return ' <span class="build-tag tag-deliberate" title="Sleeps on it \u2014 once sold, he announces 1\u20133 weeks later">\u{1F914} sleeps on it</span>';
-    return ` <span class="build-tag tag-showman" title="The hat-ceremony kid \u2014 savors the recruitment and holds out for a big announcement once a clear leader emerges">\u{1F3A9} savors it</span>`;
-  }
   function buildTag(r) {
     var _a;
     const canSee = hasScouted(state.playerCoach, r.id) || skillGradeIndex(state.playerCoach, "evaluator") >= 4 || ((_a = state.settings) == null ? void 0 : _a.revealScouting);
@@ -34471,7 +34403,7 @@ var _CFB = (() => {
                   <td class="muted">#${r.positionRank || i + 1}</td>
                   <td><span class="pos-chip pos-${r.position}">${r.position}</span></td>
                   <td>${derivedArchetype(r) ? `<span class="arch-chip">${archetypeLabel(derivedArchetype(r))}</span>` : '<span class="muted">\u2014</span>'}</td>
-                  <td class="player-name-cell">${escapeHtml(fullName(r))}${buildTag(r)}${temperamentTag(r, hasScouted(state.playerCoach, r.id))}</td>
+                  <td class="player-name-cell">${escapeHtml(fullName(r))}${buildTag(r)}</td>
                   <td><span class="rating-chip rating-${ratingColor(displayedRating(state.playerCoach, r))}">${displayedRating(state.playerCoach, r)}</span></td>
                   <td>${scouted ? `<span class="rating-chip rating-${ratingColor(r.compositeRating)}">${Math.round(r.compositeRating)}</span>` : '<span class="fog">?</span>'}</td>
                   <td>${scouted ? potShort(r.potentialBand) : '<span class="fog">?</span>'}</td>
@@ -34520,7 +34452,7 @@ var _CFB = (() => {
     return `
     <div class="rec-board">
       ${viewToggle}
-      <div class="gp-tip tip-info">\u25B8 Your board is the war: pour weekly effort into the recruits you want, watch the cut line, and pitch what each kid cares about. Sell a kid past his threshold with an offer in hand and he can commit ANY week \u2014 \u{1F525} types decide fast, \u{1F914} types sleep on it, \u{1F3A9} types hold for the ceremony. Verbals are final: an early close frees that money for the next name.</div>
+      <div class="gp-tip tip-info">\u25B8 Your board is the war: pour weekly effort into the recruits you want, watch the cut line, and pitch what each kid cares about. Out-work and out-bid the other suitors \u2014 build a clear, lasting lead and the kid commits (blowouts settle fast, dogfights go to the wire). Verbals are final: an early close frees that money for the next name.</div>
       ${board.map((entry) => {
       const recruit = state.world.recruits.find((r) => r.id === entry.recruitId);
       if (!recruit) return "";
@@ -34533,7 +34465,7 @@ var _CFB = (() => {
               <div class="board-left">
                 <span class="pos-chip pos-${recruit.position}">${recruit.position}</span>
                 <div>
-                  <div class="board-name">${escapeHtml(fullName(recruit))}${buildTag(recruit)}${temperamentTag(recruit, hasScouted(state.playerCoach, recruit.id))}</div>
+                  <div class="board-name">${escapeHtml(fullName(recruit))}${buildTag(recruit)}</div>
                   <div class="board-meta muted">
                     ${derivedArchetype(recruit) ? `<span class="arch-chip">${archetypeLabel(derivedArchetype(recruit))}</span> \xB7 ` : ""}
                     ${isScouted(recruit.id) ? `${Math.round(recruit.compositeRating)} true \xB7 ${potShort(recruit.potentialBand)} pot` : '<span class="fog">Unscouted</span>'}
@@ -34616,7 +34548,7 @@ var _CFB = (() => {
               <tr class="recruit-row" data-recruit-id="${r.id}">
                 <td><span class="pos-chip pos-${r.position}">${r.position}</span></td>
                 <td>${derivedArchetype(r) ? `<span class="arch-chip">${archetypeLabel(derivedArchetype(r))}</span>` : '<span class="muted">\u2014</span>'}</td>
-                <td class="player-name-cell">${escapeHtml(fullName(r))}${buildTag(r)}${temperamentTag(r, hasScouted(state.playerCoach, r.id))}</td>
+                <td class="player-name-cell">${escapeHtml(fullName(r))}${buildTag(r)}</td>
                 <td><span class="rating-chip rating-${ratingColor(displayedRating(state.playerCoach, r))}">${displayedRating(state.playerCoach, r)}</span></td>
                 <td>${scouted ? `<span class="rating-chip rating-${ratingColor(r.compositeRating)}">${Math.round(r.compositeRating)}</span>` : '<span class="fog">?</span>'}</td>
                 <td>${scouted ? potShort(r.potentialBand) : '<span class="fog">?</span>'}</td>
@@ -34736,7 +34668,7 @@ var _CFB = (() => {
       return `
                 <tr class="signee-row" data-recruit-id="${r.id}">
                   <td><span class="pos-chip pos-${r.position}">${r.position}</span></td>
-                  <td class="player-name-cell">${escapeHtml(fullName(r))}${buildTag(r)}${temperamentTag(r, hasScouted(state.playerCoach, r.id))}
+                  <td class="player-name-cell">${escapeHtml(fullName(r))}${buildTag(r)}
                     ${gemFlag ? '<span class="gem-tag" title="True rating well above visibility">GEM</span>' : ""}
                     ${bustFlag ? '<span class="bust-tag" title="True rating well below visibility">BUST</span>' : ""}
                   </td>
@@ -34833,7 +34765,7 @@ var _CFB = (() => {
       <div class="profile-hero">
         <div class="profile-left">
           <div class="profile-pos-badge pos-${recruit.position}">${recruit.position}</div>
-          <h2 class="profile-name">${escapeHtml(fullName(recruit))}${buildTag(recruit)}${temperamentTag(recruit, hasScouted(state.playerCoach, recruit.id))}</h2>
+          <h2 class="profile-name">${escapeHtml(fullName(recruit))}${buildTag(recruit)}</h2>
           <div class="profile-details">
             ${derivedArchetype(recruit) ? `<span class="arch-chip arch-chip-lg">${archetypeLabel(derivedArchetype(recruit))}</span>` : ""}
             <span>${recruit.height} &middot; ${recruit.weight} lbs &middot; GPA ${recruit.gpa}</span>
@@ -40307,14 +40239,28 @@ var _CFB = (() => {
       watchBug(null, {});
       watchBoard(null);
       if (w.onFinish) {
-        ticker.innerHTML = `<span class="wt-final">${w.liveLabel || "That\u2019s the half."}</span>
-        <button class="btn-primary watch-continue" id="watch-continue">Continue \u2192</button>`;
-        (_g = document.getElementById("watch-continue")) == null ? void 0 : _g.addEventListener("click", () => {
+        var _lw = state.ui.liveWatch;
+        const isCallStage = (_lw == null ? void 0 : _lw.stage) === "call" && !state.ui.autoRun;
+        if (isCallStage) {
+          // Between plays: NO interstitial. Hold on the final result a beat so the
+          // player sees the outcome, then advance straight to the next call sheet.
+          ticker.innerHTML = `<span class="wt-final">${w.liveLabel || ""}</span>`;
           const fn = w.onFinish;
-          watchStop();
-          _watch = null;
-          fn();
-        });
+          w.revealTimer = setTimeout(() => {
+            watchStop();
+            _watch = null;
+            fn();
+          }, Math.max(650, baseMs * 0.5));
+        } else {
+          ticker.innerHTML = `<span class="wt-final">${w.liveLabel || "That\u2019s the half."}</span>
+          <button class="btn-primary watch-continue" id="watch-continue">Continue \u2192</button>`;
+          (_g = document.getElementById("watch-continue")) == null ? void 0 : _g.addEventListener("click", () => {
+            const fn = w.onFinish;
+            watchStop();
+            _watch = null;
+            fn();
+          });
+        }
       } else {
         ticker.innerHTML = `<span class="wt-final">FINAL \u2014 ${escapeHtml(((_h = w.r.homeSchool) == null ? void 0 : _h.name) || "")} ${w.r.homeScore}, ${escapeHtml(((_i = w.r.awaySchool) == null ? void 0 : _i.name) || "")} ${w.r.awayScore}</span>`;
       }
