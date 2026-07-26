@@ -3929,6 +3929,25 @@ th.conv-sort { cursor: pointer; user-select: none; }
 th.conv-sort:hover { color: var(--text-0); }
 th.conv-sort.active { color: var(--team-1); }
 
+.conv-preview {
+  margin: 8px 0; padding: 12px 14px;
+  border: 1px solid var(--team-1, var(--gold)); border-radius: 12px;
+  background: var(--bg-raised);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.28);
+}
+.conv-preview-head {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--team-1, var(--gold)); margin-bottom: 8px;
+}
+.conv-preview-body {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 2px;
+}
+.conv-preview-name { font-weight: 700; font-size: 14px; }
+.conv-preview-move, .conv-preview-rating { display: flex; align-items: center; gap: 6px; }
+.conv-preview-arrow { color: var(--text-2); font-weight: 700; }
+.conv-preview-delta { font-weight: 800; font-size: 12px; font-variant-numeric: tabular-nums; }
+.conv-preview-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
 /* Per-attribute progression chips (camp report / spring reps) */
 .attr-gain-row {
   flex-basis: 100%; display: flex; gap: 4px; flex-wrap: wrap;
@@ -4730,8 +4749,40 @@ body.theme-school .data-table tr:hover td {
 .watch-pill.wp-away { border-bottom: 2px solid #7fa7d8; }
 .watch-pill.wp-live { opacity: 1; background: rgba(255,213,74,0.25); }
 .watch-controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.watch-btn { padding: 5px 10px; font-size: 0.85em; }
-.watch-progress { margin-left: auto; font-size: 0.78em; opacity: 0.6; }
+.watch-progress { margin-left: auto; font-size: 0.78em; opacity: 0.6; font-variant-numeric: tabular-nums; }
+
+/* ── Broadcast control bar: scoreboard-style live/replay controls ── */
+.broadcast-bar {
+  gap: 5px; padding: 6px 8px; margin-top: 6px;
+  background: linear-gradient(180deg, rgba(10,14,20,0.94), rgba(20,26,36,0.94));
+  border: 1px solid rgba(255,255,255,0.10);
+  border-top: 2px solid var(--team-1, #ffd54a);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+}
+.bc-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  color: var(--text-0, #fff);
+  border-radius: 6px; cursor: pointer;
+  font-weight: 800; letter-spacing: 0.04em;
+  transition: background 0.12s, border-color 0.12s, transform 0.08s;
+}
+.bc-btn:hover { background: rgba(255,255,255,0.12); border-color: var(--team-1, #ffd54a); }
+.bc-btn:active { transform: translateY(1px); }
+.bc-icon { width: 34px; height: 34px; font-size: 1.05em; padding: 0; }
+.bc-play {
+  background: var(--team-1, #ffd54a);
+  color: #000; border-color: transparent;
+  border-bottom: 2px solid var(--team-2, var(--gold, #c9952b));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25);
+}
+.bc-play:hover { filter: brightness(1.08); background: var(--team-1, #ffd54a); }
+.bc-play.bc-paused { background: rgba(255,255,255,0.05); color: var(--text-0, #fff); border: 1px solid rgba(255,255,255,0.12); box-shadow: none; }
+.bc-speed { min-width: 40px; height: 34px; padding: 0 8px; font-variant-numeric: tabular-nums; color: var(--team-1, #ffd54a); }
+.bc-text { height: 34px; padding: 0 12px; font-size: 0.82em; }
+.bc-final { margin-left: 2px; }
 
 /* ── Live watch + animated board ── */
 .watch-live-overlay { z-index: 1200; }
@@ -20210,15 +20261,6 @@ var _CFB = (() => {
       const sg = playSpringGame(state2);
       if (sg.ok) events.push({ type: "info", text: `Spring game simmed: ${sg.result.nameA} ${sg.result.scoreA}\u2013${sg.result.scoreB} ${sg.result.nameB}.` });
     }
-    if (day === 3) {
-      const school = state2.world.schools.find((s) => s.id === state2.playerSchoolId);
-      if (school && school.roster.length > C.ROSTER_SIZE) {
-        return { ok: false, events: [{
-          type: "warning",
-          text: `Final cuts: roster ${school.roster.length}/${C.ROSTER_SIZE}. Cut ${school.roster.length - C.ROSTER_SIZE} to reach the opener.`
-        }] };
-      }
-    }
     if (day === 4) {
       commitSeasonGoals(state2, state2.season);
       events.push({ type: "info", text: "AD expectations locked for the season." });
@@ -20538,8 +20580,8 @@ var _CFB = (() => {
       PRESEASON_WEEKS = {
         1: { id: "camp", label: "Development Camp" },
         2: { id: "spring", label: "Spring Game" },
-        3: { id: "cuts", label: "Final Cuts" },
-        4: { id: "redshirts", label: "Redshirts & Expectations" }
+        3: { id: "redshirts", label: "Redshirt Finalization" },
+        4: { id: "expectations", label: "Expectations" }
       };
       FOCUS_GROUPS = [
         { id: "balanced", label: "Balanced", positions: null },
@@ -24585,8 +24627,8 @@ var _CFB = (() => {
           title: "The Year",
           body: `A season runs preseason \u2192 regular season \u2192 playoffs \u2192 offseason.
     Preseason is four weeks: <b>Dev Camp</b> (training focus + position changes),
-    the <b>Spring Game</b>, <b>Cut Day</b> (get the roster legal), and <b>Redshirt
-    Finalization</b>. Then game weeks until the 16-team playoff, and an offseason
+    the <b>Spring Game</b>, <b>Redshirt Finalization</b>, and locking your
+    <b>AD Expectations</b>. Then game weeks until the 16-team playoff, and an offseason
     wizard that walks job offers, awards, departures, the <b>Transfer Portal</b>,
     walk-ons, and scheduling one screen at a time. The big CONTINUE button always
     moves time forward; everything else is preparation.`
@@ -30088,12 +30130,10 @@ var _CFB = (() => {
       body = renderPreseasonCamp(school, pre);
     } else if (focusMeta.id === "spring") {
       body = renderPreseasonSpring(school, pre);
-    } else if (focusMeta.id === "cuts") {
-      body = cutDayBody(school);
+    } else if (focusMeta.id === "redshirts") {
+      body = redshirtFinalizeBody(school);
     } else {
-      body = `
-      ${redshirtFinalizeBody(school)}
-      ${renderExpectationsBar(school, goals)}`;
+      body = renderExpectationsBar(school, goals);
     }
     return `
     ${body}
@@ -30165,6 +30205,42 @@ var _CFB = (() => {
     ${convBoardOpen ? `<p class="offseason-hint" style="margin:2px 0 0">Convert a player to a new position \u2014 pick a target position to see everyone's projected rating there (conversion penalty included). Changes lock when camp runs.</p>
          ${positionChangeBoard(school, pre)}` : ""}`;
   }
+  function conversionPreviewPanel() {
+    var _a, _b;
+    const pend = (_a = state.ui) == null ? void 0 : _a.convPending;
+    if (!pend) return "";
+    const school = state.world.schools.find((s) => s.id === state.playerSchoolId);
+    const p = school == null ? void 0 : school.roster.find((x) => x.id === pend.playerId);
+    if (!p) return "";
+    const prev = previewConversion(state, pend.playerId, pend.to);
+    if (!prev) return "";
+    const diff = prev.projected - prev.current;
+    const penaltyPct = Math.round(conversionPenaltyFactor(state) * 100);
+    const nm = `${((_b = p.name) == null ? void 0 : _b.first) || ""} ${p.name && p.name.last || ""}`.trim();
+    return `
+    <div class="conv-preview">
+      <div class="conv-preview-head">Confirm position change</div>
+      <div class="conv-preview-body">
+        <div class="conv-preview-name"><span class="player-link" data-pcard="${p.id}">${escapeHtml(nm)}</span></div>
+        <div class="conv-preview-move">
+          <span class="pos-chip pos-${prev.from}">${prev.from}</span>
+          <span class="conv-preview-arrow">→</span>
+          <span class="pos-chip pos-${pend.to}">${pend.to}</span>
+        </div>
+        <div class="conv-preview-rating">
+          <span class="rating-chip rating-${ratingColor(prev.current)}">${prev.current}</span>
+          <span class="conv-preview-arrow">→</span>
+          <span class="rating-chip rating-${ratingColor(prev.projected)}">${prev.projected}</span>
+          <span class="conv-preview-delta" style="color:${diff >= 0 ? "var(--green)" : "var(--red)"}">${diff >= 0 ? "+" : ""}${diff}</span>
+        </div>
+      </div>
+      <p class="offseason-hint" style="margin:6px 0 8px">Takes a −${penaltyPct}% haircut at ${pend.to} for this season only (clears at rollover). ${pend.anytime ? "This converts immediately." : "Locks in when camp runs."}</p>
+      <div class="conv-preview-actions">
+        <button class="btn-ghost btn-sm" id="conv-cancel">Cancel</button>
+        <button class="btn-primary btn-sm" id="conv-confirm">Confirm change</button>
+      </div>
+    </div>`;
+  }
   function positionChangeBoard(school, pre) {
     var _a, _b;
     const changes = pre.posChanges || [];
@@ -30217,6 +30293,7 @@ var _CFB = (() => {
       ${changes.map((ch) => `<span class="dash-qs-item">${ch.from} \u2192 ${ch.to} \u2713</span>`).join("")}
     </div>` : ""}
     <p class="offseason-hint" style="margin:6px 0 8px">A converted player takes a \u2212${penaltyPct}% haircut for THIS season only (your Developer skill shrinks it) \u2014 it clears at rollover. Conversions lock when camp runs.</p>
+    ${conversionPreviewPanel()}
 
     <div class="filter-chips">
       <button class="filter-chip${!convFilterPos ? " active" : ""}" data-conv-filter="">ALL POS</button>
@@ -30638,11 +30715,24 @@ var _CFB = (() => {
     document.querySelectorAll(".conv-row-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         if (!convTarget) return;
-        const res = convertPosition(state, btn.dataset.playerId, convTarget);
-        if (res.ok) notify(`${res.name}: ${res.from} \u2192 ${convTarget} (${res.before} \u2192 ${res.after} composite).`, "success");
-        else notify(res.reason, "warning");
+        state.ui.convPending = { playerId: btn.dataset.playerId, to: convTarget, anytime: false };
         rerender();
       });
+    });
+    const convConfirmBtn = document.getElementById("conv-confirm");
+    if (convConfirmBtn) convConfirmBtn.addEventListener("click", () => {
+      const pend = state.ui.convPending;
+      if (!pend) return;
+      const res = convertPosition(state, pend.playerId, pend.to, { anytime: pend.anytime });
+      if (res.ok) notify(`${res.name}: ${res.from} \u2192 ${pend.to} (${res.before} \u2192 ${res.after} composite).`, "success");
+      else notify(res.reason, "warning");
+      state.ui.convPending = null;
+      rerender();
+    });
+    const convCancelBtn = document.getElementById("conv-cancel");
+    if (convCancelBtn) convCancelBtn.addEventListener("click", () => {
+      state.ui.convPending = null;
+      rerender();
     });
     (_g = document.getElementById("btn-run-camp")) == null ? void 0 : _g.addEventListener("click", () => {
       const res = runDevCamp(state);
@@ -30962,6 +31052,8 @@ var _CFB = (() => {
         </div>
       </div>
 
+      ${conversionPreviewPanel()}
+
       <div class="card">
         <div class="table-scroll"><table class="data-table roster-table">
           <thead>
@@ -31055,11 +31147,24 @@ var _CFB = (() => {
         e.stopPropagation();
         const newPos = sel.value;
         if (!newPos) return;
-        const res = convertPosition(state, sel.dataset.posChange, newPos, { anytime: true });
-        if (res.ok) notify(`${res.name}: ${res.from} → ${newPos} (${res.before} → ${res.after} OVR).`, "success");
-        else notify(res.reason || "Can’t change position", "warning");
+        state.ui.convPending = { playerId: sel.dataset.posChange, to: newPos, anytime: true };
         rerender();
       });
+    });
+    const rConvConfirm = document.getElementById("conv-confirm");
+    if (rConvConfirm) rConvConfirm.addEventListener("click", () => {
+      const pend = state.ui.convPending;
+      if (!pend) return;
+      const res = convertPosition(state, pend.playerId, pend.to, { anytime: pend.anytime });
+      if (res.ok) notify(`${res.name}: ${res.from} → ${pend.to} (${res.before} → ${res.after} OVR).`, "success");
+      else notify(res.reason || "Can’t change position", "warning");
+      state.ui.convPending = null;
+      rerender();
+    });
+    const rConvCancel = document.getElementById("conv-cancel");
+    if (rConvCancel) rConvCancel.addEventListener("click", () => {
+      state.ui.convPending = null;
+      rerender();
     });
     document.querySelectorAll(".player-row").forEach((row) => {
       row.addEventListener("click", () => {
@@ -35590,9 +35695,13 @@ var _CFB = (() => {
   init_state();
   init_guide();
   init_utils();
+  var settingsTab = "game";
   function renderSettings() {
     var _a, _b, _c, _d, _e;
     const s = state.settings || {};
+    const SETTINGS_TABS = [["game", "Game"], ["program", "Program"], ["save", "Save"], ["dev", "Dev"]];
+    if (!SETTINGS_TABS.some(([id]) => id === settingsTab)) settingsTab = "game";
+    const tab = settingsTab;
     const pSchool = (_b = (_a = state.world) == null ? void 0 : _a.schools) == null ? void 0 : _b.find((x) => x.id === state.playerSchoolId);
     const toggle = (key, val, label) => `
     <button class="setting-toggle" data-setting="${key}" title="${label}">
@@ -35608,7 +35717,13 @@ var _CFB = (() => {
         </div>
       </div>
 
-      <!-- \u2500\u2500 Game Settings \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 -->
+      <div class="rec-tabs" style="margin-bottom:12px">
+        ${SETTINGS_TABS.map(([id, label]) => `
+          <button class="rec-tab${tab === id ? " active" : ""}" data-settings-tab="${id}">${label}</button>`).join("")}
+      </div>
+
+      <div style="display:${tab === "save" ? "block" : "none"}">
+      <!--\u2500\u2500 Game Settings \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 -->
       <div class="card">
         <div class="offseason-item">
           <span class="offseason-label">\u{1F4D6} How to Play</span>
@@ -35629,7 +35744,9 @@ var _CFB = (() => {
             <input type="file" id="import-save-file" accept="application/json,.json" style="display:none" /></span>
         </div>
       </div>
+      </div>
 
+      <div style="display:${tab === "program" ? "block" : "none"}">
       <div class="card">
         <div class="card-title">CUSTOMIZE YOUR PROGRAM</div>
         <p class="offseason-hint" style="margin:0 0 8px">The world is fictional by design \u2014 but it's your save. Rename your school, its nickname, or its stadium, and repaint your colors \u2014 the whole UI (buttons, nav, crest, and school-color mode) follows them. (Only your own program; the rest of the world keeps its generated identity.)</p>
@@ -35672,7 +35789,9 @@ var _CFB = (() => {
         </div>
         <p class="offseason-hint" style="margin:2px 0 0;font-size:11px">Drop in any image \u2014 it's fitted into your shield and saved with your dynasty. Leave it off and every school keeps its generated heraldry.</p>
       </div>
+      </div>
 
+      <div style="display:${tab === "game" ? "block" : "none"}">
       <div class="card settings-card">
         <div class="card-header"><span class="card-title">GAME SETTINGS</span></div>
         <div class="settings-list">
@@ -35756,8 +35875,9 @@ var _CFB = (() => {
 
         </div>
       </div>
+      </div>
 
-      <!-- \u2500\u2500 Dev Tools \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 -->
+      <div style="display:${tab === "dev" ? "block" : "none"}">
       <div class="card settings-card dev-tools-card">
         <div class="card-header">
           <span class="card-title">DEV TOOLS</span>
@@ -35782,12 +35902,19 @@ var _CFB = (() => {
           <button class="btn-ghost dev-action-btn" id="dev-sim-season">Sim to Playoffs</button>
         </div>
       </div>
+      </div>
       ${state.ui.showGuide ? renderGuideModal() : ""}
     </div>
   `;
   }
   function setupListeners14() {
     var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
+    document.querySelectorAll("[data-settings-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        settingsTab = btn.dataset.settingsTab;
+        rerender();
+      });
+    });
     (_a = document.getElementById("btn-rename-save")) == null ? void 0 : _a.addEventListener("click", () => {
       var _a2, _b2, _c2, _d2, _e2, _f2, _g2, _h2, _i2, _j2;
       const school = (_b2 = (_a2 = state.world) == null ? void 0 : _a2.schools) == null ? void 0 : _b2.find((x) => x.id === state.playerSchoolId);
@@ -38954,7 +39081,7 @@ var _CFB = (() => {
     const boardDone = isCall && lw.boardDone && !auto;
     const label = lw.stage === "halftime" ? "1ST HALF \u2014 LIVE" : isCall ? auto ? "AUTO-RUN \u2014 WATCHING" : boardDone ? "YOUR CALL" : "LIVE \u2014 HEADSET ON" : "2ND HALF \u2014 LIVE";
     const embed = isCall && !auto && boardDone ? ((_c = (_b = (_a = state.pendingHalftime) == null ? void 0 : _a.token) == null ? void 0 : _b.pending) == null ? void 0 : _c.kind) === "fourth" ? fourthDownPanelHtml() : callSheetPanelHtml() : "";
-    const headerBtn = auto ? `<button class="btn-secondary watch-btn" id="cs-autorun-stop">\u23F8 Stop \u2014 take the headset back</button>` : !boardDone ? `<button class="btn-secondary watch-btn" id="watch-live-skip">Skip \u23E9</button>` : "";
+    const headerBtn = auto ? `<button class="bc-btn bc-text" id="cs-autorun-stop">\u23F8 Stop \u2014 take the headset back</button>` : !boardDone ? `<button class="bc-btn bc-text" id="watch-live-skip">Skip \u23E9</button>` : "";
     return `
     <div class="modal-overlay watch-live-overlay">
       <div class="modal game-result-modal${embed ? " watch-call-mode" : ""}${boardDone ? " watch-board-collapsed" : ""}">
@@ -39135,63 +39262,56 @@ var _CFB = (() => {
       _watch.onFinish = opts.onFinish || _watch.onFinish;
     }
     const w = _watch;
+    const isLive = !!w.onFinish;
+    const finalLabel = isLive ? "Skip to Final \u23ED" : "End \u23ED";
     root.innerHTML = `
     <div class="watch-bug" id="watch-bug"></div>
     <div class="watch-ticker" id="watch-ticker">Kickoff coming up\u2026</div>
     <div class="watch-board-wrap"><svg id="watch-board" viewBox="0 0 100 62" preserveAspectRatio="xMidYMid meet"></svg>
       <div class="watch-flash" id="watch-flash"></div></div>
-    <div class="watch-controls">
-      <button class="btn-secondary watch-btn" id="watch-stepback">\u23EE</button>
-      <button class="btn-secondary watch-btn" id="watch-pause">\u23F8</button>
-      <button class="btn-secondary watch-btn" id="watch-stepfwd">\u23ED</button>
-      <button class="btn-secondary watch-btn" id="watch-speed">1\xD7</button>
-      <button class="btn-secondary watch-btn" id="watch-final">Final \u23E9</button>
+    <div class="watch-controls broadcast-bar">
+      ${isLive ? "" : `<button class="bc-btn bc-icon" id="watch-stepback" title="Step back">\u23EE</button>`}
+      <button class="bc-btn bc-icon bc-play" id="watch-pause" title="Play / pause">\u23F8</button>
+      ${isLive ? "" : `<button class="bc-btn bc-icon" id="watch-stepfwd" title="Step forward">\u23ED</button>`}
+      <button class="bc-btn bc-speed" id="watch-speed" title="Playback speed">1\xD7</button>
+      ${isLive ? "" : `<button class="bc-btn bc-text" id="watch-nextdrive" title="Next drive">Next Drive \u23ED</button>`}
+      <button class="bc-btn bc-text bc-final" id="watch-final" title="${isLive ? "Skip the rest and jump to the final" : "Jump to the end"}">${finalLabel}</button>
       <span class="watch-progress" id="watch-progress"></span>
     </div>
-    <div class="watch-halves" id="watch-halves">
-      <button class="btn-secondary watch-btn" data-whalf="1">1st Half</button>
-      <button class="btn-secondary watch-btn" data-whalf="2">2nd Half</button>
-      <button class="btn-secondary watch-btn" id="watch-nextdrive">Next Drive \u23ED</button>
-    </div>
     <div class="watch-drives" id="watch-drives"></div>`;
-    const step = (dir) => {
-      w.paused = true;
-      const pb = document.getElementById("watch-pause");
-      if (pb) pb.textContent = "\u25B6";
-      watchStop();
-      w.idx = Math.max(0, Math.min(w.seq.length - 1, w.idx - 1 + dir));
-      watchTick(true);
-    };
-    document.getElementById("watch-stepback").addEventListener("click", () => step(-1));
-    document.getElementById("watch-stepfwd").addEventListener("click", () => step(1));
-    document.querySelectorAll("[data-whalf]").forEach((btn) => btn.addEventListener("click", () => {
-      const h = parseInt(btn.dataset.whalf);
-      const at = w.seq.findIndex((s) => s.kind === "drive" && (h === 1 ? true : (s.d.plays || []).some((pl) => pl.half === 2)));
-      if (at >= 0) {
-        w.idx = at;
+    if (!isLive) {
+      const step = (dir) => {
+        w.paused = true;
+        const pb = document.getElementById("watch-pause");
+        if (pb) pb.textContent = "\u25B6";
+        watchStop();
+        w.idx = Math.max(0, Math.min(w.seq.length - 1, w.idx - 1 + dir));
+        watchTick(true);
+      };
+      document.getElementById("watch-stepback").addEventListener("click", () => step(-1));
+      document.getElementById("watch-stepfwd").addEventListener("click", () => step(1));
+      document.getElementById("watch-nextdrive").addEventListener("click", () => {
+        for (let i = w.idx + 1; i < w.seq.length; i++) {
+          if (w.seq[i].kind === "drive" || w.seq[i].kind === "final") {
+            w.idx = i;
+            break;
+          }
+        }
         watchStop();
         watchTick(true);
-      }
-    }));
+      });
+    }
     document.getElementById("watch-pause").addEventListener("click", () => {
       w.paused = !w.paused;
-      document.getElementById("watch-pause").textContent = w.paused ? "\u25B6" : "\u23F8";
+      const pb = document.getElementById("watch-pause");
+      pb.textContent = w.paused ? "\u25B6" : "\u23F8";
+      pb.classList.toggle("bc-paused", w.paused);
       if (!w.paused) watchTick();
       else watchStop();
     });
     document.getElementById("watch-speed").addEventListener("click", () => {
       w.speed = w.speed === 1 ? 2 : w.speed === 2 ? 0.5 : 1;
       document.getElementById("watch-speed").textContent = w.speed === 0.5 ? "\xBD\xD7" : `${w.speed}\xD7`;
-    });
-    document.getElementById("watch-nextdrive").addEventListener("click", () => {
-      for (let i = w.idx + 1; i < w.seq.length; i++) {
-        if (w.seq[i].kind === "drive" || w.seq[i].kind === "final") {
-          w.idx = i;
-          break;
-        }
-      }
-      watchStop();
-      watchTick(true);
     });
     document.getElementById("watch-final").addEventListener("click", () => {
       w.idx = w.seq.length - 1;
