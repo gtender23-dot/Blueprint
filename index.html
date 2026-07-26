@@ -4447,6 +4447,7 @@ th.conv-sort.active { color: var(--team-1); }
 
 
 .pos-JETMAN  { background: rgba(63,168,100,0.18); color: var(--green, #3fa864); }
+.pos-FADE { background: rgba(216,178,90,0.18); color: var(--gold, #d8b25a); }
 
 .do-group-slot { border-left: 2px solid rgba(63,168,100,0.3); }
 .do-uniq-header { margin-top: 14px; padding: 8px 2px 4px; border-top: 1px solid rgba(255,255,255,0.09); font-size: 11px; font-weight: 800; letter-spacing: 0.08em; color: var(--text-1); }
@@ -4858,6 +4859,9 @@ body.theme-school .data-table tr:hover td {
 .cs-tag-strip { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0 0 8px; }
 .cs-tag-btn { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-sub); background: rgba(255,255,255,0.04); color: var(--text-1); cursor: pointer; }
 .cs-tag-btn.active { background: var(--green); color: #08131f; border-color: transparent; }
+.cs-tag-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.cs-cat-locked { opacity: 0.38; cursor: not-allowed; filter: grayscale(0.6); }
+.cs-cat-locked .cs-cat-favs { color: var(--gold, #d8b25a); font-weight: 700; }
 .cs-st-block { margin: 6px 0 4px; }
 .cs-st-toggle { font-size: 11px; font-weight: 800; letter-spacing: 0.02em; padding: 5px 11px; border-radius: 6px; border: 1px solid var(--border-sub); background: rgba(255,255,255,0.04); color: var(--text-2); cursor: pointer; width: 100%; text-align: left; }
 .cs-st-toggle.active { color: var(--text-1); border-color: var(--border); }
@@ -6471,6 +6475,7 @@ var _CFB = (() => {
         "WR-Poss": { SPD: 13, AGI: 12, JMP: 8, HND: 39, SEC: 8, TEC: 12, AWR: 8 },
         "WR-Slot": { SPD: 21, AGI: 25, HND: 27, SEC: 6, TEC: 15, AWR: 6 },
         "WR-Physical": { SPD: 10, AGI: 9, PWR: 2, STR: 3, JMP: 13, HND: 31, SEC: 6, BLK: 4, TEC: 12, AWR: 10 },
+        "WR-Fade": { SPD: 12, AGI: 8, PWR: 3, STR: 8, JMP: 26, HND: 28, SEC: 5, TEC: 6, AWR: 4 },
         "DE-Speed": { SPD: 24, AGI: 18, PWR: 6, STR: 13, JMP: 4, TKL: 18, TEC: 13, AWR: 4 },
         "DE-Power": { SPD: 14, AGI: 4, PWR: 20, STR: 20, JMP: 2, TKL: 23, TEC: 14, AWR: 3 },
         "DE-Base": { SPD: 18, AGI: 11, PWR: 14, STR: 17, JMP: 3, TKL: 21, TEC: 14, AWR: 2 },
@@ -13509,6 +13514,8 @@ var _CFB = (() => {
         // X and Z: split end / flanker — receivers only
         SLOT: ["WR", "TE", "RB"],
         // the joker: your best inside weapon, whatever he is
+        FADE: ["WR", "TE"],
+        // the back-shoulder / red-zone jump-ball target — a tall, sure-handed body
         ABACK: ["RB", "WR", "TE"],
         // flexbone wing: any skill body who can motion and block (RB includes fullback types)
         WING: ["RB", "TE"],
@@ -13522,10 +13529,9 @@ var _CFB = (() => {
         QB: ["QB"]
       };
       MESH_AUTO_POOL = {
-        SLOT: (d) => {
-          var _a;
-          return ((_a = d.SLOT) == null ? void 0 : _a.length) ? d.SLOT : d.WR || [];
-        },
+        SLOT: (d) => [...(d.SLOT || []), ...d.WR || [], ...d.TE || []],
+        // FADE meshes WR/TE — a hand-picked jump-ball target floats up, then the rest by fit
+        FADE: (d) => [...(d.FADE || []), ...d.WR || [], ...d.TE || []],
         // For the exotic mesh spots, a user OVERRIDE (d[pos], seeded from depthOrder[pos])
         // takes precedence — his hand-picked man plays it everywhere — then the rest of the
         // eligible pool falls in behind, de-duped.
@@ -14994,6 +15000,30 @@ var _CFB = (() => {
           vs: { "Cover 0": 0.07, "Cover 1": 0.06, "Cover 2-Man": 0.05, "Cover 2": -0.02, "Cover 3": -0.02, "Cover 4": -0.03, "C3 Fire Zone": -0.04 },
           exec: { QB: { AWR: 0.6, TEC: 0.4 }, WR: { SPD: 0.5, TEC: 0.5 } }
         },
+        // ── Screens (short, callable — they force the screen mechanic) ──
+        "Bubble Screen": {
+          depth: "short",
+          minWR: 2,
+          screen: "bubble",
+          // perimeter now-screen: cashes in when they blitz or press
+          vs: { "Cover 0": 0.08, "Cover 1": 0.05, "Cover 2-Man": 0.03, "Cover 2": -0.02, "Cover 3": 0.02, "Cover 4": -0.03, "C3 Fire Zone": 0.06 },
+          exec: { QB: { TEC: 0.6, AWR: 0.4 }, WR: { AGI: 0.6, SPD: 0.4 } }
+        },
+        "Tunnel Screen": {
+          depth: "short",
+          minWR: 2,
+          screen: "tunnel",
+          // WR screen back inside behind blockers — best vs soft, upfield rush
+          vs: { "Cover 0": 0.04, "Cover 1": 0.03, "Cover 2-Man": 0.02, "Cover 2": 0.03, "Cover 3": 0.05, "Cover 4": 0.04, "C3 Fire Zone": 0.03 },
+          exec: { QB: { TEC: 0.5, AWR: 0.5 }, WR: { AGI: 0.5, SPD: 0.5 } }
+        },
+        "RB Screen": {
+          depth: "short",
+          screen: "rb",
+          // classic back screen — punishes a heavy rush
+          vs: { "Cover 0": 0.07, "Cover 1": 0.05, "Cover 2-Man": 0.03, "Cover 2": -0.01, "Cover 3": 0.01, "Cover 4": -0.02, "C3 Fire Zone": 0.07 },
+          exec: { QB: { AWR: 0.6, TEC: 0.4 }, RB: { AGI: 0.5, HND: 0.5 } }
+        },
         // ── Dropback (medium) ──
         "Smash": {
           depth: "medium",
@@ -15049,6 +15079,14 @@ var _CFB = (() => {
           minWR: 2,
           vs: { "Cover 4": 0.07, "Cover 2": 0.03, "Cover 1": 0.01, "Cover 3": -0.03, "Cover 0": -0.01, "Cover 2-Man": -0.02, "C3 Fire Zone": -0.03 },
           exec: { QB: { AWR: 0.7, TEC: 0.3 }, WR: { TEC: 0.5, SPD: 0.5 } }
+        },
+        // Back-shoulder / red-zone jump ball to your designated FADE target (a WR/TE
+        // mesh bucket in the depth chart). Wins on man/press, dies vs zone help.
+        "Red-Zone Fade": {
+          depth: "deep",
+          fade: true,
+          vs: { "Cover 0": 0.1, "Cover 1": 0.08, "Cover 2-Man": 0.06, "Cover 2": -0.02, "Cover 3": -0.03, "Cover 4": -0.05, "C3 Fire Zone": 0.02 },
+          exec: { QB: { TEC: 0.6, AWR: 0.4 }, WR: { JMP: 0.5, HND: 0.5 } }
         }
       };
       RUN_CONCEPTS = {
@@ -15095,6 +15133,14 @@ var _CFB = (() => {
           type: "run_outside",
           vsBox: { loaded: -0.02, light: 0.04 },
           exec: { QB: { TEC: 1 }, RB: { SPD: 0.7, AGI: 0.3 } }
+        },
+        // QB sneak — the QB keeps it behind the center's push. Short-yardage / goal-line
+        // hammer; forces the QB as the carrier (see _forceQBRun handling in the run resolver).
+        "QB Sneak": {
+          type: "run_inside",
+          qbSneak: true,
+          vsBox: { loaded: 0.01, light: 0.02 },
+          exec: { OL: { STR: 0.7, TEC: 0.3 }, QB: { STR: 0.6, AWR: 0.4 } }
         },
         // Named pointers to existing mechanics (resolver: unchanged):
         "Triple Option": { resolver: "option" },
@@ -16997,7 +17043,7 @@ var _CFB = (() => {
         "Wildcat": 0.5
       };
       const paEff = clamp2(((_g = PA_RATE[offFormationId]) != null ? _g : 0.22) * (((_h = offPlan.paRate) != null ? _h : 100) / 100), 0, 0.65);
-      const calledPA = !!(offPlan == null ? void 0 : offPlan._forcePA);
+      const calledPA = !!(offPlan == null ? void 0 : offPlan._forcePA) || !!(offPlan == null ? void 0 : offPlan._forcePANative);
       if (calledPA || Math.random() < paEff) {
         result.playAction = true;
         const rbId = (offPersonnel.RB || [])[0];
@@ -17124,7 +17170,8 @@ var _CFB = (() => {
     if (defPlan.spyQB && passRushers.length > 3) {
       passRushers.pop();
     }
-    const isScreen = playType === "pass_short" && !result.playAction && Math.random() < ((_m = offPlan.screenRate) != null ? _m : 14) / 100;
+    const forcedScreen = (offPlan == null ? void 0 : offPlan._forceScreen) || null;
+    const isScreen = !!forcedScreen || playType === "pass_short" && !result.playAction && Math.random() < ((_m = offPlan.screenRate) != null ? _m : 14) / 100;
     const edgeRushMult = ((defPlan == null ? void 0 : defPlan.edgePlayEff) === "crash" ? 1.08 : (defPlan == null ? void 0 : defPlan.edgePlayEff) === "contain" ? 0.94 : 1) * clamp2(1 + (((_n = offPlan == null ? void 0 : offPlan.protEmphasis) != null ? _n : 50) - 50) / -250, 0.8, 1.2);
     const fireZone = droppedIds.length > 0 && result.blitzFired === true;
     if (fireZone) result.fireZone = true;
@@ -17179,7 +17226,14 @@ var _CFB = (() => {
       const scrEdgeAdj = ((defPlan == null ? void 0 : defPlan.edgePlayEff) === "contain" ? 0.05 : (defPlan == null ? void 0 : defPlan.edgePlayEff) === "crash" ? -0.04 : 0) + ((defPlan == null ? void 0 : defPlan.covStyleEff) === "zone" ? 0.03 : (defPlan == null ? void 0 : defPlan.covStyleEff) === "man" ? -0.02 : 0);
       const sniffChance = clamp2((jackpot ? 0.03 : 0.09) + (dlAWR - 50) * 22e-4 + scrEdgeAdj, 0.02, 0.27);
       const rbId = (offPersonnel.RB || [])[0];
-      const scrTarget = rbId && Math.random() < 0.72 ? offRoster.find((p) => p.id === rbId) : offRoster.find((p) => p.id === (offPersonnel.WR || [])[0]);
+      const wrId = (offPersonnel.WR || [])[0];
+      // A CALLED screen throws to the flavor's man: RB screen → the back, bubble/tunnel →
+      // a receiver. An un-called (random) screen keeps the old ~72% RB tilt.
+      const scrTarget = forcedScreen === "rb"
+        ? offRoster.find((p) => p.id === rbId) || offRoster.find((p) => p.id === wrId)
+        : forcedScreen === "bubble" || forcedScreen === "tunnel"
+        ? offRoster.find((p) => p.id === wrId) || offRoster.find((p) => p.id === rbId)
+        : rbId && Math.random() < 0.72 ? offRoster.find((p) => p.id === rbId) : offRoster.find((p) => p.id === wrId);
       if (!scrTarget) {
         result.complete = false;
         return result;
@@ -17218,6 +17272,53 @@ var _CFB = (() => {
       }
       result.complete = false;
       result.passDepth = "short";
+      return result;
+    }
+    if ((offPlan == null ? void 0 : offPlan._forceFade) && !rushResult.sacked) {
+      // Red-zone fade — a jump ball to your designated FADE target. Wins on hops/hands/
+      // frame vs the corner and vs man; help defenders (zone) knock it down.
+      const recPool = [...offPersonnel.WR || [], ...offPersonnel.TE || []].map((id) => offRoster.find((p) => p.id === id)).filter(Boolean);
+      const fadeFit = (p) => (p.attributes.JMP || 50) * 0.4 + (p.attributes.HND || 50) * 0.4 + (p.attributes.STR || 50) * 0.2;
+      const ov = offPlan._fadeOverride || [];
+      let target = null;
+      for (const id of ov) {
+        const p = recPool.find((x) => x.id === id);
+        if (p) {
+          target = p;
+          break;
+        }
+      }
+      if (!target) target = recPool.slice().sort((a, b) => fadeFit(b) - fadeFit(a))[0] || null;
+      if (!target) {
+        result.complete = false;
+        result.passDepth = "deep";
+        return result;
+      }
+      result.targetId = target.id;
+      const cover = [...defPersonnel.CB || [], ...defPersonnel.S || []].map((id) => defRoster.find((p) => p.id === id)).filter(Boolean).sort((a, b) => (b.attributes.AWR || 50) - (a.attributes.AWR || 50))[0] || null;
+      const covStyle = (defPlan == null ? void 0 : defPlan.covStyleEff) || (defPlan == null ? void 0 : defPlan.covStyle) || "balanced";
+      const cbScore = cover ? (cover.attributes.AWR || 50) * 0.5 + (cover.attributes.JMP || 50) * 0.3 + (cover.attributes.SPD || 50) * 0.2 : 50;
+      const htEdge = ((target.heightInches || 74) - (cover ? cover.heightInches || 71 : 71)) * 0.012;
+      const covAdj = covStyle === "man" ? 0.1 : covStyle === "zone" ? -0.09 : 0.01;
+      const qbAdj = (((qb == null ? void 0 : qb.attributes.TEC) != null ? qb.attributes.TEC : 50) - 50) * 4e-3;
+      const catchP = clamp2(0.4 + (fadeFit(target) - cbScore) * 6e-3 + htEdge + covAdj + qbAdj + (rushResult.hurried ? -0.12 : 0), 0.1, 0.82);
+      if (Math.random() < catchP) {
+        result.complete = true;
+        result.receiverId = target.id;
+        result.yards = clamp2(Math.round(randNorm(11, 4)), 2, 32);
+        result.passDepth = "deep";
+        result.tacklerId = cover ? cover.id : null;
+      } else {
+        result.complete = false;
+        result.passDepth = "deep";
+        if (cover && cbScore > fadeFit(target) + 12 && Math.random() < 0.06) {
+          result.turnover = true;
+          result.turnoverType = "INT";
+          result.intById = cover.id;
+        } else if (cover) {
+          result.pbuId = cover.id;
+        }
+      }
       return result;
     }
     if (rushResult.sacked) {
@@ -17790,7 +17891,7 @@ var _CFB = (() => {
     const fbIds = offPersonnel.FB || [];
     const rbIds = offPersonnel.RB || [];
     const noBackfield = rbIds.length === 0 && fbIds.length === 0;
-    const useQBCarrier = (optionOverride == null ? void 0 : optionOverride.carrier) ? optionOverride.carrier === qb || optionOverride.carrier.position === "QB" : !!qb && (noBackfield || Math.random() < qbRunChance);
+    const useQBCarrier = (optionOverride == null ? void 0 : optionOverride.carrier) ? optionOverride.carrier === qb || optionOverride.carrier.position === "QB" : !!qb && (noBackfield || (gameplan == null ? void 0 : gameplan._forceQBRun) || Math.random() < qbRunChance);
     let carrier;
     if (optionOverride == null ? void 0 : optionOverride.carrier) {
       carrier = optionOverride.carrier;
@@ -18749,19 +18850,34 @@ var _CFB = (() => {
       }
       const categoryCalled = !forcedConceptName && !forcedGadget && !!(forcedCall == null ? void 0 : forcedCall.category) && CALL_CATEGORIES.has(forcedCall.category);
       if (categoryCalled) playType = forcedCall.category;
+      // Read the flags off a called concept: a screen (now-throw), the red-zone fade,
+      // or the QB sneak (a forced QB keeper).
+      const _fcPass = forcedConceptName ? PASS_CONCEPTS[forcedConceptName] : null;
+      const _fcRun = forcedConceptName ? RUN_CONCEPTS[forcedConceptName] : null;
+      const calledScreen = _fcPass && _fcPass.screen ? _fcPass.screen : null;
+      const calledFade = !!(_fcPass && _fcPass.fade);
+      const calledSneak = !!(_fcRun && _fcRun.qbSneak);
       // Play-action and RPO are PASS-CONCEPT levers — they never apply to a gadget
-      // (jet/option/draw/wildcat), and PA is meaningless on a run. Ignore them there
-      // instead of silently converting the called play into a pass.
-      const paValid = !!(forcedCall == null ? void 0 : forcedCall.playAction) && !forcedGadget && playType.startsWith("pass");
-      const rpoValid = !!(forcedCall == null ? void 0 : forcedCall.rpo) && !forcedGadget;
-      // Called PA needs depth to sell the fake — bump a quick pass to medium.
-      if (paValid && playType === "pass_short") playType = "pass_medium";
+      // (jet/option/draw/wildcat), PA is meaningless on a run, and PA never applies to a
+      // screen (the ball's out now — there's no fake to sell). Ignore them there.
+      const paValid = !!(forcedCall == null ? void 0 : forcedCall.playAction) && !forcedGadget && !calledScreen && playType.startsWith("pass");
+      const rpoValid = !!(forcedCall == null ? void 0 : forcedCall.rpo) && !forcedGadget && !calledScreen && !calledFade;
+      // QB Run lever — forces the QB to keep it on a called inside/outside run (never a
+      // gadget or a pass). The QB Sneak concept forces the same keeper.
+      const qbRunValid = !!(forcedCall == null ? void 0 : forcedCall.qbRun) && !forcedGadget && playType.startsWith("run");
+      // Called PA needs depth to sell the fake — bump a quick pass to medium (but not a screen).
+      if (paValid && playType === "pass_short" && !calledScreen) playType = "pass_medium";
       // Called RPO reads a defender off a run action — force a run play type (unless it's a gadget).
       if (rpoValid && !playType.startsWith("run")) playType = "run_inside";
-      // Overwrite the forced levers with the VALIDATED values so PA/RPO can't leak onto
-      // a run or a gadget (the resolvers read these off offPlanEff downstream).
+      // Overwrite the forced levers with the VALIDATED values so PA/RPO/QB-run can't leak onto
+      // the wrong play (the resolvers read these off offPlanEff downstream).
       offPlanEff._forcePA = paValid;
       offPlanEff._forceRPO = rpoValid;
+      offPlanEff._forceQBRun = qbRunValid || calledSneak;
+      offPlanEff._forceScreen = calledScreen;
+      offPlanEff._forceFade = calledFade;
+      offPlanEff._fadeOverride = calledFade ? (((offSchool == null ? void 0 : offSchool.depthOrder) || {}).FADE || null) : null;
+      offPlanEff._sneak = calledSneak;
       // MOTION: fire automatically when the CALLED concept wants motion AND the gameplan
       // motion-rate is turned up (motionRate > 0). No button — the gameplan slider is the
       // lever. A motion-tagged pass concept gets the deliberate-motion treatment (bonus +
@@ -18891,6 +19007,9 @@ var _CFB = (() => {
         def: concept.name ? (_Z = (_Y = PASS_CONCEPTS[concept.name]) != null ? _Y : RUN_CONCEPTS[concept.name]) != null ? _Z : null : null,
         fam: covFam
       };
+      // A concept that IS a play-action play (paNative) always runs the fake — its identity
+      // is the fake, so it never resolves as a straight dropback regardless of the PA lever.
+      offPlanEff._forcePANative = !!(concept.name && PASS_CONCEPTS[concept.name] && PASS_CONCEPTS[concept.name].paNative);
       const offUnit = baseOffUnit * (1 + concept.mod) * (fakeSurprise ? 1.1 : 1) * h2Counter * coordIqMod(offSchool, "off", offFormationId) * (2 - coordIqMod(defSchool, "def", defFrontId)) * getMatchupEdge(offFormationId, defFrontId) * getSituationalMod(offFormationId, down, distance, gameState.clock, fieldPos) * shortYardagePower(playType, distance, offPersonnel, offRoster) * (1 + (((__ = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : __.groundPound) || 0) * 8e-3) * (down === 4 ? 1 + (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.riverboat) || 0) * 0.01 : 1) * (offense.isHome ? C.HOME_EDGE : 1 - (1 - (2 - C.HOME_EDGE)) * (1 - (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.roadWarrior) || 0) * 0.08)) * ((_$ = offense.form) != null ? _$ : 1) * (2 - ((_aa = defense.form) != null ? _aa : 1)) * ((_ba = offense.execMult) != null ? _ba : 1) * (2 - ((_ca = defense.execMult) != null ? _ca : 1));
       const rcDef = defEff.runCommit || 0;
       const shellRunMult = playType === "run_inside" || playType === "run_outside" ? defEff.covShell === "single" ? 1.04 : defEff.covShell === "two" ? 0.95 : 1 : 1;
@@ -24761,6 +24880,7 @@ var _CFB = (() => {
     state.ui.callFormation = null;
     state.ui.callPA = false;
     state.ui.callRPO = false;
+    state.ui.callQBRun = false;
     state.ui.callTimeout = false;
     state.ui.callSTOpen = false;
     state.ui.callDrill = null;
@@ -32397,8 +32517,30 @@ var _CFB = (() => {
   }
   var SLOT_ELIGIBLE = ["WR", "TE", "RB"];
   var SLOT_DEPTH_SHOWN = 7;
+  // Per-formation playbook — the concepts each formation can call. The call sheet reads
+  // this off your gameplan (the formations you carry) so only formation-legal plays show:
+  // Wildcat Power lives only in the Wildcat, Jet Sweep travels nearly everywhere, etc.
+  // (Generated from the approved playbook matrix; keep in sync with the concept catalog.)
+  var FORMATION_PLAYBOOK = {
+    "Pro Set": ["Inside Zone", "Power", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Red-Zone Fade"],
+    "Single Back": ["Inside Zone", "Power", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Red-Zone Fade"],
+    "Power-I": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "RB Screen", "Smash", "Curl-Flat", "Y-Cross", "PA Deep Cross", "Red-Zone Fade"],
+    "Wishbone": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "RB Screen", "Curl-Flat", "Y-Cross", "PA Deep Cross", "Red-Zone Fade"],
+    "Flexbone": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Red-Zone Fade"],
+    "Wildcat": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Wildcat Power", "Slant-Flat", "Stick", "RB Screen", "Y-Cross", "PA Deep Cross", "Red-Zone Fade"],
+    "Spread": ["Inside Zone", "Power", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade"],
+    "Trips/Bunch": ["Inside Zone", "Power", "QB Sneak", "Outside Zone", "Toss", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade"],
+    "Pistol/RPO": ["Inside Zone", "Power", "Trap", "QB Sneak", "Outside Zone", "Counter", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Flood", "Dagger", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade"],
+    "Air Raid": ["Inside Zone", "QB Sneak", "Outside Zone", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade"],
+    "Empty": ["QB Sneak", "Jet Sweep", "Draw", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade"]
+  };
+  function formationPlaybookSet(formIds) {
+    const set = /* @__PURE__ */ new Set();
+    for (const id of formIds || []) for (const nm of FORMATION_PLAYBOOK[id] || []) set.add(nm);
+    return set;
+  }
   var DEPTH_POS = {
-    offense: ["QB", "RB", "WR", "SLOT", "TE", "OL"],
+    offense: ["QB", "RB", "WR", "TE", "OL"],
     defense: ["DE", "DT", "OLB", "LB", "CB", "S"],
     st: ["K", "P"]
   };
@@ -32413,6 +32555,8 @@ var _CFB = (() => {
   //   from  = eligible base positions (mirrors SLOT_ELIGIBLE_POS)
   //   forms = formations this slot appears in (for the "plays here in X" note)
   var UNIQUE_DEPTH_OFF = [
+    { pos: "SLOT", label: "SLOT RECEIVER", role: "WR-Slot", from: ["WR", "TE", "RB"], forms: ["Spread", "Air Raid", "Pistol/RPO", "Trips/Bunch", "Empty", "Single Back"] },
+    { pos: "FADE", label: "FADE / JUMP-BALL", role: "WR-Fade", from: ["WR", "TE"], forms: ["Pro Set", "Single Back", "Power-I", "Wishbone", "Flexbone", "Wildcat", "Spread", "Trips/Bunch", "Pistol/RPO", "Air Raid", "Empty"] },
     { pos: "FB", label: "FULLBACK", role: "FB-Lead", from: ["RB"], forms: ["Power-I", "Wishbone", "Flexbone", "Wildcat"] },
     { pos: "WING", label: "WISHBONE HB", role: "RB-Power", from: ["RB", "TE"], forms: ["Wishbone"] },
     { pos: "ABACK", label: "FLEXBONE A-BACK", role: "RB-Scat", from: ["RB", "WR", "TE"], forms: ["Flexbone"] },
@@ -39158,15 +39302,43 @@ var _CFB = (() => {
       state.ui.callFormation = b.dataset.csForm === "__auto" ? null : b.dataset.csForm;
       rerender();
     }));
+    const _PASS_DRILLS = ["quick", "dropback", "shots"];
+    const _RUN_DRILLS = ["inside", "perimeter", "gadgets"];
+    const _clearLockedDrill = () => {
+      const g = state.ui.callDrill && state.ui.callDrill.grp;
+      if (!g) return;
+      // If the lever now in force locks the open drill's category, back out of it.
+      if (state.ui.callPA && _RUN_DRILLS.includes(g)) state.ui.callDrill = null;
+      if ((state.ui.callRPO || state.ui.callQBRun) && (_PASS_DRILLS.includes(g) || g === "gadgets")) state.ui.callDrill = null;
+    };
     document.querySelectorAll("[data-cs-pa]").forEach((b) => b.addEventListener("click", () => {
       if (b.disabled) return;
       state.ui.callPA = !state.ui.callPA;
-      if (state.ui.callPA) state.ui.callRPO = false;
+      if (state.ui.callPA) {
+        state.ui.callRPO = false;
+        state.ui.callQBRun = false;
+      }
+      _clearLockedDrill();
       rerender();
     }));
     document.querySelectorAll("[data-cs-rpo]").forEach((b) => b.addEventListener("click", () => {
+      if (b.disabled) return;
       state.ui.callRPO = !state.ui.callRPO;
-      if (state.ui.callRPO) state.ui.callPA = false;
+      if (state.ui.callRPO) {
+        state.ui.callPA = false;
+        state.ui.callQBRun = false;
+      }
+      _clearLockedDrill();
+      rerender();
+    }));
+    document.querySelectorAll("[data-cs-qbrun]").forEach((b) => b.addEventListener("click", () => {
+      if (b.disabled) return;
+      state.ui.callQBRun = !state.ui.callQBRun;
+      if (state.ui.callQBRun) {
+        state.ui.callPA = false;
+        state.ui.callRPO = false;
+      }
+      _clearLockedDrill();
       rerender();
     }));
     document.querySelectorAll("[data-cs-timeout]").forEach((b) => b.addEventListener("click", () => {
@@ -39186,13 +39358,21 @@ var _CFB = (() => {
       if (state.ui.callFormation) call.formationId = state.ui.callFormation;
       if (state.ui.callPA) call.playAction = true;
       if (state.ui.callRPO) call.rpo = true;
+      if (state.ui.callQBRun) call.qbRun = true;
       if (state.ui.callTimeout) call.timeout = true;
       return call;
     };
     document.querySelectorAll("[data-cs-drill]").forEach((b) => b.addEventListener("click", () => {
-      state.ui.callDrill = { grp: b.dataset.csDrill, cat: b.dataset.csCat };
-      // Drilling into a run/gadget category clears any pending Play Action (invalid there).
-      if (String(b.dataset.csCat || "").startsWith("run") || b.dataset.csDrill === "gadgets") state.ui.callPA = false;
+      if (b.disabled) return;
+      const grp = b.dataset.csDrill;
+      state.ui.callDrill = { grp, cat: b.dataset.csCat };
+      // Drilling into a run/gadget category clears Play Action; a pass category clears the
+      // run levers (RPO / QB Run) — the same lockout, from the other direction.
+      if (_RUN_DRILLS.includes(grp)) state.ui.callPA = false;
+      if (_PASS_DRILLS.includes(grp)) {
+        state.ui.callRPO = false;
+        state.ui.callQBRun = false;
+      }
       rerender();
     }));
     const _drillBackBtn = document.querySelector("[data-cs-drillback]");
@@ -39456,6 +39636,7 @@ var _CFB = (() => {
       var _a2;
       const names = (((_a2 = ctx2.conceptsByGroup) == null ? void 0 : _a2[groupKey]) || []).filter((nm) => {
         var _a3;
+        if (_activePlaybook.size && !_activePlaybook.has(nm)) return false;
         return !weights || ((_a3 = weights[nm]) != null ? _a3 : 50) > 0;
       });
       if (!names.length) return "";
@@ -39478,6 +39659,12 @@ var _CFB = (() => {
     const _pkg = FORMATION_PACKAGES[_selFormId] || FORMATION_PACKAGES["Pro Set"] || {};
     const _wrCount = (_pkg.WR || 0) + (_pkg.SLOT || 0);
     const _drillCat = state.ui.callDrill || null;
+    // The active playbook: a specific chosen formation pulls only ITS plays; "Auto" pulls
+    // the union across every formation you carry. This is the gameplan-driven gate — a play
+    // that isn't in the selected look's playbook never reaches the sheet.
+    const _carriedIds = (((school == null ? void 0 : school.gameplan) == null ? void 0 : school.gameplan.offFormations) || []).map((f) => f && f.id).filter((id) => id && FORMATION_PACKAGES[id]);
+    const _pbForms = state.ui.callFormation ? [state.ui.callFormation] : _carriedIds.length ? _carriedIds : [_selFormId];
+    const _activePlaybook = formationPlaybookSet(_pbForms);
     // Concept list for a category, filtered to the chosen formation's WR count AND to
     // the plays that actually EXIST in your gameplan — a concept dialed to 0 in your
     // playbook (conceptWeights[nm] <= 0) is removed, so it never shows on the sheet.
@@ -39486,17 +39673,31 @@ var _CFB = (() => {
       const names = ((_a2 = ctx2.conceptsByGroup) == null ? void 0 : _a2[grp]) || [];
       return names.filter((nm) => {
         var _a3;
+        if (_activePlaybook.size && !_activePlaybook.has(nm)) return false;
         if (weights && ((_a3 = weights[nm]) != null ? _a3 : 50) <= 0) return false;
         const c = PASS_CONCEPTS[nm];
         if (c && c.minWR && _wrCount < c.minWR) return false;
         return true;
       });
     };
-    const tiles = CATS.map(([cat, label, grp]) => `
-    <button class="cs-cat" data-cs-drill="${grp}" data-cs-cat="${cat}">
+    // Levers (PA / RPO / QB Run) are mutually exclusive, and each one HARD-LOCKS the play
+    // types it can't touch: PA locks the run + gadget tiles, RPO and QB Run lock the pass +
+    // gadget tiles. A locked tile is greyed and untappable.
+    const _paOn = !!state.ui.callPA;
+    const _rpoOn = !!state.ui.callRPO;
+    const _qbRunOn = !!state.ui.callQBRun;
+    const _RUN_GRPS = ["inside", "perimeter"];
+    const _PASS_GRPS = ["quick", "dropback", "shots"];
+    const _lockedGrps = _paOn ? new Set([..._RUN_GRPS, "gadgets"]) : _rpoOn || _qbRunOn ? new Set([..._PASS_GRPS, "gadgets"]) : /* @__PURE__ */ new Set();
+    const _lockTip = _paOn ? "Play Action is on — pass plays only" : _rpoOn ? "RPO is on — run plays only" : _qbRunOn ? "QB Run is on — run plays only" : "";
+    const tiles = CATS.map(([cat, label, grp]) => {
+      const locked = _lockedGrps.has(grp);
+      return `
+    <button class="cs-cat${locked ? " cs-cat-locked" : ""}"${locked ? " disabled" : ""} data-cs-drill="${grp}" data-cs-cat="${cat}"${locked ? ` title="${escapeHtml(_lockTip)}"` : ""}>
       <span class="cs-cat-name">${label}</span>
-      <span class="cs-cat-favs">${escapeHtml(favs(grp))}</span>
-    </button>`).join("");
+      <span class="cs-cat-favs">${locked ? "\u{1F512} locked" : escapeHtml(favs(grp))}</span>
+    </button>`;
+    }).join("");
     // Drill-down: the actual plays in the tapped category, callable by name.
     let drillBlock = "";
     if (_drillCat) {
@@ -39520,12 +39721,11 @@ var _CFB = (() => {
     const _carried = ((school == null ? void 0 : school.gameplan) == null ? void 0 : school.gameplan.offFormations) || [];
     const _formList = (_carried.length ? _carried : [{ id: (school == null ? void 0 : school.gameplan) == null ? void 0 : school.gameplan.offFormation }]).map((f) => f && f.id).filter((id) => id && FORMATION_PACKAGES[id]);
     const _selForm = state.ui.callFormation || "__auto";
-    const _paOn = !!state.ui.callPA;
-    const _rpoOn = !!state.ui.callRPO;
-    // Play Action is a PASS lever — disable it once the player has drilled into a run
-    // (or gadget) category, so the invalid "PA + a run" combo can't be set.
-    const _drillIsRun = !!(_drillCat && (String(_drillCat.cat || "").startsWith("run") || _drillCat.grp === "gadgets"));
-    const _paDisabled = _drillIsRun;
+    // Reverse lockout: if you've already drilled into a category, disable the levers that
+    // can't apply to it (a pass drill disables the run levers; a run/gadget drill disables PA).
+    const _drillGrp = _drillCat ? _drillCat.grp : null;
+    const _paDisabled = !!(_drillGrp && (_RUN_GRPS.includes(_drillGrp) || _drillGrp === "gadgets"));
+    const _runLevDisabled = !!(_drillGrp && (_PASS_GRPS.includes(_drillGrp) || _drillGrp === "gadgets"));
     const formStrip = _formList.length ? `
         <div class="cs-form-strip">
           <span class="cs-form-tag">FORMATION</span>
@@ -39533,8 +39733,9 @@ var _CFB = (() => {
           ${_formList.map((id) => `<button class="cs-form-btn${_selForm === id ? " active" : ""}" data-cs-form="${escapeHtml(id)}">${escapeHtml(id)}</button>`).join("")}
         </div>
         <div class="cs-tag-strip">
-          <button class="cs-tag-btn${_paOn && !_paDisabled ? " active" : ""}" data-cs-pa="1" ${_paDisabled ? "disabled" : ""} title="${_paDisabled ? "Play action only applies to pass plays" : "Play action — fake the run to freeze the linebackers (opens up the medium/deep pass)"}">\u{1F3AD} Play Action</button>
-          <button class="cs-tag-btn${_rpoOn ? " active" : ""}" data-cs-rpo="1" title="RPO — read a defender off the run action and hand off or throw">\u{1F504} RPO</button>
+          <button class="cs-tag-btn${_paOn ? " active" : ""}" data-cs-pa="1" ${_paDisabled ? "disabled" : ""} title="${_paDisabled ? "Play action only applies to pass plays" : "Play action — fake the run to freeze the linebackers (opens up the medium/deep pass)"}">\u{1F3AD} Play Action</button>
+          <button class="cs-tag-btn${_rpoOn ? " active" : ""}" data-cs-rpo="1" ${_runLevDisabled ? "disabled" : ""} title="${_runLevDisabled ? "RPO is a run call — it only applies to run plays" : "RPO — read a defender off the run action and hand off or throw"}">\u{1F504} RPO</button>
+          <button class="cs-tag-btn${_qbRunOn ? " active" : ""}" data-cs-qbrun="1" ${_runLevDisabled ? "disabled" : ""} title="${_runLevDisabled ? "QB Run is a run call — it only applies to run plays" : "QB Run — the QB keeps it on the called run (a designed QB keeper)"}">\u{1F3C8} QB Run</button>
           ${(() => {
             const _tt = token.timeouts || {};
             const _ms = token.playerSide || "home";
