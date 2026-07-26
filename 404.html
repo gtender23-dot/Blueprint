@@ -6037,11 +6037,13 @@ var _CFB = (() => {
           mid: [[8, 10, 15], [11, 14, 35], [15, 19, 50]],
           low: [[8, 10, 8], [11, 14, 27], [15, 19, 65]]
         },
-        AI_TARGETS_PER_SLOT: 3,
-        // board depth per open scholarship
-        AI_BOARD_CAP: 24,
+        AI_TARGETS_PER_SLOT: 5,
+        // board depth per open scholarship — schools board FAR more than they can
+        // sign because they lose most head-to-head battles; a thin board leaves open
+        // slots when targets pick rivals. [rebuild: 3→5 so classes actually fill]
+        AI_BOARD_CAP: 48,
         // max targets per AI school
-        AI_SUITORS_CAP: 8,
+        AI_SUITORS_CAP: 10,
         // max AI schools pursuing one recruit
         AI_SUITORS_MIN: 2,
         // every recruit gets at least this many suitors
@@ -6059,8 +6061,9 @@ var _CFB = (() => {
         // $/point economics as the player. They pace spending across the cycle,
         // concentrate on their top live targets, and BOW OUT of races where closing
         // the gap would burn too much of what's left — then redeploy that money.
-        AI_PRIORITY_TOP: 8,
-        // weekly wallet concentrates on this many live targets
+        AI_PRIORITY_TOP: 12,
+        // weekly wallet concentrates on this many live targets (deeper board needs
+        // wider weekly coverage so lower-priority slots still get pursued)
         AI_BOWOUT_GAP: 20,
         // trailing the leader by this much triggers the cost check
         AI_BOWOUT_BUDGET_FRAC: 0.12,
@@ -6071,6 +6074,24 @@ var _CFB = (() => {
         // ...while trailing by this much = race over, withdraw
         AI_SPEND_AGGRO: 1,
         // multiplier on the paced weekly wallet [TUNE]
+        // ── AI aggression + war-chest (rebuilt) ──────────────────────────────────
+        // Each AI school earmarks extra spend for its top-priority (must-have)
+        // targets and will overpay to win them; cheap depth pieces it's losing are
+        // conceded. War-chest intensity rides on top of the difficulty multiplier.
+        AI_WARCHEST_TARGETS: 3,
+        // how many top-priority targets get war-chest treatment
+        AI_WARCHEST_MULT: 2.4,
+        // a war-chest target can draw up to this many × its fair wallet slice [TUNE]
+        AI_PRIORITY_SPEND_POW: 1.6,
+        // higher = wallet skews harder toward high-priority targets [TUNE]
+        AI_AGGRO_WALLET_MIN: 0.55,
+        // aggression's floor effect on the weekly wallet (weak programs pace slower)
+        // ── AI endgame (fill the class, don't hoard) ─────────────────────────────
+        // As signing day nears with open slots, schools bail losing races and spend
+        // their reserve on winnable kids. Prevents ending with open slots + cash.
+        AI_ENDGAME_WEEKS: 7,      // urgency ramps over the final N weeks
+        AI_ENDGAME_SPEND: 0.85,   // at full urgency, deploy this fraction of the reserve above the paced wallet
+        AI_ENDGAME_WINNABLE: 1.6, // extra weight on winnable targets at full urgency
         // ── Early commitments ────────────────────────────────────────────────────
         // A recruit nobody is really fighting over takes the offer in hand instead of
         // waiting for a scheduled date. Leader must be able to close (player needs an
@@ -6265,11 +6286,34 @@ var _CFB = (() => {
         // reachable against the 100 interest ceiling, so recruiting actually resolves.
         COMMIT_THRESHOLD_BASE: 85,
         COMMIT_WE_MOD: 0.4,
-        COMMIT_THRESHOLD_FLOOR: 40,
+        COMMIT_THRESHOLD_FLOOR: 28,
         COMMIT_THRESHOLD_CEIL: 90,
+        // Field-narrowing relief: how far the commit bar drops when the field has
+        // narrowed to a near-final race (fewer active suitors = lower bar to commit).
+        COMMIT_FIELD_RELIEF: 34,  // max points shaved off when down to a lone/two-horse race
+        COMMIT_FIELD_CAP: 5,      // suitors-above-one at which relief fully phases out
         SEPARATION: 15,
         DECLINE_THRESHOLD: 25,
         MAX_CAMPUS_VISITS: 5,
+        // ── Battle-decided signing (rebuilt) ─────────────────────────────────────
+        // Timing is emergent from the weekly contact battle — no pre-rolled calendar.
+        // Final recruiting day; any still-open recruit hard-locks to its leader here.
+        RECRUITING_LOCK_DAY: 19,
+        // A leader over the recruit's commit threshold signs once it has HELD a lead
+        // over #2 for the required number of consecutive weeks. Bigger margins need
+        // fewer weeks (a blowout resolves fast; a dogfight grinds and can flip).
+        RECRUITING_EARLY_FLOOR: 8, // no battle-driven commit before this day (field can still tighten); avoids a day-5 pile-up
+        COMMIT_BLOWOUT_GAP: 30,   // runaway lead
+        COMMIT_CLEAR_GAP: 16,     // clear, comfortable lead
+        COMMIT_HOLD_BLOWOUT: 2,   // weeks to hold a blowout gap
+        COMMIT_HOLD_CLEAR: 3,     // weeks to hold a clear gap
+        COMMIT_HOLD_UNCONTESTED: 3, // weeks when essentially alone
+        COMMIT_HOLD_CONTESTED: 4, // weeks to hold a narrow lead in a real fight
+        // Live funnel narrowing (presentation): trim to top-N by interest on/after
+        // these days. Cuts trailing suitors; never triggers a commit itself.
+        FUNNEL_TOP8_DAY: 8,
+        FUNNEL_TOP5_DAY: 12,
+        FUNNEL_TOP3_DAY: 15,
         // Funnel core (Phase 1 SP recruiting — §3)
         FUNNEL_SIZE: { top8: 8, top5: 5, top3: 3 },
         RIVAL_COUNT: { min: 3, max: 6 },
@@ -7116,7 +7160,13 @@ var _CFB = (() => {
       const aWins = randInt(Math.floor(played * 0.34), Math.ceil(played * 0.62));
       const ties = chance(0.55) ? randInt(1, 5) : 0;
       const bWins = Math.max(0, played - aWins - ties);
-      const trophy = chance(0.72) ? `The ${pick(TROPHY_ADJ)} ${pick(TROPHY_OBJECTS)}` : null;
+      let trophy = null;
+      if (chance(0.72)) {
+        for (let tt = 0; tt < 8; tt++) {
+          const cand = `The ${pick(TROPHY_ADJ)} ${pick(TROPHY_OBJECTS)}`;
+          if (!REAL_TROPHY_NAMES.has(cand)) { trophy = cand; break; }
+        }
+      }
       const holder = chance(0.5) ? a.id : b.id;
       const mk = (me, them, myWins, theirWins) => ({
         schoolId: them.id,
@@ -7134,7 +7184,7 @@ var _CFB = (() => {
     }
     return pairs.length;
   }
-  var COACH_FIRST, COACH_LAST, TROPHY_OBJECTS, TROPHY_ADJ, TRADITIONS, ERA_FLAVOR;
+  var COACH_FIRST, COACH_LAST, TROPHY_OBJECTS, TROPHY_ADJ, REAL_TROPHY_NAMES, TRADITIONS, ERA_FLAVOR;
   var init_lore = __esm({
     "js/engine/lore.js"() {
       init_constants();
@@ -7321,8 +7371,19 @@ var _CFB = (() => {
         "Bit",
         "Cup",
         "Paddle",
-        "Wagon Wheel",
-        "Ladder"
+        "Ladder",
+        "Kettle",
+        "Stein",
+        "Horseshoe",
+        "Lariat",
+        "Tankard",
+        "Gavel",
+        "Wrench",
+        "Cleat",
+        "Helm",
+        "Gauntlet",
+        "Chalice",
+        "Stovepipe"
       ];
       TROPHY_ADJ = [
         "Copper",
@@ -7330,7 +7391,6 @@ var _CFB = (() => {
         "Golden",
         "Brass",
         "Old",
-        "Little Brown",
         "Silver",
         "Rusty",
         "Ancient",
@@ -7338,8 +7398,24 @@ var _CFB = (() => {
         "Bronze",
         "Battered",
         "Painted",
-        "Sacred"
+        "Sacred",
+        "Tarnished",
+        "Weathered",
+        "Cast-Iron",
+        "Pewter",
+        "Gilded",
+        "Scorched",
+        "Dented"
       ];
+      // Real rivalry-trophy names the adj×object cross-product must never produce.
+      REAL_TROPHY_NAMES = /* @__PURE__ */ new Set([
+        "The Little Brown Jug", "The Old Oaken Bucket", "The Iron Skillet",
+        "The Bronze Boot", "The Golden Boot", "The Old Brass Spittoon",
+        "The Copper Kettle", "The Wagon Wheel", "The Golden Hat", "The Old Wagon Wheel",
+        "The Bell", "The Victory Bell", "The Golden Axe", "The Paul Bunyan Axe",
+        "The Territorial Cup", "The Floyd of Rosedale", "The Sweet Sioux Tomahawk",
+        "The Ancient Iron Skillet", "The Old Iron Skillet"
+      ]);
       TRADITIONS = [
         "the student section counts down the final minute in unison",
         "the team walks through the tailgate lots two hours before kick",
@@ -7371,7 +7447,7 @@ var _CFB = (() => {
         ],
         scandal: [
           "a pay-for-play scandal vacated two seasons",
-          "the NCAA took twelve scholarships and the wins with them",
+          "the league office took twelve scholarships and the wins with them",
           "a booster slush fund cost the program a bowl ban",
           "a transcript scandal ended a coach and a decade",
           "an ineligible player erased a conference title",
@@ -8882,7 +8958,7 @@ var _CFB = (() => {
         kind: "probation",
         scholarshipCap: C.ASHES_SCHOLARSHIP_CAP,
         untilSeason: state2.season + C.ASHES_PROBATION_YEARS,
-        reason: (pick2 == null ? void 0 : pick2.why) || "NCAA sanctions"
+        reason: (pick2 == null ? void 0 : pick2.why) || "league sanctions"
       };
       coach.jobSecurity = C.ASHES_JOBSEC_START;
       coach.startLeash = { untilSeason: state2.season + C.ASHES_PROBATION_YEARS };
@@ -9340,10 +9416,19 @@ var _CFB = (() => {
     school.facilities[track] = lvl + 1;
     return { ok: true, cost, level: lvl + 1 };
   }
-  function commitThreshold(recruit) {
+  function commitThreshold(recruit, contenders = null) {
     var _a, _b;
     const we = (_b = (_a = recruit.attributes) == null ? void 0 : _a.WE) != null ? _b : 50;
-    const raw = C.COMMIT_THRESHOLD_BASE - we * C.COMMIT_WE_MOD;
+    let raw = C.COMMIT_THRESHOLD_BASE - we * C.COMMIT_WE_MOD;
+    // Field-aware: a narrowed race resolves at a MUCH lower bar than an 8-way
+    // scramble. With few suitors left, the leader owns most of the (small) room
+    // and doesn't need a huge absolute number to feel settled — so the bar drops
+    // toward the floor as contenders fall. This is what lets contested races
+    // actually resolve during the season instead of stalemating to signing day.
+    if (contenders != null) {
+      const over = Math.max(0, contenders - 1);
+      raw -= C.COMMIT_FIELD_RELIEF * Math.max(0, C.COMMIT_FIELD_CAP - over) / C.COMMIT_FIELD_CAP;
+    }
     return clamp2(raw, C.COMMIT_THRESHOLD_FLOOR, C.COMMIT_THRESHOLD_CEIL);
   }
   function rivalWeight(recruit, school) {
@@ -9459,11 +9544,18 @@ var _CFB = (() => {
           });
         }
       }
+      // Per-target PRIORITY = need-at-position × recruit quality × fit. This is what
+      // makes an AI school fight hard for a must-have (hole position + blue-chip) and
+      // concede cheap depth. Stored on aiRec for the weekly spend engine.
+      const priorityById = {};
       for (const { r, fit } of scored) {
         if (targetIds.includes(r.id)) continue;
         if (targetIds.length >= boardSize) break;
         if ((r.rivals || []).length >= C.AI_SUITORS_CAP) continue;
         targetIds.push(r.id);
+        const need = needWeight(r.position);
+        const quality = 0.5 + (r.visionRating || 50) / 100; // ~0.5–1.5
+        priorityById[r.id] = need * quality * Math.max(0.4, fit);
         const [iMin, iMax] = C.RIVAL_INTEREST[r._funnelTier || "mid"];
         r.rivals.push({
           schoolId: school.id,
@@ -9477,7 +9569,24 @@ var _CFB = (() => {
         });
       }
       if (school.coach) {
-        school.coach.aiRec = { targetIds, slots, filled: 0, full: slots <= 0 };
+        // ── AGGRESSION PROFILE ────────────────────────────────────────────────
+        // Prestige is dominant; a moderate per-school personality (±~25%) means a
+        // scrappy program can occasionally out-fight for a kid, but blue-bloods
+        // usually win. Higher aggression → bigger weekly wallet + later bow-outs +
+        // more willing to war-chest a must-have.
+        const prestige = school.prestige || 2;
+        const divCap = (C.PRESTIGE_MAX && C.PRESTIGE_MAX[school.division]) || 6;
+        const prestigeBase = 0.72 + (prestige / divCap) * 0.66; // ~0.72 (weak) → ~1.38 (blue-blood)
+        const personality = 0.78 + Math.random() * 0.44; // ±~22% moderate variance
+        const aggression = +(prestigeBase * personality).toFixed(3);
+        // War-chest the top-priority targets (the ones this school will overpay for).
+        const ranked = Object.entries(priorityById).sort((a, b) => b[1] - a[1]).map(([id]) => id);
+        const warChest = new Set(ranked.slice(0, C.AI_WARCHEST_TARGETS));
+        school.coach.aiRec = {
+          targetIds, slots, filled: 0, full: slots <= 0,
+          aggression, priorityById, warChest,
+          maxPriority: Math.max(1e-3, ...Object.values(priorityById), 1e-3)
+        };
       }
     }
     for (const r of recruits) {
@@ -9522,8 +9631,28 @@ var _CFB = (() => {
       const coach = school.coach;
       const ai = coach == null ? void 0 : coach.aiRec;
       if (!ai || ai.full || (coach.budget || 0) <= 0) continue;
-      const wallet = Math.min(coach.budget, coach.budget / weeksLeft * C.AI_SPEND_AGGRO * _recDiffMult);
+      const aggro = ai.aggression || 1;
+      // Weekly wallet: paced across remaining weeks, scaled by this school's
+      // aggression (blended toward a floor so weak programs pace slower) and by the
+      // recruiting difficulty setting. Aggressive schools push more money out early.
+      // ── ENDGAME URGENCY ──────────────────────────────────────────────────────
+      // As signing day nears with slots still open, the school gets desperate: it
+      // bails on races it's losing and pours budget into recruits it can actually
+      // win. This fills classes (instead of ending with open slots + unspent cash)
+      // and smooths the commit spread (losers concede → winners commit steadily).
+      const openSlots = Math.max(0, ai.slots - (ai.filled || 0));
+      // urgency 0→1 climbs as weeks run out AND slots remain unfilled.
+      const timePressure = Math.min(1, (C.AI_ENDGAME_WEEKS - weeksLeft + 1) / C.AI_ENDGAME_WEEKS);
+      const urgency = openSlots > 0 ? Math.max(0, timePressure) : 0;
+      const aggroWallet = C.AI_AGGRO_WALLET_MIN + (aggro - C.AI_AGGRO_WALLET_MIN) * 1;
+      // Base wallet paces the budget; in the endgame, urgency ramps it toward
+      // spending the FULL remaining budget so open slots actually get filled.
+      const pacedWallet = coach.budget / weeksLeft * C.AI_SPEND_AGGRO * aggroWallet * _recDiffMult;
+      const wallet = Math.min(coach.budget, pacedWallet + (coach.budget - pacedWallet) * urgency * C.AI_ENDGAME_SPEND);
       if (wallet < 1) continue;
+      const priorityById = ai.priorityById || {};
+      const maxPriority = ai.maxPriority || 1;
+      const warChest = ai.warChest || /* @__PURE__ */ new Set();
       const live = [];
       for (const id of ai.targetIds) {
         const recruit = recruitById.get(id);
@@ -9539,24 +9668,43 @@ var _CFB = (() => {
         if (pe && !pe.eliminated && (pe.interest || 0) > leader) leader = pe.interest;
         const gap = leader - mine.interest;
         const mods = Math.max(0.15, effectiveSpend(1, recruit, school, coach, false));
-        if (gap >= C.AI_BOWOUT_GAP) {
+        const isWarChest = warChest.has(id);
+        // Strategic priority (need × quality × fit) normalized to ~0–1.
+        const strat = Math.min(1.6, (priorityById[id] || 0.4) / maxPriority);
+        // Bow-out: concede races that would burn too much to close. In the endgame
+        // this tightens hard (urgency lowers both the gap trigger and the cost the
+        // school will tolerate) so it abandons losing races and redirects the money.
+        // A war-chest must-have it's still winning is defended far harder.
+        const stillWinning = gap <= 2;
+        const effGapTrigger = C.AI_BOWOUT_GAP * (1 - urgency * 0.6);
+        if (gap >= effGapTrigger && !(isWarChest && stillWinning)) {
           const costToClose = gap * C.CONTACT_DOLLARS_PER_POINT / mods;
           const hopeless = leader >= C.AI_BOWOUT_HOPELESS_LEAD && gap >= C.AI_BOWOUT_HOPELESS_GAP;
-          if (hopeless || costToClose > C.AI_BOWOUT_BUDGET_FRAC * coach.budget) {
+          const budgetFrac = C.AI_BOWOUT_BUDGET_FRAC * aggro * (isWarChest ? 3.2 : 1) * (1 - urgency * 0.7);
+          if (hopeless || costToClose > budgetFrac * coach.budget) {
             mine.bowedOut = true;
             continue;
           }
         }
         const winning = gap <= 0;
-        const priority = (winning ? 1.35 : 1 / (1 + gap / 25)) * (0.6 + (recruit.visionRating || 50) / 100) * (mine.interest >= 95 ? 0.25 : 1);
-        live.push({ mine, mods, priority });
+        // Weekly priority weight blends BATTLE position (are we winning?) with the
+        // STRATEGIC priority (how badly we need this kid). In the endgame, winnable
+        // targets are weighted far higher so budget goes where it can actually sign.
+        const battle = (winning ? 1.35 : 1 / (1 + gap / 25)) * (mine.interest >= 95 ? 0.25 : 1);
+        const winnableBoost = 1 + urgency * (winning ? C.AI_ENDGAME_WINNABLE : -0.4);
+        const weight = Math.max(0.02, battle * Math.pow(0.35 + strat, C.AI_PRIORITY_SPEND_POW) * (isWarChest ? C.AI_WARCHEST_MULT : 1) * winnableBoost);
+        live.push({ mine, mods, weight, isWarChest, strat });
       }
       if (live.length === 0) continue;
-      live.sort((a, b) => b.priority - a.priority);
+      live.sort((a, b) => b.weight - a.weight);
       const focus = live.slice(0, C.AI_PRIORITY_TOP);
-      const prioritySum = focus.reduce((s, t) => s + t.priority, 0) || 1;
+      const weightSum = focus.reduce((s, t) => s + t.weight, 0) || 1;
+      // War-chest targets may draw beyond the even wallet (overpay to win a must-have),
+      // funded from the school's remaining budget — up to the per-contact cap.
       for (const t of focus) {
-        const dollars = Math.min(coach.budget, C.CONTACT_WEEKLY_CAP, wallet * t.priority / prioritySum);
+        let dollars = wallet * t.weight / weightSum;
+        if (t.isWarChest) dollars *= 1 + (_recDiffMult - 1) * 0.6; // harder on higher difficulty
+        dollars = Math.min(coach.budget, C.CONTACT_WEEKLY_CAP, dollars);
         if (dollars < 1) continue;
         coach.budget -= dollars;
         t.mine.spent = (t.mine.spent || 0) + dollars;
@@ -9640,148 +9788,168 @@ var _CFB = (() => {
         driftRivals(recruit, distMult, aiCtx);
       }
       let earlyCommit = false;
-      // RACE-FIRST signing: a decisive, separated leader closes when the RACE says so
-      // — not on the recruit's pre-rolled calendar. Personality (deliberate/showman)
-      // only adds a short ceremony delay; it can no longer block a settled race.
-      if (seasonStarted) {
+      // ── BATTLE-DECIDED SIGNING ──────────────────────────────────────────────
+      // Timing is now a pure emergent outcome of the weekly contact battle. There
+      // is NO pre-rolled commit calendar. A recruit signs when the race itself has
+      // resolved, via three battle signals:
+      //   (1) DURABLE LEAD — the leader is over the recruit's commit threshold AND
+      //       has held a real lead over #2 for N consecutive weeks. Blowouts (big
+      //       margin) satisfy N fast; dogfights drag out and can still flip.
+      //   (2) FIELD COLLAPSE — the leader's only serious competition bowed out /
+      //       went quiet / got cut. With nobody left to fight, the recruit settles
+      //       quickly (a very short arm), even below the durable-lead margin.
+      //   (3) HARD LOCK — on the final recruiting day, whoever leads signs (below).
+      // Presentation (temperament/showman ceremony) adds at most a 1-week flourish;
+      // it can never block a settled race.
+      if (seasonStarted && day < C.RECRUITING_LOCK_DAY) {
         const peEarly = (playerBoard || []).find((e) => e.recruitId === recruit.id);
         const poolEarly = buildFunnelPool(recruit, peEarly, playerSchoolId, playerDivision2);
-        const L = poolEarly[0], S = poolEarly[1];
+        // Signing rank is by INTEREST among still-active suitors (bowed-out schools
+        // can't win). Division only breaks near-ties via a tiny nudge.
+        const active = poolEarly.filter((e) => !e.bowedOut);
+        active.sort((a, b) => (b.interest + poolRank(b.division) * 0.001) - (a.interest + poolRank(a.division) * 0.001));
+        const L = active[0], S = active[1];
         if (L) {
           const second = (_e = S == null ? void 0 : S.interest) != null ? _e : 0;
-          const thr = commitThreshold(recruit);
+          // Field state: how many rivals are still actively fighting (not bowed out).
+          const contenders = active.length;
+          // Commit bar is FIELD-AWARE — a narrowed race resolves at a much lower
+          // interest than an 8-way scramble. This is what makes contested races
+          // settle during the season instead of stalemating at the deadline.
+          const thr = commitThreshold(recruit, contenders);
           const gap = L.interest - second;
-          // Uncontested: clear leader, nobody close. Sealed: leader has broken away
-          // from the field by a real margin (separation is the primary trigger).
-          const uncontested = L.interest >= thr && second <= C.EARLY_COMMIT_SECOND_MAX;
-          const sealed = L.interest >= C.SEAL_COMMIT_MIN && gap >= C.SEAL_COMMIT_GAP && day >= C.SEAL_COMMIT_WEEK;
-          const earlyRoom = L.interest >= C.EARLY_COMMIT_MIN && gap >= C.SEAL_COMMIT_GAP * 1.6 && day >= C.EARLY_COMMIT_WEEK;
-          if (uncontested || sealed || earlyRoom) {
-            const canClose = L.isPlayer ? !!(peEarly == null ? void 0 : peEarly.offered) : !((_f = aiCtx == null ? void 0 : aiCtx.full) == null ? void 0 : _f.has(L.schoolId));
-            if (canClose) {
+          const canClose = L.isPlayer ? !!(peEarly == null ? void 0 : peEarly.offered) : !((_f = aiCtx == null ? void 0 : aiCtx.full) == null ? void 0 : _f.has(L.schoolId));
+          const leaderKey = L.isPlayer ? "__player__" : L.schoolId;
+          // Track how many consecutive weeks THIS leader has held a qualifying lead.
+          if (recruit._leadKey === leaderKey && recruit._ledLastWeek === (day - 1)) {
+            recruit._leadWeeks = (recruit._leadWeeks || 0) + 1;
+          } else {
+            recruit._leadWeeks = 1;
+          }
+          recruit._leadKey = leaderKey;
+          recruit._ledLastWeek = day;
+          // No battle-driven commit before the early floor — lets contact build and
+          // avoids everyone signing the first eligible week. Field collapse and hard
+          // lock are the only exceptions (collapse still needs a held week).
+          const pastFloor = day >= C.RECRUITING_EARLY_FLOOR;
+          if (canClose && L.interest >= thr && pastFloor) {
+            // A bigger margin needs fewer weeks of holding it (blowout vs grind).
+            let needWeeks = gap >= C.COMMIT_BLOWOUT_GAP ? C.COMMIT_HOLD_BLOWOUT
+              : gap >= C.COMMIT_CLEAR_GAP ? C.COMMIT_HOLD_CLEAR
+              : contenders <= 1 ? C.COMMIT_HOLD_UNCONTESTED
+              : C.COMMIT_HOLD_CONTESTED;
+            // Late-cycle acceleration: as signing day nears, a held lead closes with
+            // fewer weeks — so contested battles resolve across the final weeks instead
+            // of all snapping on the hard-lock day. Still 100% battle-driven (a leader
+            // must exist and be above threshold), just quicker to pull the trigger late.
+            const weeksLeft = C.RECRUITING_LOCK_DAY - day;
+            if (weeksLeft <= 4) needWeeks = Math.max(1, needWeeks - (5 - weeksLeft));
+            const durable = (recruit._leadWeeks || 0) >= needWeeks;
+            // Field collapse: the leader is essentially alone now (everyone else bowed
+            // out / was cut). Settle fast — but still after holding for a week, so a
+            // recruit seeded with one suitor doesn't insta-commit.
+            const collapsed = contenders <= 1 && (recruit._leadWeeks || 0) >= 2;
+            if (durable || collapsed) {
               const temp = recruit.temperament || "ready";
-              // A SEALED / SEPARATED race (you won a fight) can close fast for a ready
-              // kid. A purely UNCONTESTED lean (nobody's fighting you) always takes a
-              // couple weeks to mull — so it feels like a decision, not a rubber stamp.
-              const wonAFight = sealed || earlyRoom;
-              if (temp === "ready" && wonAFight) {
-                earlyCommit = true;
-              } else {
-                if (!recruit._armedDay) {
-                  // uncontested base 2–3 wk; personality adds a touch of ceremony
-                  const base = wonAFight ? 0 : 2 + Math.floor(Math.random() * 2);
-                  const extra = temp === "showman" ? 1 + Math.floor(Math.random() * 2) : temp === "deliberate" ? 1 : 0;
-                  recruit._armedDay = day + Math.max(base + extra, 1);
-                }
-                if (day >= recruit._armedDay) earlyCommit = true;
-              }
+              const ceremony = collapsed ? 0 : (temp === "showman" ? 1 : 0);
+              if (!recruit._armedDay) recruit._armedDay = day + ceremony;
+              if (day >= recruit._armedDay) earlyCommit = true;
+            } else {
+              recruit._armedDay = null;
             }
+          } else {
+            recruit._leadWeeks = 0;
+            recruit._armedDay = null;
           }
         }
       }
-      // Lone-suitor forced signing: once the field narrows to exactly one school
-      // still in the race AND that school has an offer out, even a slow/ceremony
-      // holdout signs within 3 weeks (no reason to keep waiting). Applies to ALL
-      // temperaments, including "showman".
-      if (!earlyCommit && seasonStarted) {
-        const peLone = (playerBoard || []).find((e) => e.recruitId === recruit.id);
-        const lonePool = buildFunnelPool(recruit, peLone, playerSchoolId, playerDivision2);
-        const activeSuitors = lonePool.filter((e) => !e.bowedOut);
-        if (activeSuitors.length === 1) {
-          const only = activeSuitors[0];
-          // "has a scholarship offer": the player must have offered; an AI school
-          // that's still actively pursuing (in the pool, not full) is offering.
-          const hasOffer = only.isPlayer ? !!(peLone == null ? void 0 : peLone.offered) : !((_f = aiCtx == null ? void 0 : aiCtx.full) == null ? void 0 : _f.has(only.schoolId));
-          if (hasOffer) {
-            if (!recruit._loneSuitorArmed) {
-              // truly uncontested (lone suitor with an offer): settle in ~2–3 weeks,
-              // regardless of personality — clears the board so you focus on real fights
-              recruit._loneSuitorArmed = day + 2 + Math.floor(Math.random() * 2);
-            }
-            if (day >= recruit._loneSuitorArmed) earlyCommit = true;
-          } else {
-            recruit._loneSuitorArmed = null;
+      // Hard lock: on the final recruiting day, every still-open recruit signs with
+      // whoever currently leads the battle (their lone remaining suitor, if any).
+      const hardLock = day >= C.RECRUITING_LOCK_DAY;
+      // ── LIVE FUNNEL NARROWING (presentation only) ──────────────────────────
+      // The top8→top5→top3 stages now reflect the LIVE battle instead of a pre-rolled
+      // schedule: once enough weeks have passed, trim the field to the current top-N
+      // by interest so the UI shows a real, tightening race. This CUTS trailing
+      // suitors (eliminated=true) but never triggers a commit — battles do that.
+      if (seasonStarted && !earlyCommit && !hardLock) {
+        const peN = (playerBoard || []).find((e) => e.recruitId === recruit.id);
+        let stage = null;
+        if (day >= C.FUNNEL_TOP3_DAY) stage = "top3";
+        else if (day >= C.FUNNEL_TOP5_DAY) stage = "top5";
+        else if (day >= C.FUNNEL_TOP8_DAY) stage = "top8";
+        if (stage && recruit.funnelStage !== "committed") {
+          const poolN = buildFunnelPool(recruit, peN, playerSchoolId, playerDivision2);
+          const stageSize = C.FUNNEL_SIZE[stage] || 8;
+          const keep = new Set(poolN.slice(0, stageSize).map((e) => e.schoolId));
+          if (stage === "top3") {
+            const l3 = poolN[0];
+            recruit._trailedAtTop3 = !(l3 && l3.isPlayer);
           }
-        } else {
-          // field re-opened (another suitor back in) — reset the countdown
-          recruit._loneSuitorArmed = null;
-        }
-      }
-      const dayEvents = earlyCommit ? [{ stage: "committed", day, early: true }] : (recruit.narrowSchedule || []).filter((e) => e.day === day);
-      if (dayEvents.length === 0) continue;
-      const playerEntry = (playerBoard || []).find((e) => e.recruitId === recruit.id);
-      for (const event of dayEvents) {
-        const pool = buildFunnelPool(recruit, playerEntry, playerSchoolId, playerDivision2);
-        if (event.stage === "committed") {
-          if (pool.length === 0) continue;
-          const leader = pool[0];
-          if (leader.isPlayer && (playerEntry == null ? void 0 : playerEntry.offered)) {
-            const second = (_h = (_g = pool[1]) == null ? void 0 : _g.interest) != null ? _h : 0;
-            recruit._contestedAtCommit = leader.interest - second <= C.CONTESTED_MARGIN;
-            recruit.committed = playerSchoolId;
-            recruit.decisionStatus = "signed";
-            recruit.funnelStage = "committed";
-            commits.push({
-              recruit,
-              schoolId: playerSchoolId,
-              losers: pool.slice(1).map((e) => e.schoolId)
-            });
-          } else {
-            const rivalWinner = pool.find((e) => {
-              var _a2;
-              return !e.isPlayer && !((_a2 = aiCtx == null ? void 0 : aiCtx.full) == null ? void 0 : _a2.has(e.schoolId));
-            });
-            if (!rivalWinner) continue;
-            recruit.committed = rivalWinner.schoolId;
-            recruit.decisionStatus = "signed";
-            recruit.funnelStage = "committed";
-            if ((playerEntry == null ? void 0 : playerEntry.offered) && playerCoach) {
-              playerEntry.offered = false;
-              playerCoach.scholarshipsAvailable = (playerCoach.scholarshipsAvailable || 0) + 1;
-            }
-            commits.push({
-              recruit,
-              schoolId: rivalWinner.schoolId,
-              losers: playerEntry ? [playerSchoolId] : []
-            });
-            const winSchool = (schools || []).find((s) => s.id === rivalWinner.schoolId);
-            const ai = (_i = winSchool == null ? void 0 : winSchool.coach) == null ? void 0 : _i.aiRec;
-            if (ai) {
-              ai.filled++;
-              if (!ai.full && ai.filled >= ai.slots) {
-                ai.full = true;
-                (_j = aiCtx == null ? void 0 : aiCtx.full) == null ? void 0 : _j.add(winSchool.id);
-                (_k = aiCtx == null ? void 0 : aiCtx.share) == null ? void 0 : _k.set(winSchool.id, 0);
-                if (events && (playerBoard || []).some((be) => {
-                  const rr = recruits.find((x) => x.id === be.recruitId);
-                  return rr && !rr.committed && (rr.rivals || []).some((rv) => rv.schoolId === winSchool.id && !rv.eliminated);
-                })) {
-                  events.push({ type: "info", text: `${winSchool.name} wrapped up their class \u2014 they've cooled on your board.` });
-                }
-              }
-            }
-          }
-        } else {
-          if (event.stage === "top3") {
-            const pool3 = buildFunnelPool(recruit, playerEntry, playerSchoolId, playerDivision2);
-            const leader3 = pool3[0];
-            recruit._trailedAtTop3 = !(leader3 && leader3.isPlayer);
-          }
-          const stageSize = C.FUNNEL_SIZE[event.stage] || 8;
-          const topNIds = new Set(pool.slice(0, stageSize).map((e) => e.schoolId));
-          if (playerEntry && !playerEntry.eliminated && !topNIds.has(playerSchoolId)) {
-            playerEntry.eliminated = true;
-            if (playerEntry.offered && playerCoach) {
-              playerEntry.offered = false;
+          if (peN && !peN.eliminated && !keep.has(playerSchoolId)) {
+            peN.eliminated = true;
+            if (peN.offered && playerCoach) {
+              peN.offered = false;
               playerCoach.scholarshipsAvailable = (playerCoach.scholarshipsAvailable || 0) + 1;
             }
           }
           for (const rival of recruit.rivals || []) {
-            if (!rival.eliminated && !topNIds.has(rival.schoolId)) {
-              rival.eliminated = true;
+            if (!rival.eliminated && !keep.has(rival.schoolId)) rival.eliminated = true;
+          }
+          recruit.funnelStage = stage;
+        }
+      }
+      if (!earlyCommit && !hardLock) continue;
+      const playerEntry = (playerBoard || []).find((e) => e.recruitId === recruit.id);
+      // Winner = highest-INTEREST active (not bowed-out, not full) suitor. Division
+      // only nudges near-ties. This matches the battle-decision leader selection.
+      const pool = buildFunnelPool(recruit, playerEntry, playerSchoolId, playerDivision2)
+        .filter((e) => !e.bowedOut && !(e.isPlayer ? false : (aiCtx == null ? void 0 : aiCtx.full) == null ? void 0 : aiCtx.full.has(e.schoolId)))
+        .sort((a, b) => (b.interest + poolRank(b.division) * 0.001) - (a.interest + poolRank(a.division) * 0.001));
+      if (pool.length === 0) continue;
+      const leader = pool[0];
+      if (leader.isPlayer && (playerEntry == null ? void 0 : playerEntry.offered)) {
+        const second = (_h = (_g = pool[1]) == null ? void 0 : _g.interest) != null ? _h : 0;
+        recruit._contestedAtCommit = leader.interest - second <= C.CONTESTED_MARGIN;
+        recruit.committed = playerSchoolId;
+        recruit.decisionStatus = "signed";
+        recruit.funnelStage = "committed";
+        commits.push({
+          recruit,
+          schoolId: playerSchoolId,
+          losers: pool.slice(1).map((e) => e.schoolId)
+        });
+      } else {
+        // If the player leads on interest but hasn't offered, they can't sign the
+        // kid \u2014 fall to the top rival who can actually close.
+        const rivalWinner = pool.find((e) => !e.isPlayer);
+        if (!rivalWinner) continue;
+        recruit.committed = rivalWinner.schoolId;
+        recruit.decisionStatus = "signed";
+        recruit.funnelStage = "committed";
+        if ((playerEntry == null ? void 0 : playerEntry.offered) && playerCoach) {
+          playerEntry.offered = false;
+          playerCoach.scholarshipsAvailable = (playerCoach.scholarshipsAvailable || 0) + 1;
+        }
+        commits.push({
+          recruit,
+          schoolId: rivalWinner.schoolId,
+          losers: playerEntry ? [playerSchoolId] : []
+        });
+        const winSchool = (schools || []).find((s) => s.id === rivalWinner.schoolId);
+        const ai = (_i = winSchool == null ? void 0 : winSchool.coach) == null ? void 0 : _i.aiRec;
+        if (ai) {
+          ai.filled++;
+          if (!ai.full && ai.filled >= ai.slots) {
+            ai.full = true;
+            (_j = aiCtx == null ? void 0 : aiCtx.full) == null ? void 0 : _j.add(winSchool.id);
+            (_k = aiCtx == null ? void 0 : aiCtx.share) == null ? void 0 : _k.set(winSchool.id, 0);
+            if (events && (playerBoard || []).some((be) => {
+              const rr = recruits.find((x) => x.id === be.recruitId);
+              return rr && !rr.committed && (rr.rivals || []).some((rv) => rv.schoolId === winSchool.id && !rv.eliminated);
+            })) {
+              events.push({ type: "info", text: `${winSchool.name} wrapped up their class \u2014 they've cooled on your board.` });
             }
           }
-          recruit.funnelStage = event.stage;
         }
       }
     }
@@ -11488,135 +11656,135 @@ var _CFB = (() => {
       STATIC_D1_SCHOOLS = [
         // [name, nick, abbr, city, state, lat, lng, [c1,c2], prestige, type]  — 12 per conf, in D1_CONFS order
         // DELTA ATHLETIC (SEC analogue)
-        ["Calhoun State", "Warcats", "CAL", "Birmingham", "AL", 33.52, -86.81, ["#7A0019", "#B5A36A"], 6, "landGrant"],
-        ["Ravenwood", "Direwolves", "RAV", "Baton Rouge", "LA", 30.45, -91.19, ["#4B1F6F", "#F2A900"], 6, "flagship"],
-        ["Fairhope", "Sand Vipers", "FAI", "Gainesville", "FL", 29.65, -82.33, ["#0033A0", "#FF7000"], 5, "flagship"],
-        ["Southaven", "Ironwolves", "SVN", "Oxford", "MS", 34.37, -89.52, ["#14213D", "#C8102E"], 4, "flagship"],
-        ["Tennessee Highlands", "Night Herons", "THL", "Knoxville", "TN", 35.96, -83.92, ["#FF8200", "#58595B"], 5, "stateUniversity"],
-        ["Marietta A&M", "Ironboars", "MAM", "Athens", "GA", 33.96, -83.38, ["#BA0C2F", "#000000"], 6, "landGrant"],
-        ["Beaumont", "Ridgebacks", "BMT", "Nashville", "TN", 36.16, -86.78, ["#866D4B", "#000000"], 4, "privateCollege"],
-        ["Auburndale", "Stonecats", "AUB", "Auburn", "AL", 32.61, -85.48, ["#0C2340", "#E86100"], 5, "landGrant"],
-        ["Delacroix", "Ashcats", "DLX", "Lafayette", "LA", 30.22, -92.02, ["#582C83", "#B7A56A"], 4, "regionalState"],
-        ["Camden State", "Sabertooths", "CMD", "Lexington", "KY", 38.05, -84.5, ["#0033A0", "#FFFFFF"], 4, "stateUniversity"],
-        ["Ashville", "War Herons", "ASH", "Columbia", "SC", 34, -81.03, ["#73000A", "#000000"], 5, "flagship"],
-        ["Fort Pierce", "Ironbears", "FTP", "Tallahassee", "FL", 30.44, -84.28, ["#782F40", "#CEB888"], 5, "stateUniversity"],
+        ["Calhoun State", "Warcats", "CAL", "Birmingham", "AL", 33.52, -86.81, ["#710021", "#B2A15F"], 6, "landGrant"],
+        ["Ravenwood", "Direwolves", "RAV", "Baton Rouge", "LA", 30.45, -91.19, ["#41166D", "#E89D0B"], 6, "flagship"],
+        ["Fairhope", "Sand Vipers", "FAI", "Gainesville", "FL", 29.65, -82.33, ["#003894", "#FD6C00"], 5, "flagship"],
+        ["Southaven", "Ironwolves", "SVN", "Oxford", "MS", 34.37, -89.52, ["#201546", "#C10F33"], 4, "flagship"],
+        ["Tennessee Highlands", "Night Herons", "THL", "Knoxville", "TN", 35.96, -83.92, ["#FF8D00", "#635D5F"], 5, "stateUniversity"],
+        ["Marietta A&M", "Ironboars", "MAM", "Athens", "GA", 33.96, -83.38, ["#B20728", "#000000"], 6, "landGrant"],
+        ["Beaumont", "Ridgebacks", "BMT", "Nashville", "TN", 36.16, -86.78, ["#856246", "#000000"], 4, "privateCollege"],
+        ["Auburndale", "Stonecats", "AUB", "Auburn", "AL", 32.61, -85.48, ["#03194A", "#F26600"], 5, "landGrant"],
+        ["Delacroix", "Ashcats", "DLX", "Lafayette", "LA", 30.22, -92.02, ["#5C228D", "#BD996B"], 4, "regionalState"],
+        ["Camden State", "Sabertooths", "CMD", "Lexington", "KY", 38.05, -84.5, ["#073199", "#FFFFFF"], 4, "stateUniversity"],
+        ["Ashville", "War Herons", "ASH", "Columbia", "SC", 34, -81.03, ["#7F0A15", "#000000"], 5, "flagship"],
+        ["Fort Pierce", "Ironbears", "FTP", "Tallahassee", "FL", 30.44, -84.28, ["#773946", "#CFC092"], 5, "stateUniversity"],
         // GREAT LAKES ALLIANCE (Big Ten analogue)
-        ["Winslow", "Frost Lynx", "WIN", "Ann Arbor", "MI", 42.28, -83.74, ["#00274C", "#FFCB05"], 6, "flagship"],
-        ["Sandborough", "Cave Bears", "SAN", "Columbus", "OH", 39.96, -83, ["#BB0000", "#666666"], 6, "stateUniversity"],
-        ["Kettering State", "Stormbucks", "KET", "East Lansing", "MI", 42.73, -84.48, ["#18453B", "#FFFFFF"], 5, "landGrant"],
-        ["Northgate", "Thornbucks", "NGT", "South Bend", "IN", 41.7, -86.24, ["#0C2340", "#C99700"], 5, "privateCollege"],
-        ["Prairie Grove", "Bramble Boars", "PRG", "Madison", "WI", 43.07, -89.4, ["#C5050C", "#FFFFFF"], 5, "landGrant"],
-        ["Ellsworth", "Gray Stags", "ELL", "Iowa City", "IA", 41.66, -91.53, ["#FCD116", "#000000"], 4, "flagship"],
-        ["Bellwether", "Iron Stags", "BEL", "State College", "PA", 40.79, -77.86, ["#041E42", "#FFFFFF"], 6, "landGrant"],
-        ["Rockford Tech", "Timber Elk", "RKF", "West Lafayette", "IN", 40.43, -86.91, ["#B1810B", "#000000"], 4, "tech"],
-        ["Glenmoor", "Ledge Rams", "GLN", "Minneapolis", "MN", 44.97, -93.24, ["#7A0019", "#FFCC33"], 4, "landGrant"],
-        ["Harrowgate", "Steel Hawks", "HRW", "Evanston", "IL", 42.05, -87.69, ["#4E2A84", "#FFFFFF"], 4, "privateCollege"],
-        ["Danforth", "Cinder Hawks", "DAN", "Champaign", "IL", 40.11, -88.24, ["#13294B", "#E84A27"], 4, "landGrant"],
-        ["Sault Ridge", "Dawn Hawks", "SLT", "Bloomington", "IN", 39.17, -86.52, ["#990000", "#EEEDEB"], 4, "stateUniversity"],
+        ["Winslow", "Frost Lynx", "WIN", "Ann Arbor", "MI", 42.28, -83.74, ["#022456", "#FFC009"], 6, "flagship"],
+        ["Sandborough", "Cave Bears", "SAN", "Columbus", "OH", 39.96, -83, ["#B00C00", "#5E6365"], 6, "stateUniversity"],
+        ["Kettering State", "Stormbucks", "KET", "East Lansing", "MI", 42.73, -84.48, ["#1C5135", "#FFFFFF"], 5, "landGrant"],
+        ["Northgate", "Thornbucks", "NGT", "South Bend", "IN", 41.7, -86.24, ["#011746", "#D18D02"], 5, "privateCollege"],
+        ["Prairie Grove", "Bramble Boars", "PRG", "Madison", "WI", 43.07, -89.4, ["#BF050A", "#FFFFFF"], 5, "landGrant"],
+        ["Ellsworth", "Gray Stags", "ELL", "Iowa City", "IA", 41.66, -91.53, ["#F3DA17", "#000000"], 4, "flagship"],
+        ["Bellwether", "Iron Stags", "BEL", "State College", "PA", 40.79, -77.86, ["#051336", "#FFFFFF"], 6, "landGrant"],
+        ["Rockford Tech", "Timber Elk", "RKF", "West Lafayette", "IN", 40.43, -86.91, ["#A77E08", "#000000"], 4, "tech"],
+        ["Glenmoor", "Ledge Rams", "GLN", "Minneapolis", "MN", 44.97, -93.24, ["#860417", "#F4C235"], 4, "landGrant"],
+        ["Harrowgate", "Steel Hawks", "HRW", "Evanston", "IL", 42.05, -87.69, ["#543685", "#FFFFFF"], 4, "privateCollege"],
+        ["Danforth", "Cinder Hawks", "DAN", "Champaign", "IL", 40.11, -88.24, ["#152155", "#EC5430"], 4, "landGrant"],
+        ["Sault Ridge", "Dawn Hawks", "SLT", "Bloomington", "IN", 39.17, -86.52, ["#940008", "#E9EADF"], 4, "stateUniversity"],
         // GREAT PLAINS (Big 12 analogue)
-        ["Vandergriff", "Cragrams", "VDG", "Austin", "TX", 30.28, -97.74, ["#BF5700", "#FFFFFF"], 6, "flagship"],
-        ["Cimarron A&M", "Pale Herons", "CIM", "College Station", "TX", 30.63, -96.33, ["#500000", "#FFFFFF"], 5, "landGrant"],
-        ["Red River", "Dust Wolves", "RRV", "Norman", "OK", 35.22, -97.44, ["#841617", "#FDF9D8"], 6, "flagship"],
-        ["Cedar Bluff", "Salt Terns", "CDB", "Ames", "IA", 42.03, -93.62, ["#C8102E", "#F1BE48"], 3, "landGrant"],
-        ["Fort Sumner", "Reef Rays", "FSM", "Lawrence", "KS", 38.97, -95.24, ["#0051BA", "#E8000D"], 3, "flagship"],
-        ["Wichita Falls State", "Dune Adders", "WFS", "Wichita", "KS", 37.69, -97.34, ["#000000", "#FFCC00"], 3, "stateUniversity"],
-        ["Stillmark", "Coil Serpents", "STM", "Stillwater", "OK", 36.12, -97.06, ["#FF6600", "#000000"], 4, "landGrant"],
-        ["Cornerstone", "Storm Elk", "CST", "Lincoln", "NE", 40.81, -96.7, ["#E41C38", "#FFFFFF"], 5, "landGrant"],
-        ["Baylor Springs", "Basilisks", "BSP", "Waco", "TX", 31.55, -97.11, ["#154734", "#FFB81C"], 4, "privateCollege"],
-        ["Lubbock Plains", "Rocs", "LBP", "Lubbock", "TX", 33.58, -101.86, ["#CC0000", "#000000"], 4, "tech"],
-        ["Mesa Verde", "Cockatrice", "MVD", "Boulder", "CO", 40.01, -105.27, ["#000000", "#CFB87C"], 4, "flagship"],
-        ["Fort Collins State", "Manticores", "FCS", "Fort Collins", "CO", 40.57, -105.08, ["#1E4D2B", "#C8C372"], 3, "landGrant"],
+        ["Vandergriff", "Cragrams", "VDG", "Austin", "TX", 30.28, -97.74, ["#B74B07", "#FFFFFF"], 6, "flagship"],
+        ["Cimarron A&M", "Pale Herons", "CIM", "College Station", "TX", 30.63, -96.33, ["#560000", "#FFFFFF"], 5, "landGrant"],
+        ["Red River", "Dust Wolves", "RRV", "Norman", "OK", 35.22, -97.44, ["#7F1B1E", "#FFF3DB"], 6, "flagship"],
+        ["Cedar Bluff", "Salt Terns", "CDB", "Ames", "IA", 42.03, -93.62, ["#BC143A", "#EBBA3D"], 3, "landGrant"],
+        ["Fort Sumner", "Reef Rays", "FSM", "Lawrence", "KS", 38.97, -95.24, ["#0248AE", "#E4000B"], 3, "flagship"],
+        ["Wichita Falls State", "Dune Adders", "WFS", "Wichita", "KS", 37.69, -97.34, ["#000000", "#FFC100"], 3, "stateUniversity"],
+        ["Stillmark", "Coil Serpents", "STM", "Stillwater", "OK", 36.12, -97.06, ["#F86405", "#000000"], 4, "landGrant"],
+        ["Cornerstone", "Storm Elk", "CST", "Lincoln", "NE", 40.81, -96.7, ["#D9103B", "#FFFFFF"], 5, "landGrant"],
+        ["Baylor Springs", "Basilisks", "BSP", "Waco", "TX", 31.55, -97.11, ["#214B36", "#FFBC20"], 4, "privateCollege"],
+        ["Lubbock Plains", "Rocs", "LBP", "Lubbock", "TX", 33.58, -101.86, ["#D10000", "#000000"], 4, "tech"],
+        ["Mesa Verde", "Cockatrice", "MVD", "Boulder", "CO", 40.01, -105.27, ["#000000", "#DBB274"], 4, "flagship"],
+        ["Fort Collins State", "Manticores", "FCS", "Fort Collins", "CO", 40.57, -105.08, ["#264832", "#CEC26A"], 3, "landGrant"],
         // PACIFIC COAST (Pac-10 analogue)
-        ["Westmoreland", "Chimeras", "WML", "Los Angeles", "CA", 34.02, -118.29, ["#990000", "#FFCC00"], 5, "privateCollege"],
-        ["Baycrest", "Kelpies", "BAY", "Berkeley", "CA", 37.87, -122.26, ["#003262", "#FDB515"], 4, "flagship"],
-        ["San Marco", "Wendigos", "SMC", "Palo Alto", "CA", 37.43, -122.17, ["#8C1515", "#FFFFFF"], 5, "privateCollege"],
-        ["Pasqual", "Firebrands", "PSQ", "Los Angeles", "CA", 34.07, -118.44, ["#2D68C4", "#F2A900"], 5, "flagship"],
-        ["Cascadia", "Marsh Stags", "CSC", "Eugene", "OR", 44.04, -123.07, ["#154733", "#FEE123"], 6, "flagship"],
-        ["Puget", "Cinders", "PUG", "Seattle", "WA", 47.65, -122.31, ["#4B2E83", "#B7A57A"], 5, "flagship"],
-        ["Palo Robles", "Emberjacks", "PLR", "Tempe", "AZ", 33.42, -111.93, ["#8C1D40", "#FFC627"], 4, "landGrant"],
-        ["Tucson Mesa", "Foundrymen", "TCM", "Tucson", "AZ", 32.23, -110.95, ["#003366", "#CC0033"], 4, "flagship"],
-        ["Corvallis State", "Kilnmen", "CVS", "Corvallis", "OR", 44.56, -123.28, ["#DC4405", "#000000"], 3, "landGrant"],
-        ["Spokane Falls", "Sentries", "SPF", "Pullman", "WA", 46.73, -117.18, ["#981E32", "#5E6A71"], 3, "landGrant"],
-        ["Golden Vale", "Teamsters", "GVL", "San Diego", "CA", 32.78, -117.07, ["#A6192E", "#000000"], 3, "stateUniversity"],
-        ["Sacramento Delta", "Railmen", "SAC", "Sacramento", "CA", 38.56, -121.42, ["#043927", "#C4B581"], 3, "stateUniversity"],
+        ["Westmoreland", "Chimeras", "WML", "Los Angeles", "CA", 34.02, -118.29, ["#99000A", "#F8C102"], 5, "privateCollege"],
+        ["Baycrest", "Kelpies", "BAY", "Berkeley", "CA", 37.87, -122.26, ["#082E6B", "#FFB014"], 4, "flagship"],
+        ["San Marco", "Wendigos", "SMC", "Palo Alto", "CA", 37.43, -122.17, ["#860F0B", "#FFFFFF"], 5, "privateCollege"],
+        ["Pasqual", "Firebrands", "PSQ", "Los Angeles", "CA", 34.07, -118.44, ["#2961CF", "#F0B10B"], 5, "flagship"],
+        ["Cascadia", "Marsh Stags", "CSC", "Eugene", "OR", 44.04, -123.07, ["#103E34", "#F9EC27"], 6, "flagship"],
+        ["Puget", "Cinders", "PUG", "Seattle", "WA", 47.65, -122.31, ["#462D89", "#B5A386"], 5, "flagship"],
+        ["Palo Robles", "Emberjacks", "PLR", "Tempe", "AZ", 33.42, -111.93, ["#841746", "#FFC52F"], 4, "landGrant"],
+        ["Tucson Mesa", "Foundrymen", "TCM", "Tucson", "AZ", 32.23, -110.95, ["#002762", "#C30C3E"], 4, "flagship"],
+        ["Corvallis State", "Kilnmen", "CVS", "Corvallis", "OR", 44.56, -123.28, ["#D34406", "#000000"], 3, "landGrant"],
+        ["Spokane Falls", "Sentries", "SPF", "Pullman", "WA", 46.73, -117.18, ["#9C2828", "#646A67"], 3, "landGrant"],
+        ["Golden Vale", "Teamsters", "GVL", "San Diego", "CA", 32.78, -117.07, ["#A20F22", "#000000"], 3, "stateUniversity"],
+        ["Sacramento Delta", "Railmen", "SAC", "Sacramento", "CA", 38.56, -121.42, ["#003030", "#C0A98D"], 3, "stateUniversity"],
         // ATLANTIC SEABOARD (ACC analogue)
-        ["Tobacco Road", "Ember Hawks", "TBR", "Chapel Hill", "NC", 35.9, -79.05, ["#7BAFD4", "#FFFFFF"], 6, "flagship"],
-        ["Wolf Creek State", "Trackmen", "WCS", "Raleigh", "NC", 35.78, -78.68, ["#CC0000", "#FFFFFF"], 4, "landGrant"],
-        ["Blue Ridge", "Switchmen", "BLR", "Charlottesville", "VA", 38.03, -78.51, ["#232D4B", "#F84C1E"], 4, "flagship"],
-        ["Piedmont Tech", "Colliers", "PMT", "Blacksburg", "VA", 37.23, -80.42, ["#630031", "#CF4420"], 5, "tech"],
-        ["Clearwater", "Quarrymen", "CLW", "Coral Gables", "FL", 25.72, -80.28, ["#F47321", "#005030"], 5, "privateCollege"],
-        ["Seminole Bluff", "Ferrymen", "SBF", "Tallahassee", "FL", 30.42, -84.3, ["#00539B", "#FFD200"], 4, "stateUniversity"],
-        ["Duncastle", "Bargemen", "DUN", "Durham", "NC", 36, -78.94, ["#00539B", "#FFFFFF"], 4, "privateCollege"],
-        ["Wake Hollow", "Dockmen", "WKH", "Winston-Salem", "NC", 36.13, -80.28, ["#9E7E38", "#000000"], 3, "privateCollege"],
-        ["Tidewater", "Wharf Rats", "TDW", "Atlanta", "GA", 33.77, -84.4, ["#B3A369", "#003057"], 5, "tech"],
-        ["Chestnut Hill", "Longshoremen", "CHH", "Chestnut Hill", "MA", 42.34, -71.17, ["#98002E", "#BC9B6A"], 3, "privateCollege"],
-        ["Cavendish", "Riggers", "CVD", "Louisville", "KY", 38.21, -85.76, ["#AD0000", "#000000"], 4, "cityUniversity"],
-        ["Orange Park", "Smelters", "ORP", "Syracuse", "NY", 43.04, -76.14, ["#F76900", "#0E1A3C"], 3, "privateCollege"],
+        ["Chapelfield", "Ember Hawks", "TBR", "Chapel Hill", "NC", 35.9, -79.05, ["#87B9D0", "#FFFFFF"], 6, "flagship"],
+        ["Wolf Creek State", "Trackmen", "WCS", "Raleigh", "NC", 35.78, -78.68, ["#D30C00", "#FFFFFF"], 4, "landGrant"],
+        ["Blue Ridge", "Switchmen", "BLR", "Charlottesville", "VA", 38.03, -78.51, ["#18254E", "#F94F16"], 4, "flagship"],
+        ["Piedmont Tech", "Colliers", "PMT", "Blacksburg", "VA", 37.23, -80.42, ["#6A013A", "#D5411F"], 5, "tech"],
+        ["Clearwater", "Quarrymen", "CLW", "Coral Gables", "FL", 25.72, -80.28, ["#F77A18", "#0B5236"], 5, "privateCollege"],
+        ["Seminole Bluff", "Ferrymen", "SBF", "Tallahassee", "FL", 30.42, -84.3, ["#0049A7", "#FCD002"], 4, "stateUniversity"],
+        ["Duncastle", "Bargemen", "DUN", "Durham", "NC", 36, -78.94, ["#0055A2", "#FFFFFF"], 4, "privateCollege"],
+        ["Wake Hollow", "Dockmen", "WKH", "Winston-Salem", "NC", 36.13, -80.28, ["#A88235", "#000000"], 3, "privateCollege"],
+        ["Tidewater", "Wharf Rats", "TDW", "Atlanta", "GA", 33.77, -84.4, ["#B99A67", "#092B5B"], 5, "tech"],
+        ["Chestnut Hill", "Longshoremen", "CHH", "Chestnut Hill", "MA", 42.34, -71.17, ["#970032", "#B4A269"], 3, "privateCollege"],
+        ["Cavendish", "Riggers", "CVD", "Louisville", "KY", 38.21, -85.76, ["#B30000", "#000000"], 4, "cityUniversity"],
+        ["Orange Park", "Smelters", "ORP", "Syracuse", "NY", 43.04, -76.14, ["#F97000", "#121030"], 3, "privateCollege"],
         // NORTHEASTERN FOOTBALL LEAGUE (Big East analogue)
-        ["Westover", "Anvil Rams", "WSO", "Morgantown", "WV", 39.63, -79.95, ["#002855", "#EAAA00"], 6, "landGrant"],
-        ["Highbridge", "Forgemen", "HBR", "Pittsburgh", "PA", 40.44, -79.96, ["#003594", "#FFB81C"], 5, "cityUniversity"],
-        ["Rutherford", "Blacksmiths", "RUT", "New Brunswick", "NJ", 40.5, -74.45, ["#CC0033", "#000000"], 4, "landGrant"],
-        ["New Haven Bay", "Tanners", "NHB", "New Haven", "CT", 41.31, -72.92, ["#00356B", "#FFFFFF"], 3, "privateCollege"],
-        ["Providence Point", "Coopers", "PRP", "Providence", "RI", 41.82, -71.41, ["#000000", "#008000"], 3, "religious"],
-        ["Storrs Valley", "Wheelwrights", "STV", "Storrs", "CT", 41.81, -72.25, ["#000E2F", "#E4002B"], 4, "landGrant"],
-        ["Cambridge Row", "Cartwrights", "CBR", "Cambridge", "MA", 42.37, -71.12, ["#A51C30", "#000000"], 3, "privateCollege"],
-        ["Fordham Heights", "Millwrights", "FDH", "Bronx", "NY", 40.86, -73.89, ["#900028", "#FFFFFF"], 3, "religious"],
-        ["Newport Shore", "Sowers", "NPS", "Norfolk", "VA", 36.85, -76.29, ["#002855", "#FFFFFF"], 4, "cityUniversity"],
-        ["Nittany Falls", "Sojourners", "NTF", "Philadelphia", "PA", 39.98, -75.16, ["#9D2235", "#FFFFFF"], 3, "cityUniversity"],
-        ["Cincinnati Ridge", "Claimjumpers", "CNR", "Cincinnati", "OH", 39.13, -84.52, ["#E00122", "#000000"], 4, "cityUniversity"],
-        ["Louisville Falls", "Sluicers", "LVF", "Louisville", "KY", 38.25, -85.76, ["#AD0000", "#000000"], 3, "cityUniversity"],
+        ["Westover", "Anvil Rams", "WSO", "Morgantown", "WV", 39.63, -79.95, ["#002960", "#F6A800"], 6, "landGrant"],
+        ["Highbridge", "Forgemen", "HBR", "Pittsburgh", "PA", 40.44, -79.96, ["#002F96", "#FDB426"], 5, "cityUniversity"],
+        ["Rutherford", "Blacksmiths", "RUT", "New Brunswick", "NJ", 40.5, -74.45, ["#D5002F", "#000000"], 4, "landGrant"],
+        ["New Haven Bay", "Tanners", "NHB", "New Haven", "CT", 41.31, -72.92, ["#002B73", "#FFFFFF"], 3, "privateCollege"],
+        ["Providence Point", "Coopers", "PRP", "Providence", "RI", 41.82, -71.41, ["#000000", "#038B00"], 3, "religious"],
+        ["Storrs Valley", "Wheelwrights", "STV", "Storrs", "CT", 41.81, -72.25, ["#000438", "#F00023"], 4, "landGrant"],
+        ["Cambridge Row", "Cartwrights", "CBR", "Cambridge", "MA", 42.37, -71.12, ["#9E133B", "#000000"], 3, "privateCollege"],
+        ["Fordham Heights", "Millwrights", "FDH", "Bronx", "NY", 40.86, -73.89, ["#89001D", "#FFFFFF"], 3, "religious"],
+        ["Newport Shore", "Sowers", "NPS", "Norfolk", "VA", 36.85, -76.29, ["#08265E", "#FFFFFF"], 4, "cityUniversity"],
+        ["Nittany Falls", "Sojourners", "NTF", "Philadelphia", "PA", 39.98, -75.16, ["#9B2233", "#FFFFFF"], 3, "cityUniversity"],
+        ["Cincinnati Ridge", "Claimjumpers", "CNR", "Cincinnati", "OH", 39.13, -84.52, ["#E50024", "#000000"], 4, "cityUniversity"],
+        ["Louisville Falls", "Sluicers", "LVF", "Louisville", "KY", 38.25, -85.76, ["#A10005", "#000000"], 3, "cityUniversity"],
         // MIDLAND (MAC analogue)
-        ["Toledo Bend", "Panhandlers", "TLB", "Toledo", "OH", 41.66, -83.61, ["#003E7E", "#FFB20F"], 4, "cityUniversity"],
-        ["Kalamazoo State", "Cloudbursts", "KZS", "Kalamazoo", "MI", 42.28, -85.61, ["#63666A", "#966F00"], 3, "regionalState"],
-        ["Rockingham", "Downbursts", "RKG", "Mount Pleasant", "MI", 43.59, -84.77, ["#6A0032", "#FFC82E"], 3, "regionalState"],
-        ["Dayton Ridge", "Squalls", "DYR", "Dayton", "OH", 39.76, -84.19, ["#CE1141", "#004B8D"], 2, "religious"],
-        ["Muncie Central", "Gales", "MNC", "Muncie", "IN", 40.19, -85.39, ["#BA0C2F", "#FFFFFF"], 3, "regionalState"],
-        ["Bowling Ridge", "Tempests", "BWR", "Bowling Green", "OH", 41.37, -83.65, ["#FE5000", "#4F2C1D"], 3, "regionalState"],
-        ["Akron Summit", "Maelstroms", "AKS", "Akron", "OH", 41.08, -81.52, ["#00285E", "#84754E"], 2, "cityUniversity"],
-        ["DeKalb", "Vortex", "DKB", "DeKalb", "IL", 41.93, -88.75, ["#C8102E", "#000000"], 2, "regionalState"],
-        ["Ypsilanti", "Riptides", "YPS", "Ypsilanti", "MI", 42.24, -83.61, ["#046A38", "#FFFFFF"], 2, "regionalState"],
-        ["Peoria State", "Undertows", "PRS", "Peoria", "IL", 40.69, -89.59, ["#D4001A", "#001E62"], 2, "regionalState"],
-        ["Oxford Falls", "Breakers", "OXF", "Oxford", "OH", 39.51, -84.75, ["#B61E2E", "#FFFFFF"], 3, "regionalState"],
-        ["Sandusky Bay", "Whitecaps", "SDB", "Sandusky", "OH", 41.45, -82.71, ["#00539F", "#7C878E"], 1, "regionalState"],
+        ["Toledo Bend", "Panhandlers", "TLB", "Toledo", "OH", 41.66, -83.61, ["#0A3F76", "#FFBE0A"], 4, "cityUniversity"],
+        ["Kalamazoo State", "Cloudbursts", "KZS", "Kalamazoo", "MI", 42.28, -85.61, ["#576F6E", "#9C7200"], 3, "regionalState"],
+        ["Rockingham", "Downbursts", "RKG", "Mount Pleasant", "MI", 43.59, -84.77, ["#72002D", "#FFCF31"], 3, "regionalState"],
+        ["Dayton Ridge", "Squalls", "DYR", "Dayton", "OH", 39.76, -84.19, ["#D3094A", "#073F8F"], 2, "religious"],
+        ["Muncie Central", "Gales", "MNC", "Muncie", "IN", 40.19, -85.39, ["#B91033", "#FFFFFF"], 3, "regionalState"],
+        ["Bowling Ridge", "Tempests", "BWR", "Bowling Green", "OH", 41.37, -83.65, ["#F94408", "#4D2E21"], 3, "regionalState"],
+        ["Akron Summit", "Maelstroms", "AKS", "Akron", "OH", 41.08, -81.52, ["#0A2861", "#797948"], 2, "cityUniversity"],
+        ["DeKalb", "Vortex", "DKB", "DeKalb", "IL", 41.93, -88.75, ["#D31134", "#000000"], 2, "regionalState"],
+        ["Ypsilanti", "Riptides", "YPS", "Ypsilanti", "MI", 42.24, -83.61, ["#047139", "#FFFFFF"], 2, "regionalState"],
+        ["Peoria State", "Undertows", "PRS", "Peoria", "IL", 40.69, -89.59, ["#D1001E", "#01235A"], 2, "regionalState"],
+        ["Oxford Falls", "Breakers", "OXF", "Oxford", "OH", 39.51, -84.75, ["#BD1A25", "#FFFFFF"], 3, "regionalState"],
+        ["Sandusky Bay", "Whitecaps", "SDB", "Sandusky", "OH", 41.45, -82.71, ["#0051A5", "#7B8885"], 1, "regionalState"],
         // SUMMIT (Mountain West analogue)
-        ["Salt Basin", "Surge", "SLB", "Salt Lake City", "UT", 40.76, -111.89, ["#CC0000", "#FFFFFF"], 4, "flagship"],
-        ["Provo Heights", "Deluge", "PVH", "Provo", "UT", 40.23, -111.66, ["#002E5D", "#FFFFFF"], 3, "religious"],
-        ["High Sierra", "Monsoon", "HSR", "Las Vegas", "NV", 36.11, -115.14, ["#B10202", "#63666A"], 2, "cityUniversity"],
-        ["Reno Basin", "Sirocco", "RNB", "Reno", "NV", 39.54, -119.82, ["#003366", "#807F84"], 2, "flagship"],
-        ["Rio Grande", "Chinooks", "RGD", "Albuquerque", "NM", 35.08, -106.62, ["#BA0C2F", "#63666A"], 2, "flagship"],
-        ["Las Cruces State", "Nor'easters", "LCS", "Las Cruces", "NM", 32.28, -106.75, ["#8C0B42", "#FFFFFF"], 2, "landGrant"],
-        ["Fort Laramie", "Whiteouts", "FTL", "Colorado Springs", "CO", 38.83, -104.82, ["#003087", "#B1B3B3"], 3, "stateUniversity"],
-        ["Fresno Basin", "Frostbite", "FRB", "Fresno", "CA", 36.81, -119.75, ["#DB0032", "#003594"], 3, "stateUniversity"],
-        ["Boise Ridge", "Landslides", "BSR", "Boise", "ID", 43.6, -116.2, ["#0033A0", "#D64309"], 4, "regionalState"],
-        ["Laramie Peak", "Rockslides", "LRP", "Laramie", "WY", 41.31, -105.59, ["#492F24", "#FFC425"], 2, "flagship"],
-        ["Flagstaff Pines", "Tremors", "FGP", "Flagstaff", "AZ", 35.2, -111.65, ["#003466", "#FFC425"], 2, "regionalState"],
-        ["Grand Junction", "Faults", "GRJ", "Grand Junction", "CO", 39.06, -108.55, ["#7A0019", "#B5A36A"], 1, "regionalState"],
+        ["Salt Basin", "Surge", "SLB", "Salt Lake City", "UT", 40.76, -111.89, ["#CA0000", "#FFFFFF"], 4, "flagship"],
+        ["Provo Heights", "Deluge", "PVH", "Provo", "UT", 40.23, -111.66, ["#0C2E67", "#FFFFFF"], 3, "religious"],
+        ["High Sierra", "Monsoon", "HSR", "Las Vegas", "NV", 36.11, -115.14, ["#B80000", "#646473"], 2, "cityUniversity"],
+        ["Reno Basin", "Sirocco", "RNB", "Reno", "NV", 39.54, -119.82, ["#053C5E", "#818387"], 2, "flagship"],
+        ["Rio Grande", "Chinooks", "RGD", "Albuquerque", "NM", 35.08, -106.62, ["#B8053B", "#636463"], 2, "flagship"],
+        ["Las Cruces State", "Nor'easters", "LCS", "Las Cruces", "NM", 32.28, -106.75, ["#8F0637", "#FFFFFF"], 2, "landGrant"],
+        ["Fort Laramie", "Whiteouts", "FTL", "Colorado Springs", "CO", 38.83, -104.82, ["#00307C", "#A5AEB3"], 3, "stateUniversity"],
+        ["Fresno Basin", "Frostbite", "FRB", "Fresno", "CA", 36.81, -119.75, ["#D5002C", "#002E9B"], 3, "stateUniversity"],
+        ["Boise Ridge", "Landslides", "BSR", "Boise", "ID", 43.6, -116.2, ["#002FA9", "#D84B10"], 4, "regionalState"],
+        ["Laramie Peak", "Rockslides", "LRP", "Laramie", "WY", 41.31, -105.59, ["#522C1C", "#FFC02C"], 2, "flagship"],
+        ["Flagstaff Pines", "Tremors", "FGP", "Flagstaff", "AZ", 35.2, -111.65, ["#003770", "#F7C82B"], 2, "regionalState"],
+        ["Grand Junction", "Faults", "GRJ", "Grand Junction", "CO", 39.06, -108.55, ["#850C1A", "#AAA669"], 1, "regionalState"],
         // GULF COAST (Sun Belt analogue)
-        ["Mobile Bay", "Magma", "MOB", "Mobile", "AL", 30.7, -88.18, ["#00205B", "#EAAA00"], 3, "cityUniversity"],
-        ["Troy Junction", "Cinderfall", "TRJ", "Troy", "AL", 31.8, -85.97, ["#8A2432", "#8A8D8F"], 3, "regionalState"],
-        ["Bayou Parish", "Eclipse", "LFR", "Lafayette", "LA", 30.21, -92.02, ["#CE181E", "#000000"], 2, "regionalState"],
-        ["Monroe Delta", "Quasars", "MND", "Monroe", "LA", 32.53, -92.06, ["#840029", "#DAAA00"], 2, "regionalState"],
-        ["Boca Sands", "Pulsars", "BCS", "Boca Raton", "FL", 26.37, -80.1, ["#003366", "#CC0000"], 2, "cityUniversity"],
-        ["Orlando Central", "Nebulas", "ORC", "Orlando", "FL", 28.6, -81.2, ["#000000", "#BA9B37"], 3, "cityUniversity"],
-        ["Ogeechee State", "Solstice", "STB", "Statesboro", "GA", 32.42, -81.78, ["#011E41", "#849EAD"], 3, "regionalState"],
-        ["Pine Belt State", "Equinox", "HTB", "Hattiesburg", "MS", 31.33, -89.33, ["#000000", "#FFB71B"], 3, "regionalState"],
-        ["Arkansas Delta", "Aurora", "ARD", "Jonesboro", "AR", 35.84, -90.68, ["#CC092F", "#000000"], 2, "regionalState"],
-        ["Denton Plains", "Halos", "DNP", "Denton", "TX", 33.21, -97.13, ["#00853E", "#FFFFFF"], 2, "cityUniversity"],
-        ["San Marcos Hill", "Zeniths", "SMH", "San Marcos", "TX", 29.88, -97.94, ["#501214", "#63666A"], 2, "regionalState"],
-        ["Ruston Tech", "Apogee", "RST", "Ruston", "LA", 32.53, -92.64, ["#002F8B", "#E31B23"], 3, "tech"],
+        ["Mobile Bay", "Magma", "MOB", "Mobile", "AL", 30.7, -88.18, ["#001F64", "#E2B507"], 3, "cityUniversity"],
+        ["Troy Junction", "Cinderfall", "TRJ", "Troy", "AL", 31.8, -85.97, ["#8C2B3B", "#8D8A97"], 3, "regionalState"],
+        ["Bayou Parish", "Eclipse", "LFR", "Lafayette", "LA", 30.21, -92.02, ["#D40C19", "#000000"], 2, "regionalState"],
+        ["Monroe Delta", "Quasars", "MND", "Monroe", "LA", 32.53, -92.06, ["#8D002C", "#DDB400"], 2, "regionalState"],
+        ["Boca Sands", "Pulsars", "BCS", "Boca Raton", "FL", 26.37, -80.1, ["#003563", "#CB0000"], 2, "cityUniversity"],
+        ["Orlando Central", "Nebulas", "ORC", "Orlando", "FL", 28.6, -81.2, ["#000000", "#AF9B37"], 3, "cityUniversity"],
+        ["Ogeechee State", "Solstice", "STB", "Statesboro", "GA", 32.42, -81.78, ["#00153C", "#7A9FB0"], 3, "regionalState"],
+        ["Pine Belt State", "Equinox", "HTB", "Hattiesburg", "MS", 31.33, -89.33, ["#000000", "#FFBE21"], 3, "regionalState"],
+        ["Arkansas Delta", "Aurora", "ARD", "Jonesboro", "AR", 35.84, -90.68, ["#CD0D39", "#000000"], 2, "regionalState"],
+        ["Denton Plains", "Halos", "DNP", "Denton", "TX", 33.21, -97.13, ["#008B3E", "#FFFFFF"], 2, "cityUniversity"],
+        ["San Marcos Hill", "Zeniths", "SMH", "San Marcos", "TX", 29.88, -97.94, ["#4E131D", "#5A6A6A"], 2, "regionalState"],
+        ["Ruston Tech", "Apogee", "RST", "Ruston", "LA", 32.53, -92.64, ["#002A8A", "#E51D25"], 3, "tech"],
         // FRONTIER (Conference USA analogue)
-        ["El Camino", "Perigee", "ELC", "El Paso", "TX", 31.77, -106.5, ["#041E42", "#FF8200"], 2, "regionalState"],
-        ["Bayou City", "Vertex", "BYC", "Houston", "TX", 29.72, -95.34, ["#C8102E", "#FFFFFF"], 3, "cityUniversity"],
-        ["Trinity Fork", "Apex", "FWC", "Fort Worth", "TX", 32.71, -97.36, ["#4D1979", "#A3A9AC"], 4, "religious"],
-        ["Highland Chapel", "Iron Guard", "SMU2", "Dallas", "TX", 32.84, -96.78, ["#C8102E", "#0033A0"], 3, "religious"],
-        ["Tulsa Basin", "Steel Guard", "TLS", "Tulsa", "OK", 36.15, -95.94, ["#002D72", "#C5B783"], 2, "religious"],
-        ["Memphis Bluff", "Ironclads", "MPB", "Memphis", "TN", 35.12, -89.94, ["#003087", "#898D8D"], 3, "cityUniversity"],
-        ["Birmingham South", "Bulwark", "BHS", "Birmingham", "AL", 33.5, -86.8, ["#1E6B52", "#B4975A"], 2, "cityUniversity"],
-        ["Charlotte Queen", "Rampart", "CHQ", "Charlotte", "NC", 35.31, -80.73, ["#046A38", "#FFFFFF"], 2, "cityUniversity"],
-        ["Rice Hollow", "Bastion", "RCH", "Houston", "TX", 29.72, -95.4, ["#00205B", "#C1C6C8"], 2, "privateCollege"],
-        ["Guyandotte", "Citadels", "MRF", "Huntington", "WV", 38.42, -82.43, ["#00B140", "#000000"], 2, "regionalState"],
-        ["Coastal Pine", "Keeps", "SMP", "Gulfport", "MS", 30.37, -89.09, ["#FFAB00", "#000000"], 2, "regionalState"],
-        ["Pamlico Bay", "Redoubts", "ECB", "Greenville", "NC", 35.61, -77.37, ["#4B1869", "#FDC82F"], 3, "regionalState"]
+        ["El Camino", "Perigee", "ELC", "El Paso", "TX", 31.77, -106.5, ["#001F43", "#F68200"], 2, "regionalState"],
+        ["Bayou City", "Vertex", "BYC", "Houston", "TX", 29.72, -95.34, ["#D20E2D", "#FFFFFF"], 3, "cityUniversity"],
+        ["Trinity Fork", "Apex", "FWC", "Fort Worth", "TX", 32.71, -97.36, ["#4F1C76", "#ACB4A3"], 4, "religious"],
+        ["Highland Chapel", "Iron Guard", "HCH", "Dallas", "TX", 32.84, -96.78, ["#C70C22", "#02349C"], 3, "religious"],
+        ["Tulsa Basin", "Steel Guard", "TLS", "Tulsa", "OK", 36.15, -95.94, ["#003668", "#BCBA8E"], 2, "religious"],
+        ["Memphis Bluff", "Ironclads", "MPB", "Memphis", "TN", 35.12, -89.94, ["#002F8B", "#859997"], 3, "cityUniversity"],
+        ["Birmingham South", "Bulwark", "BHS", "Birmingham", "AL", 33.5, -86.8, ["#19625C", "#BBA155"], 2, "cityUniversity"],
+        ["Charlotte Queen", "Rampart", "CHQ", "Charlotte", "NC", 35.31, -80.73, ["#007039", "#FFFFFF"], 2, "cityUniversity"],
+        ["Rice Hollow", "Bastion", "RCH", "Houston", "TX", 29.72, -95.4, ["#0B2062", "#B9C9CB"], 2, "privateCollege"],
+        ["Guyandotte", "Citadels", "MRF", "Huntington", "WV", 38.42, -82.43, ["#00AC38", "#000000"], 2, "regionalState"],
+        ["Coastal Pine", "Keeps", "SMP", "Gulfport", "MS", 30.37, -89.09, ["#F6AC00", "#000000"], 2, "regionalState"],
+        ["Pamlico Bay", "Redoubts", "ECB", "Greenville", "NC", 35.61, -77.37, ["#42216B", "#FAD32C"], 3, "regionalState"]
       ];
       D2_CONFS = [
         // 10 D2 conferences (was 9 — added GPI for §B.2 ~100/div target)
@@ -24176,7 +24344,11 @@ var _CFB = (() => {
     unwatchedPlayCount: () => unwatchedPlayCount
   });
   function makeInheritedTrophy(a, b) {
-    return `${a.state === b.state ? `The ${a.state} Trophy` : "The Governor's Cup"}`;
+    // Deterministic invented cross-state trophy (no real "Governor's Cup").
+    if (a.state === b.state) return `The ${a.state} Trophy`;
+    const OPTS = ["The Interstate Rail", "The Border Bell", "The Commonwealth Chain", "The Frontier Anvil", "The Crossroads Cup", "The Turnpike Trophy", "The Boundary Stone", "The Republic Rivet"];
+    const idx = (hashStr(a.state + "|" + b.state)) % OPTS.length;
+    return OPTS[idx];
   }
   function setRenderFn(fn) {
     _renderFn = fn;
@@ -25237,7 +25409,7 @@ var _CFB = (() => {
         ${mmCoachId ? renderCoachHome() : renderCoachSelect(autoSave)}
 
         <div class="mm-footer">
-          <span class="mm-version">320+ Schools \xB7 28 Conferences \xB7 3 Divisions \xB7 Fixed D1 \xB7 Procedural D2/D3</span>
+          <span class="mm-version">320+ Schools \xB7 29 Conferences \xB7 3 Divisions \xB7 Fixed D1 \xB7 Procedural D2/D3</span>
         </div>
       </div>
 
@@ -28115,7 +28287,7 @@ var _CFB = (() => {
       id: "takejob",
       icon: "\u{1F3C8}",
       title: "Take the Job",
-      desc: "Pick any real program in the country and go to work. Some have banners and a century of hate; some have never won anything. You choose which."
+      desc: "Pick any program in the country and go to work. Some have banners and a century of hate; some have never won anything. You choose which."
     },
     {
       id: "outpost",
@@ -28127,13 +28299,13 @@ var _CFB = (() => {
       id: "ashes",
       icon: "\u{1F9F1}",
       title: "The Ashes",
-      desc: "Inherit an NCAA penalty. Your class is capped at 14 for three years while rivals sign full \u2014 you develop your way out, or you don't. The AD knows, so the leash is long."
+      desc: "Inherit a league penalty. Your class is capped at 14 for three years while rivals sign full \u2014 you develop your way out, or you don't. The AD knows, so the leash is long."
     },
     {
       id: "hotseat",
       icon: "\u{1F525}",
       title: "The Hot Seat",
-      desc: "A fallen power. Real roster, real banners, and an AD who measures you against the trophy case instead of last season. Every loss costs double."
+      desc: "A fallen power. A loaded roster, a wall of banners, and an AD who measures you against the trophy case instead of last season. Every loss costs double."
     },
     {
       id: "heir",
@@ -28164,6 +28336,24 @@ var _CFB = (() => {
       <div class="ob-start-note">This is the job. It's waiting for you.</div>
     </div>`;
   }
+  function loreStartAvailable() {
+    // True only when a lore start (ashes/hotseat/heir) has a matching program in
+    // the current world/division. renderStartPreview() populates _previewCache for
+    // the current ob.challenge|ob.division; mirror that so NEXT can't proceed into
+    // a founding fall-through when no qualifying program exists.
+    if (ob.challenge === "takejob" || ob.challenge === "outpost") return true;
+    if (!ob.division) return false;
+    const key = `${ob.challenge}|${ob.division}`;
+    if (_previewCache.key !== key) {
+      try {
+        const w = obGetWorld();
+        _previewCache = { key, val: w ? findStartProgram(w, ob.challenge, ob.division) : null };
+      } catch (e) {
+        _previewCache = { key, val: null };
+      }
+    }
+    return !!_previewCache.val;
+  }
   function stepJob() {
     const isOutpost = ob.challenge === "outpost";
     const isLore = ob.challenge === "ashes" || ob.challenge === "hotseat" || ob.challenge === "heir";
@@ -28185,7 +28375,7 @@ var _CFB = (() => {
         ${renderStartPreview()}
         <div class="ob-nav-row">
           <button class="btn-ghost" data-ob-back="1">\u2190 Back</button>
-          <button class="btn-primary ob-next" id="ob-next-2" ${!ob.division ? "disabled" : ""}>TAKE IT \u2192</button>
+          <button class="btn-primary ob-next" id="ob-next-2" ${!ob.division || (ob.division && !loreStartAvailable()) ? "disabled" : ""}>TAKE IT \u2192</button>
         </div>
       </div>`;
     }
@@ -28206,7 +28396,7 @@ var _CFB = (() => {
     <div class="ob-step">
       <div class="ob-kicker">STEP 3 \u2014 THE JOB</div>
       <h2 class="ob-headline">${isOutpost ? "Which ocean?" : "Where does the story begin, Coach " + escapeHtml(ob.last || "") + "?"}</h2>
-      <p class="ob-flavor">${isOutpost ? "Nobody plays football out here yet. You will found the program \u2014 and then recruit against 2,500 miles of open water for every kid on the mainland." : "Pick a state and a level, then choose the program you want to take over. Real towns, real conferences, and a hundred years of history already on the wall."}</p>
+      <p class="ob-flavor">${isOutpost ? "Nobody plays football out here yet. You will found the program \u2014 and then recruit against 2,500 miles of open water for every kid on the mainland." : "Pick a state and a level, then choose the program you want to take over. Real towns, invented programs, and a hundred years of history already on the wall."}</p>
 
       <div class="ob-state-groups">
         ${Object.entries(byRegion).map(([region, sts]) => `
@@ -28251,7 +28441,7 @@ var _CFB = (() => {
         <span class="ob-school-name">\u{1F331} Found a new program</span>
         <span class="ob-school-star">${ob.division}</span>
       </div>
-      <div class="ob-school-sub">A brand-new ${ob.division} program in ${stName} \u2014 a real town, a real conference seat</div>
+      <div class="ob-school-sub">A brand-new ${ob.division} program in ${stName} \u2014 a real town, a conference seat waiting</div>
       <div class="ob-school-hw ob-school-bare">no banners, no ghosts, no excuses \u2014 the traditions start with you</div>
       <div class="ob-school-at">you'll inherit the vacated seat's rival, and nothing else</div>
     </button>`;
@@ -33764,7 +33954,11 @@ var _CFB = (() => {
     const nextDay = upcoming.length ? upcoming[0].day : null;
     const commitDay = (_g = (_f = (recruit.narrowSchedule || []).find((e) => e.stage === "committed")) == null ? void 0 : _f.day) != null ? _g : null;
     const scouted = hasScouted(state.playerCoach, recruit.id) || !!((_h = state.settings) == null ? void 0 : _h.revealScouting);
-    const timing = commitDay == null ? "" : !scouted ? commitDay <= 10 ? "Early" : commitDay <= 14 ? "Mid" : "Late" : recruit.temperament === "showman" ? `Wk ${commitDay} (firm)` : `by Wk ${commitDay} \u2014 sooner if sold`;
+    // Timing is now battle-driven \u2014 there's no fixed commit date. Show the recruit's
+    // DECISIVENESS tendency (how quickly they'll pull the trigger once a clear leader
+    // emerges) rather than a promised week.
+    const decisive = recruit.temperament === "showman" ? "Savors the recruitment" : recruit.temperament === "deliberate" ? "Takes his time" : "Decides quickly";
+    const timing = !scouted ? commitDay == null ? "" : commitDay <= 10 ? "Early mover" : commitDay <= 14 ? "Mid-cycle" : "Late decider" : decisive;
     return {
       stage,
       stageLabel: STAGE_LABEL[stage] || stage,
@@ -34072,8 +34266,7 @@ var _CFB = (() => {
       return ' <span class="build-tag tag-ready" title="Decides fast \u2014 hit his threshold with an offer in hand and he commits that week">\u{1F525} decides fast</span>';
     if (r.temperament === "deliberate")
       return ' <span class="build-tag tag-deliberate" title="Sleeps on it \u2014 once sold, he announces 1\u20133 weeks later">\u{1F914} sleeps on it</span>';
-    const wk = (_a = (r.narrowSchedule || []).find((e) => e.stage === "committed")) == null ? void 0 : _a.day;
-    return ` <span class="build-tag tag-showman" title="The hat-ceremony kid \u2014 holds his decision for the big announcement">\u{1F3A9} announcing${wk ? ` wk ${wk}` : ""}</span>`;
+    return ` <span class="build-tag tag-showman" title="The hat-ceremony kid \u2014 savors the recruitment and holds out for a big announcement once a clear leader emerges">\u{1F3A9} savors it</span>`;
   }
   function buildTag(r) {
     var _a;
@@ -35333,7 +35526,7 @@ var _CFB = (() => {
       const d = (((_a = s.stats) == null ? void 0 : _a.pointsFor) || 0) - (((_b = s.stats) == null ? void 0 : _b.pointsAgainst) || 0);
       return `<td class="${d >= 0 ? "positive" : "negative"}">${d >= 0 ? "+" : ""}${d}</td>`;
     } },
-    { id: "sos", header: "SOS", title: "Strength of schedule (NCAA: ⅔ opponents' win% + ⅓ opponents-of-opponents' win%)", cell: (s) => {
+    { id: "sos", header: "SOS", title: "Strength of schedule (⅔ opponents' win% + ⅓ opponents-of-opponents' win%)", cell: (s) => {
       var _a;
       if (!_sosCache) _sosCache = computeSOS(((_a = state.world) == null ? void 0 : _a.schools) || [], state.schedule || []);
       const v = _sosCache.get(s.id);
@@ -35356,7 +35549,7 @@ var _CFB = (() => {
       const g = ((_a = s.stats) == null ? void 0 : _a.games) || 0;
       return `<td>${g ? (s.stats.pointsAgainst / g).toFixed(1) : "\u2014"}</td>`;
     } },
-    { id: "sos", header: "SOS", title: "Strength of schedule (NCAA: ⅔ opponents' win% + ⅓ opponents-of-opponents' win%)", cell: (e) => {
+    { id: "sos", header: "SOS", title: "Strength of schedule (⅔ opponents' win% + ⅓ opponents-of-opponents' win%)", cell: (e) => {
       const v = e.sos;
       return `<td title="Strength of schedule">${v != null && v > 0 ? v.toFixed(3) : "—"}</td>`;
     } },
