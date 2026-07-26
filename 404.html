@@ -10060,18 +10060,7 @@ var _CFB = (() => {
       const city2 = pickCity(region, used, [1, 2, 3], { nameBearing: true, states: tk.states });
       if (!city2) return null;
       used.tokenPat.add(`${tk.t}|sat|${city2.c}`);
-      const name2 = tk.special === "cal" ? `Cal State ${city2.c}` : `${tk.t}-${city2.c}`;
-      return { name: name2, city: city2, type: "satellite", nameBearing: true };
-    }
-    if (patternKey === "poly" && tk.special === "cal") {
-      if (!used.tokenPat.has("Cal|poly")) {
-        used.tokenPat.add("Cal|poly");
-        const city3 = pickCity(region, used, campusPref, { nameBearing: false, states: tk.states });
-        return { name: "Cal Poly", city: city3, type: "tech", nameBearing: false };
-      }
-      const city2 = pickCity(region, used, [1, 2, 3], { nameBearing: true, states: tk.states });
-      if (!city2) return null;
-      return { name: `Cal Poly ${city2.c}`, city: city2, type: "tech", nameBearing: true };
+      return { name: `${tk.t}-${city2.c}`, city: city2, type: "satellite", nameBearing: true };
     }
     used.tokenPat.add(`${tk.t}|${patternKey}`);
     const flagshipPref = patternKey === "uOf" || patternKey === "st" ? [2, 3, 1] : campusPref;
@@ -10268,6 +10257,64 @@ var _CFB = (() => {
     }
     return best;
   }
+  function buildStaticD1(used) {
+    // Expand the compact STATIC_D1_SCHOOLS rows into full school objects.
+    // Identity/geography/colors are frozen (identical every world). Deterministic
+    // enrollment/founded/stadium (no RNG) keep the static league stable; staff is
+    // still generated per world (rosters/coaches regenerate per world regardless).
+    const out = [];
+    const confOrder = D1_CONFS.map((c) => c.id);
+    let ci = 0, per = 0;
+    for (let i = 0; i < STATIC_D1_SCHOOLS.length; i++) {
+      const [name, nick, abbr, city, state2, lat, lng, colors, prestige, type] = STATIC_D1_SCHOOLS[i];
+      const confId = confOrder[ci];
+      const conf = D1_CONFS.find((c) => c.id === confId);
+      const cls = conf.conferenceClass;
+      const clamp6 = prestigeClamp(cls, "D1");
+      const priv = PRIVATE_TYPES.has(type);
+      // Deterministic flavor derived from fixed fields (no Math.random).
+      const enrollment = priv ? 3200 + prestige * 1800 : 18e3 + prestige * 6500;
+      const foundedBase = { flagship: 1820, landGrant: 1865, stateUniversity: 1850, tech: 1895, cityUniversity: 1900, regionalState: 1890, privateCollege: 1850, religious: 1870 }[type] || 1875;
+      const founded = foundedBase + ((i * 7) % 40);
+      const capBase = cls === "power" ? 45e3 + prestige * 1e4 : 17e3 + prestige * 6e3;
+      const capacity = Math.min(11e4, Math.round((capBase + (i % 5) * 1500) / 500) * 500);
+      const stadiumNm = ["Memorial Stadium", `${nick} Stadium`, "Veterans Memorial Stadium", `${city} Stadium`][i % 4];
+      let id = name.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 16);
+      let uid = id, n = 2;
+      while (used.ids.has(uid)) uid = id + n++;
+      used.ids.add(uid);
+      used.names.add(name);
+      used.abbrs.add(abbr);
+      out.push({
+        id: uid,
+        name,
+        nick,
+        abbr,
+        logo: "\u{1F3C8}",
+        facilities: facilitiesFor(prestige),
+        staff: staffFor(prestige, "D1"),
+        conf: confId,
+        division: "D1",
+        lat,
+        lng,
+        city,
+        state: state2,
+        type,
+        control: priv ? "private" : "public",
+        enrollment,
+        founded,
+        stadium: { name: stadiumNm, capacity },
+        prestige,
+        baseline: prestige,
+        prestigeMin: clamp6.min,
+        prestigeMax: clamp6.max,
+        colors: [colors[0], colors[1]]
+      });
+      per++;
+      if (per >= 12) { per = 0; ci++; }
+    }
+    return out;
+  }
   function generateSchools() {
     var _a, _b;
     const schools = [];
@@ -10282,8 +10329,14 @@ var _CFB = (() => {
       nickGlobal: {}
     };
     const ALL_CONFS = [...D1_CONFS, ...D2_CONFS, ...D3_CONFS];
+    // Static D1: fixed roster, built from STATIC_D1_SCHOOLS (identical every world).
+    // D2/D3 remain procedurally generated below.
+    const staticD1 = buildStaticD1(used);
+    for (const s of staticD1) used.cities.add(cityKey({ c: s.city, s: s.state }));
+    schools.push(...staticD1);
+    const PROC_CONFS = ALL_CONFS.filter((c) => c.division !== "D1");
     const regionTally = {};
-    for (const conf of ALL_CONFS) {
+    for (const conf of PROC_CONFS) {
       const cls = conf.division === "D1" ? conf.conferenceClass : conf.division;
       const ceiling = cls === "power" ? 6 : cls === "midMajor" ? 3 : ((_a = C.PRESTIGE_MAX) == null ? void 0 : _a[conf.division]) || 5;
       const [lo, hi] = confSizeRange(conf);
@@ -10364,9 +10417,12 @@ var _CFB = (() => {
       }
       schools.push(...confSchools);
     }
-    guaranteeStateCoverage(schools, ALL_CONFS);
-    resolveCityCollisions(schools);
-    mixConferenceStates(schools, ALL_CONFS);
+    // Post-processing (coverage / city-collision / conf-mixing) only touches the
+    // procedural D2/D3 schools — the static D1 league stays exactly as authored.
+    const procSchools = schools.filter((s) => s.division !== "D1");
+    guaranteeStateCoverage(procSchools, PROC_CONFS);
+    resolveCityCollisions(procSchools);
+    mixConferenceStates(procSchools, PROC_CONFS);
     return schools;
   }
   function statesToRegions() {
@@ -11351,7 +11407,7 @@ var _CFB = (() => {
     }
     return schedule;
   }
-  var D1_CONFS, D2_CONFS, D3_CONFS, PRESTIGE_WEIGHTS, D1_POWER_CLAMP, D1_MIDMAJOR_CLAMP, NICK_GLOBAL_CAP, LOC_JITTER_DEG, REGION_CITIES, STATE_TOKENS, DIRS, DENOMS_DEFAULT, DENOMS_BY_REGION, GAZ_CITY_NAMES, PERSON_NAMES, SAINT_NAMES, NICKS_CLASSIC, NICKS_REGIONAL, NICKS_TECH, NICKS_RELIGIOUS, NICKS_QUIRKY, NICK_AGGIES, COLOR_PAIRS, NAME_PATTERNS, CITY_SIZE_PREF, CAMPUS_SIZE_PREF, PATTERN_TYPE, PRIVATE_TYPES, REGION_CENTROIDS, cityKey, ANCHOR_RANK, REGION_NEIGHBORS, REGION_SPREAD, CONTINENTAL_STATES, TOKEN_STATES, WORLDGEN_INFO, SCHOOL_DATA, ALL_CONF_LIST, CONFERENCES, NONCONF_GAME_DAYS, CONF_GAME_DAYS;
+  var D1_CONFS, STATIC_D1_SCHOOLS, D2_CONFS, D3_CONFS, PRESTIGE_WEIGHTS, D1_POWER_CLAMP, D1_MIDMAJOR_CLAMP, NICK_GLOBAL_CAP, LOC_JITTER_DEG, REGION_CITIES, STATE_TOKENS, DIRS, DENOMS_DEFAULT, DENOMS_BY_REGION, GAZ_CITY_NAMES, PERSON_NAMES, SAINT_NAMES, NICKS_CLASSIC, NICKS_REGIONAL, NICKS_TECH, NICKS_RELIGIOUS, NICKS_QUIRKY, NICK_AGGIES, COLOR_PAIRS, NAME_PATTERNS, CITY_SIZE_PREF, CAMPUS_SIZE_PREF, PATTERN_TYPE, PRIVATE_TYPES, REGION_CENTROIDS, cityKey, ANCHOR_RANK, REGION_NEIGHBORS, REGION_SPREAD, CONTINENTAL_STATES, TOKEN_STATES, WORLDGEN_INFO, SCHOOL_DATA, ALL_CONF_LIST, CONFERENCES, NONCONF_GAME_DAYS, CONF_GAME_DAYS;
   var init_world = __esm({
     "js/engine/world.js"() {
       init_constants();
@@ -11363,17 +11419,152 @@ var _CFB = (() => {
       init_coach();
       init_situations();
       D1_CONFS = [
-        // Power (4) — elite programs, prestige 4-6★ baseline, clamp [3,6]
-        { id: "ALC", region: "Southeast", name: "Atlantic Collegiate Conference", short: "ALC", division: "D1", conferenceClass: "power", lat: 37.5, lng: -77.5, r: 3 },
-        { id: "PPC", region: "California", name: "Pacific Premier Conference", short: "PPC", division: "D1", conferenceClass: "power", lat: 37, lng: -120.5, r: 3 },
-        { id: "SPL", region: "DeepSouth", name: "Southeastern Premier League", short: "SPL", division: "D1", conferenceClass: "power", lat: 33, lng: -85, r: 3 },
-        { id: "HPL", region: "Midwest", name: "Heartland Premier League", short: "HPL", division: "D1", conferenceClass: "power", lat: 40, lng: -93, r: 3 },
-        // Mid-Major (5) — solid programs, prestige 1-3★ baseline, clamp [1,4]
-        { id: "MCC", region: "MountainWest", name: "Mountain Collegiate Conference", short: "MCC", division: "D1", conferenceClass: "midMajor", lat: 40, lng: -112, r: 3 },
-        { id: "SBC", region: "DeepSouth", name: "Bayou Athletic Conference", short: "SBC", division: "D1", conferenceClass: "midMajor", lat: 31, lng: -90, r: 2.5 },
-        { id: "NIC", region: "Northeast", name: "Northeast Intercollegiate", short: "NIC", division: "D1", conferenceClass: "midMajor", lat: 42.5, lng: -72.5, r: 2 },
-        { id: "GSL", region: "Southwest", name: "Gulf States League", short: "GSL", division: "D1", conferenceClass: "midMajor", lat: 30, lng: -95, r: 2.5 },
-        { id: "GLC", region: "GreatLakes", name: "Great Lakes Collegiate", short: "GLC", division: "D1", conferenceClass: "midMajor", lat: 42, lng: -84, r: 2 }
+        // STATIC D1 — fixed & identical every world. 2000-10 conference-landscape
+        // analogue: 6 power (12 each) + 4 mid-major (12 each) = 120 fictional schools.
+        // Power clamp [3,6], mid-major clamp [1,4]. School roster in STATIC_D1_SCHOOLS.
+        { id: "SEC2", region: "DeepSouth", name: "Delta Athletic Conference", short: "DAC", division: "D1", conferenceClass: "power", lat: 33, lng: -87, r: 3 },
+        { id: "BIG2", region: "GreatLakes", name: "Great Lakes Alliance", short: "GLA", division: "D1", conferenceClass: "power", lat: 41.5, lng: -85, r: 3 },
+        { id: "B122", region: "Plains", name: "Great Plains Conference", short: "GPC", division: "D1", conferenceClass: "power", lat: 37.5, lng: -97.5, r: 3 },
+        { id: "PAC2", region: "California", name: "Pacific Coast Conference", short: "PCC", division: "D1", conferenceClass: "power", lat: 37, lng: -120, r: 3 },
+        { id: "ACC2", region: "Southeast", name: "Atlantic Seaboard Conference", short: "ASC", division: "D1", conferenceClass: "power", lat: 35.5, lng: -79, r: 3 },
+        { id: "BE2", region: "MidAtlantic", name: "Northeastern Football League", short: "NFL", division: "D1", conferenceClass: "power", lat: 40, lng: -77.5, r: 3 },
+        { id: "MAC2", region: "GreatLakes", name: "Midland Conference", short: "MID", division: "D1", conferenceClass: "midMajor", lat: 40.5, lng: -83.5, r: 2.5 },
+        { id: "MWC2", region: "MountainWest", name: "Summit Conference", short: "SUM", division: "D1", conferenceClass: "midMajor", lat: 39.5, lng: -111.5, r: 2.5 },
+        { id: "SUN2", region: "DeepSouth", name: "Gulf Coast Conference", short: "GCC", division: "D1", conferenceClass: "midMajor", lat: 30.5, lng: -88.5, r: 2.5 },
+        { id: "CUSA2", region: "Southwest", name: "Frontier Conference", short: "FRO", division: "D1", conferenceClass: "midMajor", lat: 32, lng: -97, r: 2.5 }
+      ];
+      STATIC_D1_SCHOOLS = [
+        // [name, nick, abbr, city, state, lat, lng, [c1,c2], prestige, type]  — 12 per conf, in D1_CONFS order
+        // DELTA ATHLETIC (SEC analogue)
+        ["Calhoun State", "Bengals", "CAL", "Birmingham", "AL", 33.52, -86.81, ["#7A0019", "#B5A36A"], 6, "landGrant"],
+        ["Ravenwood", "Tigers", "RAV", "Baton Rouge", "LA", 30.45, -91.19, ["#4B1F6F", "#F2A900"], 6, "flagship"],
+        ["Fairhope", "Gators", "FAI", "Gainesville", "FL", 29.65, -82.33, ["#0033A0", "#FF7000"], 5, "flagship"],
+        ["Southaven", "Rebels", "SVN", "Oxford", "MS", 34.37, -89.52, ["#14213D", "#C8102E"], 4, "flagship"],
+        ["Tennessee Highlands", "Volunteers", "THL", "Knoxville", "TN", 35.96, -83.92, ["#FF8200", "#58595B"], 5, "stateUniversity"],
+        ["Marietta A&M", "Bulldogs", "MAM", "Athens", "GA", 33.96, -83.38, ["#BA0C2F", "#000000"], 6, "landGrant"],
+        ["Beaumont", "Commodores", "BMT", "Nashville", "TN", 36.16, -86.78, ["#866D4B", "#000000"], 4, "privateCollege"],
+        ["Auburndale", "Eagles", "AUB", "Auburn", "AL", 32.61, -85.48, ["#0C2340", "#E86100"], 5, "landGrant"],
+        ["Delacroix", "Bayou Cats", "DLX", "Lafayette", "LA", 30.22, -92.02, ["#582C83", "#B7A56A"], 4, "regionalState"],
+        ["Camden State", "Wildcats", "CMD", "Lexington", "KY", 38.05, -84.5, ["#0033A0", "#FFFFFF"], 4, "stateUniversity"],
+        ["Ashville", "Gamecocks", "ASH", "Columbia", "SC", 34, -81.03, ["#73000A", "#000000"], 5, "flagship"],
+        ["Fort Pierce", "Seahawks", "FTP", "Tallahassee", "FL", 30.44, -84.28, ["#782F40", "#CEB888"], 5, "stateUniversity"],
+        // GREAT LAKES ALLIANCE (Big Ten analogue)
+        ["Winslow", "Wolverines", "WIN", "Ann Arbor", "MI", 42.28, -83.74, ["#00274C", "#FFCB05"], 6, "flagship"],
+        ["Sandborough", "Buckeyes", "SAN", "Columbus", "OH", 39.96, -83, ["#BB0000", "#666666"], 6, "stateUniversity"],
+        ["Kettering State", "Spartans", "KET", "East Lansing", "MI", 42.73, -84.48, ["#18453B", "#FFFFFF"], 5, "landGrant"],
+        ["Northgate", "Fighting Irish", "NGT", "South Bend", "IN", 41.7, -86.24, ["#0C2340", "#C99700"], 5, "privateCollege"],
+        ["Prairie Grove", "Badgers", "PRG", "Madison", "WI", 43.07, -89.4, ["#C5050C", "#FFFFFF"], 5, "landGrant"],
+        ["Ellsworth", "Golden Bears", "ELL", "Iowa City", "IA", 41.66, -91.53, ["#FCD116", "#000000"], 4, "flagship"],
+        ["Bellwether", "Nittany Lions", "BEL", "State College", "PA", 40.79, -77.86, ["#041E42", "#FFFFFF"], 6, "landGrant"],
+        ["Rockford Tech", "Boilers", "RKF", "West Lafayette", "IN", 40.43, -86.91, ["#B1810B", "#000000"], 4, "tech"],
+        ["Glenmoor", "Golden Gophers", "GLN", "Minneapolis", "MN", 44.97, -93.24, ["#7A0019", "#FFCC33"], 4, "landGrant"],
+        ["Harrowgate", "Wildcats", "HRW", "Evanston", "IL", 42.05, -87.69, ["#4E2A84", "#FFFFFF"], 4, "privateCollege"],
+        ["Danforth", "Hawkeyes", "DAN", "Champaign", "IL", 40.11, -88.24, ["#13294B", "#E84A27"], 4, "landGrant"],
+        ["Sault Ridge", "Huskies", "SLT", "Bloomington", "IN", 39.17, -86.52, ["#990000", "#EEEDEB"], 4, "stateUniversity"],
+        // GREAT PLAINS (Big 12 analogue)
+        ["Vandergriff", "Longhorns", "VDG", "Austin", "TX", 30.28, -97.74, ["#BF5700", "#FFFFFF"], 6, "flagship"],
+        ["Cimarron A&M", "Aggies", "CIM", "College Station", "TX", 30.63, -96.33, ["#500000", "#FFFFFF"], 5, "landGrant"],
+        ["Red River", "Sooners", "RRV", "Norman", "OK", 35.22, -97.44, ["#841617", "#FDF9D8"], 6, "flagship"],
+        ["Cedar Bluff", "Cyclones", "CDB", "Ames", "IA", 42.03, -93.62, ["#C8102E", "#F1BE48"], 3, "landGrant"],
+        ["Fort Sumner", "Jayhawks", "FSM", "Lawrence", "KS", 38.97, -95.24, ["#0051BA", "#E8000D"], 3, "flagship"],
+        ["Wichita Falls State", "Wheatshockers", "WFS", "Wichita", "KS", 37.69, -97.34, ["#000000", "#FFCC00"], 3, "stateUniversity"],
+        ["Stillmark", "Cowboys", "STM", "Stillwater", "OK", 36.12, -97.06, ["#FF6600", "#000000"], 4, "landGrant"],
+        ["Cornerstone", "Cornhuskers", "CST", "Lincoln", "NE", 40.81, -96.7, ["#E41C38", "#FFFFFF"], 5, "landGrant"],
+        ["Baylor Springs", "Bruins", "BSP", "Waco", "TX", 31.55, -97.11, ["#154734", "#FFB81C"], 4, "privateCollege"],
+        ["Lubbock Plains", "Red Raiders", "LBP", "Lubbock", "TX", 33.58, -101.86, ["#CC0000", "#000000"], 4, "tech"],
+        ["Mesa Verde", "Buffaloes", "MVD", "Boulder", "CO", 40.01, -105.27, ["#000000", "#CFB87C"], 4, "flagship"],
+        ["Fort Collins State", "Rams", "FCS", "Fort Collins", "CO", 40.57, -105.08, ["#1E4D2B", "#C8C372"], 3, "landGrant"],
+        // PACIFIC COAST (Pac-10 analogue)
+        ["Westmoreland", "Trojans", "WML", "Los Angeles", "CA", 34.02, -118.29, ["#990000", "#FFCC00"], 5, "privateCollege"],
+        ["Baycrest", "Golden Bears", "BAY", "Berkeley", "CA", 37.87, -122.26, ["#003262", "#FDB515"], 4, "flagship"],
+        ["San Marco", "Cardinal", "SMC", "Palo Alto", "CA", 37.43, -122.17, ["#8C1515", "#FFFFFF"], 5, "privateCollege"],
+        ["Pasqual", "Bruins", "PSQ", "Los Angeles", "CA", 34.07, -118.44, ["#2D68C4", "#F2A900"], 5, "flagship"],
+        ["Cascadia", "Ducks", "CSC", "Eugene", "OR", 44.04, -123.07, ["#154733", "#FEE123"], 6, "flagship"],
+        ["Puget", "Huskies", "PUG", "Seattle", "WA", 47.65, -122.31, ["#4B2E83", "#B7A57A"], 5, "flagship"],
+        ["Palo Robles", "Sun Devils", "PLR", "Tempe", "AZ", 33.42, -111.93, ["#8C1D40", "#FFC627"], 4, "landGrant"],
+        ["Tucson Mesa", "Wildcats", "TCM", "Tucson", "AZ", 32.23, -110.95, ["#003366", "#CC0033"], 4, "flagship"],
+        ["Corvallis State", "Beavers", "CVS", "Corvallis", "OR", 44.56, -123.28, ["#DC4405", "#000000"], 3, "landGrant"],
+        ["Spokane Falls", "Cougars", "SPF", "Pullman", "WA", 46.73, -117.18, ["#981E32", "#5E6A71"], 3, "landGrant"],
+        ["Golden Vale", "Aztecs", "GVL", "San Diego", "CA", 32.78, -117.07, ["#A6192E", "#000000"], 3, "stateUniversity"],
+        ["Sacramento Delta", "Hornets", "SAC", "Sacramento", "CA", 38.56, -121.42, ["#043927", "#C4B581"], 3, "stateUniversity"],
+        // ATLANTIC SEABOARD (ACC analogue)
+        ["Tobacco Road", "Tar Heels", "TBR", "Chapel Hill", "NC", 35.9, -79.05, ["#7BAFD4", "#FFFFFF"], 6, "flagship"],
+        ["Wolf Creek State", "Wolfpack", "WCS", "Raleigh", "NC", 35.78, -78.68, ["#CC0000", "#FFFFFF"], 4, "landGrant"],
+        ["Blue Ridge", "Cavaliers", "BLR", "Charlottesville", "VA", 38.03, -78.51, ["#232D4B", "#F84C1E"], 4, "flagship"],
+        ["Piedmont Tech", "Hokies", "PMT", "Blacksburg", "VA", 37.23, -80.42, ["#630031", "#CF4420"], 5, "tech"],
+        ["Clearwater", "Hurricanes", "CLW", "Coral Gables", "FL", 25.72, -80.28, ["#F47321", "#005030"], 5, "privateCollege"],
+        ["Seminole Bluff", "Warhawks", "SBF", "Tallahassee", "FL", 30.42, -84.3, ["#00539B", "#FFD200"], 4, "stateUniversity"],
+        ["Duncastle", "Blue Devils", "DUN", "Durham", "NC", 36, -78.94, ["#00539B", "#FFFFFF"], 4, "privateCollege"],
+        ["Wake Hollow", "Deacons", "WKH", "Winston-Salem", "NC", 36.13, -80.28, ["#9E7E38", "#000000"], 3, "privateCollege"],
+        ["Tidewater", "Yellow Jackets", "TDW", "Atlanta", "GA", 33.77, -84.4, ["#B3A369", "#003057"], 5, "tech"],
+        ["Chestnut Hill", "Eagles", "CHH", "Chestnut Hill", "MA", 42.34, -71.17, ["#98002E", "#BC9B6A"], 3, "privateCollege"],
+        ["Cavendish", "Cardinals", "CVD", "Louisville", "KY", 38.21, -85.76, ["#AD0000", "#000000"], 4, "cityUniversity"],
+        ["Orange Park", "Orange", "ORP", "Syracuse", "NY", 43.04, -76.14, ["#F76900", "#0E1A3C"], 3, "privateCollege"],
+        // NORTHEASTERN FOOTBALL LEAGUE (Big East analogue)
+        ["Westover", "Mountaineers", "WSO", "Morgantown", "WV", 39.63, -79.95, ["#002855", "#EAAA00"], 6, "landGrant"],
+        ["Highbridge", "Panthers", "HBR", "Pittsburgh", "PA", 40.44, -79.96, ["#003594", "#FFB81C"], 5, "cityUniversity"],
+        ["Rutherford", "Scarlet Knights", "RUT", "New Brunswick", "NJ", 40.5, -74.45, ["#CC0033", "#000000"], 4, "landGrant"],
+        ["New Haven Bay", "Bulldogs", "NHB", "New Haven", "CT", 41.31, -72.92, ["#00356B", "#FFFFFF"], 3, "privateCollege"],
+        ["Providence Point", "Friars", "PRP", "Providence", "RI", 41.82, -71.41, ["#000000", "#008000"], 3, "religious"],
+        ["Storrs Valley", "Huskies", "STV", "Storrs", "CT", 41.81, -72.25, ["#000E2F", "#E4002B"], 4, "landGrant"],
+        ["Cambridge Row", "Crimson", "CBR", "Cambridge", "MA", 42.37, -71.12, ["#A51C30", "#000000"], 3, "privateCollege"],
+        ["Fordham Heights", "Rams", "FDH", "Bronx", "NY", 40.86, -73.89, ["#900028", "#FFFFFF"], 3, "religious"],
+        ["Newport Shore", "Pirates", "NPS", "Norfolk", "VA", 36.85, -76.29, ["#002855", "#FFFFFF"], 4, "cityUniversity"],
+        ["Nittany Falls", "Owls", "NTF", "Philadelphia", "PA", 39.98, -75.16, ["#9D2235", "#FFFFFF"], 3, "cityUniversity"],
+        ["Cincinnati Ridge", "Bearcats", "CNR", "Cincinnati", "OH", 39.13, -84.52, ["#E00122", "#000000"], 4, "cityUniversity"],
+        ["Louisville Falls", "Thoroughbreds", "LVF", "Louisville", "KY", 38.25, -85.76, ["#AD0000", "#000000"], 3, "cityUniversity"],
+        // MIDLAND (MAC analogue)
+        ["Toledo Bend", "Rockets", "TLB", "Toledo", "OH", 41.66, -83.61, ["#003E7E", "#FFB20F"], 4, "cityUniversity"],
+        ["Kalamazoo State", "Broncos", "KZS", "Kalamazoo", "MI", 42.28, -85.61, ["#63666A", "#966F00"], 3, "regionalState"],
+        ["Rockingham", "Chippewas", "RKG", "Mount Pleasant", "MI", 43.59, -84.77, ["#6A0032", "#FFC82E"], 3, "regionalState"],
+        ["Dayton Ridge", "Flyers", "DYR", "Dayton", "OH", 39.76, -84.19, ["#CE1141", "#004B8D"], 2, "religious"],
+        ["Muncie Central", "Cardinals", "MNC", "Muncie", "IN", 40.19, -85.39, ["#BA0C2F", "#FFFFFF"], 3, "regionalState"],
+        ["Bowling Ridge", "Falcons", "BWR", "Bowling Green", "OH", 41.37, -83.65, ["#FE5000", "#4F2C1D"], 3, "regionalState"],
+        ["Akron Summit", "Zephyrs", "AKS", "Akron", "OH", 41.08, -81.52, ["#00285E", "#84754E"], 2, "cityUniversity"],
+        ["DeKalb", "Redbirds", "DKB", "DeKalb", "IL", 41.93, -88.75, ["#C8102E", "#000000"], 2, "regionalState"],
+        ["Ypsilanti", "Hurons", "YPS", "Ypsilanti", "MI", 42.24, -83.61, ["#046A38", "#FFFFFF"], 2, "regionalState"],
+        ["Peoria State", "Thunder", "PRS", "Peoria", "IL", 40.69, -89.59, ["#D4001A", "#001E62"], 2, "regionalState"],
+        ["Oxford Falls", "Miners", "OXF", "Oxford", "OH", 39.51, -84.75, ["#B61E2E", "#FFFFFF"], 3, "regionalState"],
+        ["Sandusky Bay", "Lakers", "SDB", "Sandusky", "OH", 41.45, -82.71, ["#00539F", "#7C878E"], 1, "regionalState"],
+        // SUMMIT (Mountain West analogue)
+        ["Salt Basin", "Utes", "SLB", "Salt Lake City", "UT", 40.76, -111.89, ["#CC0000", "#FFFFFF"], 4, "flagship"],
+        ["Provo Heights", "Cougars", "PVH", "Provo", "UT", 40.23, -111.66, ["#002E5D", "#FFFFFF"], 3, "religious"],
+        ["High Sierra", "Rebels", "HSR", "Las Vegas", "NV", 36.11, -115.14, ["#B10202", "#63666A"], 2, "cityUniversity"],
+        ["Reno Basin", "Wolf Pack", "RNB", "Reno", "NV", 39.54, -119.82, ["#003366", "#807F84"], 2, "flagship"],
+        ["Rio Grande", "Lobos", "RGD", "Albuquerque", "NM", 35.08, -106.62, ["#BA0C2F", "#63666A"], 2, "flagship"],
+        ["Las Cruces State", "Aggies", "LCS", "Las Cruces", "NM", 32.28, -106.75, ["#8C0B42", "#FFFFFF"], 2, "landGrant"],
+        ["Fort Laramie", "Airmen", "FTL", "Colorado Springs", "CO", 38.83, -104.82, ["#003087", "#B1B3B3"], 3, "stateUniversity"],
+        ["Fresno Basin", "Bulldogs", "FRB", "Fresno", "CA", 36.81, -119.75, ["#DB0032", "#003594"], 3, "stateUniversity"],
+        ["Boise Ridge", "Broncos", "BSR", "Boise", "ID", 43.6, -116.2, ["#0033A0", "#D64309"], 4, "regionalState"],
+        ["Laramie Peak", "Miners", "LRP", "Laramie", "WY", 41.31, -105.59, ["#492F24", "#FFC425"], 2, "flagship"],
+        ["Flagstaff Pines", "Lumberjacks", "FGP", "Flagstaff", "AZ", 35.2, -111.65, ["#003466", "#FFC425"], 2, "regionalState"],
+        ["Grand Junction", "Mavericks", "GRJ", "Grand Junction", "CO", 39.06, -108.55, ["#7A0019", "#B5A36A"], 1, "regionalState"],
+        // GULF COAST (Sun Belt analogue)
+        ["Mobile Bay", "Jaguars", "MOB", "Mobile", "AL", 30.7, -88.18, ["#00205B", "#EAAA00"], 3, "cityUniversity"],
+        ["Troy Junction", "Trojans", "TRJ", "Troy", "AL", 31.8, -85.97, ["#8A2432", "#8A8D8F"], 3, "regionalState"],
+        ["Lafayette Ragin", "Cajuns", "LFR", "Lafayette", "LA", 30.21, -92.02, ["#CE181E", "#000000"], 2, "regionalState"],
+        ["Monroe Delta", "Warhawks", "MND", "Monroe", "LA", 32.53, -92.06, ["#840029", "#DAAA00"], 2, "regionalState"],
+        ["Boca Sands", "Owls", "BCS", "Boca Raton", "FL", 26.37, -80.1, ["#003366", "#CC0000"], 2, "cityUniversity"],
+        ["Orlando Central", "Knights", "ORC", "Orlando", "FL", 28.6, -81.2, ["#000000", "#BA9B37"], 3, "cityUniversity"],
+        ["Statesboro", "Eagles", "STB", "Statesboro", "GA", 32.42, -81.78, ["#011E41", "#849EAD"], 3, "regionalState"],
+        ["Hattiesburg", "Golden Eagles", "HTB", "Hattiesburg", "MS", 31.33, -89.33, ["#000000", "#FFB71B"], 3, "regionalState"],
+        ["Arkansas Delta", "Red Wolves", "ARD", "Jonesboro", "AR", 35.84, -90.68, ["#CC092F", "#000000"], 2, "regionalState"],
+        ["Denton Plains", "Mean Green", "DNP", "Denton", "TX", 33.21, -97.13, ["#00853E", "#FFFFFF"], 2, "cityUniversity"],
+        ["San Marcos Hill", "Bobcats", "SMH", "San Marcos", "TX", 29.88, -97.94, ["#501214", "#63666A"], 2, "regionalState"],
+        ["Ruston Tech", "Bulldogs", "RST", "Ruston", "LA", 32.53, -92.64, ["#002F8B", "#E31B23"], 3, "tech"],
+        // FRONTIER (Conference USA analogue)
+        ["El Camino", "Miners", "ELC", "El Paso", "TX", 31.77, -106.5, ["#041E42", "#FF8200"], 2, "regionalState"],
+        ["Bayou City", "Cougars", "BYC", "Houston", "TX", 29.72, -95.34, ["#C8102E", "#FFFFFF"], 3, "cityUniversity"],
+        ["Fort Worth Christian", "Horned Frogs", "FWC", "Fort Worth", "TX", 32.71, -97.36, ["#4D1979", "#A3A9AC"], 4, "religious"],
+        ["Southern Methodist Hill", "Mustangs", "SMU2", "Dallas", "TX", 32.84, -96.78, ["#C8102E", "#0033A0"], 3, "religious"],
+        ["Tulsa Basin", "Golden Hurricane", "TLS", "Tulsa", "OK", 36.15, -95.94, ["#002D72", "#C5B783"], 2, "religious"],
+        ["Memphis Bluff", "Tigers", "MPB", "Memphis", "TN", 35.12, -89.94, ["#003087", "#898D8D"], 3, "cityUniversity"],
+        ["Birmingham South", "Blazers", "BHS", "Birmingham", "AL", 33.5, -86.8, ["#1E6B52", "#B4975A"], 2, "cityUniversity"],
+        ["Charlotte Queen", "49ers", "CHQ", "Charlotte", "NC", 35.31, -80.73, ["#046A38", "#FFFFFF"], 2, "cityUniversity"],
+        ["Rice Hollow", "Owls", "RCH", "Houston", "TX", 29.72, -95.4, ["#00205B", "#C1C6C8"], 2, "privateCollege"],
+        ["Marshall Falls", "Thundering Herd", "MRF", "Huntington", "WV", 38.42, -82.43, ["#00B140", "#000000"], 2, "regionalState"],
+        ["Southern Pine", "Golden Eagles", "SMP", "Gulfport", "MS", 30.37, -89.09, ["#FFAB00", "#000000"], 2, "regionalState"],
+        ["East Carolina Bay", "Pirates", "ECB", "Greenville", "NC", 35.61, -77.37, ["#4B1869", "#FDC82F"], 3, "regionalState"]
       ];
       D2_CONFS = [
         // 10 D2 conferences (was 9 — added GPI for §B.2 ~100/div target)
@@ -12041,74 +12232,77 @@ var _CFB = (() => {
         ]
       };
       STATE_TOKENS = {
+        // D2/D3 procedural tokens. These are INVENTED regional words (not real
+        // state names) so "University of ___" / "___ State" / "___ Tech" patterns
+        // can never reproduce a real university. D1 is static and never uses these.
         Southeast: [
-          { t: "Georgia", states: ["GA"], uOf: 1, st: 1, tech: 1, am: 1, dir: 1, sat: 1 },
-          { t: "Carolina", states: ["NC", "SC"], uOf: 1, st: 1, dir: 1 },
-          { t: "Virginia", states: ["VA"], uOf: 1, st: 1, tech: 1, dir: 1 }
+          { t: "Piedmont", states: ["GA"], uOf: 1, st: 1, tech: 1, am: 1, dir: 1, sat: 1 },
+          { t: "Catawba", states: ["NC", "SC"], uOf: 1, st: 1, dir: 1 },
+          { t: "Tidewater", states: ["VA"], uOf: 1, st: 1, tech: 1, dir: 1 }
         ],
         DeepSouth: [
-          { t: "Alabama", states: ["AL"], uOf: 1, st: 1, am: 1, dir: 1, sat: 1 },
-          { t: "Mississippi", states: ["MS"], uOf: 1, st: 1, dir: 1 },
-          { t: "Louisiana", states: ["LA"], uOf: 1, st: 1, tech: 1, dir: 1, sat: 1 }
+          { t: "Talladega", states: ["AL"], uOf: 1, st: 1, am: 1, dir: 1, sat: 1 },
+          { t: "Yazoo", states: ["MS"], uOf: 1, st: 1, dir: 1 },
+          { t: "Acadiana", states: ["LA"], uOf: 1, st: 1, tech: 1, dir: 1, sat: 1 }
         ],
         MidSouth: [
-          { t: "Tennessee", states: ["TN"], uOf: 1, st: 1, tech: 1, dir: 1, sat: 1 },
-          { t: "Kentucky", states: ["KY"], uOf: 1, st: 1, dir: 1 },
-          { t: "Arkansas", states: ["AR"], uOf: 1, st: 1, tech: 1, dir: 1, sat: 1 }
+          { t: "Cumberland", states: ["TN"], uOf: 1, st: 1, tech: 1, dir: 1, sat: 1 },
+          { t: "Bluegrass", states: ["KY"], uOf: 1, st: 1, dir: 1 },
+          { t: "Ozark", states: ["AR"], uOf: 1, st: 1, tech: 1, dir: 1, sat: 1 }
         ],
         MidAtlantic: [
-          { t: "Pennsylvania", states: ["PA"], uOf: 1, st: 1, dir: 1 },
-          { t: "Maryland", states: ["MD"], uOf: 1, st: 1 },
-          { t: "West Virginia", states: ["WV"], uOf: 1, st: 1, tech: 1 },
-          { t: "Delaware", states: ["DE"], uOf: 1, st: 1 },
-          { t: "New Jersey", states: ["NJ"], uOf: 1, st: 1, tech: 1 }
+          { t: "Allegheny", states: ["PA"], uOf: 1, st: 1, dir: 1 },
+          { t: "Chesapeake", states: ["MD"], uOf: 1, st: 1 },
+          { t: "Monongahela", states: ["WV"], uOf: 1, st: 1, tech: 1 },
+          { t: "Brandywine", states: ["DE"], uOf: 1, st: 1 },
+          { t: "Raritan", states: ["NJ"], uOf: 1, st: 1, tech: 1 }
         ],
         Northeast: [
-          { t: "Vermont", states: ["VT"], uOf: 1, st: 1, tech: 1, dir: 1 },
-          { t: "Connecticut", states: ["CT"], uOf: 1, st: 1, dir: 1 },
-          { t: "New England", states: ["MA", "NH", "VT", "CT", "RI", "ME"], uOf: 1 },
-          { t: "Maine", states: ["ME"], uOf: 1, st: 1, dir: 1 }
+          { t: "Green Mountain", states: ["VT"], uOf: 1, st: 1, tech: 1, dir: 1 },
+          { t: "Nutmeg", states: ["CT"], uOf: 1, st: 1, dir: 1 },
+          { t: "Yankee", states: ["MA", "NH", "VT", "CT", "RI", "ME"], uOf: 1 },
+          { t: "Penobscot", states: ["ME"], uOf: 1, st: 1, dir: 1 }
         ],
         GreatLakes: [
-          { t: "Ohio", states: ["OH"], su: 1, st: 1, dir: 1 },
-          { t: "Michigan", states: ["MI"], uOf: 1, st: 1, tech: 1, dir: 1 },
-          { t: "Indiana", states: ["IN"], su: 1, st: 1, tech: 1, dir: 1 }
+          { t: "Maumee", states: ["OH"], su: 1, st: 1, dir: 1 },
+          { t: "Huron", states: ["MI"], uOf: 1, st: 1, tech: 1, dir: 1 },
+          { t: "Wabash", states: ["IN"], su: 1, st: 1, tech: 1, dir: 1 }
         ],
         Midwest: [
-          { t: "Illinois", states: ["IL"], uOf: 1, st: 1, dir: 1, sat: 1 },
-          { t: "Missouri", states: ["MO"], uOf: 1, st: 1, dir: 1 },
-          { t: "Kansas", states: ["KS"], uOf: 1, st: 1 },
-          { t: "Iowa", states: ["IA"], uOf: 1, st: 1, dir: 1 }
+          { t: "Sangamon", states: ["IL"], uOf: 1, st: 1, dir: 1, sat: 1 },
+          { t: "Ozarka", states: ["MO"], uOf: 1, st: 1, dir: 1 },
+          { t: "Flint Hills", states: ["KS"], uOf: 1, st: 1 },
+          { t: "Cedar", states: ["IA"], uOf: 1, st: 1, dir: 1 }
         ],
         UpperMidwest: [
-          { t: "Minnesota", states: ["MN"], uOf: 1, st: 1, dir: 1, sat: 1 },
-          { t: "Wisconsin", states: ["WI"], uOf: 1, st: 1, sat: 1 },
-          { t: "Dakota", states: ["ND", "SD"], st: 1 }
+          { t: "Boundary Waters", states: ["MN"], uOf: 1, st: 1, dir: 1, sat: 1 },
+          { t: "Kettle", states: ["WI"], uOf: 1, st: 1, sat: 1 },
+          { t: "Coteau", states: ["ND", "SD"], st: 1 }
         ],
         Plains: [
-          { t: "Nebraska", states: ["NE"], uOf: 1, st: 1, sat: 1 },
-          { t: "Wyoming", states: ["WY"], uOf: 1, st: 1 },
-          { t: "Kansas", states: ["KS"], uOf: 1, st: 1 }
+          { t: "Platte", states: ["NE"], uOf: 1, st: 1, sat: 1 },
+          { t: "Wind River", states: ["WY"], uOf: 1, st: 1 },
+          { t: "Smoky Hill", states: ["KS"], uOf: 1, st: 1 }
         ],
         MountainWest: [
-          { t: "Colorado", states: ["CO"], uOf: 1, st: 1, dir: 1, sat: 1 },
-          { t: "Utah", states: ["UT"], uOf: 1, st: 1, tech: 1, dir: 1 },
-          { t: "Montana", states: ["MT"], uOf: 1, st: 1, tech: 1, dir: 1 }
+          { t: "Front Range", states: ["CO"], uOf: 1, st: 1, dir: 1, sat: 1 },
+          { t: "Wasatch", states: ["UT"], uOf: 1, st: 1, tech: 1, dir: 1 },
+          { t: "Bitterroot", states: ["MT"], uOf: 1, st: 1, tech: 1, dir: 1 }
         ],
         Southwest: [
-          { t: "Texas", states: ["TX"], uOf: 1, st: 1, am: 1, tech: 1, dir: 1, sat: 1 },
-          { t: "New Mexico", states: ["NM"], uOf: 1, st: 1, tech: 1, dir: 1 }
+          { t: "Brazos", states: ["TX"], uOf: 1, st: 1, am: 1, tech: 1, dir: 1, sat: 1 },
+          { t: "Sandia", states: ["NM"], uOf: 1, st: 1, tech: 1, dir: 1 }
         ],
-        Hawaii: [{ t: "Hawaii", states: ["HI"], uOf: 1, st: 1, tech: 1, dir: 1 }],
-        Alaska: [{ t: "Alaska", states: ["AK"], uOf: 1, st: 1, tech: 1, dir: 1 }],
+        Hawaii: [{ t: "Kona", states: ["HI"], uOf: 1, st: 1, tech: 1, dir: 1 }],
+        Alaska: [{ t: "Denali", states: ["AK"], uOf: 1, st: 1, tech: 1, dir: 1 }],
         PacificNW: [
-          { t: "Oregon", states: ["OR"], uOf: 1, st: 1, tech: 1, dir: 1 },
-          { t: "Washington", states: ["WA"], uOf: 1, st: 1, dir: 1 },
-          { t: "Idaho", states: ["ID"], uOf: 1, st: 1, dir: 1 }
+          { t: "Willamette", states: ["OR"], uOf: 1, st: 1, tech: 1, dir: 1 },
+          { t: "Cascade", states: ["WA"], uOf: 1, st: 1, dir: 1 },
+          { t: "Sawtooth", states: ["ID"], uOf: 1, st: 1, dir: 1 }
         ],
         California: [
-          { t: "California", states: ["CA"], uOf: 1, dir: 1 },
-          { t: "Cal", states: ["CA"], special: "cal", sat: 1, poly: 1 }
+          { t: "Sierra Nevada", states: ["CA"], uOf: 1, dir: 1 },
+          { t: "Redwood", states: ["CA"], st: 1, tech: 1, dir: 1 }
         ]
       };
       DIRS = ["Northern", "Southern", "Eastern", "Western", "Central"];
@@ -24968,7 +25162,7 @@ var _CFB = (() => {
         ${mmCoachId ? renderCoachHome() : renderCoachSelect(autoSave)}
 
         <div class="mm-footer">
-          <span class="mm-version">300+ Schools \xB7 28 Conferences \xB7 3 Divisions \xB7 Procedural World</span>
+          <span class="mm-version">320+ Schools \xB7 28 Conferences \xB7 3 Divisions \xB7 Fixed D1 \xB7 Procedural D2/D3</span>
         </div>
       </div>
 
@@ -27794,6 +27988,7 @@ var _CFB = (() => {
           <button class="gp-mode-btn${gpMode === "simple" ? " active" : ""}" data-ob-gpmode="simple">Simple</button>
           <button class="gp-mode-btn${gpMode === "advanced" ? " active" : ""}" data-ob-gpmode="advanced">Advanced</button>
         </div>
+        ${gpMode === "simple" ? `<div class="ob-setting-desc" style="margin-top:8px;color:var(--gold);font-weight:600">\u{1F331} Simple starts are Division III, Take the Job only — the grassroots path. Switch to Advanced to unlock D1/D2 and the other start types.</div>` : ""}
       </div>
 
       ${(() => {
@@ -27819,13 +28014,15 @@ var _CFB = (() => {
   `;
   }
   function stepSituation() {
+    const simpleLock = gameplanIsSimple();
+    const cards = simpleLock ? CHALLENGE_CARDS.filter((c) => c.id === "takejob") : CHALLENGE_CARDS;
     return `
     <div class="ob-step">
       <div class="ob-kicker">STEP 2 \u2014 THE SITUATION</div>
       <h2 class="ob-headline">What kind of job are you taking, Coach ${escapeHtml(ob.last || "")}?</h2>
-      <p class="ob-flavor">Every program in this world has a hundred years of history behind it \u2014 banners, scandals, a legend or two, and a rival it has hated since 1926. Pick the story you want to walk into.</p>
+      <p class="ob-flavor">${simpleLock ? "Simple game planning locks you to the grassroots start \u2014 take a Division III job and build it up. Switch to Advanced back in Step 1 for the other start types." : "Every program in this world has a hundred years of history behind it \u2014 banners, scandals, a legend or two, and a rival it has hated since 1926. Pick the story you want to walk into."}</p>
       <div class="ob-challenge-grid">
-        ${CHALLENGE_CARDS.map((c) => `
+        ${cards.map((c) => `
           <button class="ob-pick-card ob-challenge-card${ob.challenge === c.id ? " active" : ""}" data-ob-challenge="${c.id}">
             <div class="ob-pick-head"><span class="ob-pick-icon">${c.icon}</span><span class="ob-pick-title">${c.title}</span></div>
             <div class="ob-pick-desc">${c.desc}</div>
@@ -27895,6 +28092,7 @@ var _CFB = (() => {
   function stepJob() {
     const isOutpost = ob.challenge === "outpost";
     const isLore = ob.challenge === "ashes" || ob.challenge === "hotseat" || ob.challenge === "heir";
+    const divCards = gameplanIsSimple() ? DIV_CARDS.filter((d) => d.id === "D3") : DIV_CARDS;
     if (isLore) {
       return `
       <div class="ob-step">
@@ -27902,7 +28100,7 @@ var _CFB = (() => {
         <h2 class="ob-headline">How big is the stage?</h2>
         <p class="ob-flavor">Pick a level. We'll find the program whose history matches your situation \u2014 the story chooses the school.</p>
         <div class="ob-card-grid">
-          ${DIV_CARDS.map((d) => `
+          ${divCards.map((d) => `
             <button class="ob-pick-card${ob.division === d.id ? " active" : ""}" data-ob-div="${d.id}">
               <div class="ob-pick-head"><span class="ob-pick-icon">${d.icon}</span><span class="ob-pick-title">${d.title}</span></div>
               <div class="ob-pick-sub">${d.sub}</div>
@@ -27946,9 +28144,9 @@ var _CFB = (() => {
       </div>
 
       ${ob.state ? `
-        <div class="ob-kicker" style="margin-top:16px">THE LEVEL</div>
+        <div class="ob-kicker" style="margin-top:16px">THE LEVEL${gameplanIsSimple() ? ` <span style="color:var(--gold);font-weight:600;letter-spacing:0">— D3 (Simple)</span>` : ""}</div>
         <div class="ob-card-grid">
-          ${DIV_CARDS.map((d) => `
+          ${divCards.map((d) => `
             <button class="ob-pick-card${ob.division === d.id ? " active" : ""}" data-ob-div="${d.id}">
               <div class="ob-pick-head"><span class="ob-pick-icon">${d.icon}</span><span class="ob-pick-title">${d.title}</span></div>
               <div class="ob-pick-sub">${d.sub}</div>
