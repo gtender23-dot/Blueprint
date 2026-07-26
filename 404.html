@@ -10074,12 +10074,40 @@ var _CFB = (() => {
     else name = `${tk.t} Poly`;
     return { name, city, type: PATTERN_TYPE[patternKey], nameBearing: false };
   }
+  // Safety net: some real cities are essentially one-college towns, so
+  // "[City] State/University/Tech" reproduces a real school. Reject any generated
+  // name whose leading stem is one of these — the generator retries with another.
+  var REAL_SCHOOL_STEMS = /* @__PURE__ */ new Set([
+    "Shippensburg", "Slippery Rock", "Bloomsburg", "Kutztown", "Millersville",
+    "Clarion", "Edinboro", "Lock Haven", "Mansfield", "Cullowhee", "Elon",
+    "Glenville", "Statesboro", "Valdosta", "Nacogdoches", "Stephenville",
+    "Kingsville", "Commerce", "Weatherford", "Tahlequah", "Durant", "Alva",
+    "Ada", "Chadron", "Kearney", "Peru", "Wayne", "Emporia", "Hays", "Pittsburg",
+    "Warrensburg", "Maryville", "Kirksville", "Cape Girardeau", "Canyon",
+    "Cheney", "Ellensburg", "Monmouth", "Ashland", "Findlay", "Tiffin",
+    "Bluffton", "Hillsdale", "Alma", "Adrian", "Hiram", "Wooster", "Grinnell",
+    "Wartburg", "Luther", "Carleton", "Gustavus", "Ripon", "Beloit", "Lawrence",
+    "Kenyon", "Oberlin", "Denison", "Wabash", "DePauw", "Earlham", "Hanover",
+    "Marshall", "Rollins", "Stetson", "Mercer", "Furman", "Wofford",
+    "Samford", "Radford", "Longwood", "Gardner",
+    "Newberry", "Guilford", "Wingate", "Pfeiffer", "Berry"
+  ]);
+  function isRealSchoolName(name) {
+    if (!name) return false;
+    for (const stem of REAL_SCHOOL_STEMS) {
+      // Catch the stem as a leading word ("Shippensburg State"), a bare name
+      // ("Statesboro"), inside "University of ___", or after a satellite hyphen
+      // ("Piedmont-Valdosta").
+      if (name === stem || name.startsWith(stem + " ") || name.includes("of " + stem) || name.includes("-" + stem) || name.endsWith("-" + stem)) return true;
+    }
+    return false;
+  }
   function makeIdentity(region, cls, used, opts = {}) {
     const patterns = opts.patterns || NAME_PATTERNS[cls];
     for (let attempt = 0; attempt < 30; attempt++) {
       const key = weightedPick(patterns);
       const res = tryPattern(key, region, cls, used);
-      if (res && !used.names.has(res.name)) {
+      if (res && !used.names.has(res.name) && !isRealSchoolName(res.name)) {
         used.names.add(res.name);
         if (res.city) used.cities.add(cityKey(res.city));
         return res;
@@ -10087,7 +10115,7 @@ var _CFB = (() => {
     }
     for (const key of opts.fallback || ["pc", "sn", "cd", "cc"]) {
       const res = tryPattern(key, region, cls, used);
-      if (res && !used.names.has(res.name)) {
+      if (res && !used.names.has(res.name) && !isRealSchoolName(res.name)) {
         used.names.add(res.name);
         if (res.city) used.cities.add(cityKey(res.city));
         return res;
@@ -10100,7 +10128,7 @@ var _CFB = (() => {
     for (const city2 of shuffle([...pool])) {
       for (const d of [...denoms, "Union", "Central", "Presbyterian"]) {
         const name2 = `${city2.c} ${d}${d === "Union" ? " College" : ""}`;
-        if (!used.names.has(name2)) {
+        if (!used.names.has(name2) && !isRealSchoolName(name2)) {
           used.names.add(name2);
           used.cities.add(cityKey(city2));
           return { name: name2, city: city2, type: "denominational", nameBearing: true };
@@ -10209,8 +10237,22 @@ var _CFB = (() => {
     const founded = randInt3(fLo, fHi);
     const capacity = stadiumCapacity(cls, prestige);
     const person = PERSON_NAMES[randInt3(0, PERSON_NAMES.length - 1)];
+    const person2 = PERSON_NAMES[randInt3(0, PERSON_NAMES.length - 1)];
     const smallVenue = cls === "D2" || cls === "D3";
-    const stadiumNames = smallVenue ? ["Memorial Stadium", `${person} Field`, "Alumni Field", `${person} Memorial Field`, "Veterans Memorial Stadium", `${nick} Field`] : ["Memorial Stadium", `${person} Stadium`, `${person} Field`, "Veterans Memorial Stadium", `${nick} Stadium`, `${person} Memorial Stadium`];
+    // Widened venue templates so lower divisions don't cluster on a few names.
+    // Named-donor / geographic / civic templates dominate; the plain "Memorial
+    // Stadium" survives but is now one option among many.
+    const stadiumNames = smallVenue ? [
+      `${person} Field`, `${person} Memorial Field`, `${nick} Field`, `${person2} Stadium`,
+      `${person}-${person2} Field`, "Alumni Field", "Memorial Stadium", "Founders Field",
+      "Heritage Field", "Pioneer Field", "Veterans Memorial Field", `${person} Athletic Field`,
+      "Homecoming Field", "The Bowl", `Old ${person} Field`
+    ] : [
+      `${person} Stadium`, `${person} Field`, `${nick} Stadium`, `${person} Memorial Stadium`,
+      `${person2} Field`, "Memorial Stadium", "Veterans Memorial Stadium", `${person}-${person2} Stadium`,
+      "Legacy Stadium", "Centennial Stadium", `${person} Athletic Complex`, "The Coliseum",
+      `${person2} Memorial Stadium`, "Founders Stadium", `${person} Bowl`
+    ];
     const stadium = { name: stadiumNames[randInt3(0, stadiumNames.length - 1)], capacity };
     return { enrollment, founded, stadium, control: priv ? "private" : "public" };
   }
@@ -10352,11 +10394,14 @@ var _CFB = (() => {
         const nickPick = pickNickname({ cls, type: ident.type, region: schoolRegion }, confNicks, used);
         const abbr = makeAbbr(ident.name, used.abbrs);
         let c1, c2;
-        for (let t = 0; t < 12; t++) {
+        // Prefer a pair unused globally; fall back to conference-unique, then any.
+        for (let t = 0; t < 16; t++) {
           [c1, c2] = COLOR_PAIRS[randInt3(0, COLOR_PAIRS.length - 1)];
-          if (!confColorKeys.has(c1 + c2)) break;
+          const globallyFresh = !(used.colorKeys && used.colorKeys.has(c1 + c2));
+          if (!confColorKeys.has(c1 + c2) && (globallyFresh || t >= 8)) break;
         }
         confColorKeys.add(c1 + c2);
+        (used.colorKeys = used.colorKeys || /* @__PURE__ */ new Set()).add(c1 + c2);
         const cityObj = ident.city || { c: "", s: "", lat: conf.lat, lng: conf.lng };
         const lat = +(cityObj.lat + (Math.random() * 2 - 1) * LOC_JITTER_DEG).toFixed(2);
         const lng = +(cityObj.lng + (Math.random() * 2 - 1) * LOC_JITTER_DEG).toFixed(2);
@@ -10399,12 +10444,19 @@ var _CFB = (() => {
         anchor.prestige = ceiling;
         anchor.baseline = ceiling;
         anchor.stadium.capacity = Math.max(anchor.stadium.capacity, stadiumCapacity(cls, ceiling));
-      } else if (cls === "power") {
+      } else {
+        // Anchor-type fixup: the best program in a conference should read like a
+        // state/city/regional school, not a tiny liberal-arts or religious college.
+        // Power wants a flagship/landGrant (rank <=1); D2/D3 accept any public/
+        // state/city/regional/tech/directional identity (rank <=6) and only exclude
+        // the small private-college cluster (satellite 7, liberalArts/religious/
+        // private/denominational 8). Swap prestige with the best eligible anchor.
+        const maxRank = cls === "power" ? 1 : 6;
         const top = confSchools.reduce((a, b) => b.prestige > a.prestige ? b : a);
-        if (((_b = ANCHOR_RANK[top.type]) != null ? _b : 9) > 1) {
+        if (((_b = ANCHOR_RANK[top.type]) != null ? _b : 9) > maxRank) {
           const flag = [...confSchools].filter((s) => {
             var _a2;
-            return ((_a2 = ANCHOR_RANK[s.type]) != null ? _a2 : 9) <= 1;
+            return ((_a2 = ANCHOR_RANK[s.type]) != null ? _a2 : 9) <= maxRank;
           }).sort((a, b) => b.prestige - a.prestige)[0];
           if (flag && flag.prestige < top.prestige) {
             const tmp = { p: flag.prestige, b: flag.baseline };
@@ -11546,7 +11598,7 @@ var _CFB = (() => {
         ["Monroe Delta", "Warhawks", "MND", "Monroe", "LA", 32.53, -92.06, ["#840029", "#DAAA00"], 2, "regionalState"],
         ["Boca Sands", "Owls", "BCS", "Boca Raton", "FL", 26.37, -80.1, ["#003366", "#CC0000"], 2, "cityUniversity"],
         ["Orlando Central", "Knights", "ORC", "Orlando", "FL", 28.6, -81.2, ["#000000", "#BA9B37"], 3, "cityUniversity"],
-        ["Statesboro", "Eagles", "STB", "Statesboro", "GA", 32.42, -81.78, ["#011E41", "#849EAD"], 3, "regionalState"],
+        ["Ogeechee State", "Eagles", "STB", "Statesboro", "GA", 32.42, -81.78, ["#011E41", "#849EAD"], 3, "regionalState"],
         ["Hattiesburg", "Golden Eagles", "HTB", "Hattiesburg", "MS", 31.33, -89.33, ["#000000", "#FFB71B"], 3, "regionalState"],
         ["Arkansas Delta", "Red Wolves", "ARD", "Jonesboro", "AR", 35.84, -90.68, ["#CC092F", "#000000"], 2, "regionalState"],
         ["Denton Plains", "Mean Green", "DNP", "Denton", "TX", 33.21, -97.13, ["#00853E", "#FFFFFF"], 2, "cityUniversity"],
@@ -12339,11 +12391,11 @@ var _CFB = (() => {
         "Douglas",
         "Drew",
         "Edison",
-        "Emerson",
+        "Ellery",
         "Farwell",
-        "Franklin",
+        "Fenwick",
         "Grant",
-        "Hamilton",
+        "Halstead",
         "Hardin",
         "Harrison",
         "Hayes",
@@ -12352,8 +12404,8 @@ var _CFB = (() => {
         "Knox",
         "Langdon",
         "Logan",
-        "Manning",
-        "Marshall",
+        "Larkspur",
+        "Merton",
         "Morton",
         "Pierce",
         "Porter",
@@ -12364,11 +12416,11 @@ var _CFB = (() => {
         "Tilden",
         "Tyler",
         "Warren",
-        "Webster",
+        "Wexford",
         "Wilson",
         "Abbott",
         "Ainsworth",
-        "Baldwin",
+        "Bramwell",
         "Bancroft",
         "Beckett",
         "Calloway",
@@ -12396,42 +12448,45 @@ var _CFB = (() => {
         "Yardley"
       ].filter((p) => !GAZ_CITY_NAMES.has(p));
       SAINT_NAMES = [
+        // Obscure/invented saint names — deliberately NOT the well-known ones that
+        // map to real US colleges (no St. Bonaventure/Olaf/Norbert/Anselm/Ambrose/
+        // Francis/Lawrence/Vincent/Benedict/Scholastica/Catherine/Thomas/Mary's).
         "St. Aldous",
-        "St. Benedict",
-        "St. Catherine",
         "St. Clement",
-        "St. Dominic",
+        "St. Cuthbert",
         "St. Edmund",
-        "St. Francis",
-        "St. Gregory",
+        "St. Ethelred",
+        "St. Gerasimus",
         "St. Helena",
-        "St. Ignatius",
+        "St. Hilary",
         "St. Jerome",
         "St. Kieran",
-        "St. Lawrence",
-        "St. Martin",
-        "St. Nicholas",
-        "St. Patrick",
+        "St. Kentigern",
+        "St. Botolph",
+        "St. Werburgh",
+        "St. Aidan",
         "St. Raphael",
         "St. Sebastian",
         "St. Thaddeus",
-        "St. Vincent",
-        "St. Anselm",
-        "St. Bonaventure",
+        "St. Alphege",
+        "St. Cadoc",
+        "St. Chad",
         "St. Columba",
         "St. Hildegard",
-        "St. Norbert",
-        "St. Scholastica",
-        "St. Ambrose",
+        "St. Petroc",
+        "St. Cyprian",
+        "St. Dunstan",
         "St. Basil",
         "St. Crispin",
         "St. Fabian",
         "St. Leander",
         "St. Maurus",
-        "St. Olaf",
+        "St. Ninian",
         "St. Regis",
         "St. Swithin",
-        "St. Ursula"
+        "St. Ursula",
+        "St. Willibrord",
+        "St. Egwin"
       ];
       NICKS_CLASSIC = [
         { n: "Bulldogs", e: "\u{1F43E}" },
@@ -12780,7 +12835,27 @@ var _CFB = (() => {
         ["#6C0BA9", "#F1C40F"],
         ["#0D3349", "#E8A020"],
         ["#A0001C", "#1C39BB"],
-        ["#2C3E50", "#E8A020"]
+        ["#2C3E50", "#E8A020"],
+        ["#5D0E1F", "#D9C089"],
+        ["#0B2545", "#8DA9C4"],
+        ["#3D2B56", "#EFD9A0"],
+        ["#7A1F2B", "#C0C0C0"],
+        ["#12403C", "#EAD196"],
+        ["#22336C", "#F2B705"],
+        ["#4A0E0E", "#E8C547"],
+        ["#0F5257", "#F2E9DC"],
+        ["#5B2333", "#EAD7A0"],
+        ["#1E2A4A", "#C99B3F"],
+        ["#3B0A45", "#D4AF37"],
+        ["#0A3D2A", "#F4A100"],
+        ["#6E1423", "#0B1F3A"],
+        ["#274060", "#E6B800"],
+        ["#402218", "#D8B15C"],
+        ["#5A175D", "#F0E68C"],
+        ["#0C2340", "#E03A3E"],
+        ["#7B3F00", "#FFD27F"],
+        ["#123456", "#F5A623"],
+        ["#611C35", "#BFA06A"]
       ];
       NAME_PATTERNS = {
         power: [["uOf", 26], ["st", 22], ["su", 6], ["am", 9], ["tech", 9], ["cu", 14], ["cs", 10], ["poly", 2], ["dir", 2]],
