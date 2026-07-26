@@ -5088,7 +5088,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "4fcfa8f82a";
+globalThis.__BUILD__ = "2f695040df";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -13626,10 +13626,13 @@ var _CFB = (() => {
     for (const s of slots) (posSlots[_a = s.pos] || (posSlots[_a] = [])).push(s);
     const slotClaimed = slots.some((s) => s.pos === "SLOT" && (assignments == null ? void 0 : assignments[s.id]));
     const hasJoker = !!((_b = activeDepth.SLOT) == null ? void 0 : _b.length) || slotClaimed;
-    const posOrder = Object.keys(posSlots).sort((a, b) => (a === "SLOT" ? hasJoker ? -1 : 1 : 0) - (b === "SLOT" ? hasJoker ? -1 : 1 : 0));
+    const namedFb = (activeDepth.FB || []).some((id) => allActive.has(id));
+    const rank = (p) => p === "SLOT" ? hasJoker ? -2 : 1 : p === "RB" && namedFb ? -1 : 0;
+    const posOrder = Object.keys(posSlots).sort((a, b) => rank(a) - rank(b));
     for (const pos of posOrder) {
       const isFbSlot = (s) => s.role === "FB-Lead" || s.label === "FB" || s.label === "B";
-      const group = posSlots[pos].slice().sort((a, b) => (isFbSlot(a) ? 1 : 0) - (isFbSlot(b) ? 1 : 0));
+      const fbRank = namedFb ? -1 : 1;
+      const group = posSlots[pos].slice().sort((a, b) => (isFbSlot(a) ? fbRank : 0) - (isFbSlot(b) ? fbRank : 0));
       let pool = (MESH_AUTO_POOL[pos] ? MESH_AUTO_POOL[pos](activeDepth) : activeDepth[pos] || []).slice();
       if (ratingById && MESH_AUTO_POOL[pos]) {
         const override = activeDepth[pos] || [];
@@ -13663,12 +13666,8 @@ var _CFB = (() => {
           pick2 = fbOverride.find((id) => !used.has(id) && allActive.has(id)) || null;
         }
         if (!pick2 && isFbSlot(s)) {
-          const tePool = (activeDepth.TE || []).filter((id) => !used.has(id) && allActive.has(id));
-          if (ratingById) tePool.sort((a, b) => {
-            var _a2, _b2;
-            return ((_a2 = ratingById[b]) != null ? _a2 : 0) - ((_b2 = ratingById[a]) != null ? _b2 : 0);
-          });
-          pick2 = tePool[0] || null;
+          const fbPool = [...activeDepth.FB || [], ...activeDepth.RB || [], ...activeDepth.TE || []].filter((id, i, arr) => arr.indexOf(id) === i).filter((id) => !used.has(id) && allActive.has(id));
+          pick2 = fbPool[0] || null;
         }
         if (!pick2) {
           while (cursor < pool.length && used.has(pool[cursor])) cursor++;
@@ -18310,7 +18309,7 @@ var _CFB = (() => {
     return { penalty, player };
   }
   function simulateDrive(offense, defense, gameState, log, opts = {}) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya, _za;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya;
     const { roster: offRoster, depth: offDepth, gameplan: offPlan, school: offSchool, ctx: offCtx } = offense;
     const { roster: defRoster, depth: defDepth, gameplan: defPlan, school: defSchool, ctx: defCtx } = defense;
     const R = opts.resume || null;
@@ -18802,7 +18801,14 @@ var _CFB = (() => {
         var _a2;
         return ((_a2 = defRoster.find((p) => p.id === id)) == null ? void 0 : _a2.position) || null;
       };
-      const offDepthWithSlot = ((_E = (_D = offSchool == null ? void 0 : offSchool.depthOrder) == null ? void 0 : _D.SLOT) == null ? void 0 : _E.length) ? __spreadProps(__spreadValues({}, activeOffDepth), { SLOT: offSchool.depthOrder.SLOT.filter((id) => offRoster.some((p) => p.id === id && p.injuryGamesOut === 0)) }) : activeOffDepth;
+      const MESH_DEPTH_KEYS = ["SLOT", "FB", "WING", "ABACK", "WILDCAT", "JETMAN"];
+      let offDepthWithSlot = activeOffDepth;
+      for (const key of MESH_DEPTH_KEYS) {
+        const named = (_D = offSchool == null ? void 0 : offSchool.depthOrder) == null ? void 0 : _D[key];
+        if (!(named == null ? void 0 : named.length)) continue;
+        const live = named.filter((id) => offRoster.some((p) => p.id === id && p.injuryGamesOut === 0));
+        if (live.length) offDepthWithSlot = __spreadProps(__spreadValues({}, offDepthWithSlot), { [key]: live });
+      }
       const offField = resolveOffField(offFormationId, offFA == null ? void 0 : offFA.slots, offFA == null ? void 0 : offFA.shares, offDepthWithSlot, null, offPosOf);
       const defBaseField = resolveDefField(baseFront, defFA == null ? void 0 : defFA.slots, defFA == null ? void 0 : defFA.blitzShares, activeDefDepth, null, defPosOf);
       const offPersonnel = offField ? offField.personnel : resolvePersonnel(offFormationId, activeOffDepth);
@@ -18811,10 +18817,10 @@ var _CFB = (() => {
         const id = ((offPersonnel == null ? void 0 : offPersonnel.QB) || [])[0];
         return id ? offRoster.find((p) => p.id === id) : null;
       })();
-      const losFree = (_F = offEff.losFreedom) != null ? _F : "auto";
+      const losFree = (_E = offEff.losFreedom) != null ? _E : "auto";
       const sPl0 = (defPersonnel.S || []).map((id) => defRoster.find((pl) => pl.id === id)).filter(Boolean);
       const sAwr0 = sPl0.length ? sPl0.reduce((t, pl) => t + pl.attributes.AWR, 0) / sPl0.length : 50;
-      const covFam = coverageFamily((_G = defEff.covShell) != null ? _G : "balanced", (_H = defEff.covStyle) != null ? _H : "balanced", sAwr0);
+      const covFam = coverageFamily((_F = defEff.covShell) != null ? _F : "balanced", (_G = defEff.covStyle) != null ? _G : "balanced", sAwr0);
       const DISGUISE_SHOW = {
         "Cover 1": "Cover 2",
         "Cover 3": "Cover 2",
@@ -18826,11 +18832,11 @@ var _CFB = (() => {
       const oppMemPre = seenMemory(defCtx);
       let shownFam = covFam, fooled = false;
       if ((playType.startsWith("pass") || playType.startsWith("run")) && qb0) {
-        const pDisguise = clamp2(0.1 + (((_I = defPlanEff.blitzDesign) != null ? _I : 50) - 50) * 4e-3 + (sAwr0 - 50) * 2e-3 + Math.min(0.1, (oppMemPre.audibles || 0) * 0.012), 0.04, 0.45);
+        const pDisguise = clamp2(0.1 + (((_H = defPlanEff.blitzDesign) != null ? _H : 50) - 50) * 4e-3 + (sAwr0 - 50) * 2e-3 + Math.min(0.1, (oppMemPre.audibles || 0) * 0.012), 0.04, 0.45);
         if (Math.random() < pDisguise) {
-          shownFam = (_J = DISGUISE_SHOW[covFam]) != null ? _J : covFam;
-          const craft = ((_K = defPlanEff.blitzDesign) != null ? _K : 50) * 0.5 + sAwr0 * 0.5;
-          const read = ((_L = qb0.attributes.AWR) != null ? _L : 50) * 0.7 + ((_M = qb0.attributes.TEC) != null ? _M : 50) * 0.3;
+          shownFam = (_I = DISGUISE_SHOW[covFam]) != null ? _I : covFam;
+          const craft = ((_J = defPlanEff.blitzDesign) != null ? _J : 50) * 0.5 + sAwr0 * 0.5;
+          const read = ((_K = qb0.attributes.AWR) != null ? _K : 50) * 0.7 + ((_L = qb0.attributes.TEC) != null ? _L : 50) * 0.3;
           fooled = Math.random() < clamp2(0.5 + (craft - read) * 0.01, 0.15, 0.85);
         }
       }
@@ -18839,7 +18845,7 @@ var _CFB = (() => {
       if (qb0 && losFree !== "never" && !familyPinned) {
         const shellSeen = fooled && defEff.covShell !== "balanced" && defEff.covShell != null ? ["Cover 2", "Cover 4", "Cover 2-Man"].includes(shownFam) ? -1 : 1 : defEff.covShell === "single" ? 1 : defEff.covShell === "two" ? -1 : 0;
         const boxScore = shellSeen + (defEff.runCommit || 0) / 12;
-        const seeIt = clamp2((((_N = qb0.attributes.AWR) != null ? _N : 50) - 55) * 8e-3 * (losFree === "free" ? 1.5 : 1), 0, 0.25);
+        const seeIt = clamp2((((_M = qb0.attributes.AWR) != null ? _M : 50) - 55) * 8e-3 * (losFree === "free" ? 1.5 : 1), 0, 0.25);
         if ((playType === "run_inside" || playType === "run_outside") && boxScore >= 1 && Math.random() < seeIt) {
           playType = "pass_short";
           killCall = "toPass";
@@ -18857,7 +18863,7 @@ var _CFB = (() => {
           shotCall = true;
         }
         if (playType === "pass_short" && covMem.blitz / covMem.dropbacks >= 0.35) {
-          offPlanEff.screenRate = ((_O = offPlanEff.screenRate) != null ? _O : 14) + 6;
+          offPlanEff.screenRate = ((_N = offPlanEff.screenRate) != null ? _N : 14) + 6;
         }
       }
       const offWeights = getOffWeights(offFormationId, playType) || OFF_WEIGHTS[playType];
@@ -18871,16 +18877,16 @@ var _CFB = (() => {
       else if (playType === "run_inside" || playType === "run_outside") concept = pickRunConcept(playType, offPersonnel, offRoster, defEff, offPlanEff.conceptWeights || null, forcedConceptName, _pbGate);
       let audible = false;
       if (concept.name && playType.startsWith("pass") && qb0 && losFree !== "never" && audiblesUsed < (losFree === "free" ? 2 : 1)) {
-        const calledVs = (_R = (_Q = (_P = PASS_CONCEPTS[concept.name]) == null ? void 0 : _P.vs) == null ? void 0 : _Q[believedFam]) != null ? _R : 0;
-        const pAud = clamp2((((_S = qb0.attributes.AWR) != null ? _S : 50) - 55) * 0.012, 0, 0.35) * (losFree === "free" ? 1.4 : 1);
+        const calledVs = (_Q = (_P = (_O = PASS_CONCEPTS[concept.name]) == null ? void 0 : _O.vs) == null ? void 0 : _P[believedFam]) != null ? _Q : 0;
+        const pAud = clamp2((((_R = qb0.attributes.AWR) != null ? _R : 50) - 55) * 0.012, 0, 0.35) * (losFree === "free" ? 1.4 : 1);
         if (calledVs <= -0.02 && Math.random() < pAud) {
           const depth = playType.replace("pass_", "");
           const wrN = ((offPersonnel == null ? void 0 : offPersonnel.WR) || []).length;
           let bestName = null, bestVs = calledVs;
           for (const [nm, c] of Object.entries(PASS_CONCEPTS)) {
             if (c.depth !== depth || c.minWR && wrN < c.minWR) continue;
-            if (offPlanEff.conceptWeights && ((_T = offPlanEff.conceptWeights[nm]) != null ? _T : 50) <= 0) continue;
-            const v = (_V = (_U = c.vs) == null ? void 0 : _U[believedFam]) != null ? _V : 0;
+            if (offPlanEff.conceptWeights && ((_S = offPlanEff.conceptWeights[nm]) != null ? _S : 50) <= 0) continue;
+            const v = (_U = (_T = c.vs) == null ? void 0 : _T[believedFam]) != null ? _U : 0;
             if (v > bestVs) {
               bestVs = v;
               bestName = nm;
@@ -18894,7 +18900,7 @@ var _CFB = (() => {
             const skill = execSkill(c.exec || {}, offRoster, offPersonnel);
             concept = {
               name: bestName,
-              mod: ((_X = (_W = c.vs) == null ? void 0 : _W[covFam]) != null ? _X : 0) * clamp2(1 + (skill - 50) / 100, 0.6, 1.4)
+              mod: ((_W = (_V = c.vs) == null ? void 0 : _V[covFam]) != null ? _W : 0) * clamp2(1 + (skill - 50) / 100, 0.6, 1.4)
             };
           }
         }
@@ -18902,17 +18908,17 @@ var _CFB = (() => {
       if (fooled) offPlanEff._fooled = true;
       _conceptCtx = {
         name: concept.name,
-        def: concept.name ? (_Z = (_Y = PASS_CONCEPTS[concept.name]) != null ? _Y : RUN_CONCEPTS[concept.name]) != null ? _Z : null : null,
+        def: concept.name ? (_Y = (_X = PASS_CONCEPTS[concept.name]) != null ? _X : RUN_CONCEPTS[concept.name]) != null ? _Y : null : null,
         fam: covFam
       };
       offPlanEff._forcePANative = !!(concept.name && PASS_CONCEPTS[concept.name] && PASS_CONCEPTS[concept.name].paNative);
-      const offUnit = baseOffUnit * (1 + concept.mod) * (fakeSurprise ? 1.1 : 1) * h2Counter * coordIqMod(offSchool, "off", offFormationId) * (2 - coordIqMod(defSchool, "def", defFrontId)) * getMatchupEdge(offFormationId, defFrontId) * getSituationalMod(offFormationId, down, distance, gameState.clock, fieldPos) * shortYardagePower(playType, distance, offPersonnel, offRoster) * (1 + (((__ = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : __.groundPound) || 0) * 8e-3) * (down === 4 ? 1 + (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.riverboat) || 0) * 0.01 : 1) * (offense.isHome ? C.HOME_EDGE : 1 - (1 - (2 - C.HOME_EDGE)) * (1 - (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.roadWarrior) || 0) * 0.08)) * ((_$ = offense.form) != null ? _$ : 1) * (2 - ((_aa = defense.form) != null ? _aa : 1)) * ((_ba = offense.execMult) != null ? _ba : 1) * (2 - ((_ca = defense.execMult) != null ? _ca : 1));
+      const offUnit = baseOffUnit * (1 + concept.mod) * (fakeSurprise ? 1.1 : 1) * h2Counter * coordIqMod(offSchool, "off", offFormationId) * (2 - coordIqMod(defSchool, "def", defFrontId)) * getMatchupEdge(offFormationId, defFrontId) * getSituationalMod(offFormationId, down, distance, gameState.clock, fieldPos) * shortYardagePower(playType, distance, offPersonnel, offRoster) * (1 + (((_Z = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : _Z.groundPound) || 0) * 8e-3) * (down === 4 ? 1 + (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.riverboat) || 0) * 0.01 : 1) * (offense.isHome ? C.HOME_EDGE : 1 - (1 - (2 - C.HOME_EDGE)) * (1 - (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.roadWarrior) || 0) * 0.08)) * ((__ = offense.form) != null ? __ : 1) * (2 - ((_$ = defense.form) != null ? _$ : 1)) * ((_aa = offense.execMult) != null ? _aa : 1) * (2 - ((_ba = defense.execMult) != null ? _ba : 1));
       const rcDef = defEff.runCommit || 0;
       const shellRunMult = playType === "run_inside" || playType === "run_outside" ? defEff.covShell === "single" ? 1.04 : defEff.covShell === "two" ? 0.95 : 1 : 1;
       const edgeRunMult = defEff.edgePlay === "contain" ? playType === "run_outside" ? 1.04 : playType === "run_inside" ? 0.98 : 1 : defEff.edgePlay === "crash" ? playType === "run_outside" ? 0.96 : playType === "run_inside" ? 1.02 : 1 : 1;
       const oppMem = seenMemory(defCtx);
-      _tkStyle = (_ea = (_da = defEff.tackleStyle) != null ? _da : defPlan.tackleStyle) != null ? _ea : "balanced";
-      _optKey = (_ga = (_fa = defEff.optionKey) != null ? _fa : defPlan.optionKey) != null ? _ga : "balanced";
+      _tkStyle = (_da = (_ca = defEff.tackleStyle) != null ? _ca : defPlan.tackleStyle) != null ? _da : "balanced";
+      _optKey = (_fa = (_ea = defEff.optionKey) != null ? _ea : defPlan.optionKey) != null ? _fa : "balanced";
       const defAwrFactor = (() => {
         const readers = [...defPersonnel.LB || [], ...defPersonnel.S || []].map((id) => defRoster.find((p) => p.id === id)).filter(Boolean);
         const awr = readers.length ? readers.reduce((s2, p) => s2 + p.attributes.AWR, 0) / readers.length : 50;
@@ -18931,14 +18937,14 @@ var _CFB = (() => {
         offRoster,
         offCtx.fatigueMap,
         slotMap(offPersonnel),
-        (((_ha = offense.form) != null ? _ha : 1) * ((_ia = offense.execMult) != null ? _ia : 1) - 1) * C.FORM_ATTR_SCALE
+        (((_ga = offense.form) != null ? _ga : 1) * ((_ha = offense.execMult) != null ? _ha : 1) - 1) * C.FORM_ATTR_SCALE
       );
       const effDefRoster = makeEffectiveRoster(
         onFieldDef,
         defRoster,
         defCtx.fatigueMap,
         slotMap(defPersonnel),
-        (((_ja = defense.form) != null ? _ja : 1) * ((_ka = defense.execMult) != null ? _ka : 1) - 1) * C.FORM_ATTR_SCALE
+        (((_ia = defense.form) != null ? _ia : 1) * ((_ja = defense.execMult) != null ? _ja : 1) - 1) * C.FORM_ATTR_SCALE
       );
       const qbId = ((offPersonnel == null ? void 0 : offPersonnel.QB) || activeOffDepth["QB"] || [])[0];
       let qb = qbId ? effOffRoster.find((p) => p.id === qbId) : null;
@@ -18969,17 +18975,17 @@ var _CFB = (() => {
           const optShare = offPlanEff.optionRate != null ? clamp2(offPlanEff.optionRate / 100, 0, 1) : OPTION_CAPABLE[offFormationId];
           optionSnap = Math.random() < optShare;
         } else if (SPEED_OPTION[offFormationId] != null) {
-          const optShare = SPEED_OPTION[offFormationId] * clamp2(((_la = offPlanEff.optionRate) != null ? _la : 70) / 70, 0, 1.5);
+          const optShare = SPEED_OPTION[offFormationId] * clamp2(((_ka = offPlanEff.optionRate) != null ? _ka : 70) / 70, 0, 1.5);
           if (Math.random() < optShare) {
             optionSnap = true;
             optionStyle = "speed";
           }
         }
       }
-      const rpoFit = (_ma = C.RPO_FIT[offFormationId]) != null ? _ma : 0.5;
+      const rpoFit = (_la = C.RPO_FIT[offFormationId]) != null ? _la : 0.5;
       const rpoKeyMult = defEff.optionKey === "qb" ? 0.7 : 1;
       const calledRPO = !!(offPlanEff && offPlanEff._forceRPO);
-      if (!optionSnap && !forcedGadget && qb && (calledRPO || rpoFit > 0 && playType.startsWith("run") && Math.random() < ((_na = offPlanEff.rpoRate) != null ? _na : 40) / 100 * rpoFit * rpoKeyMult)) {
+      if (!optionSnap && !forcedGadget && qb && (calledRPO || rpoFit > 0 && playType.startsWith("run") && Math.random() < ((_ma = offPlanEff.rpoRate) != null ? _ma : 40) / 100 * rpoFit * rpoKeyMult)) {
         const lbs = ((defPersonnel == null ? void 0 : defPersonnel.LB) || []).map((id) => {
           var _a2;
           return (_a2 = defRoster == null ? void 0 : defRoster.find) == null ? void 0 : _a2.call(defRoster, (p) => p.id === id);
@@ -19011,13 +19017,13 @@ var _CFB = (() => {
         }
       }
       let wildcatTaker = null;
-      if (offFormationId === "Wildcat" && !jetMan && (!coachCalled || forcedGadget === "wildcat") && (effPlayType === "run_inside" || effPlayType === "run_outside") && ((_oa = offField == null ? void 0 : offField.bySlot) == null ? void 0 : _oa.RB_H)) {
+      if (offFormationId === "Wildcat" && !jetMan && (!coachCalled || forcedGadget === "wildcat") && (effPlayType === "run_inside" || effPlayType === "run_outside") && ((_na = offField == null ? void 0 : offField.bySlot) == null ? void 0 : _na.RB_H)) {
         wildcatTaker = effOffRoster.find((p) => p.id === offField.bySlot.RB_H) || null;
       }
       let drawSnap = false;
       if (forcedGadget === "draw" && effPlayType === "run_inside") {
         drawSnap = true;
-      } else if (!optionSnap && !jetMan && !wildcatTaker && !coachCalled && effPlayType === "run_inside" && Math.random() < clamp2(((_pa = offPlanEff.drawRate) != null ? _pa : DRAW_DEFAULT) / 100, 0, 0.35)) {
+      } else if (!optionSnap && !jetMan && !wildcatTaker && !coachCalled && effPlayType === "run_inside" && Math.random() < clamp2(((_oa = offPlanEff.drawRate) != null ? _oa : DRAW_DEFAULT) / 100, 0, 0.35)) {
         drawSnap = true;
       }
       let playResult;
@@ -19043,7 +19049,7 @@ var _CFB = (() => {
         let pitchManId = null;
         if (offField == null ? void 0 : offField.bySlot) {
           const wings = ["RB_H", "RB_2"].map((sid) => offField.bySlot[sid]).map((id) => id && effOffRoster.find((p) => p.id === id)).filter(Boolean);
-          pitchManId = (_ra = (_qa = wings.sort((a, b) => (b.attributes.SPD || 0) - (a.attributes.SPD || 0))[0]) == null ? void 0 : _qa.id) != null ? _ra : null;
+          pitchManId = (_qa = (_pa = wings.sort((a, b) => (b.attributes.SPD || 0) - (a.attributes.SPD || 0))[0]) == null ? void 0 : _pa.id) != null ? _qa : null;
         }
         playResult = resolveOptionPlay(
           effPlayType,
@@ -19065,12 +19071,12 @@ var _CFB = (() => {
       } else if (effPlayType === "run_inside" || effPlayType === "run_outside") {
         let drawOverride = null;
         if (drawSnap) {
-          const caughtBlitz = Math.random() < clamp2(((_sa = defPlanEff.blitzPct) != null ? _sa : 20) / 100 + (defPlanEff.edgePlayEff === "crash" ? 0.12 : defPlanEff.edgePlayEff === "contain" ? -0.06 : 0), 0.05, 0.75);
+          const caughtBlitz = Math.random() < clamp2(((_ra = defPlanEff.blitzPct) != null ? _ra : 20) / 100 + (defPlanEff.edgePlayEff === "crash" ? 0.12 : defPlanEff.edgePlayEff === "contain" ? -0.06 : 0), 0.05, 0.75);
           if (caughtBlitz) {
             drawOverride = { laneShift: 0.14, forcePenetrator: null, phase: "draw" };
           } else {
             const mike = (defPersonnel.LB || []).map((id) => effDefRoster.find((p) => p.id === id)).filter(Boolean)[0] || null;
-            const sniffP = clamp2(0.28 + (((_ta = mike == null ? void 0 : mike.attributes.AWR) != null ? _ta : 50) - 50) * 5e-3 - (((_ua = qb == null ? void 0 : qb.attributes.TEC) != null ? _ua : 50) - 50) * 18e-4 + Math.min(0.15, (oppMem.draw || 0) * 0.03), 0.1, 0.65);
+            const sniffP = clamp2(0.28 + (((_sa = mike == null ? void 0 : mike.attributes.AWR) != null ? _sa : 50) - 50) * 5e-3 - (((_ta = qb == null ? void 0 : qb.attributes.TEC) != null ? _ta : 50) - 50) * 18e-4 + Math.min(0.15, (oppMem.draw || 0) * 0.03), 0.1, 0.65);
             drawOverride = Math.random() < sniffP ? { laneShift: -0.12, forcePenetrator: mike, phase: "draw" } : { laneShift: 0.04, forcePenetrator: null, phase: "draw" };
           }
         }
@@ -19121,7 +19127,7 @@ var _CFB = (() => {
       {
         let fam = covFam;
         if (playResult.fireZone) fam = "C3 Fire Zone";
-        else if (playResult.blitzFired && fam === "Cover 1" && ((_va = defEff.blitzPct) != null ? _va : 20) >= 40) fam = "Cover 0";
+        else if (playResult.blitzFired && fam === "Cover 1" && ((_ua = defEff.blitzPct) != null ? _ua : 20) >= 40) fam = "Cover 0";
         playResult.coverage = fam;
         if (shownFam !== covFam) {
           playResult.shownCoverage = shownFam;
@@ -19159,7 +19165,7 @@ var _CFB = (() => {
         defSpd: slotSpeedMap(defBaseField == null ? void 0 : defBaseField.bySlot, defRoster),
         offSit,
         tempo: offEff.tempo,
-        blitzFired: (_wa = playResult.blitzFired) != null ? _wa : false,
+        blitzFired: (_va = playResult.blitzFired) != null ? _va : false,
         clock: gameState.clock,
         half: gameState.half,
         scoreOff: gameState.score.off,
@@ -19182,13 +19188,13 @@ var _CFB = (() => {
       if (!offPlanEff._injuriesOff && playResult.qbInjured && playResult.qbInjuryGames > 0 && playResult.rusherId) {
         const injQb = offRoster.find((p) => p.id === playResult.rusherId);
         if (injQb) {
-          const medMult = 1 - (((_ya = (_xa = offSchool == null ? void 0 : offSchool.facilities) == null ? void 0 : _xa.medicine) != null ? _ya : 2) - 2) * 0.08;
+          const medMult = 1 - (((_xa = (_wa = offSchool == null ? void 0 : offSchool.facilities) == null ? void 0 : _wa.medicine) != null ? _xa : 2) - 2) * 0.08;
           injQb.injuryGamesOut = Math.max(1, Math.round(Math.max(injQb.injuryGamesOut || 0, playResult.qbInjuryGames) * medMult));
           injQb.injury = makeInjury(injQb.injuryGamesOut, gameState.week || 0);
           offCtx.benchedMap[injQb.id] = true;
         }
       }
-      const tempoMult = (_za = C.TEMPO_MULT[offEff.tempo]) != null ? _za : 1;
+      const tempoMult = (_ya = C.TEMPO_MULT[offEff.tempo]) != null ? _ya : 1;
       let elapsed = Math.max(4, Math.round(randNorm(
         (playType.startsWith("run") ? C.CLOCK_RUN.mean : C.CLOCK_PASS.mean) * tempoMult,
         playType.startsWith("run") ? C.CLOCK_RUN.sd : C.CLOCK_PASS.sd
@@ -32525,7 +32531,7 @@ var _CFB = (() => {
   var UNIQUE_DEPTH_OFF = [
     { pos: "SLOT", label: "SLOT RECEIVER", role: "WR-Slot", from: ["WR", "TE", "RB"], forms: ["Spread", "Air Raid", "Pistol/RPO", "Trips/Bunch", "Empty"] },
     { pos: "FADE", label: "FADE / JUMP-BALL", role: "WR-Fade", from: ["WR", "TE"], forms: ["Pro Set", "Single Back", "Power-I", "Wishbone", "Flexbone", "Wildcat", "Spread", "Trips/Bunch", "Pistol/RPO", "Air Raid", "Empty"] },
-    { pos: "FB", label: "FULLBACK", role: "FB-Lead", from: ["RB"], forms: ["Power-I", "Wishbone", "Flexbone", "Wildcat"] },
+    { pos: "FB", label: "FULLBACK", role: "FB-Lead", from: ["RB", "TE"], forms: ["Power-I", "Wishbone", "Flexbone", "Wildcat"] },
     { pos: "WING", label: "WISHBONE HB", role: "RB-Power", from: ["RB", "TE"], forms: ["Wishbone"] },
     { pos: "ABACK", label: "FLEXBONE A-BACK", role: "RB-Scat", from: ["RB", "WR", "TE"], forms: ["Flexbone"] },
     { pos: "WILDCAT", label: "WILDCAT BACK", role: "RB-Power", from: ["RB", "WR", "QB"], forms: ["Wildcat"] },
@@ -33005,7 +33011,8 @@ var _CFB = (() => {
       TE: ["TE", "WR"],
       OL: ["OL", "TE"]
     };
-    const posList = SHARED_POS[pos] || [pos];
+    const isFbSlot = slot && (slot.role === "FB-Lead" || slot.label === "FB" || slot.label === "B");
+    const posList = isFbSlot ? ["RB", "TE"] : SHARED_POS[pos] || [pos];
     const candidates = roster.filter((p) => posList.includes(p.position)).map((p) => ({ p, rat: slotRating(p, slot) })).sort((a, b) => b.rat - a.rat);
     return `
     <div class="picker-overlay" data-picker-close="bg">
