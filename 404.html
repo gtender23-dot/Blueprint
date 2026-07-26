@@ -4359,10 +4359,6 @@ th.conv-sort.active { color: var(--team-1); }
   margin: 18px 4px 6px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); }
 .co-zone-label .muted { font-weight: 500; letter-spacing: 0.02em; text-transform: none; }
 
-/* Temperament chips */
-.tag-ready { background: rgba(240,120,60,0.16); color: #f59e6b; }
-.tag-deliberate { background: rgba(120,150,240,0.14); color: #93a8f0; }
-.tag-showman { background: rgba(220,180,60,0.15); color: #e5c76b; }
 
 /* Program heritage (the inherited past) */
 .heritage { padding: 4px 14px 10px; }
@@ -5982,7 +5978,7 @@ var _CFB = (() => {
         // Reputation XP per program milestone (career wins, first title...) [TUNE]
         // ── Offseason Chunk 3: roster stages [TUNE] ──
         REDSHIRT_MAX_GAMES: 4,
-        // games a redshirt can play and keep the year (NCAA rule)
+        // games a redshirt can play and keep the year (league rule)
         WALKON_POOL_EXTRA_MIN: 2,
         // tryout candidates beyond open scholarships (min) — always a real choice
         WALKON_POOL_EXTRA_MAX: 4,
@@ -6209,7 +6205,7 @@ var _CFB = (() => {
         // Each start re-points a system that already exists at a program's real
         // generated history. No flavor-only modes: every number here is consumed.
         ASHES_SCHOLARSHIP_CAP: 14,
-        // NCAA probation: signable slots (vs ~25 normal)
+        // probation: signable slots (vs ~25 normal)
         ASHES_PROBATION_YEARS: 3,
         // seasons the reduction runs
         ASHES_JOBSEC_START: 82,
@@ -9271,6 +9267,7 @@ var _CFB = (() => {
       const room = bidders.reduce((s, b) => s + b.bid, 0);
       const contested = bidders.length > 1;
       const fairShare = 1 / bidders.length;
+      const topBid = Math.max(...bidders.map((b) => b.bid));
       for (const b of bidders) {
         const share = b.bid / room;
         let move;
@@ -9282,6 +9279,10 @@ var _CFB = (() => {
           // (share above an even split) and you LOSE ground if you're losing it.
           // Symmetric by construction — outbid a rival and his meter falls as yours climbs.
           move = C.SHARE_SWING * (share - fairShare);
+          // Parity floor: in a dead-even room the swing is ~0 and both suitors idle below
+          // the commit bar until the deadline. Give the current room leader a small floor
+          // so a contested battle still creeps toward a decision instead of stalemating.
+          if (b.bid === topBid) move = Math.max(move, C.SHARE_GAIN_MAX * 0.15);
         }
         b.e.interest = clamp2((b.e.interest || 0) + move, 0, 100);
         b.e._lastShare = share;
@@ -9479,7 +9480,11 @@ var _CFB = (() => {
         0,
         roster.filter((p) => p.classYear === "SR").length + Math.max(0, C.ROSTER_SIZE - roster.length)
       );
-      if (!school.coach) school.coach = null;
+      // A school between coaches doesn't run a recruiting board. Skipping it here means it
+      // never seeds "driven" rivals that would sit on recruits' boards without ever bidding
+      // (no coach → no aiRec → no weekly spend). It can still surface as a light ambient
+      // suitor via the near-school backfill loop below, which bids through drift.
+      if (!school.coach) continue;
       const needWeight = (pos) => {
         const returning = (count[pos] || 0) - (srs[pos] || 0);
         // HARD MAX: at or above the ceiling for returning players → don't recruit here.
@@ -9781,8 +9786,11 @@ var _CFB = (() => {
         const peEarly = (playerBoard || []).find((e) => e.recruitId === recruit.id);
         const poolEarly = buildFunnelPool(recruit, peEarly, playerSchoolId, playerDivision2);
         // Signing rank is by INTEREST among still-active suitors (bowed-out schools
-        // can't win). Division only breaks near-ties via a tiny nudge.
-        const active = poolEarly.filter((e) => !e.bowedOut);
+        // can't win). A school that has ALREADY FILLED its class is out of the running
+        // too — otherwise it sits as a phantom "leader," blocks the durable-lead path
+        // (canClose stays false), and freezes the recruit until the hard lock even when a
+        // live suitor is clearly winning. This mirrors the hard-lock pool filter below.
+        const active = poolEarly.filter((e) => !e.bowedOut && !(e.isPlayer ? false : (aiCtx == null ? void 0 : aiCtx.full) == null ? void 0 : aiCtx.full.has(e.schoolId)));
         active.sort((a, b) => (b.interest + poolRank(b.division) * 0.001) - (a.interest + poolRank(a.division) * 0.001));
         const L = active[0], S = active[1];
         if (L) {
@@ -9925,8 +9933,13 @@ var _CFB = (() => {
   }
   function fillRemainingSlots(school, recruits, openSlots) {
     if (openSlots <= 0) return [];
+    // Backfill must respect the caliber/tier walls the rest of recruiting enforces —
+    // otherwise a leftover D1-tier kid could be signed by a nearby D3 (or vice versa)
+    // purely on geography, breaking prestige-based class quality. Any slot we can't fill
+    // with a same-tier recruit is filled with a walk-on later (fillWithWalkOns).
+    const _myTier = { D1: 3, D2: 2, D3: 1 }[school.division] || 1;
     const uncommitted = recruits.filter(
-      (r) => !r.committed && r.decisionStatus === "undecided"
+      (r) => !r.committed && r.decisionStatus === "undecided" && calibreVisible(r, school.division) && tierOf(r) !== _myTier - 1
     );
     uncommitted.sort((a, b) => {
       const da = recruitDistance(a, school);
@@ -10300,7 +10313,17 @@ var _CFB = (() => {
         return nk;
       }
     }
-    return NICKS_CLASSIC[randInt3(0, NICKS_CLASSIC.length - 1)];
+    // Last resort — every weighted candidate is taken in this conference. Widen to every
+    // pool, still prefer a nickname not already in this conference and least-used globally,
+    // and ALWAYS register the pick so dedup/cap tracking stay consistent (was: return a
+    // random classic that bypassed both).
+    const allNicks = [NICKS_CLASSIC, NICKS_REGIONAL[region] || [], NICKS_TECH, NICKS_RELIGIOUS, NICKS_QUIRKY, [NICK_AGGIES]].flat();
+    const fresh = allNicks.filter((nk) => !confNicks.has(nk.n));
+    const fromPool = (fresh.length ? fresh : allNicks).slice().sort((a, b) => (used.nickGlobal[a.n] || 0) - (used.nickGlobal[b.n] || 0));
+    const pick = fromPool[0] || NICKS_CLASSIC[0];
+    confNicks.add(pick.n);
+    used.nickGlobal[pick.n] = (used.nickGlobal[pick.n] || 0) + 1;
+    return pick;
   }
   function makeAbbr(name, usedAbbrs) {
     const SKIP = /* @__PURE__ */ new Set(["College", "State", "University", "Tech", "Institute", "Polytechnic", "Poly", "A&M", "A&T", "Arts", "of", "and", "&", "the", "St.", "St"]);
@@ -11437,13 +11460,23 @@ var _CFB = (() => {
       const byeIdx = byePick % confDaySlots.length;
       daySlots = confDaySlots.filter((_, i) => i !== byeIdx);
     }
+    const homeCount = {};
+    for (const id of ids) homeCount[id] = 0;
     for (let r = 0; r < roundsToPlay; r++) {
       const roundIdx = (startOffset + r) % totalRounds;
       const day = daySlots[r];
-      const flip = r % 2 === 0;
       for (const [a, b] of allRounds[roundIdx]) {
-        if (flip) add(day, a, b);
-        else add(day, b, a);
+        // Balance home/away PER TEAM, not per round: give home to whoever has hosted less
+        // so far (ties broken by round parity). Each team's split ends up as even as the
+        // game count allows (4-4 over 8) instead of the old per-round flip that could
+        // leave a team 5-3 / 3-5.
+        let home = a, away = b;
+        if (homeCount[a] > homeCount[b] || homeCount[a] === homeCount[b] && r % 2 === 1) {
+          home = b;
+          away = a;
+        }
+        homeCount[home] = (homeCount[home] || 0) + 1;
+        add(day, home, away);
       }
     }
   }
@@ -11530,9 +11563,6 @@ var _CFB = (() => {
           break;
         }
         if (matched) continue;
-        for (const g of [...schedule]) {
-          if (g.day !== day) break;
-        }
         const dayGames = schedule.filter((g) => g.day === day);
         let augmented = false;
         outer: for (const g of dayGames) {
@@ -11658,7 +11688,7 @@ var _CFB = (() => {
         ["Wichita Falls State", "Dune Adders", "WFS", "Wichita", "KS", 37.69, -97.34, ["#000000", "#FFC100"], 3, "stateUniversity"],
         ["Stillmark", "Coil Serpents", "STM", "Stillwater", "OK", 36.12, -97.06, ["#F86405", "#000000"], 4, "landGrant"],
         ["Cornerstone", "Storm Elk", "CST", "Lincoln", "NE", 40.81, -96.7, ["#D9103B", "#FFFFFF"], 5, "landGrant"],
-        ["Baylor Springs", "Basilisks", "BSP", "Waco", "TX", 31.55, -97.11, ["#214B36", "#FFBC20"], 4, "privateCollege"],
+        ["Brazos Springs", "Basilisks", "BRS", "Waco", "TX", 31.55, -97.11, ["#214B36", "#FFBC20"], 4, "privateCollege"],
         ["Lubbock Plains", "Rocs", "LBP", "Lubbock", "TX", 33.58, -101.86, ["#D10000", "#000000"], 4, "tech"],
         ["Mesa Verde", "Cockatrice", "MVD", "Boulder", "CO", 40.01, -105.27, ["#000000", "#DBB274"], 4, "flagship"],
         ["Fort Collins State", "Manticores", "FCS", "Fort Collins", "CO", 40.57, -105.08, ["#264832", "#CEC26A"], 3, "landGrant"],
@@ -11676,7 +11706,7 @@ var _CFB = (() => {
         ["Golden Vale", "Teamsters", "GVL", "San Diego", "CA", 32.78, -117.07, ["#A20F22", "#000000"], 3, "stateUniversity"],
         ["Sacramento Delta", "Railmen", "SAC", "Sacramento", "CA", 38.56, -121.42, ["#003030", "#C0A98D"], 3, "stateUniversity"],
         // ATLANTIC SEABOARD (ACC analogue)
-        ["Chapelfield", "Ember Hawks", "TBR", "Chapel Hill", "NC", 35.9, -79.05, ["#87B9D0", "#FFFFFF"], 6, "flagship"],
+        ["Chapelfield", "Ember Hawks", "CHA", "Chapel Hill", "NC", 35.9, -79.05, ["#87B9D0", "#FFFFFF"], 6, "flagship"],
         ["Wolf Creek State", "Trackmen", "WCS", "Raleigh", "NC", 35.78, -78.68, ["#D30C00", "#FFFFFF"], 4, "landGrant"],
         ["Blue Ridge", "Switchmen", "BLR", "Charlottesville", "VA", 38.03, -78.51, ["#18254E", "#F94F16"], 4, "flagship"],
         ["Piedmont Tech", "Colliers", "PMT", "Blacksburg", "VA", 37.23, -80.42, ["#6A013A", "#D5411F"], 5, "tech"],
@@ -11696,9 +11726,9 @@ var _CFB = (() => {
         ["Providence Point", "Coopers", "PRP", "Providence", "RI", 41.82, -71.41, ["#000000", "#038B00"], 3, "religious"],
         ["Storrs Valley", "Wheelwrights", "STV", "Storrs", "CT", 41.81, -72.25, ["#000438", "#F00023"], 4, "landGrant"],
         ["Cambridge Row", "Cartwrights", "CBR", "Cambridge", "MA", 42.37, -71.12, ["#9E133B", "#000000"], 3, "privateCollege"],
-        ["Fordham Heights", "Millwrights", "FDH", "Bronx", "NY", 40.86, -73.89, ["#89001D", "#FFFFFF"], 3, "religious"],
+        ["Fenwick Heights", "Millwrights", "FNH", "Bronx", "NY", 40.86, -73.89, ["#89001D", "#FFFFFF"], 3, "religious"],
         ["Newport Shore", "Sowers", "NPS", "Norfolk", "VA", 36.85, -76.29, ["#08265E", "#FFFFFF"], 4, "cityUniversity"],
-        ["Nittany Falls", "Sojourners", "NTF", "Philadelphia", "PA", 39.98, -75.16, ["#9B2233", "#FFFFFF"], 3, "cityUniversity"],
+        ["Keystone Falls", "Sojourners", "KEY", "Philadelphia", "PA", 39.98, -75.16, ["#9B2233", "#FFFFFF"], 3, "cityUniversity"],
         ["Cincinnati Ridge", "Claimjumpers", "CNR", "Cincinnati", "OH", 39.13, -84.52, ["#E50024", "#000000"], 4, "cityUniversity"],
         ["Louisville Falls", "Sluicers", "LVF", "Louisville", "KY", 38.25, -85.76, ["#A10005", "#000000"], 3, "cityUniversity"],
         // MIDLAND (MAC analogue)
@@ -11730,12 +11760,12 @@ var _CFB = (() => {
         // GULF COAST (Sun Belt analogue)
         ["Mobile Bay", "Magma", "MOB", "Mobile", "AL", 30.7, -88.18, ["#001F64", "#E2B507"], 3, "cityUniversity"],
         ["Troy Junction", "Cinderfall", "TRJ", "Troy", "AL", 31.8, -85.97, ["#8C2B3B", "#8D8A97"], 3, "regionalState"],
-        ["Bayou Parish", "Eclipse", "LFR", "Lafayette", "LA", 30.21, -92.02, ["#D40C19", "#000000"], 2, "regionalState"],
+        ["Bayou Parish", "Eclipse", "BPA", "Lafayette", "LA", 30.21, -92.02, ["#D40C19", "#000000"], 2, "regionalState"],
         ["Monroe Delta", "Quasars", "MND", "Monroe", "LA", 32.53, -92.06, ["#8D002C", "#DDB400"], 2, "regionalState"],
         ["Boca Sands", "Pulsars", "BCS", "Boca Raton", "FL", 26.37, -80.1, ["#003563", "#CB0000"], 2, "cityUniversity"],
         ["Orlando Central", "Nebulas", "ORC", "Orlando", "FL", 28.6, -81.2, ["#000000", "#AF9B37"], 3, "cityUniversity"],
-        ["Ogeechee State", "Solstice", "STB", "Statesboro", "GA", 32.42, -81.78, ["#00153C", "#7A9FB0"], 3, "regionalState"],
-        ["Pine Belt State", "Equinox", "HTB", "Hattiesburg", "MS", 31.33, -89.33, ["#000000", "#FFBE21"], 3, "regionalState"],
+        ["Ogeechee State", "Solstice", "OST", "Statesboro", "GA", 32.42, -81.78, ["#00153C", "#7A9FB0"], 3, "regionalState"],
+        ["Pine Belt State", "Equinox", "PBE", "Hattiesburg", "MS", 31.33, -89.33, ["#000000", "#FFBE21"], 3, "regionalState"],
         ["Arkansas Delta", "Aurora", "ARD", "Jonesboro", "AR", 35.84, -90.68, ["#CD0D39", "#000000"], 2, "regionalState"],
         ["Denton Plains", "Halos", "DNP", "Denton", "TX", 33.21, -97.13, ["#008B3E", "#FFFFFF"], 2, "cityUniversity"],
         ["San Marcos Hill", "Zeniths", "SMH", "San Marcos", "TX", 29.88, -97.94, ["#4E131D", "#5A6A6A"], 2, "regionalState"],
@@ -11743,16 +11773,16 @@ var _CFB = (() => {
         // FRONTIER (Conference USA analogue)
         ["El Camino", "Perigee", "ELC", "El Paso", "TX", 31.77, -106.5, ["#001F43", "#F68200"], 2, "regionalState"],
         ["Bayou City", "Vertex", "BYC", "Houston", "TX", 29.72, -95.34, ["#D20E2D", "#FFFFFF"], 3, "cityUniversity"],
-        ["Trinity Fork", "Apex", "FWC", "Fort Worth", "TX", 32.71, -97.36, ["#4F1C76", "#ACB4A3"], 4, "religious"],
+        ["Trinity Fork", "Apex", "TFO", "Fort Worth", "TX", 32.71, -97.36, ["#4F1C76", "#ACB4A3"], 4, "religious"],
         ["Highland Chapel", "Iron Guard", "HCH", "Dallas", "TX", 32.84, -96.78, ["#C70C22", "#02349C"], 3, "religious"],
         ["Tulsa Basin", "Steel Guard", "TLS", "Tulsa", "OK", 36.15, -95.94, ["#003668", "#BCBA8E"], 2, "religious"],
         ["Memphis Bluff", "Ironclads", "MPB", "Memphis", "TN", 35.12, -89.94, ["#002F8B", "#859997"], 3, "cityUniversity"],
         ["Birmingham South", "Bulwark", "BHS", "Birmingham", "AL", 33.5, -86.8, ["#19625C", "#BBA155"], 2, "cityUniversity"],
         ["Charlotte Queen", "Rampart", "CHQ", "Charlotte", "NC", 35.31, -80.73, ["#007039", "#FFFFFF"], 2, "cityUniversity"],
         ["Rice Hollow", "Bastion", "RCH", "Houston", "TX", 29.72, -95.4, ["#0B2062", "#B9C9CB"], 2, "privateCollege"],
-        ["Guyandotte", "Citadels", "MRF", "Huntington", "WV", 38.42, -82.43, ["#00AC38", "#000000"], 2, "regionalState"],
-        ["Coastal Pine", "Keeps", "SMP", "Gulfport", "MS", 30.37, -89.09, ["#F6AC00", "#000000"], 2, "regionalState"],
-        ["Pamlico Bay", "Redoubts", "ECB", "Greenville", "NC", 35.61, -77.37, ["#42216B", "#FAD32C"], 3, "regionalState"]
+        ["Guyandotte", "Citadels", "GUY", "Huntington", "WV", 38.42, -82.43, ["#00AC38", "#000000"], 2, "regionalState"],
+        ["Coastal Pine", "Keeps", "CPI", "Gulfport", "MS", 30.37, -89.09, ["#F6AC00", "#000000"], 2, "regionalState"],
+        ["Pamlico Bay", "Redoubts", "PBA", "Greenville", "NC", 35.61, -77.37, ["#42216B", "#FAD32C"], 3, "regionalState"]
       ];
       D2_CONFS = [
         // 10 D2 conferences (was 9 — added GPI for §B.2 ~100/div target)
@@ -12675,7 +12705,7 @@ var _CFB = (() => {
         { n: "Mavericks", e: "\u{1F920}" },
         { n: "Buccaneers", e: "\u2693" },
         { n: "Pioneers", e: "\u{1F9ED}" },
-        { n: "Wolverines", e: "\u{1F43E}" },
+        { n: "Ironbacks", e: "\u{1F43E}" },
         { n: "Vikings", e: "\u{1F6E1}\ufe0f" },
         { n: "Ravens", e: "\u{1F426}\u200d\u2b1b" },
         { n: "Coyotes", e: "\u{1F43A}" },
@@ -12703,15 +12733,15 @@ var _CFB = (() => {
           { n: "Paladins", e: "\u{1F6E1}\uFE0F" },
           { n: "Phoenix", e: "\u{1F525}" },
           { n: "Moccasins", e: "\u{1F40D}" },
-          { n: "Terrapins", e: "\u{1F422}" },
-          { n: "Wolfpack", e: "\u{1F43A}" },
+          { n: "Snapjaws", e: "\u{1F422}" },
+          { n: "Frostpack", e: "\u{1F43A}" },
           { n: "Highlanders", e: "\u26F0\uFE0F" },
           { n: "Flames", e: "\u{1F525}" }
         ],
         DeepSouth: [
           { n: "Warhawks", e: "\u2708\uFE0F" },
           { n: "Trojans", e: "\u{1F6E1}\uFE0F" },
-          { n: "Gators", e: "\u{1F40A}" },
+          { n: "Swamp Kings", e: "\u{1F40A}" },
           { n: "Pelicans", e: "\u{1F426}" },
           { n: "Southerners", e: "\u{1F3BA}" },
           { n: "Tornadoes", e: "\u{1F32A}\uFE0F" },
@@ -12910,13 +12940,13 @@ var _CFB = (() => {
       ];
       NICKS_QUIRKY = [
         { n: "Thunderducks", e: "\u{1F986}" },
-        { n: "Fighting Badgers", e: "\u{1F9A1}" },
+        { n: "Fighting Marmots", e: "\u{1F9A1}" },
         { n: "Nightjars", e: "\u{1F426}" },
         { n: "Ironhogs", e: "\u{1F417}" },
         { n: "Screaming Weasels", e: "\u{1F43E}" },
         { n: "Turnips", e: "\u{1FADB}" },
         { n: "Fighting Bees", e: "\u{1F41D}" },
-        { n: "Mud Hens", e: "\u{1F414}" },
+        { n: "Bog Hens", e: "\u{1F414}" },
         { n: "Gravediggers", e: "\u26CF\uFE0F" },
         { n: "Prospectors", e: "\u26CF\uFE0F" },
         { n: "Cartographers", e: "\u{1F5FA}\uFE0F" },
@@ -13981,6 +14011,25 @@ var _CFB = (() => {
         developPlayer(player, plan, coach, mult, school);
       }
       developPotentialAndPerformance(player, coach, school);
+      // Complacency drift — the only downward pressure in development. A low-work-ethic
+      // upperclassman can lose a step of polish over the offseason (skills go stale without
+      // the effort), so rosters aren't purely monotonic and year-to-year has some texture.
+      // Deliberately small and gated on low WE — most players still only trend up. Tunable:
+      // raise the WE gate (55) or the max chance (0.22) to make regression bite harder.
+      {
+        const we = player.attributes.WE || 50;
+        if (we < 55 && (player.classYear === "JR" || player.classYear === "SR")) {
+          const chance = clamp2((55 - we) / 200, 0, 0.22);
+          if (Math.random() < chance) {
+            const coached = ATTRIBUTES.filter((a) => !MEASURED_ATTRS.includes(a) && (player.attributes[a] || 0) > 30);
+            if (coached.length) {
+              const attr = coached[randInt3(0, coached.length - 1)];
+              player.attributes[attr] = clamp2(player.attributes[attr] - 1, 0, 99);
+              refreshRatings(player);
+            }
+          }
+        }
+      }
     }
   }
   function runGraduation(school, currentSeason) {
@@ -16402,7 +16451,7 @@ var _CFB = (() => {
     }
     return pool[pool.length - 1];
   }
-  function pickPassConcept(playType, offPersonnel, offRoster, family, weights = null, forceName = null) {
+  function pickPassConcept(playType, offPersonnel, offRoster, family, weights = null, forceName = null, allowed = null) {
     var _a, _b, _c;
     const depth = playType.replace("pass_", "");
     const wrN = (offPersonnel.WR || []).length;
@@ -16411,16 +16460,18 @@ var _CFB = (() => {
       const skill2 = execSkill(c2.exec || {}, offRoster, offPersonnel);
       return { name: forceName, mod: ((_b = c2.vs[family]) != null ? _b : 0) * clamp2(1 + (skill2 - 50) / 100, 0.6, 1.4) };
     }
-    const pool = Object.entries(PASS_CONCEPTS).filter(([, c2]) => c2.depth === depth && (!c2.minWR || wrN >= c2.minWR));
+    let pool = Object.entries(PASS_CONCEPTS).filter(([nm, c2]) => c2.depth === depth && !c2.screen && !c2.fade && (!c2.minWR || wrN >= c2.minWR) && (!allowed || allowed.includes(nm)));
+    if (!pool.length) pool = Object.entries(PASS_CONCEPTS).filter(([, c2]) => c2.depth === depth && !c2.screen && !c2.fade && (!c2.minWR || wrN >= c2.minWR));
     if (!pool.length) return { name: null, mod: 0 };
     const [name, c] = weightedConceptPick(pool, weights);
     const base = (_c = c.vs[family]) != null ? _c : 0;
     const skill = execSkill(c.exec || {}, offRoster, offPersonnel);
     return { name, mod: base * clamp2(1 + (skill - 50) / 100, 0.6, 1.4) };
   }
-  function pickRunConcept(playType, offPersonnel, offRoster, defEff, weights = null, forceName = null) {
+  function pickRunConcept(playType, offPersonnel, offRoster, defEff, weights = null, forceName = null, allowed = null) {
     var _a, _b, _c;
-    const pool = forceName && ((_a = RUN_CONCEPTS[forceName]) == null ? void 0 : _a.type) === playType ? [[forceName, RUN_CONCEPTS[forceName]]] : Object.entries(RUN_CONCEPTS).filter(([, c2]) => c2.type === playType);
+    let pool = forceName && ((_a = RUN_CONCEPTS[forceName]) == null ? void 0 : _a.type) === playType ? [[forceName, RUN_CONCEPTS[forceName]]] : Object.entries(RUN_CONCEPTS).filter(([nm, c2]) => c2.type === playType && !c2.resolver && (!allowed || allowed.includes(nm)));
+    if (!pool.length) pool = Object.entries(RUN_CONCEPTS).filter(([, c2]) => c2.type === playType && !c2.resolver);
     if (!pool.length) return { name: null, mod: 0 };
     const [name, c] = weightedConceptPick(pool, forceName ? null : weights);
     const boxState = (defEff.runCommit || 0) > 5 || defEff.covShell === "single" ? "loaded" : (defEff.runCommit || 0) < -5 || defEff.covShell === "two" ? "light" : null;
@@ -18007,6 +18058,13 @@ var _CFB = (() => {
       const design = (_o = gameplan == null ? void 0 : gameplan._ocQbRunDesign) != null ? _o : 50;
       finalYards = Math.round(finalYards * (0.9 + design / 500));
     }
+    if (gameplan && gameplan._sneak) {
+      // QB sneak — behind the center's push it's a near-automatic short gain. Convert
+      // (floor 1, often 2) unless stuffed; stuff chance drops with the QB's strength.
+      const stuffP = clamp2(0.12 - (((carrier == null ? void 0 : carrier.attributes.STR) || 50) - 50) * 3e-3, 0.04, 0.22);
+      if (Math.random() >= stuffP) finalYards = Math.max(finalYards, 1 + (Math.random() < 0.45 ? 1 : 0));
+      else finalYards = Math.min(finalYards, 0);
+    }
     result.yards = finalYards;
     result.tacklerId = outcome.tacklerId;
     result.assistId = outcome.assistId;
@@ -18860,7 +18918,7 @@ var _CFB = (() => {
       // Play-action and RPO are PASS-CONCEPT levers — they never apply to a gadget
       // (jet/option/draw/wildcat), PA is meaningless on a run, and PA never applies to a
       // screen (the ball's out now — there's no fake to sell). Ignore them there.
-      const paValid = !!(forcedCall == null ? void 0 : forcedCall.playAction) && !forcedGadget && !calledScreen && playType.startsWith("pass");
+      const paValid = !!(forcedCall == null ? void 0 : forcedCall.playAction) && !forcedGadget && !calledScreen && !calledFade && playType.startsWith("pass");
       const rpoValid = !!(forcedCall == null ? void 0 : forcedCall.rpo) && !forcedGadget && !calledScreen && !calledFade;
       // QB Run lever — forces the QB to keep it on a called inside/outside run (never a
       // gadget or a pass). The QB Sneak concept forces the same keeper.
@@ -18969,8 +19027,9 @@ var _CFB = (() => {
       const baseDefUnit = defUnitStrengthSchemeFit(defPersonnel, defFrontId, defRoster, defWeights);
       const h2Counter = defPlan._h2Counter && defPlan._h2Counter.formationId === offFormationId ? 1 - defPlan._h2Counter.eff : 1;
       let concept = { name: null, mod: 0 };
-      if (playType.startsWith("pass")) concept = pickPassConcept(playType, offPersonnel, offRoster, covFam, offPlanEff.conceptWeights || null, forcedConceptName);
-      else if (playType === "run_inside" || playType === "run_outside") concept = pickRunConcept(playType, offPersonnel, offRoster, defEff, offPlanEff.conceptWeights || null, forcedConceptName);
+      const _pbGate = forcedCall ? FORMATION_PLAYBOOK[offFormationId] || null : null;
+      if (playType.startsWith("pass")) concept = pickPassConcept(playType, offPersonnel, offRoster, covFam, offPlanEff.conceptWeights || null, forcedConceptName, _pbGate);
+      else if (playType === "run_inside" || playType === "run_outside") concept = pickRunConcept(playType, offPersonnel, offRoster, defEff, offPlanEff.conceptWeights || null, forcedConceptName, _pbGate);
       let audible = false;
       if (concept.name && playType.startsWith("pass") && qb0 && losFree !== "never" && audiblesUsed < (losFree === "free" ? 2 : 1)) {
         const calledVs = (_R = (_Q = (_P = PASS_CONCEPTS[concept.name]) == null ? void 0 : _P.vs) == null ? void 0 : _Q[believedFam]) != null ? _R : 0;
@@ -22153,7 +22212,14 @@ var _CFB = (() => {
           const openSlots = classTarget - signed;
           if (openSlots > 0) {
             const filled = fillRemainingSlots(school, state2.world.recruits, openSlots);
-            for (const r of filled) recordSigning(state2, r, school.id, [], "backfill");
+            for (const r of filled) {
+              // If the log-cap rejects the signing, unwind the commit so the recruit isn't
+              // left committed-but-unrostered (a walk-on will take the slot instead).
+              if (!recordSigning(state2, r, school.id, [], "backfill")) {
+                r.committed = null;
+                r.decisionStatus = "undecided";
+              }
+            }
           }
         }
         for (const recruit of state2.world.recruits) {
@@ -22832,6 +22898,13 @@ var _CFB = (() => {
     const divSchools = state2.world.schools.filter((s) => s.division === division);
     const _sos = computeSOS(state2.world.schools, state2.schedule || []);
     const sosOf = (s) => _sos.get(s.id) || 0;
+    // Head-to-head tiebreaker: if two teams are level on conference record and overall
+    // wins, whoever won their meeting is crowned — not whoever has the better roster.
+    const h2h = (a, b) => {
+      const g = (state2.schedule || []).find((x) => x.result && x.result.winner && [x.homeId, x.awayId].includes(a.id) && [x.homeId, x.awayId].includes(b.id));
+      if (!g) return 0;
+      return g.result.winner === a.id ? -1 : g.result.winner === b.id ? 1 : 0;
+    };
     const confs = [...new Set(divSchools.map((s) => s.conf))];
     const confChamps = [];
     const champIds = /* @__PURE__ */ new Set();
@@ -22841,7 +22914,7 @@ var _CFB = (() => {
         const bG = Math.max(1, b.record.confWins + b.record.confLosses);
         const aPct = a.record.confWins / aG;
         const bPct = b.record.confWins / bG;
-        return bPct - aPct || b.record.wins - a.record.wins || avgTop22Composite(b.roster) - avgTop22Composite(a.roster);
+        return bPct - aPct || b.record.wins - a.record.wins || h2h(a, b) || avgTop22Composite(b.roster) - avgTop22Composite(a.roster);
       })[0];
       if (top) {
         confChamps.push(top);
@@ -22864,11 +22937,28 @@ var _CFB = (() => {
     for (const s of field) creditBudgetBonus(state2, s.id, C.BONUS_PLAYOFF_BERTH, "Playoff berth", events);
     if (field.length < 2) return bracket;
     const n = field.length;
+    // Bracket-SLOT ordering. The old code paired round 1 linearly (1v16, 2v15, …) and
+    // the next round pairs winners in game order — which put the 1 and 2 seeds' games
+    // side by side and collided their winners in round 2. Standard bracket-slot order
+    // arranges the field so adjacent teams are round-1 opponents AND adjacent winners
+    // meet next, keeping the top seeds in opposite halves (1 and 2 can only meet in the
+    // final). Works for any field size; byes (non-power-of-two fields) fall to the tail.
+    const _seedSlots = (size) => {
+      let a = [1];
+      while (a.length < size) {
+        const sum = a.length * 2 + 1, b = [];
+        for (const s of a) b.push(s, sum - s);
+        a = b;
+      }
+      return a;
+    };
+    const _bsize = 1 << Math.ceil(Math.log2(Math.max(2, n)));
+    const ordered = _seedSlots(_bsize).filter((seed) => seed <= n).map((seed) => field[seed - 1]);
     const r1games = [];
-    for (let i = 0; i < Math.floor(n / 2); i++) {
-      r1games.push({ homeId: field[i].id, awayId: field[n - 1 - i].id, result: null });
+    for (let i = 0; i + 1 < ordered.length; i += 2) {
+      r1games.push({ homeId: ordered[i].id, awayId: ordered[i + 1].id, result: null });
     }
-    const byeId = n % 2 === 1 ? field[Math.floor(n / 2)].id : null;
+    const byeId = ordered.length % 2 === 1 ? ordered[ordered.length - 1].id : null;
     const days = [];
     for (let d = PHASES.PLAYOFFS.days[0]; d <= PHASES.PLAYOFFS.days[1]; d++) days.push(d);
     bracket.rounds.push({ day: days[0], games: r1games, complete: false, byeId });
@@ -23050,7 +23140,7 @@ var _CFB = (() => {
         (e) => e.season === state2.season && e.schoolId === schoolId
       ).length;
       const slots = C.ROSTER_SIZE - school.roster.length + school.roster.filter((p) => p.classYear === "SR").length;
-      if (alreadyLogged >= slots) return;
+      if (alreadyLogged >= slots) return false;
     }
     const playerWasChasing = !!(((_a = state2.playerCoach) == null ? void 0 : _a.recruitBoard) || []).find((e) => e.recruitId === recruit.id);
     state2.signingsLog.push({
@@ -23082,6 +23172,7 @@ var _CFB = (() => {
     if (schoolId === state2.playerSchoolId && source === "funnel") {
       awardSigningXP(state2, recruit, losers);
     }
+    return true;
   }
   function awardSigningXP(state2, recruit, losers) {
     var _a, _b, _c, _d;
@@ -23865,7 +23956,11 @@ var _CFB = (() => {
     } : null;
     const oldSchoolId = state2.playerSchoolId;
     const oldSchool = state2.world.schools.find((s) => s.id === oldSchoolId);
-    if (pc.status === "employed" && oldSchool && oldSchool.id !== newSchoolId) {
+    // Backfill the school we're leaving whenever it has no coach or still points to the
+    // player — covers BOTH voluntarily leaving (status employed) AND being fired (status
+    // unemployed, which the old `=== "employed"` check skipped, stranding the school
+    // coachless for a full season). Never overwrites a legitimate AI coach already there.
+    if (oldSchool && oldSchool.id !== newSchoolId && (!oldSchool.coach || oldSchool.coach === pc)) {
       oldSchool.coach = makeReplacementAICoach(oldSchool);
     }
     newSchool.coach = pc;
@@ -24403,7 +24498,6 @@ var _CFB = (() => {
     getUpcomingGame: () => getUpcomingGame,
     liveWatchOn: () => liveWatchOn,
     loadFromSlot: () => loadFromSlot,
-    loadSavedGame: () => loadSavedGame,
     navigate: () => navigate,
     navigateBack: () => navigateBack,
     notify: () => notify,
@@ -25110,6 +25204,15 @@ var _CFB = (() => {
     state.ui.showFourthDown = false;
     state.ui.liveWatch = null;
     state.ui.autoRun = false;
+    // Transient call-sheet levers/drill are per-snap UI, not durable state — clear them on
+    // load so a save taken with PA/RPO/QB-Run lit doesn't reopen with them stale-lit.
+    state.ui.callFormation = null;
+    state.ui.callPA = false;
+    state.ui.callRPO = false;
+    state.ui.callQBRun = false;
+    state.ui.callTimeout = false;
+    state.ui.callDrill = null;
+    state.ui.callSTOpen = false;
     state._callModeToday = null;
     state._pregamePlan = null;
     state.settings = __spreadValues({
@@ -25145,26 +25248,6 @@ var _CFB = (() => {
   }
   async function refreshSaves() {
     state.ui.saves = await listSaves();
-  }
-  async function loadSavedGame(slot = "auto") {
-    var _a, _b;
-    const saved = await loadGame(slot);
-    if (saved && !saved._incompatible) {
-      Object.assign(state, saved);
-      state.ui.showSaveModal = false;
-      state.ui.showLoadModal = false;
-      state.ui.showInbox = false;
-      state.ui.showGameResult = false;
-      if (state.world) repairRecruitLocations(state.world);
-      ensureSkills(state.playerCoach);
-      ensureCareerFields(state.playerCoach);
-      for (const s of (_b = (_a = state.world) == null ? void 0 : _a.schools) != null ? _b : []) {
-        ensureSkills(s.coach);
-        ensureCareerFields(s.coach);
-      }
-      return true;
-    }
-    return false;
   }
   var state, _renderFn, _notifyFn, NO_HISTORY_VIEWS;
   var init_state = __esm({
@@ -30354,8 +30437,6 @@ var _CFB = (() => {
   function jobsBody(school) {
     return `
     <div class="event-embed">${renderScheduling()}</div>
-    <div class="offseason-label" style="font-size:11px;letter-spacing:.5px;opacity:.7;margin-top:16px">ROSTER CUTS</div>
-    ${cutDayBody(school)}
     <p class="offseason-hint" style="margin-top:10px">Continue to start Season ${state.season + 1}.</p>`;
   }
   function cutDayBody(school) {
@@ -32555,7 +32636,7 @@ var _CFB = (() => {
   //   from  = eligible base positions (mirrors SLOT_ELIGIBLE_POS)
   //   forms = formations this slot appears in (for the "plays here in X" note)
   var UNIQUE_DEPTH_OFF = [
-    { pos: "SLOT", label: "SLOT RECEIVER", role: "WR-Slot", from: ["WR", "TE", "RB"], forms: ["Spread", "Air Raid", "Pistol/RPO", "Trips/Bunch", "Empty", "Single Back"] },
+    { pos: "SLOT", label: "SLOT RECEIVER", role: "WR-Slot", from: ["WR", "TE", "RB"], forms: ["Spread", "Air Raid", "Pistol/RPO", "Trips/Bunch", "Empty"] },
     { pos: "FADE", label: "FADE / JUMP-BALL", role: "WR-Fade", from: ["WR", "TE"], forms: ["Pro Set", "Single Back", "Power-I", "Wishbone", "Flexbone", "Wildcat", "Spread", "Trips/Bunch", "Pistol/RPO", "Air Raid", "Empty"] },
     { pos: "FB", label: "FULLBACK", role: "FB-Lead", from: ["RB"], forms: ["Power-I", "Wishbone", "Flexbone", "Wildcat"] },
     { pos: "WING", label: "WISHBONE HB", role: "RB-Power", from: ["RB", "TE"], forms: ["Wishbone"] },
@@ -32626,7 +32707,6 @@ var _CFB = (() => {
   function renderDepthOrder(school, side) {
     const groups = DEPTH_POS[side] || [];
     const slotOf = slotLabelsByPlayer(school, side);
-    const activeDepthAll = buildActiveDepth(school);
     return `
     <div class="card depth-order-card">
       <div class="card-header">
@@ -32634,14 +32714,12 @@ var _CFB = (() => {
         <span class="card-sub">\u25B2 to promote \xB7 order = who plays next</span>
       </div>
       ${groups.map((pos) => {
-      var _a, _b;
-      const ids = pos === "SLOT" ? activeDepthAll.SLOT || [] : ((_a = school.depthChart) == null ? void 0 : _a[pos]) || [];
-      const slotLive = side === "offense" && (((_b = OFF_FIELD_LAYOUTS[activeOffFormation]) == null ? void 0 : _b.slots) || []).some((s) => s.pos === "SLOT");
-      if (pos === "SLOT" && !ids.length) return "";
+      var _a;
+      const ids = ((_a = school.depthChart) == null ? void 0 : _a[pos]) || [];
       if (!ids.length) return "";
       return `
-          <div class="do-group${pos === "SLOT" ? " do-group-slot" : ""}">
-            <div class="do-pos"><span class="pos-chip pos-${pos}">${pos}</span>${pos === "SLOT" ? slotLive ? `<span class="do-slot-note on">plays SL in ${escapeHtml(activeOffFormation)}</span>` : `<span class="do-slot-note">${escapeHtml(activeOffFormation)} has no slot \u2014 he stays at his own spot</span>` : ""}</div>
+          <div class="do-group">
+            <div class="do-pos"><span class="pos-chip pos-${pos}">${pos}</span></div>
             ${ids.map((id, i) => {
         var _a2, _b2;
         const p = school.roster.find((x) => x.id === id);
@@ -32680,10 +32758,8 @@ var _CFB = (() => {
         })()}
                   <span class="do-arch">${escapeHtml(archetypeLabel(p) || "")}</span>
                   ${committee}
-                  ${side === "offense" && SLOT_ELIGIBLE.includes(pos) ? `<button class="do-slotbtn${(((_a2 = school.depthOrder) == null ? void 0 : _a2.SLOT) || []).includes(id) ? " on" : ""}"
-                               data-slot-toggle="${id}"
-                               title="${(((_b2 = school.depthOrder) == null ? void 0 : _b2.SLOT) || []).includes(id) ? "Remove from the slot" : "Make him your slot man \u2014 he moves inside on 3-wide looks and the next man takes his spot"}">\u25C8</button>` : pos === "SLOT" ? `<button class="do-slotbtn on" data-slot-toggle="${id}" title="Remove from the slot">\u25C8</button>` : '<span class="do-up-spacer"></span>'}
-                  ${i > 0 ? `<button class="do-up" data-depth-up="${pos}" data-pid="${id}" title="${pos === "SLOT" ? "Promote \u2014 the top man plays the slot whenever a formation calls for one" : "Promote"}">\u25B2</button>` : '<span class="do-up-spacer"></span>'}
+                  <span class="do-up-spacer"></span>
+                  ${i > 0 ? `<button class="do-up" data-depth-up="${pos}" data-pid="${id}" title="Promote">\u25B2</button>` : '<span class="do-up-spacer"></span>'}
                 </div>`;
       }).join("")}
           </div>`;
@@ -33205,20 +33281,6 @@ var _CFB = (() => {
       });
     });
     const setShareRebalanced = (map, layoutSlots, slotId, want) => setSplitRebalanced(map, layoutSlots.map((s) => s.id), slotId, want);
-    document.querySelectorAll("[data-slot-toggle]").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        var _a2;
-        e.stopPropagation();
-        const school2 = getPlayerSchool();
-        const id = btn.dataset.slotToggle;
-        const list = (_a2 = school2.depthOrder).SLOT || (_a2.SLOT = []);
-        const at = list.indexOf(id);
-        if (at >= 0) list.splice(at, 1);
-        else list.push(id);
-        school2.depthChart = buildDepthChart(school2.roster, school2.gameplan, school2.depthOrder);
-        rerender();
-      });
-    });
     document.querySelectorAll("[data-share-step]").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -36436,14 +36498,6 @@ var _CFB = (() => {
       </div>
 
       <div style="display:${tab === "save" ? "block" : "none"}">
-      <!--\u2500\u2500 Game Settings \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 -->
-      <div class="card">
-        <div class="offseason-item">
-          <span class="offseason-label">\u{1F4D6} How to Play</span>
-          <span class="offseason-detail"><button class="btn-ghost btn-sm" id="btn-settings-guide">Open guide</button></span>
-        </div>
-      </div>
-
       <div class="card">
         <div class="card-title">SAVE BACKUP</div>
         <p class="offseason-hint" style="margin:0 0 8px">Your dynasty lives in this browser. Export a backup file before clearing data or switching devices \u2014 import it anywhere to continue.</p>
@@ -36505,6 +36559,12 @@ var _CFB = (() => {
       </div>
 
       <div style="display:${tab === "game" ? "block" : "none"}">
+      <div class="card">
+        <div class="offseason-item">
+          <span class="offseason-label">\u{1F4D6} How to Play</span>
+          <span class="offseason-detail"><button class="btn-ghost btn-sm" id="btn-settings-guide">Open guide</button></span>
+        </div>
+      </div>
       <div class="card settings-card">
         <div class="card-header"><span class="card-title">GAME SETTINGS</span></div>
         <div class="settings-list">

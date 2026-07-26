@@ -4,7 +4,7 @@
 // HTML requests are network-first (fresh when online, cached offline); static
 // assets stay cache-first. CACHE is stamped with the bundle's content hash, so
 // every build ships a new cache and 'activate' clears the old one.
-const CACHE = 'cfb-dynasty-8f2a82a946';
+const CACHE = 'cfb-dynasty-b042715984';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
