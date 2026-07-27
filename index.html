@@ -639,6 +639,10 @@ body::before {
 .data-table tr:hover td { background: rgba(255,255,255,0.02); }
 .data-table.compact td, .data-table.compact th { padding: 6px 10px; }
 .player-row > td { background: var(--team-a7) !important; }
+/* An opaque ground under data tables so the blueprint grid can't strike through
+   the rows. ATTRIBUTE tables (any table carrying colour-coded .attr-cell values)
+   are left transparent on purpose — their cells read against the drafting sheet. */
+.data-table:not(:has(.attr-cell)) { background: var(--bg-card); }
 
 /* ── Column reorder ─────────────────────────────────────────────────────── */
 th[data-tbl] {
@@ -1202,16 +1206,16 @@ th.col-drag-over {
   padding: 6px 14px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: transparent;
-  color: var(--text-2);
+  background: var(--bg-raised, #171c2c);
+  color: var(--team-2, var(--gold));
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.12s;
   position: relative;
 }
 .rec-tab:hover { color: var(--text-0); border-color: var(--text-1); }
-.rec-tab.active { background: var(--team-a10); border-color: var(--team-1); color: var(--team-1); }
+.rec-tab.active { background: var(--team-1); border-color: var(--team-1); color: #08111f; }
 /* Merged-group pages: the primary page-level tab bar (Team / Program / Statistics groups).
    This is the main in-page navigation now, so it reads as a bold segmented control:
    a defined track, clearly raised inactive tabs, and a loud SECONDARY-color active tab
@@ -1237,21 +1241,21 @@ th.col-drag-over {
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--text-2);
+  color: var(--team-2, var(--gold));
   border-radius: 7px;
 }
 .group-tabs .rec-tab:hover { color: var(--text-0); border-color: var(--text-1); }
 .group-tabs .rec-tab.active {
-  /* loud secondary-color fill + brushed sheen + glow */
+  /* loud PRIMARY-color fill + brushed sheen + glow */
   background:
     linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0)),
     repeating-linear-gradient(135deg, rgba(255,255,255,0.06) 0 2px, rgba(0,0,0,0.05) 2px 4px),
-    var(--team-2, var(--gold));
-  border-color: color-mix(in srgb, var(--team-2, var(--gold)) 70%, #000);
+    var(--team-1);
+  border-color: color-mix(in srgb, var(--team-1) 70%, #000);
   color: #08111f;
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--team-2, var(--gold)) 60%, transparent),
-    0 3px 12px color-mix(in srgb, var(--team-2, var(--gold)) 40%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--team-1) 60%, transparent),
+    0 3px 12px color-mix(in srgb, var(--team-1) 40%, transparent);
 }
 /* underline indicator tab-bar style: a bright bar under the active tab */
 .group-tabs .rec-tab.active::after {
@@ -1259,8 +1263,8 @@ th.col-drag-over {
   position: absolute;
   left: 14%; right: 14%; bottom: -5px;
   height: 3px; border-radius: 3px;
-  background: var(--team-2, var(--gold));
-  box-shadow: 0 0 10px color-mix(in srgb, var(--team-2, var(--gold)) 70%, transparent);
+  background: var(--team-1);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--team-1) 70%, transparent);
 }
 /* embedded sub-view headers inside a group: drop the big top margin so tabs sit tight to content */
 .group-body .view-header { margin-bottom: 12px; }
@@ -2617,20 +2621,20 @@ input[type="range"] { accent-color: var(--team-1); }
 .practice-tab {
   position: relative;
   padding: 5px 11px;
-  font-size: 12px; font-weight: 600;
+  font-size: 12px; font-weight: 700;
   background: var(--bg-raised);
   border: 1px solid var(--border-sub);
   border-radius: 5px;
-  color: var(--text-2);
+  color: var(--team-2, var(--gold));
   cursor: pointer;
   transition: color 0.12s, border-color 0.12s, background 0.12s;
   user-select: none;
 }
 .practice-tab:hover { color: var(--text-0); border-color: var(--border); }
 .practice-tab.active {
-  background: var(--green-a10);
-  border-color: var(--green);
-  color: var(--green);
+  background: var(--team-1);
+  border-color: var(--team-1);
+  color: #08111f;
 }
 .practice-tab.has-custom:not(.active) { border-color: var(--green-a30); }
 .tab-custom-dot {
@@ -2754,7 +2758,7 @@ input[type="range"] { accent-color: var(--team-1); }
 .slider-unit { font-weight: 400; color: var(--text-2); }
 
 /* Presets row */
-.practice-presets { display: flex; align-items: center; gap: 8px; }
+.practice-presets { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; row-gap: 6px; }
 .practice-presets-label {
   font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
   color: var(--text-2); text-transform: uppercase;
@@ -5085,6 +5089,7 @@ body.theme-school .data-table tr:hover td {
    separate ideas without shouting. Nothing here is a card — a chapter is
    prose, and boxing every paragraph would fight the reading. */
 .manual-intro { color: var(--text-2); font-size: 13px; line-height: 1.65; max-width: 62ch; margin: 0 0 18px; }
+.manual-pregame-bar { padding: 4px 0 14px; }
 .manual-note  { color: var(--text-2); font-size: 12px; font-style: italic; margin: 18px 0 0; }
 
 .manual-toc { display: flex; flex-direction: column; gap: 8px; }
@@ -5105,7 +5110,13 @@ body.theme-school .data-table tr:hover td {
 .manual-chapter-title { display: flex; align-items: center; gap: 9px; margin-top: 8px; }
 .manual-chapter-icon  { font-size: 22px; }
 
-.manual-chapter { max-width: 68ch; }
+.manual-chapter {
+  max-width: 68ch;
+  background: var(--bg-card);
+  border: 1px solid var(--border-sub);
+  border-radius: 12px;
+  padding: 20px 24px;
+}
 .manual-section { margin: 0 0 26px; }
 .manual-heading {
   font-size: 15px; font-weight: 700; margin: 0 0 9px;
@@ -5136,7 +5147,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "8aa452f05f";
+globalThis.__BUILD__ = "6591da062c";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -5207,6 +5218,13 @@ var _CFB = (() => {
         CAPPED_ATTRS: ["SPD", "AGI", "PWR", "STR", "JMP", "HND", "SEC", "BLK", "TKL", "TEC", "AWR"],
         // every attribute the division ceiling applies to (all but WE & CON)
         CAP_WE_OVERAGE: { pivot: 55, step: 0.22, max: 7 },
+        // Archetype cap tilt: the division ceiling is not a flat wall on every attribute.
+        // At generation it tilts UPWARD toward the player's archetype — the attributes it
+        // leans on hardest earn headroom ABOVE the base division cap (a D3 burner can be
+        // genuinely fast), while everything else stays exactly AT the cap. Nothing is ever
+        // capped below the division line; the cap is a floor a signature trait can break.
+        // Bigger = more headroom on signature traits, and a higher roster ceiling.
+        PHYS_CAP_ARCH_SPREAD: 6,
         // Work ethic bends the cap: a grinder outworks his measurables. WE above `pivot`
         // adds `step` per point to the POTENTIAL ceiling of the capped attrs, up to `max`.
         // WE 80 in D3 → +~6 (a 70 base becomes ~76); WE 50 → +0 (stays 70). This is what
@@ -8396,7 +8414,25 @@ var _CFB = (() => {
       player.roleRatings[pos] = player.compositeRating;
     }
   }
-  function generatePotential(attrs, prestigeBonus = 0, tier = 3, physCapOverride = null) {
+  function archCapTilt(archetype) {
+    var _a;
+    const capped = C.CAPPED_ATTRS || ATTRIBUTES;
+    const out = {};
+    for (const a of capped) out[a] = 0;
+    const w = ROLE_WEIGHTS[archetype];
+    if (!w) return out;
+    const vals = capped.map((a) => w[a] || 0);
+    const sum = vals.reduce((s, x) => s + x, 0);
+    if (sum <= 0) return out;
+    const mean = sum / capped.length;
+    const spread = (_a = C.PHYS_CAP_ARCH_SPREAD) != null ? _a : 6;
+    capped.forEach((a, i) => {
+      const dev = (vals[i] - mean) / Math.max(mean, 6);
+      out[a] = Math.max(0, Math.round(spread * Math.min(dev, 1)));
+    });
+    return out;
+  }
+  function generatePotential(attrs, prestigeBonus = 0, tier = 3, physCapOverride = null, capTilt = null) {
     const bands = ["average", "good", "great", "sky"];
     const w = C.PRESTIGE_BAND_W * prestigeBonus;
     const sky = clamp2(0.1 + w, 0.03, 0.2);
@@ -8420,7 +8456,7 @@ var _CFB = (() => {
     const caps = {};
     for (const attr of ATTRIBUTES) {
       let ceil = 99;
-      if (physCap < 99 && CAPPED.includes(attr)) ceil = physCap;
+      if (physCap < 99 && CAPPED.includes(attr)) ceil = clamp2(physCap + ((capTilt == null ? void 0 : capTilt[attr]) || 0), 1, 99);
       const lo = Math.min(attrs[attr], ceil);
       caps[attr] = clamp2(attrs[attr] + Math.round(randNorm(spread, 6)), lo, ceil);
     }
@@ -8519,9 +8555,12 @@ var _CFB = (() => {
     const physCap = C.PHYS_CAP_BY_TIER && C.PHYS_CAP_BY_TIER[tier] || 99;
     const headroomBase = C.PHYS_SPAWN_HEADROOM_BY_TIER && C.PHYS_SPAWN_HEADROOM_BY_TIER[tier] != null ? C.PHYS_SPAWN_HEADROOM_BY_TIER[tier] : 0;
     const spawnCap = Math.max(1, physCap - headroomBase);
+    const capTilt = archCapTilt(archetype);
+    const spawnCapOf = (a) => Math.max(1, Math.min(99, spawnCap + (capTilt[a] || 0)));
     if (physCap < 99) {
       for (const a of CAPPED_ATTRS) {
-        if (attrs[a] > spawnCap) attrs[a] = spawnCap;
+        const c = spawnCapOf(a);
+        if (attrs[a] > c) attrs[a] = c;
       }
     }
     {
@@ -8536,13 +8575,14 @@ var _CFB = (() => {
     }
     if (physCap < 99) {
       for (const a of CAPPED_ATTRS) {
-        if (attrs[a] > spawnCap) attrs[a] = spawnCap;
+        const c = spawnCapOf(a);
+        if (attrs[a] > c) attrs[a] = c;
       }
     }
     const weCfg = C.CAP_WE_OVERAGE || { pivot: 55, step: 0.22, max: 7 };
     const weBonus = physCap < 99 ? clamp2(Math.round(((attrs.WE || 0) - weCfg.pivot) * weCfg.step), 0, weCfg.max) : 0;
     const softCap = physCap < 99 ? Math.min(99, physCap + weBonus) : 99;
-    const potential = generatePotential(attrs, prestigeBonus, tier, softCap);
+    const potential = generatePotential(attrs, prestigeBonus, tier, softCap, capTilt);
     const trueComp = posAdjust(rawComposite(attrs, position), position);
     const visionRating = posAdjust(
       ATTRIBUTES.reduce((s, a) => s + (attrs[a] || 0), 0) / ATTRIBUTES.length + C.VIS_CENTRE,
@@ -25354,156 +25394,6 @@ var _CFB = (() => {
     }
   });
 
-  // js/ui/views/guide.js
-  function renderGuideModal() {
-    return `
-    <div class="modal-overlay guide-overlay" id="guide-overlay">
-      <div class="modal guide-modal">
-        <div class="modal-header">
-          <span class="modal-title">How to Play</span>
-          <button class="btn-ghost btn-sm" id="btn-guide-close">Close \u2715</button>
-        </div>
-        <div class="modal-body guide-body">
-          <p class="guide-intro">The two-minute version of every system. You can't
-          break anything by skipping this \u2014 the game explains itself as you go.
-          When you want the real mechanism rather than the summary, <b>The Manual</b>
-          (in the main menu) is the long version.</p>
-          ${SECTIONS.map((s) => `
-            <div class="guide-section">
-              <div class="guide-head"><span class="guide-icon">${s.icon}</span>
-                <span class="guide-title">${s.title}</span></div>
-              <p class="guide-text">${s.body}</p>
-            </div>`).join("")}
-        </div>
-      </div>
-    </div>`;
-  }
-  function wireGuideListeners() {
-    var _a, _b;
-    (_a = document.getElementById("btn-guide-close")) == null ? void 0 : _a.addEventListener("click", () => {
-      state.ui.showGuide = false;
-      rerender();
-    });
-    (_b = document.getElementById("guide-overlay")) == null ? void 0 : _b.addEventListener("click", (e) => {
-      if (e.target.id === "guide-overlay") {
-        state.ui.showGuide = false;
-        rerender();
-      }
-    });
-  }
-  var SECTIONS;
-  var init_guide = __esm({
-    "js/ui/views/guide.js"() {
-      init_state();
-      SECTIONS = [
-        {
-          icon: "\u{1F5D3}\uFE0F",
-          title: "The Year",
-          body: `A season runs preseason \u2192 regular season \u2192 playoffs \u2192 offseason.
-    Preseason is four weeks: <b>Dev Camp</b> (training focus + position changes),
-    the <b>Spring Game</b>, <b>Redshirt Finalization</b>, and locking your
-    <b>AD Expectations</b>. Then game weeks until the 16-team playoff, and an offseason
-    wizard that walks job offers, awards, departures, the <b>Transfer Portal</b>,
-    walk-ons, and scheduling one screen at a time. The big CONTINUE button always
-    moves time forward; everything else is preparation.`
-        },
-        {
-          icon: "\u{1F3C8}",
-          title: "Game Week",
-          body: `Each week you see the matchup, a scouting memo, and one-game prep
-    decisions. Set your <b>Game Plan</b> (identity + per-situation overrides) and
-    <b>Depth Chart</b>, then advance to play. Your game pauses at <b>halftime</b> \u2014
-    the Adjustments tab has the big knobs (tendency, tempo, blitz rate, 4th down)
-    with your current settings shown; changes there are for this game, but lineup
-    changes stick. After the game, the Plan Report grades how your calls did.`
-        },
-        {
-          icon: "\u{1F3AF}",
-          title: "Recruiting",
-          body: `Recruiting runs weeks 1\u201319 and rivals start immediately \u2014 build a board
-    in week 1. <b>Scout</b> to reveal true ratings, set a weekly <b>contact
-    allocation</b> (money = interest), and spend on <b>visits</b> for big pushes.
-    An <b>offer</b> reserves a scholarship and is required to win a commit. Watch
-    the race panel on each recruit: interest compounds, commits are final, and
-    anyone still holding your offer signs with you on <b>Signing Day</b> (week 19).
-    Winning pays \u2014 conference titles, playoff wins, and championships add real
-    money to next year's budget. Reading a recruit: every attribute and the
-    <b>testing sheet</b> (RAS, 40, vert) are visible \u2014 but his <b>true rating
-    and potential stay hidden until you scout him</b>. RAS is a hypothesis, not
-    a verdict: <b>\u26A0 raw</b> tests better than he plays, <b>\u{1F3C8} gamer</b> plays
-    better than he tests. Closing is a <b>battle</b>, not a calendar: out-work and
-    out-bid his other suitors, and once you've built a clear, lasting lead he
-    commits \u2014 blowouts settle fast, dogfights go to the wire. Verbals are final
-    \u2014 every close frees money for the next name.`
-        },
-        {
-          icon: "\u{1F4CB}",
-          title: "Depth Chart",
-          body: `The field shows your starters per formation \u2014 tap a slot to assign
-    anyone. Catch slots carry <b>target share</b> dials (a 100% budget of the QB's
-    looks), defenders carry <b>blitz share</b> toggles. Below the field, the
-    <b>FULL DEPTH</b> list is the real pecking order \u2014 \u25B2 promotes, and the order
-    drives snap rotation and injury next-man-up. The RB rows have a <b>carry
-    split</b>: dial two backs to share the ground game, committee style. Two
-    things to know: your OL reads left-to-right (LT\xB7LG\xB7C\xB7RG\xB7RT \u2014 run direction
-    points at these five), and feeding one receiver 25%+ of the targets earns
-    him <b>double-teams</b>. Stars draw brackets.`
-        },
-        {
-          icon: "\u{1F9E0}",
-          title: "Game Planning",
-          body: `Offense/Defense Defaults are your identity \u2014 tendency, tempo, formation
-    mix (weights always total 100%), coverage, blitz rate, 4th-down nerve. The
-    <b>Situations</b> tab overrides any of it for specific spots (3rd &amp; long,
-    red zone, two-minute) \u2014 anything left on AUTO inherits your defaults. The
-    <b>IDENTITY card</b> up top reads your plan back to you: how hard your play
-    action sells (run-heavy identities sell it, pass-happy ones don't), your
-    screen/RPO/motion volume, your line's left\u2013middle\u2013right strength, and where
-    your runs point. Every dial has a real, tested effect \u2014 and a real cost.`
-        },
-        {
-          icon: "\u{1F4C8}",
-          title: "Development",
-          body: `Growth runs on three channels. <b>Practice</b> is the one you aim \u2014
-    your plan ticks the roster at weeks 8, 13 and 18, so what you emphasize in-season
-    is what improves. At <b>season's end</b>, talent takes over: players rise toward
-    their hidden potential whether they played or not \u2014 a sky-high freshman blooms on
-    the bench \u2014 but <b>Work Ethic gates it hard</b> (the gifted and lazy stall; the gym
-    rat hits every inch of a modest ceiling), and <b>production feeds the attributes it
-    exercised</b>: 60 catches grow hands, a 14-pressure season grows the rush toolkit.
-    <b>Development Camp</b> is your offseason lever \u2014 pick the position groups that
-    train hot while everyone else cools. Redshirts bank the eligibility year and
-    develop the whole time.`
-        },
-        {
-          icon: "\u{1F4BC}",
-          title: "Your Career",
-          body: `You're the coach, not the school. Wins against expectations build
-    <b>job security</b>; fail and the hot seat ends in a firing. Succeed and
-    better programs come calling in the offseason <b>Job Market</b> \u2014 or stay,
-    and hardware (conference titles, championships, MVPs) juices your extension.
-    Five skills grow by doing: Evaluator, Recruiter, Developer, Reputation, Roots.
-    Programs are buildable too: titles and sustained winning slowly raise a
-    school's <b>permanent pedigree</b> \u2014 stay long enough and you can turn a
-    nobody into a name (and a fading giant really does fade).
-    Separately, your <b>Coach DNA</b> tracks HOW you win \u2014 ground-and-pound,
-    pressure, ball-hawking, riverboat gambles \u2014 earning grades and milestone
-    badges that feed small on-field edges. Check the full record in the Coach
-    Office.`
-        },
-        {
-          icon: "\u{1F4A1}",
-          title: "Five Tips for Season One",
-          body: `1) Build the recruiting board in week 1 \u2014 interest compounds.
-    2) Offers win races; interest alone doesn't. 3) Set your depth order once and
-    trust next-man-up. 4) Leave most Situations on AUTO until you know your roster.
-    5) Losing with a bad roster is survivable \u2014 the AD grades you against
-    expectations, not the standings.`
-        }
-      ];
-    }
-  });
-
   // js/ui/logo.js
   var BLUEPRINT_MARK;
   var init_logo = __esm({
@@ -25580,7 +25470,6 @@ var _CFB = (() => {
       </div>
 
       ${renderLoadModal(saves)}
-      ${state.ui.showGuide ? renderGuideModal() : ""}
     </div>
   `;
   }
@@ -25609,7 +25498,7 @@ var _CFB = (() => {
         </div>` : `
         <button class="btn-mm btn-mm-new" id="btn-mm-newcoach">+ NEW COACH</button>` : ""}
       ${autoSave ? `<button class="btn-mm btn-mm-secondary" id="btn-mm-continue" style="margin-top:8px">\u25B6 Legacy save \xB7 ${escapeHtml(autoSave.school || "?")} S${autoSave.season}</button>` : ""}
-      <button class="btn-mm-guide" id="btn-mm-guide">\u{1F4D6} How to Play</button>
+      <button class="btn-mm-guide" id="btn-mm-guide">\u{1F4D6} The Manual</button>
     </div>`;
   }
   function renderCoachDna(c) {
@@ -25816,10 +25705,8 @@ var _CFB = (() => {
   async function setupListeners2() {
     var _a, _b, _c, _d, _e, _f, _g, _h;
     (_a = document.getElementById("btn-mm-guide")) == null ? void 0 : _a.addEventListener("click", () => {
-      state.ui.showGuide = true;
-      rerender();
+      navigate("manual");
     });
-    wireGuideListeners();
     await refreshSaves();
     (_b = document.getElementById("btn-mm-continue")) == null ? void 0 : _b.addEventListener("click", async () => {
       await loadFromSlot("auto");
@@ -25944,7 +25831,6 @@ var _CFB = (() => {
       init_utils();
       init_coach();
       init_season();
-      init_guide();
       init_coachprofile();
       init_logo();
       mmCoachId = null;
@@ -26040,7 +25926,6 @@ var _CFB = (() => {
           <h1 class="view-title">Game Plan</h1>
           <div class="view-subtitle">Simple mode \u2014 set your identity, the sim handles the scheme. Want every knob? Settings &rsaquo; Game &rsaquo; Game Plan Detail.</div>
         </div>
-        <button class="btn-primary" id="btn-save-gameplan">Save Plan</button>
       </div>
       ${renderPlanSlots(school)}
       <div class="rec-tabs" style="margin-bottom:16px">
@@ -26059,7 +25944,6 @@ var _CFB = (() => {
           <h1 class="view-title">Game Plan</h1>
           <div class="view-subtitle">Plan by situation \u2014 anything left on AUTO inherits your defaults. Too many dials? Settings &rsaquo; Game &rsaquo; Game Plan Detail.</div>
         </div>
-        <button class="btn-primary" id="btn-save-gameplan">Save Plan</button>
       </div>
       ${renderPlanSlots(school)}
       <div class="rec-tabs" style="margin-bottom:16px">
@@ -27398,12 +27282,12 @@ var _CFB = (() => {
     });
     root.querySelectorAll("[data-ht-depth]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const PRESETS2 = {
+        const PRESETS = {
           quick: { short: 60, medium: 30, deep: 10 },
           balanced: { short: 40, medium: 40, deep: 20 },
           deep: { short: 25, medium: 35, deep: 40 }
         };
-        gp.passDepth = __spreadValues({}, PRESETS2[btn.dataset.htDepth]);
+        gp.passDepth = __spreadValues({}, PRESETS[btn.dataset.htDepth]);
         rerender();
       });
     });
@@ -27999,7 +27883,7 @@ var _CFB = (() => {
     </div>`;
   }
   function setupListeners() {
-    var _a, _b, _c, _d;
+    var _a, _b, _c;
     document.querySelectorAll("[data-plan-slot]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const school2 = getPlayerSchool();
@@ -28069,10 +27953,6 @@ var _CFB = (() => {
     (_c = document.getElementById("max-fg")) == null ? void 0 : _c.addEventListener("input", (e) => {
       gp.maxFGDist = parseInt(e.target.value);
       document.getElementById("max-fg-val").textContent = `${e.target.value} yds`;
-    });
-    (_d = document.getElementById("btn-save-gameplan")) == null ? void 0 : _d.addEventListener("click", async () => {
-      const ok = await saveNow();
-      notify(ok ? "Game plan saved!" : "Save FAILED \u2014 storage full or blocked.", ok ? "success" : "error");
     });
     document.querySelectorAll("[data-nav]").forEach((el) => {
       el.addEventListener("click", () => {
@@ -32439,7 +32319,6 @@ var _CFB = (() => {
         <div class="view-subtitle">Tap a slot to assign \xB7 shares &amp; blitzers on the field \xB7 depth order and RB split below</div>
         <div class="header-actions">
           <button class="btn-ghost" id="btn-auto-sort">Auto-Fill</button>
-          <button class="btn-primary" id="btn-save-depth">Save</button>
         </div>
       </div>` : `<div class="view-header">
         <div>
@@ -32448,7 +32327,6 @@ var _CFB = (() => {
         </div>
         <div class="header-actions">
           <button class="btn-ghost" id="btn-auto-sort">Auto-Fill</button>
-          <button class="btn-primary" id="btn-save-depth">Save</button>
         </div>
       </div>`}
 
@@ -33214,7 +33092,7 @@ var _CFB = (() => {
     return Object.fromEntries(((school == null ? void 0 : school.roster) || []).map((p) => [p.id, p.compositeRating]));
   }
   function setupListeners9() {
-    var _a, _b, _c;
+    var _a, _b;
     const school = getPlayerSchool();
     if (!school) return;
     const gp = school.gameplan;
@@ -33462,10 +33340,6 @@ var _CFB = (() => {
       applySimplePlan(school);
       rerender();
     }));
-    (_c = document.getElementById("btn-save-depth")) == null ? void 0 : _c.addEventListener("click", () => {
-      school.depthChart = buildDepthChart(school.roster, school.gameplan, school.depthOrder);
-      saveNow().then((ok) => notify(ok ? "Depth chart saved!" : "Save FAILED \u2014 storage full or blocked.", ok ? "success" : "error"));
-    });
     document.querySelectorAll("[data-nav]").forEach((el) => {
       el.addEventListener("click", () => navigate(el.dataset.nav));
     });
@@ -38794,7 +38668,6 @@ var _CFB = (() => {
   init_state();
   init_persistence();
   init_state();
-  init_guide();
   init_utils();
   var settingsTab = "game";
   function renderSettings() {
@@ -38887,8 +38760,8 @@ var _CFB = (() => {
       <div style="display:${tab === "game" ? "block" : "none"}">
       <div class="card">
         <div class="offseason-item">
-          <span class="offseason-label">\u{1F4D6} How to Play</span>
-          <span class="offseason-detail"><button class="btn-ghost btn-sm" id="btn-settings-guide">Open guide</button></span>
+          <span class="offseason-label">\u{1F4D6} The Manual</span>
+          <span class="offseason-detail"><button class="btn-ghost btn-sm" id="btn-settings-guide">Open manual</button></span>
         </div>
       </div>
       <div class="card settings-card">
@@ -39013,7 +38886,6 @@ var _CFB = (() => {
         </div>
       </div>
       </div>
-      ${state.ui.showGuide ? renderGuideModal() : ""}
     </div>
   `;
   }
@@ -39153,10 +39025,8 @@ var _CFB = (() => {
       }
     });
     (_k = document.getElementById("btn-settings-guide")) == null ? void 0 : _k.addEventListener("click", () => {
-      state.ui.showGuide = true;
-      rerender();
+      navigate("manual");
     });
-    wireGuideListeners();
     document.querySelectorAll("[data-diff-key]").forEach((btn) => {
       btn.addEventListener("click", () => {
         if (!state.settings) state.settings = {};
@@ -39471,8 +39341,6 @@ var _CFB = (() => {
 
   // js/ui/views/practice.js
   init_state();
-  init_coachprofile();
-  init_persistence();
   init_utils();
   init_constants();
   var TOTAL_MINUTES = 100;
@@ -39553,11 +39421,23 @@ var _CFB = (() => {
     const attrs = Object.keys(PRACTICE_TOOLS[toolKey] || {});
     return attrs.find((a) => a !== toolKey) || null;
   }
-  var PRESETS = {
-    Balanced: __spreadValues({}, DEFAULT_PRACTICE),
-    "Off-Heavy": { SPD: 14, AGI: 14, PWR: 8, STR: 10, JMP: 6, HND: 14, SEC: 8, BLK: 10, TKL: 2, TEC: 8, AWR: 6 },
-    "Def-Heavy": { SPD: 12, AGI: 10, PWR: 10, STR: 14, JMP: 4, HND: 4, SEC: 2, BLK: 4, TKL: 20, TEC: 8, AWR: 12 }
-  };
+  function archetypesForGroup(groupId) {
+    const prefix = `${groupId}-`;
+    return Object.keys(ROLE_WEIGHTS).filter((k) => k.startsWith(prefix)).map((k) => ({ key: k, label: k.slice(prefix.length).replace(/-/g, " ") }));
+  }
+  var ARCH_POS_FLOOR = 2;
+  function archetypePlanWeights(archetypeKey, pos) {
+    const arch = ROLE_WEIGHTS[archetypeKey] || {};
+    const posW = POS_WEIGHTS[pos] || {};
+    const w = {};
+    for (const k of Object.keys(PRACTICE_TOOLS)) {
+      const a = arch[k] || 0, p = posW[k] || 0;
+      if (a === 0 && p === 0) continue;
+      w[k] = a * 0.75 + p * 0.25;
+      if (p > 0) w[k] = Math.max(w[k], ARCH_POS_FLOOR);
+    }
+    return w;
+  }
   function activeGroup() {
     var _a;
     const id = state.ui.practicePosGroup || "QB";
@@ -39596,15 +39476,15 @@ var _CFB = (() => {
       filtered[t] = (_b = preset[t]) != null ? _b : 0;
       total += filtered[t];
     }
-    if (total > 0 && total !== TOTAL_MINUTES) {
-      const scale = TOTAL_MINUTES / total;
-      let running = 0;
-      const keys = Object.keys(filtered);
-      for (let i = 0; i < keys.length - 1; i++) {
-        filtered[keys[i]] = Math.round(filtered[keys[i]] * scale);
-        running += filtered[keys[i]];
+    if (total > 0) {
+      const parts = relevant.map((t) => ({ t, exact: filtered[t] / total * TOTAL_MINUTES }));
+      let used = 0;
+      for (const part of parts) {
+        filtered[part.t] = Math.floor(part.exact);
+        used += filtered[part.t];
       }
-      filtered[keys[keys.length - 1]] = TOTAL_MINUTES - running;
+      const byRem = [...parts].sort((a, b) => b.exact % 1 - a.exact % 1);
+      for (let i = 0; used < TOTAL_MINUTES; i++, used++) filtered[byRem[i % byRem.length].t]++;
     }
     for (const p of group.positions) {
       school.positionPlans[p] = filtered;
@@ -39635,13 +39515,11 @@ var _CFB = (() => {
       <div class="view-header${embed ? " embed-actions" : ""}">
         <div>
           ${embed ? "" : `<h1 class="view-title">Practice Plan</h1>`}
-          ${state._coachId ? '<button class="btn-ghost btn-sm" id="btn-pp-to-library" style="margin-top:4px">Save to Coach Library</button>' : ""}
           <div class="view-subtitle">
-            ${TOTAL_MINUTES} min per position \xB7 Development fires at Week 30
+            ${TOTAL_MINUTES} min per position \xB7 trains at camp and three in-season checkpoints
             ${customCount > 0 ? `<span class="custom-groups-badge">${customCount} customized</span>` : ""}
           </div>
         </div>
-        <button class="btn-primary" id="btn-save-practice" ${over || under ? "disabled" : ""}>Save Plan</button>
       </div>
 
       <div class="practice-timing-note">
@@ -39726,27 +39604,16 @@ var _CFB = (() => {
       </div>
 
       <div class="practice-presets">
-        <span class="practice-presets-label">Presets</span>
-        ${Object.keys(PRESETS).map((name) => `
-          <button class="btn-ghost btn-sm practice-preset" data-preset="${escapeHtml(name)}">${name}</button>
+        <span class="practice-presets-label">Train as</span>
+        ${archetypesForGroup(group.id).map((a) => `
+          <button class="btn-ghost btn-sm practice-preset" data-archetype="${escapeHtml(a.key)}">${escapeHtml(a.label)}</button>
         `).join("")}
       </div>
     </div>
   `;
   }
   function setupListeners17() {
-    var _a, _b, _c;
-    (_a = document.getElementById("btn-pp-to-library")) == null ? void 0 : _a.addEventListener("click", () => {
-      const school2 = getPlayerSchool();
-      const name = prompt("Name this practice plan:", "My Practice");
-      if (!name || !school2) return;
-      const ok = savePracticeToLibrary(
-        state._coachId,
-        name,
-        { positionPlans: school2.positionPlans || null, practiceMinutes: school2.practiceMinutes || null }
-      );
-      notify(ok ? `"${name}" saved to your coach library` : "Practice library full (3 max)", ok ? "success" : "warning");
-    });
+    var _a;
     const school = getPlayerSchool();
     if (!school) return;
     function recalcBudget() {
@@ -39762,7 +39629,6 @@ var _CFB = (() => {
       const under = total < TOTAL_MINUTES;
       const fill = document.getElementById("practice-budget-fill");
       const label = document.getElementById("practice-budget-label");
-      const saveBtn = document.getElementById("btn-save-practice");
       if (fill) {
         fill.style.width = `${Math.min(100, total / TOTAL_MINUTES * 100)}%`;
         fill.className = `practice-budget-fill${over ? " over" : under ? " under" : ""}`;
@@ -39771,7 +39637,6 @@ var _CFB = (() => {
         label.className = `practice-budget-label ${over ? "budget-over" : under ? "budget-under" : "budget-ok"}`;
         label.textContent = `${total} / ${TOTAL_MINUTES} min${over ? ` \u2014 ${total - TOTAL_MINUTES} over` : under ? ` \u2014 ${TOTAL_MINUTES - total} remaining` : " \u2014 ready"}`;
       }
-      if (saveBtn) saveBtn.disabled = over || under;
     }
     document.querySelectorAll(".practice-tab").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -39791,18 +39656,16 @@ var _CFB = (() => {
     });
     document.querySelectorAll(".practice-preset").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const preset = PRESETS[btn.dataset.preset];
-        if (!preset) return;
-        applyPresetToGroup(school, activeGroup(), preset);
+        const key = btn.dataset.archetype;
+        if (!ROLE_WEIGHTS[key]) return;
+        const g = activeGroup();
+        applyPresetToGroup(school, g, archetypePlanWeights(key, g.positions[0]));
         rerender();
       });
     });
-    (_b = document.getElementById("btn-reset-group")) == null ? void 0 : _b.addEventListener("click", () => {
+    (_a = document.getElementById("btn-reset-group")) == null ? void 0 : _a.addEventListener("click", () => {
       resetGroupToDefault(school, activeGroup());
       rerender();
-    });
-    (_c = document.getElementById("btn-save-practice")) == null ? void 0 : _c.addEventListener("click", () => {
-      saveNow().then((ok) => notify(ok ? "Practice plan saved!" : "Save FAILED \u2014 storage full or blocked.", ok ? "success" : "error"));
     });
   }
 
@@ -40475,7 +40338,7 @@ var _CFB = (() => {
     requestAnimationFrame(() => requestAnimationFrame(apply));
   }
   function renderApp() {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e, _f;
     const _scroll = captureScroll();
     const _viewChanged = state.ui.view !== lastRenderedView;
     const _pSchool = getPlayerSchool();
@@ -40492,6 +40355,16 @@ var _CFB = (() => {
         var _a2;
         return (_a2 = m.setupListeners) == null ? void 0 : _a2.call(m);
       });
+      lastRenderedView = view;
+      return;
+    }
+    if (view === "manual" && !state.initialized) {
+      root.innerHTML = `<div class="newgame-wrapper">
+        <div class="manual-pregame-bar"><button class="btn-ghost btn-sm" id="btn-manual-to-menu">\u2190 Main Menu</button></div>
+        ${renderManual()}
+      </div>`;
+      setupListeners12();
+      (_c = document.getElementById("btn-manual-to-menu")) == null ? void 0 : _c.addEventListener("click", () => navigate("mainmenu"));
       lastRenderedView = view;
       return;
     }
@@ -40554,7 +40427,7 @@ var _CFB = (() => {
             <div class="coach-school">${escapeHtml((school == null ? void 0 : school.name) || "")}</div>
             <div class="coach-meta">
               <span class="rep-badge">${escapeHtml((coach == null ? void 0 : coach.reputation) || "C")}</span>
-              ${renderPrestige((_d = (_c = school == null ? void 0 : school.prestige) != null ? _c : coach == null ? void 0 : coach.prestige) != null ? _d : 3, ((_e = C.PRESTIGE_MAX) == null ? void 0 : _e[school == null ? void 0 : school.division]) || 5)}
+              ${renderPrestige((_e = (_d = school == null ? void 0 : school.prestige) != null ? _d : coach == null ? void 0 : coach.prestige) != null ? _e : 3, ((_f = C.PRESTIGE_MAX) == null ? void 0 : _f[school == null ? void 0 : school.division]) || 5)}
             </div>
           </div>
           <div class="budget-info">
