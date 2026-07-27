@@ -5136,7 +5136,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "78c432237a";
+globalThis.__BUILD__ = "c219379683";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -35904,11 +35904,14 @@ var _CFB = (() => {
       defense that is trailing is playing desperate at the same moment your offense is
       playing safe.
 
-      Then three sheets stack. Your base plan is the floor. Your weekly plan for this
-      opponent overwrites what it touches. The situation cell overwrites what <i>it</i>
-      touches. What comes out the other side is the plan that actually calls this one
-      snap \u2014 and if you never opened the situational editor, it is simply your base plan,
-      untouched, on every down.`
+      Then the sheets stack, and the order matters. Your base plan is the floor. Your
+      <b>situation</b> cell overwrites what it touches on top of that. And your <b>weekly</b> plan
+      for this opponent overwrites <i>last</i> \u2014 weekly wins the ties, because you set it
+      deliberately for this game. A few dials are <b>shifts</b> rather than overrides: pass lean,
+      blitz rate, and run commit stack additively on top of whatever the layers below produced,
+      instead of replacing them. So even if you never open the situational editor, the snap is not
+      simply your base plan untouched \u2014 your weekly overrides still apply, and a smart-auto tempo
+      fills in each situation for you.`
       },
       {
         heading: "Run or pass",
@@ -36021,9 +36024,12 @@ var _CFB = (() => {
       coordinator knows the package he just called. Your left tackle does not personally
       false start because he personally lost his rep.
 
-      And nothing about the opponent enters your call. Your game plan is prepared against a
-      situation, not read off the defense across the ball. What the defense does is answered
-      by the eleven men executing it, which is the whole of <i>Defending a Game</i>.`
+      And your prepared plan takes nothing about the opponent into account \u2014 it is built against a
+      <i>situation</i>, not read off the defense across the ball. But that is not the whole story:
+      at the line your quarterback reads the box, and an aware one kills a doomed call into a better
+      one, audibles, or takes the shot a defense earned by tipping its hand all afternoon. The plan
+      is blind; the pre-snap read is not. What the defense does from there is answered by the
+      eleven men executing it, which is the whole of <i>Defending a Game</i>.`
       }
     ]
   };
@@ -37177,8 +37183,10 @@ var _CFB = (() => {
 
       For a kicker, accuracy raises the chance the ball goes through. For a punter, accuracy
       <b>reduces his variance</b>. A high-technique punter is reliable: his punts cluster. A
-      big-legged, low-technique punter booms some and shanks others, and the shanks are where
-      games are lost.
+      big-legged, low-technique punter booms some and shanks others. Even his worst is floored,
+      though \u2014 a shank still travels a fair chunk, never dying at his feet \u2014 so the damage is not a
+      ball that goes nowhere but the field position and coverage he bleeds on the short ones, over
+      and over.
 
       That asymmetry has a clear conclusion. Your punter's leg is capped from above anyway \u2014 a
       punt that reaches the end zone is a touchback and the yardage past that is thrown away, so
