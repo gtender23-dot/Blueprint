@@ -5136,7 +5136,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "381e3e1e3e";
+globalThis.__BUILD__ = "78c432237a";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -9937,7 +9937,7 @@ var _CFB = (() => {
         const personality = 0.78 + Math.random() * 0.44;
         const aggression = +(prestigeBase * personality).toFixed(3);
         const ranked = Object.entries(priorityById).sort((a, b) => b[1] - a[1]).map(([id]) => id);
-        const warChest = new Set(ranked.slice(0, C.AI_WARCHEST_TARGETS));
+        const warChest = ranked.slice(0, C.AI_WARCHEST_TARGETS);
         school.coach.aiRec = {
           targetIds,
           slots,
@@ -10002,7 +10002,7 @@ var _CFB = (() => {
       if (wallet < 1) continue;
       const priorityById = ai.priorityById || {};
       const maxPriority = ai.maxPriority || 1;
-      const warChest = ai.warChest || /* @__PURE__ */ new Set();
+      const warChest = new Set(Array.isArray(ai.warChest) ? ai.warChest : []);
       const live = [];
       for (const id of ai.targetIds) {
         const recruit = recruitById.get(id);
@@ -14473,6 +14473,7 @@ var _CFB = (() => {
     if (coach.tenureSeasons == null) coach.tenureSeasons = 0;
     if (coach.lastDelta === void 0) coach.lastDelta = null;
     if (coach.dominanceStreak == null) coach.dominanceStreak = 0;
+    if (coach._onNotice == null) coach._onNotice = false;
     if (coach.lastOfferSeason === void 0) coach.lastOfferSeason = null;
   }
   var DIV_RANK;
@@ -15691,9 +15692,9 @@ var _CFB = (() => {
     const finish = opts.finish || defaultFinish;
     const ra = carrier.attributes || {};
     const laneX = (Math.random() - 0.5) * 9;
-    const laneShift = (lane - 0.634) * (lane < 0.634 ? 0.45 : -0.35);
-    const car = { x: laneX * 0.35, y: -3.92 + laneShift, top: spdYps2(ra.SPD), acc: accel2(ra.AGI), vx: 0, vy: 0 };
-    const entry = 0.712 + lane * 0 + (Math.random() - 0.5) * 0.18 + Math.min(0.12, Math.max(-0.12, vision * 0.05));
+    const laneShift = (lane - 0.6) * (lane < 0.6 ? 0.26 : 0.19);
+    const car = { x: laneX * 0.35, y: -3.92 - LANE_RECENTER + laneShift, top: spdYps2(ra.SPD), acc: accel2(ra.AGI), vx: 0, vy: 0 };
+    const entry = 0.712 + (lane - 0.6) * 0.028 + (Math.random() - 0.5) * 0.18 + Math.min(0.12, Math.max(-0.12, vision * 0.05));
     car.vx = (laneX - car.x) * 0.3;
     car.vy = car.top * entry;
     const chasers = [];
@@ -15737,7 +15738,7 @@ var _CFB = (() => {
         });
       }
     }
-    const blockedP = Math.max(0.15, Math.min(0.92, 0.67 + lane * 0 + vision * 0.1));
+    const blockedP = Math.max(0.15, Math.min(0.92, 0.67 + (lane - 0.6) * 0.12 + vision * 0.1));
     let li = 0;
     for (const lb of secondLevel.slice(0, 3)) {
       const da = lb.attributes || {};
@@ -16029,7 +16030,7 @@ var _CFB = (() => {
       breakaway: !tackler && clearedDeep && yards >= 18
     };
   }
-  var TICK2, MAX_T2, MAX_Y2, MIN_Y, RADIUS2, hyp, spdYps2, accel2, dSpd, dAcc, reactS2;
+  var TICK2, MAX_T2, MAX_Y2, MIN_Y, RADIUS2, LANE_RECENTER, hyp, spdYps2, accel2, dSpd, dAcc, reactS2;
   var init_run2geo = __esm({
     "js/engine/run2geo.js"() {
       TICK2 = 0.1;
@@ -16037,6 +16038,7 @@ var _CFB = (() => {
       MAX_Y2 = 100;
       MIN_Y = -6;
       RADIUS2 = 1.25;
+      LANE_RECENTER = 0.07;
       hyp = (x, y) => Math.sqrt(x * x + y * y);
       spdYps2 = (s) => 6.4 + (s != null ? s : 50) * 0.028;
       accel2 = (a) => 7 + (a != null ? a : 50) * 0.05;
@@ -16066,7 +16068,7 @@ var _CFB = (() => {
     d.x += d.vx * dt;
     d.y += d.vy * dt;
   }
-  function routeDuel(receiver, defender, passDepth, coverageType, pressHot = false) {
+  function routeDuel(receiver, defender, passDepth, coverageType, pressHot = false, trace = null) {
     var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
     if (!defender) return coverageType === "zone" ? 0.84 : 1;
     const ra = receiver.attributes || {}, da = defender.attributes || {};
@@ -16180,10 +16182,11 @@ var _CFB = (() => {
       }
     }
     const dist = Math.sqrt((rec.x - def.x) ** 2 + (rec.y - def.y) ** 2);
+    if (trace) trace.dist = dist;
     const m = QMAP[`${passDepth}/${coverageType}`] || QMAP["medium/zone"];
-    return qsep(m, dist, coverageType === "press" ? PRESS_RECENTER : 0);
+    return qsep(m, dist);
   }
-  var TICK3, spd, acc, rctMan, rctZone, ROUTES, QMAP, SEP_RECENTER, PRESS_RECENTER, qsep;
+  var TICK3, spd, acc, rctMan, rctZone, ROUTES, QMAP, SEP_RECENTER, qsep;
   var init_sepgeo = __esm({
     "js/engine/sepgeo.js"() {
       TICK3 = 0.1;
@@ -16198,18 +16201,17 @@ var _CFB = (() => {
         // the go: break = subtle stem lean
       };
       QMAP = {
-        "deep/offman": { dq: [2.575, 3.096, 3.649, 3.938, 4.126, 4.352, 4.507, 4.705, 4.866, 4.996, 5.18, 5.305, 5.443, 5.563, 5.724, 5.87, 6.027, 6.207, 6.388, 6.611, 6.921, 7.174, 7.576, 7.731, 7.731], sq: [0.1524, 0.2174, 0.2546, 0.285, 0.3124, 0.3375, 0.3557, 0.3734, 0.3926, 0.4121, 0.4316, 0.4441, 0.4565, 0.4706, 0.4871, 0.501, 0.5207, 0.5366, 0.5557, 0.5753, 0.6061, 0.6414, 0.6715, 0.7712, 0.8427] },
-        "deep/press": { dq: [0.132, 0.299, 0.448, 0.568, 0.775, 0.928, 1.085, 1.219, 1.351, 1.475, 1.599, 1.747, 1.889, 2.026, 2.164, 2.325, 2.522, 2.761, 2.996, 3.343, 3.761, 4.214, 4.705, 5.2, 5.2], sq: [0.1439, 0.2519, 0.3228, 0.3639, 0.3907, 0.4148, 0.4347, 0.4582, 0.4801, 0.4966, 0.5109, 0.5267, 0.5431, 0.5562, 0.5731, 0.587, 0.6074, 0.6266, 0.6465, 0.6667, 0.7032, 0.7451, 0.7962, 0.8589, 0.9546] },
-        "deep/zone": { dq: [0.233, 0.402, 0.569, 0.651, 0.766, 0.834, 0.902, 0.968, 1.028, 1.085, 1.138, 1.185, 1.236, 1.29, 1.347, 1.407, 1.458, 1.53, 1.622, 1.722, 1.866, 1.992, 2.158, 2.221, 2.221], sq: [0, 0.0374, 0.0995, 0.1401, 0.1789, 0.207, 0.2326, 0.2611, 0.2881, 0.3071, 0.3267, 0.3456, 0.3688, 0.39, 0.4103, 0.4283, 0.4453, 0.4738, 0.5003, 0.5326, 0.5675, 0.6024, 0.6452, 0.6975, 0.7853] },
-        "medium/offman": { dq: [1.279, 1.499, 1.637, 1.738, 1.819, 1.904, 1.988, 2.103, 2.246, 2.369, 2.467, 2.559, 2.647, 2.724, 2.804, 2.881, 2.96, 3.051, 3.143, 3.252, 3.389, 3.539, 3.612, 3.612, 3.612], sq: [0.1464, 0.2395, 0.2928, 0.3282, 0.3589, 0.3744, 0.3941, 0.4137, 0.4316, 0.4498, 0.4609, 0.4737, 0.489, 0.5005, 0.517, 0.5318, 0.5484, 0.5625, 0.5831, 0.6067, 0.6393, 0.6691, 0.7018, 0.7583, 0.8398] },
-        "medium/press": { dq: [0.618, 0.7, 0.793, 0.848, 0.916, 1.014, 1.097, 1.214, 1.324, 1.443, 1.553, 1.63, 1.701, 1.757, 1.805, 1.85, 1.913, 1.99, 2.119, 2.405, 2.671, 2.831, 2.967, 3.312, 3.687], sq: [0.0797, 0.1926, 0.2676, 0.3073, 0.3399, 0.3632, 0.38, 0.4047, 0.4229, 0.4417, 0.4571, 0.4725, 0.4888, 0.5036, 0.5205, 0.5342, 0.5506, 0.5679, 0.5923, 0.6199, 0.6536, 0.6948, 0.7422, 0.8064, 0.883] },
-        "medium/zone": { dq: [1.702, 1.709, 1.858, 1.96, 2.064, 2.15, 2.228, 2.304, 2.375, 2.43, 2.477, 2.526, 2.569, 2.618, 2.661, 2.71, 2.76, 2.81, 2.862, 2.919, 2.993, 3.069, 3.154, 3.285, 3.421], sq: [0.0323, 0.114, 0.1804, 0.2214, 0.2594, 0.2873, 0.3101, 0.3319, 0.3579, 0.3787, 0.3954, 0.413, 0.4306, 0.4482, 0.4641, 0.4821, 0.502, 0.5247, 0.5504, 0.5801, 0.6138, 0.6481, 0.7037, 0.7777, 0.872] },
-        "short/offman": { dq: [1.446, 1.573, 1.72, 1.824, 1.927, 2.027, 2.117, 2.247, 2.406, 2.516, 2.63, 2.72, 2.799, 2.899, 2.99, 3.075, 3.177, 3.292, 3.412, 3.545, 3.69, 3.852, 4.032, 4.138, 4.138], sq: [0.1665, 0.294, 0.3487, 0.3716, 0.403, 0.4312, 0.4566, 0.4783, 0.4947, 0.5118, 0.5278, 0.5428, 0.5592, 0.5727, 0.5873, 0.6042, 0.6185, 0.6385, 0.6566, 0.6784, 0.706, 0.7357, 0.7758, 0.8298, 0.9276] },
-        "short/press": { dq: [0.529, 0.601, 0.716, 0.777, 0.865, 0.957, 1.059, 1.179, 1.308, 1.417, 1.515, 1.592, 1.677, 1.737, 1.786, 1.828, 1.884, 1.966, 2.113, 2.429, 2.646, 2.784, 2.922, 3.162, 3.425], sq: [0, 0.097, 0.1751, 0.2233, 0.2606, 0.2924, 0.3158, 0.338, 0.3588, 0.3781, 0.3948, 0.4133, 0.4313, 0.4511, 0.4668, 0.4859, 0.5035, 0.5258, 0.5485, 0.5793, 0.6135, 0.6539, 0.7212, 0.7776, 0.8696] },
-        "short/zone": { dq: [1.913, 1.92, 2.068, 2.152, 2.225, 2.281, 2.325, 2.379, 2.424, 2.467, 2.503, 2.541, 2.577, 2.615, 2.65, 2.687, 2.723, 2.76, 2.803, 2.85, 2.919, 2.999, 3.096, 3.226, 3.398], sq: [0.0452, 0.1465, 0.2143, 0.2555, 0.2924, 0.322, 0.3436, 0.3693, 0.3909, 0.4097, 0.4312, 0.4481, 0.468, 0.4861, 0.504, 0.5229, 0.5445, 0.5686, 0.5974, 0.6263, 0.6639, 0.7066, 0.7585, 0.8419, 0.9423] }
+        "deep/offman": { dq: [2.9332, 3.8729, 4.1689, 4.4015, 4.5029, 4.6803, 4.8036, 4.9172, 5.0029, 5.1084, 5.2433, 5.3499, 5.4433, 5.4898, 5.603, 5.6899, 5.8065, 5.9159, 6.0045, 6.1081, 6.1787, 6.3367, 6.4921, 6.6871, 7.5093], sq: [0.1662, 0.2744, 0.3117, 0.3328, 0.3548, 0.3734, 0.3919, 0.3993, 0.4096, 0.4218, 0.433, 0.4447, 0.4548, 0.4605, 0.4732, 0.4795, 0.4918, 0.5007, 0.5116, 0.5205, 0.5321, 0.5451, 0.5596, 0.6022, 0.6786] },
+        "deep/press": { dq: [0.233, 0.4141, 0.6459, 0.7601, 0.8545, 0.9232, 1.0335, 1.1281, 1.2572, 1.3143, 1.4028, 1.4743, 1.5138, 1.6003, 1.7052, 1.7599, 1.8241, 1.8579, 2.007, 2.151, 2.2842, 2.4289, 2.7612, 3.0895, 4.0617], sq: [0.2701, 0.368, 0.4008, 0.4303, 0.4499, 0.4715, 0.4874, 0.4961, 0.5055, 0.5138, 0.5188, 0.5326, 0.5434, 0.5621, 0.5723, 0.5803, 0.5945, 0.6017, 0.6047, 0.6178, 0.6311, 0.6497, 0.6644, 0.6985, 0.8261] },
+        "deep/zone": { dq: [0.575, 0.7683, 0.8086, 0.8626, 0.8951, 0.9253, 0.9497, 0.9868, 1.02, 1.0717, 1.1184, 1.1585, 1.1877, 1.2261, 1.25, 1.2892, 1.3102, 1.3249, 1.3633, 1.3886, 1.4048, 1.4366, 1.4694, 1.5312, 1.7162], sq: [0.1165, 0.1926, 0.2134, 0.2423, 0.2652, 0.2766, 0.2848, 0.294, 0.3076, 0.3203, 0.3381, 0.3449, 0.3572, 0.3729, 0.3802, 0.3999, 0.4068, 0.4228, 0.4392, 0.4557, 0.4797, 0.5051, 0.5208, 0.5539, 0.6737] },
+        "medium/offman": { dq: [1.8658, 2.2084, 2.3643, 2.4702, 2.5568, 2.6168, 2.6801, 2.7145, 2.7485, 2.7838, 2.8209, 2.8605, 2.8981, 2.9436, 3.0043, 3.0508, 3.1094, 3.1508, 3.1984, 3.2495, 3.3132, 3.3834, 3.4892, 3.6122, 3.8473], sq: [0.2681, 0.3389, 0.3611, 0.3918, 0.4037, 0.4203, 0.4348, 0.4432, 0.4527, 0.4611, 0.4692, 0.4826, 0.4875, 0.497, 0.5078, 0.515, 0.5258, 0.5367, 0.5468, 0.5659, 0.5781, 0.5944, 0.6214, 0.6576, 0.6913] },
+        "medium/press": { dq: [0.5126, 0.6821, 0.767, 0.8102, 0.8861, 0.9328, 0.9921, 1.1084, 1.1955, 1.2604, 1.3603, 1.4144, 1.4666, 1.5186, 1.5395, 1.5916, 1.6406, 1.6929, 1.716, 1.7565, 1.786, 1.8481, 1.908, 2.5769, 3.0254], sq: [0.2678, 0.3192, 0.3491, 0.384, 0.393, 0.4168, 0.4303, 0.4383, 0.4478, 0.454, 0.4637, 0.4746, 0.4803, 0.4901, 0.5048, 0.5109, 0.521, 0.5333, 0.5475, 0.5561, 0.5712, 0.5952, 0.6201, 0.6524, 0.7169] },
+        "medium/zone": { dq: [1.591, 1.822, 1.9699, 2.0244, 2.0801, 2.1525, 2.2142, 2.2445, 2.2711, 2.3047, 2.328, 2.3508, 2.3794, 2.3977, 2.4495, 2.484, 2.5382, 2.5782, 2.6159, 2.692, 2.7499, 2.777, 2.8813, 2.9333, 3.1961], sq: [0.1805, 0.2578, 0.2755, 0.3009, 0.326, 0.351, 0.3628, 0.3772, 0.3937, 0.4044, 0.4178, 0.4332, 0.4439, 0.4617, 0.4696, 0.4835, 0.4955, 0.5145, 0.538, 0.5542, 0.574, 0.5881, 0.6157, 0.6662, 0.8013] },
+        "short/offman": { dq: [1.8692, 2.2656, 2.4016, 2.4933, 2.5593, 2.6029, 2.6642, 2.7139, 2.7557, 2.8043, 2.8508, 2.9145, 2.9648, 3.0094, 3.052, 3.1085, 3.163, 3.2185, 3.2617, 3.3214, 3.3988, 3.4952, 3.6158, 3.811, 4.1854], sq: [0.3247, 0.413, 0.4368, 0.4519, 0.475, 0.4912, 0.5057, 0.5162, 0.5255, 0.5363, 0.5424, 0.5467, 0.5532, 0.5618, 0.5708, 0.5815, 0.5877, 0.5991, 0.6153, 0.6285, 0.6379, 0.6616, 0.6817, 0.7185, 0.7733] },
+        "short/press": { dq: [0.4501, 0.7088, 0.7731, 0.8376, 0.8836, 0.9701, 1.0486, 1.1225, 1.1724, 1.2691, 1.366, 1.3951, 1.4484, 1.4875, 1.5373, 1.5953, 1.6222, 1.654, 1.6893, 1.7278, 1.7892, 1.8406, 2.0401, 2.6936, 3.039], sq: [0.1595, 0.2376, 0.2781, 0.2984, 0.3304, 0.3513, 0.3599, 0.3761, 0.3879, 0.3972, 0.4096, 0.4224, 0.4285, 0.4436, 0.455, 0.4651, 0.4752, 0.4848, 0.5008, 0.5159, 0.5415, 0.5779, 0.5878, 0.6263, 0.7114] },
+        "short/zone": { dq: [1.734, 2.0786, 2.2013, 2.2528, 2.2927, 2.3262, 2.3555, 2.3884, 2.4276, 2.4607, 2.4899, 2.5235, 2.5636, 2.5933, 2.6226, 2.6551, 2.6877, 2.7189, 2.7483, 2.784, 2.8258, 2.8701, 2.9193, 3.0157, 3.1157], sq: [0.162, 0.2512, 0.2897, 0.3381, 0.3605, 0.3758, 0.3926, 0.4121, 0.4254, 0.4386, 0.449, 0.4587, 0.4753, 0.4893, 0.5043, 0.5107, 0.5244, 0.5375, 0.5525, 0.573, 0.5951, 0.6163, 0.6519, 0.6989, 0.7836] }
       };
       SEP_RECENTER = 0.015;
-      PRESS_RECENTER = 0.038;
       qsep = (m, x, extra = 0) => Math.max(0, Math.min(1, qinterp(m, x) + SEP_RECENTER + extra));
     }
   });
@@ -16222,7 +16224,7 @@ var _CFB = (() => {
     return mu + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
   }
   function resolvePocket(input, D = DIALS) {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f;
     const reps = input.reps || [];
     if (!reps.length) return { sacked: false, hurried: false };
     let numPen = 0;
@@ -16232,8 +16234,7 @@ var _CFB = (() => {
     const blitzDesign = (_b = input.blitzDesign) != null ? _b : 50;
     const paBite = (_c = input.paBite) != null ? _c : 0;
     const passKey = (_d = input.passKey) != null ? _d : 0;
-    const dna = (_e = input.dnaPressure) != null ? _e : 0;
-    const clock = D.CLOCK * (1 + (protectMult - 1) * D.PROT_GAIN) * (1 + paBite * D.PA_CLOCK) * (1 - dna * 3e-3);
+    const clock = D.CLOCK * (1 + (protectMult - 1) * D.PROT_GAIN) * (1 + paBite * D.PA_CLOCK);
     const collapse = D.COLLAPSE * (numPen - 1);
     const designPull = (blitzDesign - 50) / 100 * D.DESIGN_FREE;
     let minArr = Infinity;
@@ -16242,7 +16243,7 @@ var _CFB = (() => {
       const a = rep.r || {};
       const isEdge = rep.power || rep.speed || /^(DE|OLB|LB-Edge)/.test(rep.pos || "");
       const path = isEdge ? D.PATH_EDGE : D.PATH_INT;
-      const closeSpd = D.CLOSE_BASE + (((_f = a.SPD) != null ? _f : 50) * 0.6 + ((_g = a.AGI) != null ? _g : 50) * 0.4 - 55) * D.CLOSE_SLOPE;
+      const closeSpd = D.CLOSE_BASE + (((_e = a.SPD) != null ? _e : 50) * 0.6 + ((_f = a.AGI) != null ? _f : 50) * 0.4 - 55) * D.CLOSE_SLOPE;
       const traverse = path / Math.max(3, closeSpd);
       let shed;
       if (rep.blitzer) {
@@ -16610,18 +16611,21 @@ var _CFB = (() => {
     return result;
   }
   function routeVsCoverage(receiver, defender, passDepth, coverageType) {
+    const _tr = globalThis.__sepAB ? {} : null;
     const sep = routeDuel(
       receiver,
       defender,
       passDepth,
       coverageType,
-      _passCtx.pressLevel === "press"
+      _passCtx.pressLevel === "press",
+      _tr
     );
     if (globalThis.__sepAB) {
       globalThis.__sepAB.push({
         d: passDepth,
         t: coverageType,
         g: sep,
+        dist: _tr == null ? void 0 : _tr.dist,
         r: _refSepAB(receiver, defender, passDepth, coverageType),
         ra: __spreadProps(__spreadValues({}, receiver.attributes), { comp: receiver.compositeRating, pos: receiver.position }),
         da: defender ? __spreadProps(__spreadValues({}, defender.attributes), { comp: defender.compositeRating, pos: defender.position }) : null
@@ -16655,7 +16659,10 @@ var _CFB = (() => {
     const w = passDepth === "short" ? 1 : passDepth === "medium" ? 0.7 : 0.35;
     return clamp2(0.5 + (recVal - defVal) / 80 + (r.TEC - d.TEC) * w * 2e-3, 0, 1);
   }
-  function qbRead(targets, pressureLevel, qb, motionTell = 0) {
+  function motionMisreadProb(dbAWR, qbAWR) {
+    return clamp2(0.14 + (dbAWR - 50) * 4e-3 - (qbAWR - 50) * 3e-3, 0.03, 0.45);
+  }
+  function qbRead(targets, pressureLevel, qb, motionReadEdge = 0) {
     if (!targets.length) return null;
     const eff = (t) => t.separation - (t.bracketed ? 0.04 : 0);
     const sorted = [...targets].sort((a, b) => eff(b) - eff(a));
@@ -16665,7 +16672,7 @@ var _CFB = (() => {
     const pool = pressureLevel === 1 ? sorted.slice(0, 2) : sorted;
     const eligible = pool.filter((t) => t.separation > minSep);
     if (eligible.length === 0) eligible.push(sorted[0]);
-    const giBail = clamp2((qb.attributes.AWR - 55) / 50 + motionTell, 0.1, 0.92);
+    const giBail = clamp2((qb.attributes.AWR - 55) / 50 + motionReadEdge, 0.1, 0.92);
     const shareValsN = eligible.map((t) => {
       var _a;
       return (_a = t.shareWeight) != null ? _a : 15;
@@ -17420,7 +17427,7 @@ var _CFB = (() => {
       blitzerDbId,
       _passCtx.pressLevel
     );
-    let motionTell = 0;
+    let motionReadEdge = 0;
     {
       const MOTION_RATE = {
         "Trips/Bunch": 0.35,
@@ -17447,14 +17454,14 @@ var _CFB = (() => {
         mover.separation = clamp2(mover.separation + motionGain, 0, 1);
         const dbs = coverageAssigned.map((c) => c.defender).filter(Boolean);
         const dbAWR = dbs.length ? dbs.reduce((s, p) => s + p.attributes.AWR, 0) / dbs.length : 50;
-        motionTell = clamp2(0.2 - (dbAWR - 50) * 3e-3, 0.04, 0.3);
         result.motion = true;
         result.motionManId = mover.receiverId;
-        if (calledMotion) {
-          const rawStyle = (defPlan == null ? void 0 : defPlan.covStyleEff) === "man" ? "man" : (defPlan == null ? void 0 : defPlan.covStyleEff) === "zone" ? "zone" : mover.coverageType === "man" || mover.coverageType === "press" ? "man" : "zone";
-          const misread = Math.random() < motionTell;
-          result.motionReveal = misread ? rawStyle === "man" ? "zone" : "man" : rawStyle;
-        }
+        const motionMisreadP = motionMisreadProb(dbAWR, qb.attributes.AWR);
+        const misread = Math.random() < motionMisreadP;
+        motionReadEdge = misread ? -0.12 : 0.15;
+        result._motionMisread = misread;
+        const rawStyle = (defPlan == null ? void 0 : defPlan.covStyleEff) === "man" ? "man" : (defPlan == null ? void 0 : defPlan.covStyleEff) === "zone" ? "zone" : mover.coverageType === "man" || mover.coverageType === "press" ? "man" : "zone";
+        result.motionReveal = misread ? rawStyle === "man" ? "zone" : "man" : rawStyle;
       }
     }
     if (offPlan._rpoFlip) {
@@ -17525,18 +17532,21 @@ var _CFB = (() => {
         }
       }
       const disguise = 1 - (((_Y = defPlan == null ? void 0 : defPlan.blitzDesign) != null ? _Y : 50) - 50) / 150;
-      if (deepest && maxDepth >= 2) deepest.separation = clamp2(deepest.separation + 0.14 * disguise, 0, 1);
-      if (defPlan == null ? void 0 : defPlan._h2Shadow) {
-        for (const t of targets) {
-          if (((_Z = t.receiver) == null ? void 0 : _Z.id) === defPlan._h2Shadow.id) t.separation = clamp2(t.separation - defPlan._h2Shadow.eff, 0, 1);
-        }
+      const dnaPressureCov = 1 - ((defPlan == null ? void 0 : defPlan._dnaPressure) || 0) * 0.015;
+      if (deepest && maxDepth >= 2) deepest.separation = clamp2(deepest.separation + 0.14 * disguise * dnaPressureCov, 0, 1);
+    }
+    if ((defPlan == null ? void 0 : defPlan._h2Shadow) && targets.length > 0) {
+      for (const t of targets) {
+        if (((_Z = t.receiver) == null ? void 0 : _Z.id) === defPlan._h2Shadow.id) t.separation = clamp2(t.separation - defPlan._h2Shadow.eff, 0, 1);
       }
     }
-    const chosen = qbRead(targets, pressureLevel, qb, motionTell);
+    const chosen = qbRead(targets, pressureLevel, qb, motionReadEdge);
     if (!chosen) {
       return result;
     }
     result.targetId = chosen.receiverId;
+    if (result._motionMisread === true) chosen.separation = clamp2(chosen.separation - 0.07, 0, 1);
+    else if (result._motionMisread === false) chosen.separation = clamp2(chosen.separation + 0.02, 0, 1);
     const receiverObj = chosen.receiver;
     const coveringDef = chosen.defender;
     const sep = chosen.separation;
@@ -18036,8 +18046,7 @@ var _CFB = (() => {
     if (pos === "RB") return d === 0 ? 50 : 25;
     return d === 0 ? 65 : d === 1 ? 40 : 25;
   }
-  function filterActiveDepth(depthChart, ctx2, snapShareMap, side) {
-    var _a;
+  function filterActiveDepth(depthChart, ctx2, side) {
     const totalSnaps = side === "off" ? ctx2.offSnaps || 0 : ctx2.defSnaps || 0;
     const result = {};
     for (const [pos, ids] of Object.entries(depthChart)) {
@@ -18048,8 +18057,7 @@ var _CFB = (() => {
       const active = [];
       for (let slot = 0; slot < ids.length; slot++) {
         const id = ids[slot];
-        const defaultCap = starterSnapCap(pos, slot);
-        const capFrac = ((_a = snapShareMap == null ? void 0 : snapShareMap[id]) != null ? _a : defaultCap) / 100;
+        const capFrac = starterSnapCap(pos, slot) / 100;
         const played = ctx2.snapCountMap[id] || 0;
         const isCapped = totalSnaps > 0 && played / totalSnaps > capFrac;
         const isBenched = !!ctx2.benchedMap[id];
@@ -18289,10 +18297,10 @@ var _CFB = (() => {
     }
     return { player: best, rating: bestVal > 0 ? bestVal : 55 };
   }
-  function coverageStrength(roster) {
+  function coverageStrength(roster, stGrade = 0) {
     const cov = roster.filter((p) => ["LB", "S", "CB"].includes(p.position)).slice(0, 8);
-    if (!cov.length) return 55;
-    return cov.reduce((s, p) => s + (p.attributes.SPD + p.attributes.TKL) / 2, 0) / cov.length;
+    const base = cov.length ? cov.reduce((s, p) => s + (p.attributes.SPD + p.attributes.TKL) / 2, 0) / cov.length : 55;
+    return base * (1 + (stGrade || 0) * 0.01);
   }
   function returnOutcome(retRating, cov, startLine, base) {
     const edgeYds = (retRating - cov) / C.RETURN_EDGE_DIV;
@@ -18311,7 +18319,7 @@ var _CFB = (() => {
     yds = Math.min(roomToScore, yds);
     return { yards: yds, td, startLine: clamp2(startLine + yds, 1, 100) };
   }
-  function kickoffOutcome(kickingRoster, receivingRoster, returnerOverride) {
+  function kickoffOutcome(kickingRoster, receivingRoster, returnerOverride, stGrade = 0) {
     const k = kickingRoster.find((p) => p.position === "K");
     const leg = k ? (k.attributes.TEC + k.attributes.STR) / 2 : 55;
     const tbChance = clamp2(C.KICKOFF_TOUCHBACK_BASE + (leg - 55) / 220, 0.35, 0.9);
@@ -18319,7 +18327,7 @@ var _CFB = (() => {
       return { touchback: true, td: false, fieldPos: C.KICKOFF_START, returner: null };
     }
     const { player, rating } = pickReturner(receivingRoster, returnerOverride);
-    const cov = coverageStrength(kickingRoster);
+    const cov = coverageStrength(kickingRoster, stGrade);
     const r = returnOutcome(rating, cov, 3, C.KICKOFF_RETURN_BASE);
     return { touchback: false, td: r.td, fieldPos: r.startLine, returner: player, retYds: r.yards };
   }
@@ -18363,7 +18371,7 @@ var _CFB = (() => {
     return { penalty, player };
   }
   function simulateDrive(offense, defense, gameState, log, opts = {}) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya, _za;
     const { roster: offRoster, depth: offDepth, gameplan: offPlan, school: offSchool, ctx: offCtx } = offense;
     const { roster: defRoster, depth: defDepth, gameplan: defPlan, school: defSchool, ctx: defCtx } = defense;
     const R = opts.resume || null;
@@ -18526,7 +18534,7 @@ var _CFB = (() => {
           if (!touchback) {
             if (Math.random() >= C.PUNT_FAIR_CATCH) {
               const { player, rating } = pickReturner(defRoster, (((_d = defSchool == null ? void 0 : defSchool.depthOrder) == null ? void 0 : _d.RET) || [])[0]);
-              const cov = coverageStrength(offRoster);
+              const cov = coverageStrength(offRoster, ((_e = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : _e.specialTeams) || 0);
               const r = returnOutcome(rating, cov, puntStart, C.PUNT_RETURN_BASE);
               returner = player;
               retYds = Math.round(r.yards * (puntDef === "block" ? 0.5 : puntDef === "safe" ? 1.15 : 1));
@@ -18538,8 +18546,8 @@ var _CFB = (() => {
                   type: "punt",
                   puntYds,
                   touchback: false,
-                  returnerId: (_e = returner == null ? void 0 : returner.id) != null ? _e : null,
-                  punterId: (_f = (offDepth["P"] || [])[0]) != null ? _f : null,
+                  returnerId: (_f = returner == null ? void 0 : returner.id) != null ? _f : null,
+                  punterId: (_g = (offDepth["P"] || [])[0]) != null ? _g : null,
                   returnYds: retYds,
                   returnTD: true,
                   down,
@@ -18560,8 +18568,8 @@ var _CFB = (() => {
             type: "punt",
             puntYds,
             touchback,
-            returnerId: (_g = returner == null ? void 0 : returner.id) != null ? _g : null,
-            punterId: (_h = (offDepth["P"] || [])[0]) != null ? _h : null,
+            returnerId: (_h = returner == null ? void 0 : returner.id) != null ? _h : null,
+            punterId: (_i = (offDepth["P"] || [])[0]) != null ? _i : null,
             returnYds: retYds,
             returnTD: false,
             down,
@@ -18612,19 +18620,17 @@ var _CFB = (() => {
               formations: formations.length ? formations : [offPlan.offFormation || "Pro Set"],
               conceptsByGroup: conceptGroups(),
               // the sheet's ≈% follow the SITUATION (wizard grid)
-              conceptWeights: (_i = askEff.conceptWeights) != null ? _i : null
+              conceptWeights: (_j = askEff.conceptWeights) != null ? _j : null
             })
           } };
         }
       }
       {
         const flagOnOffense = Math.random() < C.PENALTY_OFF_SHARE;
-        const dnaDiscipline = 1 - (((_j = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : _j.discipline) || 0) * 0.01;
         let iqPenMult = 1;
         if (flagOnOffense) {
           iqPenMult = 1 + Math.max(0, (C.PENALTY_IQ_PIVOT - offFormIQ) / C.PENALTY_IQ_DIV);
           iqPenMult = clamp2(iqPenMult, 1, C.PENALTY_IQ_MAX);
-          iqPenMult *= dnaDiscipline;
         }
         const _penDefSit = resolveSituation({ down, distance, fieldPos, margin: gameState.score.def - gameState.score.off, clock: gameState.clock });
         const _penDefEff = getEffectivePlan(defPlan, defSchool == null ? void 0 : defSchool.weeklyPlan, _penDefSit);
@@ -18635,10 +18641,11 @@ var _CFB = (() => {
         if (Math.random() < C.PENALTY_PER_PLAY * sideMult) {
           const onOffense = flagOnOffense;
           const { penalty, player } = rollPenalty(onOffense ? "offense" : "defense", offRoster, defRoster);
+          const drilledAway = onOffense && penalty.preSnap && Math.random() < (((_l = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : _l.discipline) || 0) * 0.012;
           const yds = penalty.yards;
           const who = player ? `${player.name.first[0]}. ${player.name.last}` : null;
           const teamName = onOffense ? offSchool.name : defSchool.name;
-          if (onOffense) {
+          if (onOffense && !drilledAway) {
             fieldPos = clamp2(fieldPos - yds, 1, 99);
             distance += yds;
             pen.offCount++;
@@ -18649,7 +18656,7 @@ var _CFB = (() => {
               penaltyName: penalty.name,
               penaltyOn: teamName,
               penaltySide: "offense",
-              penaltyPlayerId: (_l = player == null ? void 0 : player.id) != null ? _l : null,
+              penaltyPlayerId: (_m = player == null ? void 0 : player.id) != null ? _m : null,
               yards: -yds,
               autoFirst: false,
               down,
@@ -18661,7 +18668,7 @@ var _CFB = (() => {
               scoreDef: gameState.score.def
             });
             continue;
-          } else {
+          } else if (!onOffense) {
             const rawPos = fieldPos + yds;
             pen.defCount++;
             pen.defYds += yds;
@@ -18685,7 +18692,7 @@ var _CFB = (() => {
               penaltyName: penalty.name,
               penaltyOn: teamName,
               penaltySide: "defense",
-              penaltyPlayerId: (_m = player == null ? void 0 : player.id) != null ? _m : null,
+              penaltyPlayerId: (_n = player == null ? void 0 : player.id) != null ? _n : null,
               yards: yds,
               autoFirst,
               down,
@@ -18731,7 +18738,7 @@ var _CFB = (() => {
         conceptWeights: offEff.conceptWeights,
         protEmphasis: offEff.protEmphasis,
         qbAggr: offEff.qbAggr,
-        _ocQbRunDesign: (_q = (_p = (_o = (_n = offSchool == null ? void 0 : offSchool.staff) == null ? void 0 : _n.oc) == null ? void 0 : _o.ratings) == null ? void 0 : _p.qbRunDesign) != null ? _q : 50,
+        _ocQbRunDesign: (_r = (_q = (_p = (_o = offSchool == null ? void 0 : offSchool.staff) == null ? void 0 : _o.oc) == null ? void 0 : _p.ratings) == null ? void 0 : _q.qbRunDesign) != null ? _r : 50,
         _injuriesOff: (offSchool == null ? void 0 : offSchool._injuriesOff) === true,
         _dnaAir: ((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.airAttack) || 0,
         _dnaGround: ((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.groundPound) || 0,
@@ -18762,8 +18769,8 @@ var _CFB = (() => {
         // auto/te1/slot/hot
         // DC Blitz Design (Phase 3): disguise quality. 50 is
         // neutral — the pre-coordinator game exactly.
-        blitzDesign: (_u = (_t = (_s = (_r = defSchool == null ? void 0 : defSchool.staff) == null ? void 0 : _r.dc) == null ? void 0 : _s.ratings) == null ? void 0 : _t.blitzDesign) != null ? _u : 50,
-        _dnaPressure: ((_v = defSchool == null ? void 0 : defSchool._dnaGrades) == null ? void 0 : _v.pressure) || 0,
+        blitzDesign: (_v = (_u = (_t = (_s = defSchool == null ? void 0 : defSchool.staff) == null ? void 0 : _s.dc) == null ? void 0 : _t.ratings) == null ? void 0 : _u.blitzDesign) != null ? _v : 50,
+        _dnaPressure: ((_w = defSchool == null ? void 0 : defSchool._dnaGrades) == null ? void 0 : _w.pressure) || 0,
         _dnaBallHawk: ((defSchool == null ? void 0 : defSchool._dnaGrades) == null ? void 0 : defSchool._dnaGrades.ballHawk) || 0
       });
       const offFormationId = (forcedCall == null ? void 0 : forcedCall.formationId) && FORMATION_PACKAGES[forcedCall.formationId] ? forcedCall.formationId : rollFormation(offEff.offFormations) || offPlan.offFormation || "Pro Set";
@@ -18775,7 +18782,7 @@ var _CFB = (() => {
         gameState.half,
         gameState.score.def - gameState.score.off,
         offFormationId,
-        (_x = (_w = defEff.subPhilosophy) != null ? _w : defPlan.subPhilosophy) != null ? _x : "auto"
+        (_y = (_x = defEff.subPhilosophy) != null ? _x : defPlan.subPhilosophy) != null ? _y : "auto"
       );
       let playType = pickPlayType(
         offFormationId,
@@ -18808,7 +18815,7 @@ var _CFB = (() => {
         } else if (PASS_CONCEPTS[nm]) {
           playType = "pass_" + PASS_CONCEPTS[nm].depth;
           forcedConceptName = nm;
-        } else if ((_y = RUN_CONCEPTS[nm]) == null ? void 0 : _y.type) {
+        } else if ((_z = RUN_CONCEPTS[nm]) == null ? void 0 : _z.type) {
           playType = RUN_CONCEPTS[nm].type;
           forcedConceptName = nm;
         }
@@ -18842,11 +18849,11 @@ var _CFB = (() => {
       }
       const coachCalled = !!(forcedConceptName || forcedGadget);
       const familyPinned = coachCalled || categoryCalled;
-      const activeOffDepth = filterActiveDepth(offDepth, offCtx, offSchool == null ? void 0 : offSchool.snapShare, "off");
-      const activeDefDepth = filterActiveDepth(defDepth, defCtx, defSchool == null ? void 0 : defSchool.snapShare, "def");
-      const offFA = (_A = (_z = offPlan.fieldAssignments) == null ? void 0 : _z.offense) == null ? void 0 : _A[offFormationId];
+      const activeOffDepth = filterActiveDepth(offDepth, offCtx, "off");
+      const activeDefDepth = filterActiveDepth(defDepth, defCtx, "def");
+      const offFA = (_B = (_A = offPlan.fieldAssignments) == null ? void 0 : _A.offense) == null ? void 0 : _B[offFormationId];
       const baseFront = defPlan.defBaseFront || "4-3";
-      const defFA = (_C = (_B = defPlan.fieldAssignments) == null ? void 0 : _B.defense) == null ? void 0 : _C[baseFront];
+      const defFA = (_D = (_C = defPlan.fieldAssignments) == null ? void 0 : _C.defense) == null ? void 0 : _D[baseFront];
       const offPosOf = (id) => {
         var _a2;
         return ((_a2 = offRoster.find((p) => p.id === id)) == null ? void 0 : _a2.position) || null;
@@ -18858,7 +18865,7 @@ var _CFB = (() => {
       const MESH_DEPTH_KEYS = ["SLOT", "FB", "WING", "ABACK", "WILDCAT", "JETMAN"];
       let offDepthWithSlot = activeOffDepth;
       for (const key of MESH_DEPTH_KEYS) {
-        const named = (_D = offSchool == null ? void 0 : offSchool.depthOrder) == null ? void 0 : _D[key];
+        const named = (_E = offSchool == null ? void 0 : offSchool.depthOrder) == null ? void 0 : _E[key];
         if (!(named == null ? void 0 : named.length)) continue;
         const live = named.filter((id) => offRoster.some((p) => p.id === id && p.injuryGamesOut === 0));
         if (live.length) offDepthWithSlot = __spreadProps(__spreadValues({}, offDepthWithSlot), { [key]: live });
@@ -18871,10 +18878,10 @@ var _CFB = (() => {
         const id = ((offPersonnel == null ? void 0 : offPersonnel.QB) || [])[0];
         return id ? offRoster.find((p) => p.id === id) : null;
       })();
-      const losFree = (_E = offEff.losFreedom) != null ? _E : "auto";
+      const losFree = (_F = offEff.losFreedom) != null ? _F : "auto";
       const sPl0 = (defPersonnel.S || []).map((id) => defRoster.find((pl) => pl.id === id)).filter(Boolean);
       const sAwr0 = sPl0.length ? sPl0.reduce((t, pl) => t + pl.attributes.AWR, 0) / sPl0.length : 50;
-      const covFam = coverageFamily((_F = defEff.covShell) != null ? _F : "balanced", (_G = defEff.covStyle) != null ? _G : "balanced", sAwr0);
+      const covFam = coverageFamily((_G = defEff.covShell) != null ? _G : "balanced", (_H = defEff.covStyle) != null ? _H : "balanced", sAwr0);
       const DISGUISE_SHOW = {
         "Cover 1": "Cover 2",
         "Cover 3": "Cover 2",
@@ -18886,11 +18893,11 @@ var _CFB = (() => {
       const oppMemPre = seenMemory(defCtx);
       let shownFam = covFam, fooled = false;
       if ((playType.startsWith("pass") || playType.startsWith("run")) && qb0) {
-        const pDisguise = clamp2(0.1 + (((_H = defPlanEff.blitzDesign) != null ? _H : 50) - 50) * 4e-3 + (sAwr0 - 50) * 2e-3 + Math.min(0.1, (oppMemPre.audibles || 0) * 0.012), 0.04, 0.45);
+        const pDisguise = clamp2(0.1 + (((_I = defPlanEff.blitzDesign) != null ? _I : 50) - 50) * 4e-3 + (sAwr0 - 50) * 2e-3 + Math.min(0.1, (oppMemPre.audibles || 0) * 0.012), 0.04, 0.45);
         if (Math.random() < pDisguise) {
-          shownFam = (_I = DISGUISE_SHOW[covFam]) != null ? _I : covFam;
-          const craft = ((_J = defPlanEff.blitzDesign) != null ? _J : 50) * 0.5 + sAwr0 * 0.5;
-          const read = ((_K = qb0.attributes.AWR) != null ? _K : 50) * 0.7 + ((_L = qb0.attributes.TEC) != null ? _L : 50) * 0.3;
+          shownFam = (_J = DISGUISE_SHOW[covFam]) != null ? _J : covFam;
+          const craft = ((_K = defPlanEff.blitzDesign) != null ? _K : 50) * 0.5 + sAwr0 * 0.5;
+          const read = ((_L = qb0.attributes.AWR) != null ? _L : 50) * 0.7 + ((_M = qb0.attributes.TEC) != null ? _M : 50) * 0.3;
           fooled = Math.random() < clamp2(0.5 + (craft - read) * 0.01, 0.15, 0.85);
         }
       }
@@ -18899,7 +18906,7 @@ var _CFB = (() => {
       if (qb0 && losFree !== "never" && !familyPinned) {
         const shellSeen = fooled && defEff.covShell !== "balanced" && defEff.covShell != null ? ["Cover 2", "Cover 4", "Cover 2-Man"].includes(shownFam) ? -1 : 1 : defEff.covShell === "single" ? 1 : defEff.covShell === "two" ? -1 : 0;
         const boxScore = shellSeen + (defEff.runCommit || 0) / 12;
-        const seeIt = clamp2((((_M = qb0.attributes.AWR) != null ? _M : 50) - 55) * 8e-3 * (losFree === "free" ? 1.5 : 1), 0, 0.25);
+        const seeIt = clamp2((((_N = qb0.attributes.AWR) != null ? _N : 50) - 55) * 8e-3 * (losFree === "free" ? 1.5 : 1), 0, 0.25);
         if ((playType === "run_inside" || playType === "run_outside") && boxScore >= 1 && Math.random() < seeIt) {
           playType = "pass_short";
           killCall = "toPass";
@@ -18917,7 +18924,7 @@ var _CFB = (() => {
           shotCall = true;
         }
         if (playType === "pass_short" && covMem.blitz / covMem.dropbacks >= 0.35) {
-          offPlanEff.screenRate = ((_N = offPlanEff.screenRate) != null ? _N : 14) + 6;
+          offPlanEff.screenRate = ((_O = offPlanEff.screenRate) != null ? _O : 14) + 6;
         }
       }
       const offWeights = getOffWeights(offFormationId, playType) || OFF_WEIGHTS[playType];
@@ -18931,16 +18938,16 @@ var _CFB = (() => {
       else if (playType === "run_inside" || playType === "run_outside") concept = pickRunConcept(playType, offPersonnel, offRoster, defEff, offPlanEff.conceptWeights || null, forcedConceptName, _pbGate);
       let audible = false;
       if (concept.name && playType.startsWith("pass") && qb0 && losFree !== "never" && audiblesUsed < (losFree === "free" ? 2 : 1)) {
-        const calledVs = (_Q = (_P = (_O = PASS_CONCEPTS[concept.name]) == null ? void 0 : _O.vs) == null ? void 0 : _P[believedFam]) != null ? _Q : 0;
-        const pAud = clamp2((((_R = qb0.attributes.AWR) != null ? _R : 50) - 55) * 0.012, 0, 0.35) * (losFree === "free" ? 1.4 : 1);
+        const calledVs = (_R = (_Q = (_P = PASS_CONCEPTS[concept.name]) == null ? void 0 : _P.vs) == null ? void 0 : _Q[believedFam]) != null ? _R : 0;
+        const pAud = clamp2((((_S = qb0.attributes.AWR) != null ? _S : 50) - 55) * 0.012, 0, 0.35) * (losFree === "free" ? 1.4 : 1);
         if (calledVs <= -0.02 && Math.random() < pAud) {
           const depth = playType.replace("pass_", "");
           const wrN = ((offPersonnel == null ? void 0 : offPersonnel.WR) || []).length;
           let bestName = null, bestVs = calledVs;
           for (const [nm, c] of Object.entries(PASS_CONCEPTS)) {
             if (c.depth !== depth || c.minWR && wrN < c.minWR) continue;
-            if (offPlanEff.conceptWeights && ((_S = offPlanEff.conceptWeights[nm]) != null ? _S : 50) <= 0) continue;
-            const v = (_U = (_T = c.vs) == null ? void 0 : _T[believedFam]) != null ? _U : 0;
+            if (offPlanEff.conceptWeights && ((_T = offPlanEff.conceptWeights[nm]) != null ? _T : 50) <= 0) continue;
+            const v = (_V = (_U = c.vs) == null ? void 0 : _U[believedFam]) != null ? _V : 0;
             if (v > bestVs) {
               bestVs = v;
               bestName = nm;
@@ -18954,7 +18961,7 @@ var _CFB = (() => {
             const skill = execSkill(c.exec || {}, offRoster, offPersonnel);
             concept = {
               name: bestName,
-              mod: ((_W = (_V = c.vs) == null ? void 0 : _V[covFam]) != null ? _W : 0) * clamp2(1 + (skill - 50) / 100, 0.6, 1.4)
+              mod: ((_X = (_W = c.vs) == null ? void 0 : _W[covFam]) != null ? _X : 0) * clamp2(1 + (skill - 50) / 100, 0.6, 1.4)
             };
           }
         }
@@ -18962,17 +18969,17 @@ var _CFB = (() => {
       if (fooled) offPlanEff._fooled = true;
       _conceptCtx = {
         name: concept.name,
-        def: concept.name ? (_Y = (_X = PASS_CONCEPTS[concept.name]) != null ? _X : RUN_CONCEPTS[concept.name]) != null ? _Y : null : null,
+        def: concept.name ? (_Z = (_Y = PASS_CONCEPTS[concept.name]) != null ? _Y : RUN_CONCEPTS[concept.name]) != null ? _Z : null : null,
         fam: covFam
       };
       offPlanEff._forcePANative = !!(concept.name && PASS_CONCEPTS[concept.name] && PASS_CONCEPTS[concept.name].paNative);
-      const offUnit = baseOffUnit * (1 + concept.mod) * (fakeSurprise ? 1.1 : 1) * h2Counter * coordIqMod(offSchool, "off", offFormationId) * (2 - coordIqMod(defSchool, "def", defFrontId)) * getMatchupEdge(offFormationId, defFrontId) * getSituationalMod(offFormationId, down, distance, gameState.clock, fieldPos) * shortYardagePower(playType, distance, offPersonnel, offRoster) * (1 + (((_Z = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : _Z.groundPound) || 0) * 8e-3) * (down === 4 ? 1 + (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.riverboat) || 0) * 0.01 : 1) * (offense.isHome ? C.HOME_EDGE : 1 - (1 - (2 - C.HOME_EDGE)) * (1 - (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.roadWarrior) || 0) * 0.08)) * ((__ = offense.form) != null ? __ : 1) * (2 - ((_$ = defense.form) != null ? _$ : 1)) * ((_aa = offense.execMult) != null ? _aa : 1) * (2 - ((_ba = defense.execMult) != null ? _ba : 1));
+      const offUnit = baseOffUnit * (1 + concept.mod) * (fakeSurprise ? 1.1 : 1) * h2Counter * coordIqMod(offSchool, "off", offFormationId) * (2 - coordIqMod(defSchool, "def", defFrontId)) * getMatchupEdge(offFormationId, defFrontId) * getSituationalMod(offFormationId, down, distance, gameState.clock, fieldPos) * shortYardagePower(playType, distance, offPersonnel, offRoster) * (1 + (((__ = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : __.groundPound) || 0) * 8e-3) * (down === 4 ? 1 + (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.riverboat) || 0) * 0.01 : 1) * (offense.isHome ? C.HOME_EDGE : 1 - (1 - (2 - C.HOME_EDGE)) * (1 - (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.roadWarrior) || 0) * 0.08)) * ((_$ = offense.form) != null ? _$ : 1) * (2 - ((_aa = defense.form) != null ? _aa : 1)) * ((_ba = offense.execMult) != null ? _ba : 1) * (2 - ((_ca = defense.execMult) != null ? _ca : 1));
       const rcDef = defEff.runCommit || 0;
       const shellRunMult = playType === "run_inside" || playType === "run_outside" ? defEff.covShell === "single" ? 1.04 : defEff.covShell === "two" ? 0.95 : 1 : 1;
       const edgeRunMult = defEff.edgePlay === "contain" ? playType === "run_outside" ? 1.04 : playType === "run_inside" ? 0.98 : 1 : defEff.edgePlay === "crash" ? playType === "run_outside" ? 0.96 : playType === "run_inside" ? 1.02 : 1 : 1;
       const oppMem = seenMemory(defCtx);
-      _tkStyle = (_da = (_ca = defEff.tackleStyle) != null ? _ca : defPlan.tackleStyle) != null ? _da : "balanced";
-      _optKey = (_fa = (_ea = defEff.optionKey) != null ? _ea : defPlan.optionKey) != null ? _fa : "balanced";
+      _tkStyle = (_ea = (_da = defEff.tackleStyle) != null ? _da : defPlan.tackleStyle) != null ? _ea : "balanced";
+      _optKey = (_ga = (_fa = defEff.optionKey) != null ? _fa : defPlan.optionKey) != null ? _ga : "balanced";
       const defAwrFactor = (() => {
         const readers = [...defPersonnel.LB || [], ...defPersonnel.S || []].map((id) => defRoster.find((p) => p.id === id)).filter(Boolean);
         const awr = readers.length ? readers.reduce((s2, p) => s2 + p.attributes.AWR, 0) / readers.length : 50;
@@ -18991,14 +18998,14 @@ var _CFB = (() => {
         offRoster,
         offCtx.fatigueMap,
         slotMap(offPersonnel),
-        (((_ga = offense.form) != null ? _ga : 1) * ((_ha = offense.execMult) != null ? _ha : 1) - 1) * C.FORM_ATTR_SCALE
+        (((_ha = offense.form) != null ? _ha : 1) * ((_ia = offense.execMult) != null ? _ia : 1) - 1) * C.FORM_ATTR_SCALE
       );
       const effDefRoster = makeEffectiveRoster(
         onFieldDef,
         defRoster,
         defCtx.fatigueMap,
         slotMap(defPersonnel),
-        (((_ia = defense.form) != null ? _ia : 1) * ((_ja = defense.execMult) != null ? _ja : 1) - 1) * C.FORM_ATTR_SCALE
+        (((_ja = defense.form) != null ? _ja : 1) * ((_ka = defense.execMult) != null ? _ka : 1) - 1) * C.FORM_ATTR_SCALE
       );
       const qbId = ((offPersonnel == null ? void 0 : offPersonnel.QB) || activeOffDepth["QB"] || [])[0];
       let qb = qbId ? effOffRoster.find((p) => p.id === qbId) : null;
@@ -19029,17 +19036,17 @@ var _CFB = (() => {
           const optShare = offPlanEff.optionRate != null ? clamp2(offPlanEff.optionRate / 100, 0, 1) : OPTION_CAPABLE[offFormationId];
           optionSnap = Math.random() < optShare;
         } else if (SPEED_OPTION[offFormationId] != null) {
-          const optShare = SPEED_OPTION[offFormationId] * clamp2(((_ka = offPlanEff.optionRate) != null ? _ka : 70) / 70, 0, 1.5);
+          const optShare = SPEED_OPTION[offFormationId] * clamp2(((_la = offPlanEff.optionRate) != null ? _la : 70) / 70, 0, 1.5);
           if (Math.random() < optShare) {
             optionSnap = true;
             optionStyle = "speed";
           }
         }
       }
-      const rpoFit = (_la = C.RPO_FIT[offFormationId]) != null ? _la : 0.5;
+      const rpoFit = (_ma = C.RPO_FIT[offFormationId]) != null ? _ma : 0.5;
       const rpoKeyMult = defEff.optionKey === "qb" ? 0.7 : 1;
       const calledRPO = !!(offPlanEff && offPlanEff._forceRPO);
-      if (!optionSnap && !forcedGadget && qb && (calledRPO || rpoFit > 0 && playType.startsWith("run") && Math.random() < ((_ma = offPlanEff.rpoRate) != null ? _ma : 40) / 100 * rpoFit * rpoKeyMult)) {
+      if (!optionSnap && !forcedGadget && qb && (calledRPO || rpoFit > 0 && playType.startsWith("run") && Math.random() < ((_na = offPlanEff.rpoRate) != null ? _na : 40) / 100 * rpoFit * rpoKeyMult)) {
         const lbs = ((defPersonnel == null ? void 0 : defPersonnel.LB) || []).map((id) => {
           var _a2;
           return (_a2 = defRoster == null ? void 0 : defRoster.find) == null ? void 0 : _a2.call(defRoster, (p) => p.id === id);
@@ -19071,13 +19078,13 @@ var _CFB = (() => {
         }
       }
       let wildcatTaker = null;
-      if (offFormationId === "Wildcat" && !jetMan && (!coachCalled || forcedGadget === "wildcat") && (effPlayType === "run_inside" || effPlayType === "run_outside") && ((_na = offField == null ? void 0 : offField.bySlot) == null ? void 0 : _na.RB_H)) {
+      if (offFormationId === "Wildcat" && !jetMan && (!coachCalled || forcedGadget === "wildcat") && (effPlayType === "run_inside" || effPlayType === "run_outside") && ((_oa = offField == null ? void 0 : offField.bySlot) == null ? void 0 : _oa.RB_H)) {
         wildcatTaker = effOffRoster.find((p) => p.id === offField.bySlot.RB_H) || null;
       }
       let drawSnap = false;
       if (forcedGadget === "draw" && effPlayType === "run_inside") {
         drawSnap = true;
-      } else if (!optionSnap && !jetMan && !wildcatTaker && !coachCalled && effPlayType === "run_inside" && Math.random() < clamp2(((_oa = offPlanEff.drawRate) != null ? _oa : DRAW_DEFAULT) / 100, 0, 0.35)) {
+      } else if (!optionSnap && !jetMan && !wildcatTaker && !coachCalled && effPlayType === "run_inside" && Math.random() < clamp2(((_pa = offPlanEff.drawRate) != null ? _pa : DRAW_DEFAULT) / 100, 0, 0.35)) {
         drawSnap = true;
       }
       let playResult;
@@ -19103,7 +19110,7 @@ var _CFB = (() => {
         let pitchManId = null;
         if (offField == null ? void 0 : offField.bySlot) {
           const wings = ["RB_H", "RB_2"].map((sid) => offField.bySlot[sid]).map((id) => id && effOffRoster.find((p) => p.id === id)).filter(Boolean);
-          pitchManId = (_qa = (_pa = wings.sort((a, b) => (b.attributes.SPD || 0) - (a.attributes.SPD || 0))[0]) == null ? void 0 : _pa.id) != null ? _qa : null;
+          pitchManId = (_ra = (_qa = wings.sort((a, b) => (b.attributes.SPD || 0) - (a.attributes.SPD || 0))[0]) == null ? void 0 : _qa.id) != null ? _ra : null;
         }
         playResult = resolveOptionPlay(
           effPlayType,
@@ -19125,12 +19132,12 @@ var _CFB = (() => {
       } else if (effPlayType === "run_inside" || effPlayType === "run_outside") {
         let drawOverride = null;
         if (drawSnap) {
-          const caughtBlitz = Math.random() < clamp2(((_ra = defPlanEff.blitzPct) != null ? _ra : 20) / 100 + (defPlanEff.edgePlayEff === "crash" ? 0.12 : defPlanEff.edgePlayEff === "contain" ? -0.06 : 0), 0.05, 0.75);
+          const caughtBlitz = Math.random() < clamp2(((_sa = defPlanEff.blitzPct) != null ? _sa : 20) / 100 + (defPlanEff.edgePlayEff === "crash" ? 0.12 : defPlanEff.edgePlayEff === "contain" ? -0.06 : 0), 0.05, 0.75);
           if (caughtBlitz) {
             drawOverride = { laneShift: 0.14, forcePenetrator: null, phase: "draw" };
           } else {
             const mike = (defPersonnel.LB || []).map((id) => effDefRoster.find((p) => p.id === id)).filter(Boolean)[0] || null;
-            const sniffP = clamp2(0.28 + (((_sa = mike == null ? void 0 : mike.attributes.AWR) != null ? _sa : 50) - 50) * 5e-3 - (((_ta = qb == null ? void 0 : qb.attributes.TEC) != null ? _ta : 50) - 50) * 18e-4 + Math.min(0.15, (oppMem.draw || 0) * 0.03), 0.1, 0.65);
+            const sniffP = clamp2(0.28 + (((_ta = mike == null ? void 0 : mike.attributes.AWR) != null ? _ta : 50) - 50) * 5e-3 - (((_ua = qb == null ? void 0 : qb.attributes.TEC) != null ? _ua : 50) - 50) * 18e-4 + Math.min(0.15, (oppMem.draw || 0) * 0.03), 0.1, 0.65);
             drawOverride = Math.random() < sniffP ? { laneShift: -0.12, forcePenetrator: mike, phase: "draw" } : { laneShift: 0.04, forcePenetrator: null, phase: "draw" };
           }
         }
@@ -19181,7 +19188,7 @@ var _CFB = (() => {
       {
         let fam = covFam;
         if (playResult.fireZone) fam = "C3 Fire Zone";
-        else if (playResult.blitzFired && fam === "Cover 1" && ((_ua = defEff.blitzPct) != null ? _ua : 20) >= 40) fam = "Cover 0";
+        else if (playResult.blitzFired && fam === "Cover 1" && ((_va = defEff.blitzPct) != null ? _va : 20) >= 40) fam = "Cover 0";
         playResult.coverage = fam;
         if (shownFam !== covFam) {
           playResult.shownCoverage = shownFam;
@@ -19219,7 +19226,7 @@ var _CFB = (() => {
         defSpd: slotSpeedMap(defBaseField == null ? void 0 : defBaseField.bySlot, defRoster),
         offSit,
         tempo: offEff.tempo,
-        blitzFired: (_va = playResult.blitzFired) != null ? _va : false,
+        blitzFired: (_wa = playResult.blitzFired) != null ? _wa : false,
         clock: gameState.clock,
         half: gameState.half,
         scoreOff: gameState.score.off,
@@ -19242,13 +19249,13 @@ var _CFB = (() => {
       if (!offPlanEff._injuriesOff && playResult.qbInjured && playResult.qbInjuryGames > 0 && playResult.rusherId) {
         const injQb = offRoster.find((p) => p.id === playResult.rusherId);
         if (injQb) {
-          const medMult = 1 - (((_xa = (_wa = offSchool == null ? void 0 : offSchool.facilities) == null ? void 0 : _wa.medicine) != null ? _xa : 2) - 2) * 0.08;
+          const medMult = 1 - (((_ya = (_xa = offSchool == null ? void 0 : offSchool.facilities) == null ? void 0 : _xa.medicine) != null ? _ya : 2) - 2) * 0.08;
           injQb.injuryGamesOut = Math.max(1, Math.round(Math.max(injQb.injuryGamesOut || 0, playResult.qbInjuryGames) * medMult));
           injQb.injury = makeInjury(injQb.injuryGamesOut, gameState.week || 0);
           offCtx.benchedMap[injQb.id] = true;
         }
       }
-      const tempoMult = (_ya = C.TEMPO_MULT[offEff.tempo]) != null ? _ya : 1;
+      const tempoMult = (_za = C.TEMPO_MULT[offEff.tempo]) != null ? _za : 1;
       let elapsed = Math.max(4, Math.round(randNorm(
         (playType.startsWith("run") ? C.CLOCK_RUN.mean : C.CLOCK_PASS.mean) * tempoMult,
         playType.startsWith("run") ? C.CLOCK_RUN.sd : C.CLOCK_PASS.sd
@@ -19479,7 +19486,7 @@ var _CFB = (() => {
     defGP._h2Counter = { formationId: top[0], eff: IQC.eff, auto: true };
   }
   function playHalf(token, half, resume = null) {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e, _f, _g;
     const {
       homeTeam,
       awayTeam,
@@ -19646,7 +19653,8 @@ var _CFB = (() => {
             const kickRoster = scoringTeam === "home" ? homeRoster : awayRoster;
             const recvRoster = receivingTeam === "home" ? homeRoster : awayRoster;
             const recvSchool = receivingTeam === "home" ? homeSchool : awaySchool;
-            const ko = kickoffOutcome(kickRoster, recvRoster, (((_c = recvSchool == null ? void 0 : recvSchool.depthOrder) == null ? void 0 : _c.RET) || [])[0]);
+            const kickSchool = scoringTeam === "home" ? homeSchool : awaySchool;
+            const ko = kickoffOutcome(kickRoster, recvRoster, (((_c = recvSchool == null ? void 0 : recvSchool.depthOrder) == null ? void 0 : _c.RET) || [])[0], ((_d = kickSchool == null ? void 0 : kickSchool._dnaGrades) == null ? void 0 : _d.specialTeams) || 0);
             const retName = ko.returner ? `${ko.returner.name.first[0]}. ${ko.returner.name.last}` : null;
             if (!token.koReturns) token.koReturns = [];
             if (!ko.touchback && ko.returner) {
@@ -19662,7 +19670,7 @@ var _CFB = (() => {
               const pat = Math.random() < C.PAT_RATE ? 1 : 0;
               if (receivingTeam === "home") token.homeScore += 6 + pat;
               else token.awayScore += 6 + pat;
-              const ko2 = kickoffOutcome(recvRoster, kickRoster, (((_e = (_d = scoringTeam === "home" ? homeSchool : awaySchool) == null ? void 0 : _d.depthOrder) == null ? void 0 : _e.RET) || [])[0]);
+              const ko2 = kickoffOutcome(recvRoster, kickRoster, (((_f = (_e = scoringTeam === "home" ? homeSchool : awaySchool) == null ? void 0 : _e.depthOrder) == null ? void 0 : _f.RET) || [])[0], ((_g = recvSchool == null ? void 0 : recvSchool._dnaGrades) == null ? void 0 : _g.specialTeams) || 0);
               if (!ko2.touchback && ko2.returner) {
                 token.koReturns.push({
                   side: scoringTeam,
@@ -20675,9 +20683,7 @@ var _CFB = (() => {
     for (const p of school.roster) {
       const plan = getEffectivePracticePlan(school, p.position);
       if (!plan) continue;
-      const reps = {};
-      for (const [tool, mins] of Object.entries(plan)) reps[tool] = Math.round((mins || 0) * C.SPRING_DEV_MULT);
-      developPlayer(p, reps, coach);
+      developPlayer(p, plan, coach, C.SPRING_DEV_MULT, school);
     }
     school.depthChart = buildDepthChart(school.roster, school.gameplan, school.depthOrder || {});
     const devReport = school.roster.map((p) => {
@@ -22607,7 +22613,7 @@ var _CFB = (() => {
         myGP._h2Counter = { formationId: adj.formationId, eff: Math.min(0.1, 0.04 * strength) };
         adjEval = { kind: "counter", h1OppPts: isHome ? token.awayScore : token.homeScore };
       } else if (adj.kind === "shadow") {
-        myGP._h2Shadow = { id: adj.receiverId, eff: Math.min(0.16, 0.07 * strength) };
+        myGP._h2Shadow = { id: adj.receiverId, eff: Math.min(0.12, 0.06 * strength) };
         const h1RecYds = ((_d = oppStats == null ? void 0 : oppStats[adj.receiverId]) == null ? void 0 : _d.recYds) || 0;
         adjEval = { kind: "shadow", receiverId: adj.receiverId, name: adj.name, h1RecYds };
       } else if (adj.kind === "protect") {
@@ -23597,7 +23603,7 @@ var _CFB = (() => {
     if (!school) return;
     const games = C.CONF_GAMES + C.NONCONF_GAMES;
     const actual = ((_a = school.recentWins) == null ? void 0 : _a[0]) || 0;
-    const exp = expectedWins(school.prestige, games);
+    const exp = expectedWins(school.prestige, games, coach);
     const delta = actual - exp;
     const dominated = delta >= C.DOMINANCE_DELTA;
     coach.dominanceStreak = dominated ? (coach.dominanceStreak || 0) + 1 : 0;
@@ -23611,12 +23617,18 @@ var _CFB = (() => {
     ));
     const inGrace = coach.tenureSeasons <= C.JOBSEC_GRACE_SEASONS || leashed;
     const streakFire = coach.lastDelta != null && delta <= C.JOBSEC_FIRE_STREAK_DELTA && coach.lastDelta <= C.JOBSEC_FIRE_STREAK_DELTA;
-    coach._pendingFire = !inGrace && (coach.jobSecurity <= C.JOBSEC_FIRE_FLOOR || streakFire);
+    const fireConditionsMet = !inGrace && (coach.jobSecurity <= C.JOBSEC_FIRE_FLOOR || streakFire);
     const seat = seatState(coach.jobSecurity);
-    if (!inGrace && seat === "hot" && !coach._pendingFire) {
+    if (fireConditionsMet && coach._onNotice) {
+      coach._pendingFire = true;
+    } else if (fireConditionsMet || !inGrace && seat === "hot") {
+      coach._pendingFire = false;
+      coach._onNotice = true;
       events.push({ type: "warning", text: `AD: You're on the hot seat. Win now or a change will be made.` });
-    } else if (seat === "warm") {
-      events.push({ type: "info", text: `AD: Program needs to show improvement next season.` });
+    } else {
+      coach._pendingFire = false;
+      coach._onNotice = false;
+      if (seat === "warm") events.push({ type: "info", text: `AD: Program needs to show improvement next season.` });
     }
     coach.lastDelta = delta;
   }
@@ -24151,6 +24163,7 @@ var _CFB = (() => {
   // js/engine/persistence.js
   var persistence_exports = {};
   __export(persistence_exports, {
+    auditSaveState: () => auditSaveState,
     deleteSlotData: () => deleteSlotData,
     exportJSON: () => exportJSON,
     exportString: () => exportString,
@@ -24162,9 +24175,41 @@ var _CFB = (() => {
     rehydrate: () => rehydrate,
     saveGame: () => saveGame
   });
+  function _jsonUnsafeType(v) {
+    if (v instanceof Set) return "Set";
+    if (v instanceof Map) return "Map";
+    return null;
+  }
   function saveDietReplacer(key, value) {
     if (key === "roleRatings") return void 0;
+    const bad = _jsonUnsafeType(value);
+    if (bad && !_warnedSaveKeys.has(key)) {
+      _warnedSaveKeys.add(key);
+      console.warn(`[save] "${key}" is a ${bad} \u2014 it serializes to {} and loses its data on load. Store it as an array and rebuild the ${bad} on read (see warChest in recruiting.js).`);
+    }
     return value;
+  }
+  function auditSaveState(root, { maxNodes = 2e5 } = {}) {
+    const offenders = [];
+    const seen = /* @__PURE__ */ new Set();
+    let budget = maxNodes;
+    const walk = (val, path) => {
+      if (budget-- <= 0 || val == null || typeof val !== "object") return;
+      const bad = _jsonUnsafeType(val);
+      if (bad) {
+        offenders.push({ path, type: bad });
+        return;
+      }
+      if (seen.has(val)) return;
+      seen.add(val);
+      if (Array.isArray(val)) {
+        for (let i = 0; i < val.length; i++) walk(val[i], `${path}[${i}]`);
+      } else {
+        for (const k of Object.keys(val)) walk(val[k], path ? `${path}.${k}` : k);
+      }
+    };
+    walk(root, "");
+    return offenders;
   }
   function rehydrate(saved) {
     var _a, _b;
@@ -24394,11 +24439,12 @@ var _CFB = (() => {
     if (saved && saved._saveVersion !== SAVE_VERSION) return { _incompatible: true };
     return saved ? rehydrate(saved) : null;
   }
-  var DB_NAME, DB_VERSION, STORE_NAME;
+  var _warnedSaveKeys, DB_NAME, DB_VERSION, STORE_NAME;
   var init_persistence = __esm({
     "js/engine/persistence.js"() {
       init_constants();
       init_player();
+      _warnedSaveKeys = /* @__PURE__ */ new Set();
       DB_NAME = "cfb-dynasty";
       DB_VERSION = 1;
       STORE_NAME = "saves";
@@ -24617,7 +24663,6 @@ var _CFB = (() => {
       // season offers last appeared (for the offer cooldown)
     };
     school.coach = playerCoach;
-    school.snapShare = {};
     for (const s of world.schools) {
       try {
         ensureFieldAssignments(s.gameplan);
@@ -35727,11 +35772,12 @@ var _CFB = (() => {
       when camp runs \u2014 after that, a conversion is a different, unrestricted path rather than a
       camp decision.
 
-      <b>Week two is the spring game.</b> <b>Week three is cut day</b>, and it is the hard roster
-      gate: your signed class has arrived, and if you are over the limit this is where it gets
-      resolved. <b>Week four is when the athletic director's expectations lock</b> for the season.
-      What you are being measured against is fixed there, and it does not move afterwards no
-      matter what happens to your roster.
+      <b>Week two is the spring game.</b> Week three is quiet \u2014 it has no event of its own; your
+      freshmen simply bed in. There is <i>no</i> preseason cut gate: the hard roster-limit decision
+      was already made back at the offseason's <b>Cut Day</b>, before camp opened, so nothing about
+      the cap is settled in the preseason weeks. <b>Week four is when the athletic director's
+      expectations lock</b> for the season. What you are being measured against is fixed there, and
+      it does not move afterwards no matter what happens to your roster.
 
       Redshirt decisions you have not confirmed are applied automatically when the first game week
       arrives. If you were planning to think about it during non-conference, you were not.`
@@ -35753,7 +35799,9 @@ var _CFB = (() => {
       Later in the year two more things bolt on. When the offseason opens, this season's records
       finalise first, then prestige and reputation update, and only then does the job market
       evaluate anybody \u2014 so coaches are hired and fired against results that are already on the
-      books. At the very end, the season's development tick runs and seniors graduate.`
+      books. At the very end, seniors graduate and your finishers bank their experience \u2014 but the
+      season's development tick does <i>not</i> run here. It was moved forward to next season's
+      Week-1 camp, which is why camp week, not the season's close, is where your roster grows.`
       },
       {
         heading: "The practice checkpoints",
@@ -35772,10 +35820,11 @@ var _CFB = (() => {
         heading: "The deadlines that bite",
         body: `Five, and each one takes something away permanently.
 
-      <b>Camp week one</b> ends position changes as a camp decision. <b>Camp week three</b> is the
-      roster gate; being over it is not a warning you can dismiss. <b>Camp week four</b> locks
-      your mandate. <b>The end of championship week</b> closes recruiting \u2014 every recruit still
-      undecided resolves without you, and every dollar left in the pool bought nothing.
+      <b>Camp week one</b> ends position changes as a camp decision. <b>Camp week four</b> locks
+      your mandate. <b>The first game week</b> finalizes your redshirts \u2014 any you have not confirmed
+      are applied for you, and that window shuts. <b>The end of championship week</b> closes
+      recruiting \u2014 every recruit still undecided resolves without you, and every dollar left in the
+      pool bought nothing.
 
       And in the offseason, <b>cut day gates the portal</b>. You cannot shop for transfers while
       over the cap, because every player you added would have to be cut again. If you arrive at
@@ -35787,9 +35836,11 @@ var _CFB = (() => {
       },
       {
         heading: "Building the schedule",
-        body: `Your conference games are not yours. They are generated, and the specific opponents
-      rotate from season to season, so a conference slate is a different set of problems each year
-      even with the same membership.
+        body: `Your conference games are not yours. They are generated, and in a large conference the
+      specific opponents rotate from season to season, so a slate is a different set of problems each
+      year even with the same membership. In a small conference \u2014 nine teams or fewer, where the
+      slate already reaches everybody \u2014 there is nothing to rotate: you play the whole league every
+      year, and only the order shifts.
 
       Your non-conference games <b>are</b> yours, and you pick them in the offseason scheduling
       stage \u2014 well before you know what your roster will look like. Two hard rules apply. A
@@ -35797,10 +35848,11 @@ var _CFB = (() => {
       same two teams do not meet twice.
 
       Scheduling up or down carries a guarantee that lands on <i>next</i> year's recruiting pool \u2014
-      a credit for agreeing to be somebody's road opponent, a charge for buying a soft one. That
-      is the whole trade: a favourable schedule is paid for in recruiting money, and a brutal one
-      pays you in it. Your rivalry game is managed separately and does not come out of that
-      allowance.`
+      and it is set by the <b>star gap</b> between you and the opponent, not by who hosts. Scheduling
+      up, toward a bigger name, is a credit; buying a soft opponent below you is a charge; venue does
+      not enter into it. That is the whole trade: a favourable schedule is paid for in recruiting
+      money, and a brutal one pays you in it. Your rivalry game is managed separately and does not
+      come out of that allowance.`
       },
       {
         heading: "The offseason is a sequence, not a phase",
@@ -36020,9 +36072,11 @@ var _CFB = (() => {
       },
       {
         heading: "The lie",
-        body: `The defense can show a shell it is not playing, and the substitution is always the
-      same direction: a committed look gets dressed up as a softer one. Single-high shows as
-      two-high. A pure man-and-blitz look shows as something with help over the top.
+        body: `The defense can show a shell it is not playing, and the substitution runs <i>both</i>
+      directions. A committed look can dress up as a softer one \u2014 single-high shown as two-high, a
+      man-and-blitz look shown with help over the top. But a soft look can just as well show as
+      committed: a true two-high shell rotated to look single-high, baiting a check into the very
+      coverage it is quietly still playing.
 
       Two people sell it. Your opposing coordinator's blitz design is the acting coach \u2014 how
       well the disguise is drawn up. The safeties' awareness is the acting: they are the men
@@ -36031,8 +36085,9 @@ var _CFB = (() => {
 
       Whether your quarterback buys it is his read against their craft. Awareness leads that
       read and technique supports it, in that order. An experienced quarterback against a
-      badly disguised defense is essentially never fooled. A raw one against a well-coached
-      secondary is fooled more often than not.`
+      badly disguised defense is rarely fooled \u2014 but never immune: the chance of biting never
+      falls to zero, so even the sharpest read gets caught once in a while. A raw one against a
+      well-coached secondary is fooled more often than not.`
       },
       {
         heading: "Why the disguise is dangerous rather than annoying",
@@ -36115,8 +36170,11 @@ var _CFB = (() => {
       formation the situation reached for. Team discipline \u2014 awareness and technique across
       your roster \u2014 scales the flag rate on top of that, on both sides of the ball.
 
-      Your defense is not affected by any of this before the snap. They are not the ones who
-      have to go on a count.`
+      Your defense has its own version of this before the snap, and it is real: defenders jump
+      offside and into the neutral zone, and the more aggressive the call, the more they jump \u2014
+      press coverage and heavy blitz bait the early trigger. What the defense does <i>not</i> have
+      is the coordinator's scheme-knowledge lever; that one is offense-only. A defense's pre-snap
+      flags come from aggression and team discipline instead.`
       }
     ]
   };
@@ -36177,14 +36235,17 @@ var _CFB = (() => {
         heading: "The four techniques, and what each one buys",
         body: `<b>Press</b> starts with a jam. Strength, technique, and agility decide whether
       it lands; the receiver answers with agility, technique, and strength of his own. Win the
-      jam and the route starts late and starts short \u2014 it never gets on schedule. Lose it and
-      you are flat-footed at the line while he is into a clean stem, and the further the route
-      goes, the worse that gets. Press is a bet, and the payout and the loss both scale with
-      depth.
+      jam and his release is <i>laboured</i> \u2014 he comes off the line rebuilding speed instead of
+      accelerating, reaches the top of his stem late, and breaks from a shallower point with you
+      still on him. Whiff it and he is into a clean stem while you are flat-footed at the line.
+      The size of that swing is set by how badly the rep was won or lost \u2014 not by how deep the
+      route runs. A jam hurts a go route as much as a dig; it does not compound with distance.
 
-      <b>Man</b> is pure pursuit. He runs where the receiver <i>is</i>, not where he is going,
-      and that persistent lag is exactly where a speed advantage turns into yards. He gets a
-      beat of reaction at the break, then plants and recovers like anyone else.
+      <b>Man</b> is pure pursuit \u2014 he runs where the receiver <i>is</i>, not where he is going,
+      and that persistent lag is exactly where a speed advantage turns into yards. But you never
+      face plain man as its own call: in play it always resolves to one of the other two \u2014
+      <b>press</b> if he crowds the line, <b>off-man</b> if he plays off. The pursuit is the
+      engine underneath both, not a coverage you meet on its own.
 
       <b>Off-man</b> hands you the underneath route and takes the deep one away. The cushion is
       the lid \u2014 he is backpedaling at the snap, so nothing quick threatens him and nothing long
@@ -36212,10 +36273,12 @@ var _CFB = (() => {
       {
         heading: "The read",
         body: `Your quarterback sorts his targets by how open they are, and then he throws to
-      one of them \u2014 usually, but not reliably, the most open. Awareness governs how
-      concentrated that choice is. A sharp processor works to the best read far more often; a
-      scattered one sprays the ball around the route tree, hitting the third option on a snap
-      where the first was wide open.
+      one of them \u2014 usually, but not reliably, the most open. Awareness governs how he works that
+      progression, and it runs opposite to the intuition. A <i>raw</i> quarterback tunnel-visions
+      on his first read and fires it, so he actually stays glued to his primary. A <i>sharp</i>
+      one reads the whole field and spreads the ball across the tree \u2014 less tied to any single
+      man. The spread is the mark of the better processor: a defense cannot sit on his first read,
+      and a receiver who comes open a beat late still gets the ball.
 
       Coverage he can see, he respects. A bracketed receiver is demoted before he is ever
       looked at, and a receiver with no separation is not eligible at all \u2014 unless nobody is
@@ -36224,7 +36287,9 @@ var _CFB = (() => {
 
       Under a hurried pocket the progression collapses to the front of the list \u2014 everything
       past the top of it is unavailable regardless of how open it was. This is most of what
-      pressure actually does. The throw is not worse; the throw is <i>earlier</i>.
+      pressure actually does. And the throw itself is <i>also</i> worse: a hurried release carries
+      a direct completion penalty on top of the shortened read. So pressure costs you twice \u2014 a
+      thinner menu and a lower hit rate on what is left.
 
       Target share is a real thumb on the scale here, and it is a thumb your quarterback may
       refuse. Feed a receiver heavily and a smart quarterback still bails off him when he is
@@ -36276,10 +36341,11 @@ var _CFB = (() => {
         body: `Occasionally a receiver comes free with nobody assigned to him. In zone he is very
       open; in man he is as open as it is possible to be, and the throw is free.
 
-      That is the payoff for everything that looks decorative \u2014 the motion that beat a jam, the
-      blitz that emptied a zone. Both are covered elsewhere, in <i>The Pre-Snap Read</i> and
-      <i>Defending a Game</i>. It is worth knowing they cash out here, on the throw that never
-      had to be earned.`
+      That is the payoff for a defensive mistake, chiefly a <b>blitz that emptied a zone</b> \u2014 a
+      rusher vacates his area and the man in it has nobody home. Motion does <i>not</i> produce
+      this: it buys a cleaner release and a coverage tell, but the receiver stays assigned. The
+      vacated zone is covered in <i>Defending a Game</i>. It is worth knowing it cashes out here,
+      on the throw that never had to be earned.`
       }
     ]
   };
@@ -36302,9 +36368,11 @@ var _CFB = (() => {
       protection picks him up, and whether that happens is close to a coin flip. A blitz buys an
       unblocked rusher, some of the time \u2014 not a better one.
 
-      Keeping backs and tight ends in makes those pickups likelier and the pocket calmer. It
-      costs you a route. A protection-heavy call against a defense that is not blitzing has
-      spent bodies on nothing.`
+      Keeping backs and tight ends in does <i>not</i> make any one pickup likelier \u2014 the roll is
+      flat whenever a blocker is free. What extra bodies buy is insurance against an <b>overload</b>:
+      when the blitz sends more men than your base protection can touch, the extra blocker is the
+      one who has anybody to pick up at all. Against a blitz you can already handle \u2014 or a defense
+      not blitzing \u2014 a protection-heavy call has spent bodies on nothing, and it costs you a route.`
       },
       {
         heading: "What a pass set is made of",
@@ -36412,9 +36480,10 @@ var _CFB = (() => {
 
       The fake is a contract with your run game and it is only worth what the defense owes
       you. A run-heavy identity with a credible back sells it hard. A pass-first offense
-      selling a run fake is fooling nobody, and it is paying the deeper drop for nothing. The
-      quarterback's own craft sells the ride, and a disciplined, aware linebacker corps is the
-      counter \u2014 they simply do not bite.
+      selling a run fake is fooling nobody \u2014 but that costs nothing: the deeper-drop sack risk
+      and the defender-freezing benefit share the same gate, so a fake that does not bite simply
+      does nothing, with no penalty attached. The quarterback's own craft sells the ride, and a
+      disciplined, aware linebacker corps is the counter \u2014 they simply do not bite.
 
       A defense keying the run bites <i>harder</i>. This is the single sharpest trap in the
       game: the opponent who has committed to stopping your run is the opponent your play
@@ -36423,10 +36492,12 @@ var _CFB = (() => {
       {
         heading: "The escape hatch",
         body: `A quarterback about to be sacked may get out of it instead. Whether he can is
-      measured against <i>himself</i> \u2014 his athletic profile against his own passing baseline
-      \u2014 not against an absolute speed number. A quarterback who is more athlete than passer
-      scrambles a lot at any level of football. A pocket passer who happens to be quick for
-      his division does not, because he is still more passer than athlete.
+      measured mostly against <i>himself</i> \u2014 his athletic profile against his own passing
+      baseline \u2014 but there is an absolute speed term in there too. A quarterback who is more
+      athlete than passer scrambles a lot at any level; a genuinely fast one scrambles more
+      everywhere on raw speed alone. A pocket passer who is only quick <i>for his division</i>
+      stays near the floor, because he is still more passer than athlete and has no absolute
+      speed to fall back on.
 
       Once he takes off he is a ball carrier and a fragile one. A smart, technically sound
       quarterback slides early: he concedes ground and takes far less risk. A quarterback
@@ -36509,7 +36580,9 @@ var _CFB = (() => {
       linebackers is loose for a good gain; a back who is loose for a good gain still has to
       beat a man who is deliberately refusing to guess.
 
-      Everything else has a job. A contain corner squeezes from the alley. Linemen chase from
+      Everything else has a job. The deep safeties and corners are the last line and rally to the
+      ball \u2014 there is no dedicated contain man holding the alley, so a back who breaks the second
+      level is racing the whole deep net, not a single edge defender. Linemen chase from
       behind, which makes a cutback a risk rather than a free lane. Late help arrives if the run
       lasts long enough. And the sideline is a defender \u2014 the one that never misses.
 
@@ -36574,9 +36647,10 @@ var _CFB = (() => {
       recognition, then finishing. Your best pursuers lead the team, comfortably, but the draw
       is genuinely spread across the rotation and it is not the same defender every snap.
 
-      Linebackers get a thumb on the scale, because linebackers lead defenses in tackles in real
-      football, and a defense whose leading tackler is a safety is a defense with a problem
-      rather than a good safety.
+      Linebackers lead the run-tackle count, but not because of any thumb on the scale \u2014 on runs
+      there is no artificial bias. They lead by geometry: they are the box fitters, so they are
+      simply where most runs are met. A defense whose leading tackler is a safety is a defense
+      with a problem rather than a good safety.
 
       One consequence worth stating plainly: a high tackle total is evidence a man was on the
       field and around the ball. It is not evidence the defense was good. The linebacker on a
@@ -36619,8 +36693,10 @@ var _CFB = (() => {
       The weekly plan is where it gets interesting, because it works two different ways
       depending on the dial. Pass lean, blitz rate, and run commit are <b>shifts</b> \u2014 they
       stack additively on top of whatever your situational plan already produced. Coverage,
-      pass depth, tempo, and front are <b>overrides</b> \u2014 they replace the standing call
-      outright for the week.
+      pass depth, and tempo are <b>overrides</b> \u2014 they replace the standing call
+      outright for the week. There is no weekly <i>front</i> dial, despite what you might expect
+      from the others: your fronts stay situational and automatic, set per cell rather than for
+      the week.
 
       The logic is that you made an override deliberately for this opponent, so it wins. In
       practice a weekly coverage call silently ignores every coverage you set in every cell,
@@ -36650,7 +36726,9 @@ var _CFB = (() => {
 
       <b>Run direction</b> chooses which side of your line the ball attacks and is worth real
       yards, because the point-of-attack reps dominate the lane \u2014 see <i>The Run Fit</i>.
-      <b>Protection emphasis</b> keeps backs and tight ends in to pick up blitzers, calming the
+      <b>Protection emphasis</b> keeps <i>tight ends</i> in to pick up blitzers \u2014 a hybrid tight
+      end blocks instead of releasing. Your back already stays in to protect regardless of this
+      dial, so what the lever actually moves is tight ends, not backs; either way you calm the
       pocket at the price of a body in the route. <b>Play-action rate</b> and <b>motion rate</b>
       multiply what your formation naturally does rather than setting it, so the same dial builds
       very different offenses out of different personnel.
@@ -36811,9 +36889,9 @@ var _CFB = (() => {
       defensive staff.
 
       What the extra rusher buys is in <i>The Pocket</i>, and bears repeating: the free man is
-      barely faster to the quarterback than a rusher who won his rep. The pressure comes from
-      bodies in the race. You are paying a deep receiver's separation for one more body \u2014 so the
-      question is whether your front needed one.`
+      not actually faster to the quarterback than a rusher who won his rep \u2014 if anything a hair
+      slower. The pressure comes from bodies in the race, not from his lane. You are paying a deep
+      receiver's separation for one more body \u2014 so the question is whether your front needed one.`
       },
       {
         heading: "Run commit is the box lever",
@@ -36887,10 +36965,13 @@ var _CFB = (() => {
       looks get met harder \u2014 capped, scaled by how aware your defenders are, and reset every
       game. A sharp defense punishes a repetitive offense on its own.
 
-      The mirror applies to you. A defense that shows one shell every snap is a defense the
-      offense eventually gets a free shot against, and that is not a mistake by the offense \u2014
-      it is an earned answer. If you have found an identity that works, the reward for keeping
-      it is real and so is the bill.`
+      The mirror applies to you, but it works through commitment, not repetition. When you
+      <b>commit</b> a single-high, loaded look \u2014 one that tips the picture before the snap \u2014 an
+      aware enough quarterback can read it and check into the answer, and against single-high the
+      answer is the deep shot the light coverage left open. It is not about showing the same shell
+      every snap; it is about committing the picture on the snap that matters. A balanced identity
+      that never fully tips its hand gives him nothing to check into \u2014 but if you have found a
+      committed look that works, the reward for keeping it is real and so is the bill.`
       }
     ]
   };
@@ -36920,9 +37001,10 @@ var _CFB = (() => {
       those are the interesting ones.
 
       The <b>slot</b> is the joker: your best inside weapon, whoever he is \u2014 a receiver, a
-      tight end, a back. The <b>fullback</b> is a back or a tight end. The <b>wing</b> and the
-      <b>A-back</b> are the option-formation bodies, drawn from backs, tight ends, and
-      receivers. The <b>wildcat back</b> is whoever can take a direct snap. The <b>jet man</b>
+      tight end, a back. The <b>fullback</b> is a back or a tight end. The <b>A-back</b> is the
+      flexbone body \u2014 any skill man who can motion and block, drawn from backs, tight ends, and
+      receivers \u2014 while the <b>wing</b> is a power body specifically: backs and tight ends only,
+      no receivers. The <b>wildcat back</b> is whoever can take a direct snap. The <b>jet man</b>
       is pure speed from either receiver or back. The <b>fade</b> spot wants a tall, sure-handed
       body from the receivers or tight ends.
 
@@ -36954,10 +37036,11 @@ var _CFB = (() => {
       {
         heading: "Out of position",
         body: `A man lined up somewhere he does not belong is degraded, and how much depends on
-      what the job asks of him. Measured physical tools travel intact \u2014 speed is speed
-      regardless of what is written next to his name. Coached skill mostly does not, because it
+      what the job asks of him. Measured physical tools travel <i>almost</i> intact \u2014 speed is
+      very nearly speed regardless of what is written next to his name, though even that takes a
+      small haircut. Coached skill mostly does not travel, because it
       is specific to a job he has not been coached for. His motor and his conditioning come with
-      him untouched.
+      him fully untouched.
 
       Adjacent positions soften it considerably. A safety at corner is a very different
       proposition from a safety at guard, and the game knows the difference.
@@ -36991,10 +37074,12 @@ var _CFB = (() => {
       him to, and pays for it with interceptions. The same dial produces a good offense behind
       one quarterback and a turnover machine behind another.
 
-      And the defense notices. Overuse is film, and it accrues a small capped edge scaled by how
-      aware the defenders are. Feeding your best receiver is correct. Feeding him to the exclusion
-      of everything else makes him progressively less open and your quarterback progressively
-      more likely to force it, and neither effect announces itself.`
+      And the defense notices \u2014 but not as a vague, awareness-scaled film edge. A man you feature
+      heavily, a quarter of your targets or more, becomes the man the defense <b>keys</b>: the
+      bracket and the lock land on <i>him</i>, because film brackets the receiver who scares it.
+      Feeding your best receiver is correct. Feeding him to the exclusion of everything else pulls
+      the double-team onto him, makes him progressively less open, and leaves your quarterback
+      progressively more likely to force it \u2014 and neither effect announces itself.`
       },
       {
         heading: "Rotation and the snap cap",
@@ -37006,9 +37091,10 @@ var _CFB = (() => {
       Quarterbacks, kickers, and punters never rotate. They play every snap, and they accumulate
       fatigue anyway.
 
-      You can override the caps directly. If you want a rotation, dial it; if you want your
-      starters to play until they cannot, dial that instead and accept what happens to them in
-      the fourth quarter.`
+      These caps are automatic \u2014 they follow your depth-chart order, and there is no per-player
+      snap dial to set. The lever you actually have is the ORDER itself: who you list as the
+      starter, and how close the next man's rating sits, is what decides how the snaps really
+      split and how fresh your starters are in the fourth quarter.`
       },
       {
         heading: "Fatigue",
@@ -37018,7 +37104,7 @@ var _CFB = (() => {
 
       What fatigue takes is physical only. Speed, strength, agility, power, leaping, tackling and
       blocking all degrade. Instincts and technique do not \u2014 a tired veteran is still a smart
-      veteran. Hands degrade at half rate, on the theory that catching is partly muscle memory.
+      veteran. Hands degrade more slowly than the rest, on the theory that catching is partly muscle memory.
 
       Past a threshold a man is pulled and the next man goes in; he comes back when he has
       recovered past a lower one. The gap between those two is deliberate, and it is what stops
@@ -37061,12 +37147,15 @@ var _CFB = (() => {
       game measures the attempt from where the ball is actually struck.
 
       Your range setting is a <b>comfort cap</b> you impose, not a statement of what your
-      kicker can do \u2014 and it is expressed in the same true terms. If you set it from where the
-      ball is spotted rather than where it is kicked, you have quietly told your team to attempt
-      kicks well beyond what you meant.
+      kicker can do \u2014 and it is read in <b>spot</b> terms: the farthest yard line, measured from
+      the goal, that you will let him try from. It is NOT the length of the kick. The real kick
+      always travels farther than that line \u2014 the snap and hold spot the ball back, and the end
+      zone sits beyond the goal besides. So if you set the cap to the true distance your kicker's
+      leg reaches, you have quietly told your team to attempt kicks well past it.
 
-      Go and look at what your kicker's leg actually supports, then set the cap to match it.
-      This single setting decides more games than most of the offensive sheet.`
+      Set the cap by the yard LINE you trust him from, not by how far his leg throws the ball \u2014
+      the yard line always sits a good chunk closer than the kick it produces. This single
+      setting decides more games than most of the offensive sheet.`
       },
       {
         heading: "Why a long miss is worse than a punt",
@@ -37098,9 +37187,10 @@ var _CFB = (() => {
       },
       {
         heading: "The kicking game on kickoffs",
-        body: `Most kickoffs are touchbacks, and a stronger leg produces more of them. That is
-      mostly a good thing: a touchback is a known, decent outcome and it removes the return
-      entirely.
+        body: `Most kickoffs are touchbacks, and more of them come from a blend of raw <b>strength</b>
+      and <b>placement technique</b> \u2014 note that is not the same "leg" that drives field goals and
+      punts (strength and power); on kickoffs, accuracy pulls its weight. A touchback is mostly a
+      good thing: a known, decent outcome that removes the return entirely.
 
       When it is returned, the value is a <b>gap</b> \u2014 the returner's ability against the kicking
       team's coverage unit \u2014 not either number on its own. A dangerous returner against a fast,
@@ -37184,7 +37274,7 @@ var _CFB = (() => {
         heading: "What a practice plan is",
         body: `A plan is minutes across drills, and only the proportions matter \u2014 a drill's share of
       your total time is what it buys. Each drill has a primary attribute it develops and a
-      secondary it develops at half rate, so the conditioning work is folded into the physical
+      secondary it develops more slowly, so the conditioning work is folded into the physical
       drills and the mental work carries work ethic alongside it. There is no drill you can run
       that only helps.
 
@@ -37193,8 +37283,9 @@ var _CFB = (() => {
       claim about which attributes matter for your team, and a plan that spreads evenly is a claim
       that none of them do.
 
-      Practice runs at four moments: the development camp in the first week of camp, at a much
-      larger multiplier, and three checkpoints during the season. What matters is the plan that is
+      Practice runs at five moments: the development camp in the first week of camp, at a much
+      larger multiplier; the spring game, a smaller second preseason tick that runs on the
+      post-camp roster; and three checkpoints during the season. What matters is the plan that is
       set <i>at</i> a checkpoint, not the plan you had most of the year. Covered in <i>The
       Year</i>.
 
@@ -37345,9 +37436,11 @@ var _CFB = (() => {
       radius and only to you, and inside that radius is the biggest lever in the game. Whether the
       position fills a real hole in <b>this class</b>. And whether his <b>wants</b> are satisfied.
 
-      There is a single number on his card that reports the product of all of it. It is the most
-      decision-relevant thing on the screen, and it is the difference between a small program
-      beating a rich one and a small program wasting a season.`
+      All of it multiplies together \u2014 reputation, roots, class need, and satisfied wants compound
+      rather than add \u2014 so the difference between a small program beating a rich one and a small
+      program wasting a season is whether these line up on the same recruit. The card shows you the
+      pieces; you weigh the stack yourself, and roots inside your radius is usually the piece that
+      tips it.`
       },
       {
         heading: "What he wants",
@@ -37383,9 +37476,11 @@ var _CFB = (() => {
 
       Then the <b>offer</b>, which is discussed below.
 
-      Repeated contact with the same recruit has diminishing returns. Grinding one kid is worth
-      less each time you do it, which is another argument for spreading across a board and another
-      argument for scouting before you spend.`
+      Weekly standing contact does not carry a per-dollar diminishing term \u2014 it competes on
+      <b>share of the room</b>, so what your money buys depends on who else is bidding. But a race
+      you already dominate has little room left to win, and repeated one-off visits and scouting DO
+      diminish with each use. Both point the same way: spread across a board and scout before you
+      spend rather than grinding one kid.`
       },
       {
         heading: "What an offer actually is",
@@ -37473,9 +37568,13 @@ var _CFB = (() => {
       Seniors do not enter \u2014 they are leaving anyway. Players below a quality floor do not enter.
       A player redshirting this season does not enter; he is sitting on purpose, not stuck.
 
-      Your own roster is immune. Nobody transfers out from under you. The portal is incoming only,
-      and if that reads as generous, it is \u2014 it means the entire mechanic is an opportunity rather
-      than a threat.`
+      Your roster is not immune. Rivals will not poach your starters for a bigger stage \u2014 that
+      part is incoming only \u2014 but your own buried upperclassmen can still walk. A junior or
+      senior of real quality who is stacked behind returning players at his spot, with no path
+      to the field, may run out of patience and enter the portal himself. The deeper the logjam,
+      the likelier he goes. It is capped \u2014 you lose at most a couple a year \u2014 and each departure
+      lands in your inbox by name. A depth chart you never untangled costs you bodies, so the
+      mechanic is an opportunity and a quiet threat both.`
       },
       {
         heading: "Role beats money",
@@ -37632,7 +37731,8 @@ var _CFB = (() => {
       {
         heading: "The five skills",
         body: `Five grades on a letter ladder, each step costing more experience than the last. They
-      are yours, they follow you between jobs, and each one does something specific.
+      are yours and each does something specific. Four of them follow you between jobs intact; the
+      fifth, roots, is place-specific and largely resets when you move (see below).
 
       <b>Evaluator</b> narrows the gap between a recruit's public number and his real one. It grows
       by scouting \u2014 once per recruit, with a bonus for finding a player the market has misjudged.
@@ -37651,7 +37751,9 @@ var _CFB = (() => {
 
       <b>Roots</b> only applies to recruits inside your home radius and only to you. Inside that
       radius it is the biggest multiplier in the game. It is the answer to being poor: you cannot
-      outbid anyone anywhere, but you can be unbeatable somewhere.`
+      outbid anyone anywhere, but you can be unbeatable somewhere. It is also the one grade that
+      does not travel \u2014 roots are place-specific, so changing schools burns most of what you had
+      banked and you start rebuilding in the new backyard.`
       },
       {
         heading: "Coach DNA",
@@ -37671,15 +37773,18 @@ var _CFB = (() => {
       },
       {
         heading: "How the market sees you",
-        body: `Your attractiveness to other programs is three things: how far you have beaten your
-      expectation, how long you have <b>sustained</b> it, and your reputation grade.
+        body: `The market reads one number about you: your <b>reputation</b> grade. Winning lifts
+      it over a career, and it is what a hiring program measures you against \u2014 not last year's
+      record, not a hot streak.
 
-      The sustained part is the one that catches people out. A promotion requires a dominance
-      streak, not one good year. Beating the mandate once makes your seat comfortable. Beating it
-      repeatedly is what makes the phone ring.
+      The part that catches people out is that there is <b>no dominance-streak gate</b> anymore.
+      The phone rings only when three things line up in the same offseason: a seat actually
+      <b>opens</b>, your reputation <b>clears that program's bar</b>, and their search happens to
+      <b>land on you</b>. It is real-world timing. A title winner can get zero big offers because
+      nobody good got fired, or several because marquee seats opened \u2014 right place, right time.
 
-      School desirability works the other way and is simpler: division dominates and prestige is the
-      lever within it. Any job in a higher division outranks almost any job below it, and your
+      School desirability works the other way and is simpler: division dominates and prestige is
+      the lever within it. Any job in a higher division outranks almost any job below it, and your
       reputation grade is what determines how high you can reach.`
       },
       {
