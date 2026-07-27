@@ -5136,7 +5136,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "c219379683";
+globalThis.__BUILD__ = "8aa452f05f";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -16480,7 +16480,9 @@ var _CFB = (() => {
       const speedRush = edgeAlign && role !== "DE-Power";
       const powerPass = role === "DE-Power";
       if (blitzer) {
-        const pickedUp = availBlockers.length > 0 && Math.random() < 0.35;
+        const freeBlockers = availBlockers.length;
+        const pickupProb = freeBlockers > 0 ? Math.min(0.35 + (freeBlockers - 1) * 0.12, 0.68) : 0;
+        const pickedUp = Math.random() < pickupProb;
         const blocker2 = pickedUp ? availBlockers.splice(availBlockers.length - 1, 1)[0] : null;
         reps.push({ rusher, blocker: blocker2, isEdge: edgeAlign, speedRush, powerPass, blitzer: !pickedUp });
         continue;
@@ -16973,7 +16975,7 @@ var _CFB = (() => {
     return assigned;
   }
   function resolvePassPlay(playType, offPersonnel, defPersonnel, offRoster, defRoster, qb, offUnit, defUnit, offPlan, defPlan, frontId, shareByPlayerId = null, blitzShareByPlayerId = null, offFormationId = "Pro Set", roleBySlotPlayer = null, dropShareById = null) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa;
     const result = {
       type: playType,
       yards: 0,
@@ -17134,7 +17136,9 @@ var _CFB = (() => {
     for (const te of tePlayers) {
       if (blockingTEIds.has(te.id)) blockers.push(te);
     }
-    if (rbPlayers.length > 0) blockers.push(rbPlayers[0]);
+    const _rbPE = (_m = offPlan == null ? void 0 : offPlan.protEmphasis) != null ? _m : 50;
+    const rbReleased = rbPlayers.length > 0 && _rbPE < 50 && Math.random() < (50 - _rbPE) / 50;
+    if (rbPlayers.length > 0 && !rbReleased) blockers.push(rbPlayers[0]);
     if (defPlan.greenDog && rbPlayers.length > 0) {
       const rbBlocking = rbPlayers.filter((rb) => rb._gameArch === "RB-Power" || rb._gameArch === "RB-Workhorse" || Math.random() < 0.4).length;
       if (rbBlocking > 0) {
@@ -17153,8 +17157,8 @@ var _CFB = (() => {
       passRushers.pop();
     }
     const forcedScreen = (offPlan == null ? void 0 : offPlan._forceScreen) || null;
-    const isScreen = !!forcedScreen || playType === "pass_short" && !result.playAction && Math.random() < ((_m = offPlan.screenRate) != null ? _m : 14) / 100;
-    const edgeRushMult = ((defPlan == null ? void 0 : defPlan.edgePlayEff) === "crash" ? 1.08 : (defPlan == null ? void 0 : defPlan.edgePlayEff) === "contain" ? 0.94 : 1) * clamp2(1 + (((_n = offPlan == null ? void 0 : offPlan.protEmphasis) != null ? _n : 50) - 50) / -250, 0.8, 1.2);
+    const isScreen = !!forcedScreen || playType === "pass_short" && !result.playAction && Math.random() < ((_n = offPlan.screenRate) != null ? _n : 14) / 100;
+    const edgeRushMult = ((defPlan == null ? void 0 : defPlan.edgePlayEff) === "crash" ? 1.08 : (defPlan == null ? void 0 : defPlan.edgePlayEff) === "contain" ? 0.94 : 1) * clamp2(1 + (((_o = offPlan == null ? void 0 : offPlan.protEmphasis) != null ? _o : 50) - 50) / -250, 0.8, 1.2);
     const fireZone = droppedIds.length > 0 && result.blitzFired === true;
     if (fireZone) result.fireZone = true;
     let fzBonus = 0;
@@ -17163,14 +17167,14 @@ var _CFB = (() => {
       const craft = d0 ? (d0.attributes.AWR + d0.attributes.TEC) / 2 : 50;
       fzBonus = clamp2(8 + (craft - 50) * 0.3, 5, 22);
     }
-    const rushResult = resolvePassRush(passRushers, blockers, blitzPct, defContextBoost, Math.min(100, ((_o = defPlan.blitzDesign) != null ? _o : 50) + fzBonus), defPlan._dnaPressure || 0, ((offPlan == null ? void 0 : offPlan._h2Protect) ? 1 - offPlan._h2Protect.eff : 1) * edgeRushMult, paBite, Math.max(0, -(defPlan.runCommitEff || 0)));
+    const rushResult = resolvePassRush(passRushers, blockers, blitzPct, defContextBoost, Math.min(100, ((_p = defPlan.blitzDesign) != null ? _p : 50) + fzBonus), defPlan._dnaPressure || 0, ((offPlan == null ? void 0 : offPlan._h2Protect) ? 1 - offPlan._h2Protect.eff : 1) * edgeRushMult, paBite, Math.max(0, -(defPlan.runCommitEff || 0)));
     if (!isScreen && !rushResult.sacked) {
       const depthMult = playType === "pass_short" ? C.BAT_SHORT_MULT : playType === "pass_deep" ? C.BAT_DEEP_MULT : 1;
       let batter = null;
       const atLine = passRushers.filter((r) => r.player && /^(DE|DT)/.test(r.role || "") && !rushResult.pressureIds.includes(r.player.id) && !rushResult.sackerIds.includes(r.player.id));
       for (const r of atLine) {
         const p = r.player;
-        const ht = (_p = p.heightInches) != null ? _p : 74;
+        const ht = (_q = p.heightInches) != null ? _q : 74;
         const chance2 = clamp2(
           (C.BAT_BASE + Math.max(0, p.attributes.JMP - 50) * C.BAT_JMP_SCALE + Math.max(0, p.attributes.AWR - 50) * C.BAT_AWR_SCALE + Math.max(0, ht - 74) * C.BAT_HEIGHT_SCALE) * depthMult,
           0,
@@ -17184,7 +17188,7 @@ var _CFB = (() => {
       if (batter) {
         result.batted = true;
         result.battedById = batter.id;
-        result.battedByName = `${(_s = (_r = (_q = batter.name) == null ? void 0 : _q.first) == null ? void 0 : _r[0]) != null ? _s : ""}. ${(_u = (_t = batter.name) == null ? void 0 : _t.last) != null ? _u : ""}`.trim();
+        result.battedByName = `${(_t = (_s = (_r = batter.name) == null ? void 0 : _r.first) == null ? void 0 : _s[0]) != null ? _t : ""}. ${(_v = (_u = batter.name) == null ? void 0 : _u.last) != null ? _v : ""}`.trim();
         result.complete = false;
         result.yards = 0;
         if (Math.random() < C.BAT_TIP_INT) {
@@ -17221,7 +17225,7 @@ var _CFB = (() => {
         if (result.complete) {
           result.receiverId = scrTarget.id;
           const stopper = pickTackler(dl.concat((defPersonnel.LB || []).map((id) => defRoster.find((p) => p.id === id)).filter(Boolean)));
-          result.tacklerId = (_v = stopper == null ? void 0 : stopper.id) != null ? _v : null;
+          result.tacklerId = (_w = stopper == null ? void 0 : stopper.id) != null ? _w : null;
         }
         result.passDepth = "short";
         return result;
@@ -17243,7 +17247,7 @@ var _CFB = (() => {
         result.receiverId = scrTarget.id;
         result.passDepth = "short";
         const stopper = pickTackler(pursuers);
-        result.tacklerId = result.brokenById ? (_y = (_x = (_w = pickTackler(pursuers.filter((p) => p.id !== result.brokenById))) == null ? void 0 : _w.id) != null ? _x : stopper == null ? void 0 : stopper.id) != null ? _y : null : (_z = stopper == null ? void 0 : stopper.id) != null ? _z : null;
+        result.tacklerId = result.brokenById ? (_z = (_y = (_x = pickTackler(pursuers.filter((p) => p.id !== result.brokenById))) == null ? void 0 : _x.id) != null ? _y : stopper == null ? void 0 : stopper.id) != null ? _z : null : (_A = stopper == null ? void 0 : stopper.id) != null ? _A : null;
         return result;
       }
       result.complete = false;
@@ -17302,7 +17306,7 @@ var _CFB = (() => {
       if (qb && Math.random() < scrambleChance) {
         const laneBase = spyActive ? 0.18 : 0.3;
         const scrambleLane = laneBase + Math.random() * 0.2;
-        const sacker = ((_A = rushResult.sackerIds) == null ? void 0 : _A[0]) ? defRoster.find((p) => p.id === rushResult.sackerIds[0]) : null;
+        const sacker = ((_B = rushResult.sackerIds) == null ? void 0 : _B[0]) ? defRoster.find((p) => p.id === rushResult.sackerIds[0]) : null;
         const lbIdsInBox = (defPersonnel.LB || []).slice(0, Math.ceil((defPersonnel.LB || []).length / 2));
         const secondLevel = lbIdsInBox.map((id) => defRoster.find((p) => p.id === id)).filter(Boolean);
         const deepLevel = (defPersonnel.DB || []).slice(0, 3).map((id) => defRoster.find((p) => p.id === id)).filter(Boolean);
@@ -17325,8 +17329,8 @@ var _CFB = (() => {
       }
       result.sack = true;
       result.yards = -Math.max(2, Math.round(randNorm(6, 2)));
-      result.sackerId = (_B = rushResult.sackerIds[0]) != null ? _B : null;
-      result.sackerId2 = (_C = rushResult.sackerIds[1]) != null ? _C : null;
+      result.sackerId = (_C = rushResult.sackerIds[0]) != null ? _C : null;
+      result.sackerId2 = (_D = rushResult.sackerIds[1]) != null ? _D : null;
       result.pressureIds = rushResult.sackerIds.slice(0, 2);
       const qbHndMult = clamp2(1 - (qb.attributes.SEC * 0.85 + qb.attributes.TEC * 0.15 - 50) * C.FUMBLE_HND_SCALE, 0.45, 1.3);
       if (Math.random() < C.STRIP_SACK_RATE * qbHndMult) {
@@ -17367,10 +17371,10 @@ var _CFB = (() => {
     }
     const pressureLevel = rushResult.hurried ? 1 : 0;
     const hurried = rushResult.hurried;
-    if (rushResult.hurried && ((_D = rushResult.pressureIds) == null ? void 0 : _D.length)) result.pressureIds = rushResult.pressureIds.slice(0, 2);
+    if (rushResult.hurried && ((_E = rushResult.pressureIds) == null ? void 0 : _E.length)) result.pressureIds = rushResult.pressureIds.slice(0, 2);
     result.hurried = hurried;
     const passDepthKey = playType === "pass_short" ? "short" : playType === "pass_medium" ? "medium" : "deep";
-    const covStyleLive = (_F = (_E = defPlan == null ? void 0 : defPlan.covStyleEff) != null ? _E : defPlan == null ? void 0 : defPlan.covStyle) != null ? _F : "balanced";
+    const covStyleLive = (_G = (_F = defPlan == null ? void 0 : defPlan.covStyleEff) != null ? _F : defPlan == null ? void 0 : defPlan.covStyle) != null ? _G : "balanced";
     const isZoneHeavy = covStyleLive === "zone" ? true : covStyleLive === "man" ? false : ["Nickel", "Dime", "3-4"].includes(frontId);
     const DEPTHS = ["short", "medium", "deep"];
     const tiltFor = (pid) => {
@@ -17391,8 +17395,16 @@ var _CFB = (() => {
         receiversOnField.push({ receiverId: te.id, receiver: te, passDepth: tiltFor(te.id) });
       }
     }
-    if (rbPlayers.length > 0 && (passDepthKey === "short" || passDepthKey === "medium" && Math.random() < 0.35)) {
-      receiversOnField.push({ receiverId: rbPlayers[0].id, receiver: rbPlayers[0], passDepth: "short" });
+    if (rbPlayers.length > 0) {
+      if (rbReleased) {
+        receiversOnField.push({
+          receiverId: rbPlayers[0].id,
+          receiver: rbPlayers[0],
+          passDepth: passDepthKey === "deep" ? "medium" : passDepthKey
+        });
+      } else if (passDepthKey === "short" || passDepthKey === "medium" && Math.random() < 0.35) {
+        receiversOnField.push({ receiverId: rbPlayers[0].id, receiver: rbPlayers[0], passDepth: "short" });
+      }
     }
     if (!receiversOnField.length) {
       result.complete = false;
@@ -17402,18 +17414,18 @@ var _CFB = (() => {
     for (const r of receiversOnField) {
       const p = offRoster.find((x) => x.id === r.receiverId);
       if (!p) continue;
-      const share = (_G = shareByPlayerId == null ? void 0 : shareByPlayerId[r.receiverId]) != null ? _G : 0;
-      const threat = ((_H = p.compositeRating) != null ? _H : 0) * (1 + share / 200);
+      const share = (_H = shareByPlayerId == null ? void 0 : shareByPlayerId[r.receiverId]) != null ? _H : 0;
+      const threat = ((_I = p.compositeRating) != null ? _I : 0) * (1 + share / 200);
       if (threat > bestThreat) {
         bestThreat = threat;
         keyId = r.receiverId;
       }
     }
-    keyId = (_J = keyId != null ? keyId : (_I = offPersonnel.WR) == null ? void 0 : _I[0]) != null ? _J : null;
+    keyId = (_K = keyId != null ? keyId : (_J = offPersonnel.WR) == null ? void 0 : _J[0]) != null ? _K : null;
     {
-      const who = (_L = (_K = defPlan.bracketWhoEff) != null ? _K : defPlan.bracketWho) != null ? _L : "auto";
-      if (who === "te1") keyId = (_N = (_M = offPersonnel.TE) == null ? void 0 : _M[0]) != null ? _N : keyId;
-      else if (who === "slot") keyId = (_R = (_Q = (_O = offPersonnel.WR) == null ? void 0 : _O[2]) != null ? _Q : (_P = offPersonnel.WR) == null ? void 0 : _P[1]) != null ? _R : keyId;
+      const who = (_M = (_L = defPlan.bracketWhoEff) != null ? _L : defPlan.bracketWho) != null ? _M : "auto";
+      if (who === "te1") keyId = (_O = (_N = offPersonnel.TE) == null ? void 0 : _N[0]) != null ? _O : keyId;
+      else if (who === "slot") keyId = (_S = (_R = (_P = offPersonnel.WR) == null ? void 0 : _P[2]) != null ? _R : (_Q = offPersonnel.WR) == null ? void 0 : _Q[1]) != null ? _S : keyId;
       else if (who === "hot" && defPlan._hotTargetId) keyId = defPlan._hotTargetId;
     }
     const coverageAssigned = assignCoverage(
@@ -17445,7 +17457,7 @@ var _CFB = (() => {
         "Flexbone": 0.45,
         "Wildcat": 0.4
       };
-      const motionEff = clamp2(((_S = MOTION_RATE[offFormationId]) != null ? _S : 0.2) * (((_T = offPlan.motionRate) != null ? _T : 100) / 100), 0, 0.6);
+      const motionEff = clamp2(((_T = MOTION_RATE[offFormationId]) != null ? _T : 0.2) * (((_U = offPlan.motionRate) != null ? _U : 100) / 100), 0, 0.6);
       const calledMotion = !!(offPlan == null ? void 0 : offPlan._forceMotion);
       if ((calledMotion || Math.random() < motionEff) && coverageAssigned.length > 1) {
         const mover = coverageAssigned[1] || coverageAssigned[0];
@@ -17469,10 +17481,10 @@ var _CFB = (() => {
       for (const a of coverageAssigned) a.separation = clamp2(a.separation + flipWin, 0, 1);
     }
     {
-      const shell = (_U = defPlan == null ? void 0 : defPlan.covShellEff) != null ? _U : "balanced";
-      const style = (_V = defPlan == null ? void 0 : defPlan.covStyleEff) != null ? _V : "balanced";
-      const prot = (_W = offPlan == null ? void 0 : offPlan.protEmphasis) != null ? _W : 50;
-      const aggr = (_X = offPlan == null ? void 0 : offPlan.qbAggr) != null ? _X : 50;
+      const shell = (_V = defPlan == null ? void 0 : defPlan.covShellEff) != null ? _V : "balanced";
+      const style = (_W = defPlan == null ? void 0 : defPlan.covStyleEff) != null ? _W : "balanced";
+      const prot = (_X = offPlan == null ? void 0 : offPlan.protEmphasis) != null ? _X : 50;
+      const aggr = (_Y = offPlan == null ? void 0 : offPlan.qbAggr) != null ? _Y : 50;
       let adj = 0;
       const sPlayers = (defPersonnel.S || []).map((id) => defRoster.find((pl) => pl.id === id)).filter(Boolean);
       const sAwr = sPlayers.length ? sPlayers.reduce((t, pl) => t + pl.attributes.AWR, 0) / sPlayers.length : 50;
@@ -17531,13 +17543,13 @@ var _CFB = (() => {
           deepest = t;
         }
       }
-      const disguise = 1 - (((_Y = defPlan == null ? void 0 : defPlan.blitzDesign) != null ? _Y : 50) - 50) / 150;
+      const disguise = 1 - (((_Z = defPlan == null ? void 0 : defPlan.blitzDesign) != null ? _Z : 50) - 50) / 150;
       const dnaPressureCov = 1 - ((defPlan == null ? void 0 : defPlan._dnaPressure) || 0) * 0.015;
       if (deepest && maxDepth >= 2) deepest.separation = clamp2(deepest.separation + 0.14 * disguise * dnaPressureCov, 0, 1);
     }
     if ((defPlan == null ? void 0 : defPlan._h2Shadow) && targets.length > 0) {
       for (const t of targets) {
-        if (((_Z = t.receiver) == null ? void 0 : _Z.id) === defPlan._h2Shadow.id) t.separation = clamp2(t.separation - defPlan._h2Shadow.eff, 0, 1);
+        if (((__ = t.receiver) == null ? void 0 : __.id) === defPlan._h2Shadow.id) t.separation = clamp2(t.separation - defPlan._h2Shadow.eff, 0, 1);
       }
     }
     const chosen = qbRead(targets, pressureLevel, qb, motionReadEdge);
@@ -17551,7 +17563,7 @@ var _CFB = (() => {
     const coveringDef = chosen.defender;
     const sep = chosen.separation;
     const avgShare = 15;
-    const chosenShare = (__ = chosen.shareWeight) != null ? __ : avgShare;
+    const chosenShare = (_$ = chosen.shareWeight) != null ? _$ : avgShare;
     const forced = chosenShare > avgShare * 1.6 && (chosen.bracketed || chosen.separation < 0.4);
     const dropProb = clamp2(C.DROP_BASE - receiverObj.attributes.HND * C.DROP_HND_SCALE, 0.015, 0.08);
     let helper = null;
@@ -17587,7 +17599,7 @@ var _CFB = (() => {
       } else if (catchResult.pbu) {
         result.pbuId = catchResult.pbuId;
       }
-      result.throwerId = (_$ = qb == null ? void 0 : qb.id) != null ? _$ : null;
+      result.throwerId = (_aa = qb == null ? void 0 : qb.id) != null ? _aa : null;
       return result;
     }
     const useVdeep = passDepthKey === "deep" && sep > C.VDEEP_SEP_THRESHOLD && receiverObj._gameArch === "WR-Deep" && Math.random() < C.VDEEP_PROB;
@@ -36374,11 +36386,11 @@ var _CFB = (() => {
       protection picks him up, and whether that happens is close to a coin flip. A blitz buys an
       unblocked rusher, some of the time \u2014 not a better one.
 
-      Keeping backs and tight ends in does <i>not</i> make any one pickup likelier \u2014 the roll is
-      flat whenever a blocker is free. What extra bodies buy is insurance against an <b>overload</b>:
-      when the blitz sends more men than your base protection can touch, the extra blocker is the
-      one who has anybody to pick up at all. Against a blitz you can already handle \u2014 or a defense
-      not blitzing \u2014 a protection-heavy call has spent bodies on nothing, and it costs you a route.`
+      Keeping backs and tight ends in genuinely raises the odds a blitzer is met: the more bodies
+      you leave in to block, the likelier one of them is free to pick him up. It pays most against
+      a <b>heavy blitz</b>, where the extra blocker both has someone to take and is more likely to
+      get to him. Against a defense that is not blitzing, a protection-heavy call has spent bodies
+      on nothing \u2014 and it always costs you a route.`
       },
       {
         heading: "What a pass set is made of",
@@ -36732,10 +36744,11 @@ var _CFB = (() => {
 
       <b>Run direction</b> chooses which side of your line the ball attacks and is worth real
       yards, because the point-of-attack reps dominate the lane \u2014 see <i>The Run Fit</i>.
-      <b>Protection emphasis</b> keeps <i>tight ends</i> in to pick up blitzers \u2014 a hybrid tight
-      end blocks instead of releasing. Your back already stays in to protect regardless of this
-      dial, so what the lever actually moves is tight ends, not backs; either way you calm the
-      pocket at the price of a body in the route. <b>Play-action rate</b> and <b>motion rate</b>
+      <b>Protection emphasis</b> governs both your tight ends and your <i>back</i>. Turn it up and
+      a hybrid tight end blocks instead of releasing and your back stays in to protect \u2014 a calmer
+      pocket, fewer men in the route. Turn it down and the back releases into a route instead: a
+      live outlet and more completions, bought with a hotter pocket and more sacks. It is a real
+      two-way trade, not a one-way "keep bodies in" switch. <b>Play-action rate</b> and <b>motion rate</b>
       multiply what your formation naturally does rather than setting it, so the same dial builds
       very different offenses out of different personnel.
 
