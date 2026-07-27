@@ -5136,7 +5136,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "ceff64937e";
+globalThis.__BUILD__ = "381e3e1e3e";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -16091,8 +16091,13 @@ var _CFB = (() => {
       const jam = ((_e = da.STR) != null ? _e : 50) * 0.4 + ((_f = da.TEC) != null ? _f : 50) * 0.35 + ((_g = da.AGI) != null ? _g : 50) * 0.25 + 1;
       const release = ((_h = ra.AGI) != null ? _h : 50) * 0.4 + ((_i = ra.TEC) != null ? _i : 50) * 0.35 + ((_j = ra.STR) != null ? _j : 50) * 0.25;
       const jamGap = (jam - release) * (pressHot ? 1.08 : 1);
-      if (jamGap >= 0) recDelay = Math.min(0.42, 0.14 + jamGap * 75e-4);
-      else def.lag = Math.min(0.38, 0.1 - jamGap * 65e-4);
+      if (jamGap >= 0) {
+        recDelay = Math.min(0.42, 0.14 + jamGap * 75e-4);
+        def.lag = recDelay;
+        rec.acc *= Math.max(0.55, 1 - jamGap * 85e-4);
+      } else {
+        def.lag = Math.min(0.38, 0.1 - jamGap * 65e-4);
+      }
       def.y = 0.8;
     } else if (coverageType === "offman") {
       def.y = 6.2;
@@ -16176,9 +16181,9 @@ var _CFB = (() => {
     }
     const dist = Math.sqrt((rec.x - def.x) ** 2 + (rec.y - def.y) ** 2);
     const m = QMAP[`${passDepth}/${coverageType}`] || QMAP["medium/zone"];
-    return qsep(m, dist);
+    return qsep(m, dist, coverageType === "press" ? PRESS_RECENTER : 0);
   }
-  var TICK3, spd, acc, rctMan, rctZone, ROUTES, QMAP, SEP_RECENTER, qsep;
+  var TICK3, spd, acc, rctMan, rctZone, ROUTES, QMAP, SEP_RECENTER, PRESS_RECENTER, qsep;
   var init_sepgeo = __esm({
     "js/engine/sepgeo.js"() {
       TICK3 = 0.1;
@@ -16204,7 +16209,8 @@ var _CFB = (() => {
         "short/zone": { dq: [1.913, 1.92, 2.068, 2.152, 2.225, 2.281, 2.325, 2.379, 2.424, 2.467, 2.503, 2.541, 2.577, 2.615, 2.65, 2.687, 2.723, 2.76, 2.803, 2.85, 2.919, 2.999, 3.096, 3.226, 3.398], sq: [0.0452, 0.1465, 0.2143, 0.2555, 0.2924, 0.322, 0.3436, 0.3693, 0.3909, 0.4097, 0.4312, 0.4481, 0.468, 0.4861, 0.504, 0.5229, 0.5445, 0.5686, 0.5974, 0.6263, 0.6639, 0.7066, 0.7585, 0.8419, 0.9423] }
       };
       SEP_RECENTER = 0.015;
-      qsep = (m, x) => Math.max(0, Math.min(1, qinterp(m, x) + SEP_RECENTER));
+      PRESS_RECENTER = 0.038;
+      qsep = (m, x, extra = 0) => Math.max(0, Math.min(1, qinterp(m, x) + SEP_RECENTER + extra));
     }
   });
 
@@ -35688,9 +35694,2059 @@ var _CFB = (() => {
     ]
   };
 
+  // js/ui/manual/the-year.js
+  var chapter2 = {
+    id: "the-year",
+    icon: "\u{1F5D3}\uFE0F",
+    title: "The Year",
+    blurb: "The full calendar, the order things resolve in on a day you advance, and the deadlines that do not wait for you.",
+    sections: [
+      {
+        heading: "The shape of a year",
+        body: `Six phases, in order. <b>Preseason</b> \u2014 four weeks of camp before anyone plays.
+      <b>Non-conference</b>, then <b>conference play</b>, then the <b>conference championship</b>.
+      Then the <b>playoffs</b>, and then the <b>offseason</b>, which is a guided sequence rather
+      than a stretch of calendar.
+
+      The one window that does not line up with the phases is recruiting. It opens on the first
+      day of camp \u2014 before you have played a snap \u2014 and closes at the end of championship week.
+      The playoffs run with the class already locked. Nothing you do in the postseason affects
+      who signs.
+
+      That is worth sitting with, because it inverts the instinct. Your best recruiting weeks are
+      the ones nobody is watching, and the deep run that would sell the program happens after the
+      selling is over.`
+      },
+      {
+        heading: "What each week of camp is for",
+        body: `The four preseason weeks are not filler. Each has a job and each has something that
+      stops being possible once it passes.
+
+      <b>Week one is development camp.</b> The whole league develops, your practice plan shapes
+      it, and your chosen focus group trains hot while everyone else cools. Position changes lock
+      when camp runs \u2014 after that, a conversion is a different, unrestricted path rather than a
+      camp decision.
+
+      <b>Week two is the spring game.</b> <b>Week three is cut day</b>, and it is the hard roster
+      gate: your signed class has arrived, and if you are over the limit this is where it gets
+      resolved. <b>Week four is when the athletic director's expectations lock</b> for the season.
+      What you are being measured against is fixed there, and it does not move afterwards no
+      matter what happens to your roster.
+
+      Redshirt decisions you have not confirmed are applied automatically when the first game week
+      arrives. If you were planning to think about it during non-conference, you were not.`
+      },
+      {
+        heading: "What happens when you advance a day",
+        body: `The order is fixed and it is not the order you would guess.
+
+      Recruiting settles first \u2014 every contested recruit's week resolves across every suitor at
+      once. Then redshirt and roster bookkeeping. Then injuries heal, league-wide. Then, on three
+      specific weeks, a practice checkpoint develops every roster in the league using whatever
+      plan is currently set. <b>Then</b> the games are played.
+
+      Games running last is deliberate \u2014 the result is the payoff at the end of the tick, not the
+      thing everything else reacts to. It has one consequence worth knowing: a player's layoff
+      ticks down <i>before</i> that day's game, so a man due back this week is back for this
+      week's game rather than the next one.
+
+      Later in the year two more things bolt on. When the offseason opens, this season's records
+      finalise first, then prestige and reputation update, and only then does the job market
+      evaluate anybody \u2014 so coaches are hired and fired against results that are already on the
+      books. At the very end, the season's development tick runs and seniors graduate.`
+      },
+      {
+        heading: "The practice checkpoints",
+        body: `Practice is not a season-long average. It ticks the whole league three times: once
+      mid-season, once after the bye, and once late.
+
+      Whatever plan is set at that moment is the plan that develops your roster. Change it in week
+      two and change it back in week four and nothing happened. Change it the week before a
+      checkpoint and it is the plan you get.
+
+      This makes the bye week a genuine coaching week rather than a gap in the schedule, and it
+      makes a mid-season plan change a real decision instead of a cosmetic one. Covered properly
+      in <i>Building a Player</i>.`
+      },
+      {
+        heading: "The deadlines that bite",
+        body: `Five, and each one takes something away permanently.
+
+      <b>Camp week one</b> ends position changes as a camp decision. <b>Camp week three</b> is the
+      roster gate; being over it is not a warning you can dismiss. <b>Camp week four</b> locks
+      your mandate. <b>The end of championship week</b> closes recruiting \u2014 every recruit still
+      undecided resolves without you, and every dollar left in the pool bought nothing.
+
+      And in the offseason, <b>cut day gates the portal</b>. You cannot shop for transfers while
+      over the cap, because every player you added would have to be cut again. If you arrive at
+      that stage bloated, you will spend it trimming rather than shopping, and the good transfers
+      will be gone by the time you get there.
+
+      A coach who reaches any of these unprepared does not get a penalty. He gets a smaller set of
+      options, which is worse, because it does not announce itself.`
+      },
+      {
+        heading: "Building the schedule",
+        body: `Your conference games are not yours. They are generated, and the specific opponents
+      rotate from season to season, so a conference slate is a different set of problems each year
+      even with the same membership.
+
+      Your non-conference games <b>are</b> yours, and you pick them in the offseason scheduling
+      stage \u2014 well before you know what your roster will look like. Two hard rules apply. A
+      non-conference game never crosses divisions, no matter who you would rather play. And the
+      same two teams do not meet twice.
+
+      Scheduling up or down carries a guarantee that lands on <i>next</i> year's recruiting pool \u2014
+      a credit for agreeing to be somebody's road opponent, a charge for buying a soft one. That
+      is the whole trade: a favourable schedule is paid for in recruiting money, and a brutal one
+      pays you in it. Your rivalry game is managed separately and does not come out of that
+      allowance.`
+      },
+      {
+        heading: "The offseason is a sequence, not a phase",
+        body: `It runs as a fixed order of stages and each one closes behind you. The coaching
+      carousel first, so you know whether you are still employed and who is courting you. Then
+      awards, then departures \u2014 the seniors leaving and the holes they leave.
+
+      Then the decisions: cut day, the transfer portal, your own contract, coordinator hires, one
+      skill clinic, walk-on tryouts if you have scholarships going spare, and finally scheduling.
+
+      The ordering is doing real work. You see your holes before you shop. You settle your own job
+      before you commit to a roster. Your new coordinators are hired before camp opens so they are
+      in place when development runs. Nothing here is arbitrary, and moving through it quickly is
+      how coaches end up with rosters they did not intend.`
+      },
+      {
+        heading: "What the year does to your program",
+        body: `Prestige updates once a season, against results, and it moves slowly within a band
+      set by your division. It is not a score you can spike \u2014 it is a reputation that accumulates.
+
+      That matters because prestige is load-bearing in three separate places. It sets what the
+      athletic director expects of you, which is covered in <i>Your Career</i>. It multiplies what
+      your recruiting dollars are worth, which is covered in <i>Recruiting</i>. And it drives
+      attendance, which is where next year's recruiting pool comes from.
+
+      So a good season pays you three times, a year late, and a bad one costs you three times on
+      the same delay. Almost nothing in this game is settled inside the season you are playing.`
+      }
+    ]
+  };
+
+  // js/ui/manual/anatomy-of-a-play.js
+  var chapter3 = {
+    id: "anatomy-of-a-play",
+    icon: "\u{1F3AC}",
+    title: "Anatomy of a Play",
+    blurb: "One snap, start to finish: what gets decided, in what order, and why the play is almost always over before the ball is.",
+    sections: [
+      {
+        heading: "Before the huddle breaks",
+        body: `Every snap starts by asking one question of the game state: what
+      situation is this? Down, distance, where the ball is, the score margin, the clock \u2014
+      all of it collapses into a single label. Third and long. Backed up. Two-minute. Goal
+      line.
+
+      Both sidelines answer that question independently, and both answer it from their own
+      frame. The same snap is <i>goal line</i> to you and <i>goal line</i> to him, because
+      the ball is where the ball is. But the score is read from each bench separately, so a
+      defense that is trailing is playing desperate at the same moment your offense is
+      playing safe.
+
+      Then three sheets stack. Your base plan is the floor. Your weekly plan for this
+      opponent overwrites what it touches. The situation cell overwrites what <i>it</i>
+      touches. What comes out the other side is the plan that actually calls this one
+      snap \u2014 and if you never opened the situational editor, it is simply your base plan,
+      untouched, on every down.`
+      },
+      {
+        heading: "Run or pass",
+        body: `The formation is on the field before the call is made, and the formation leans.
+      Some personnel groupings throw and some do not, and that lean is applied to every snap
+      out of that look no matter what else is happening. It is a fact about the eleven men
+      standing there, not a guess about the down.
+
+      On top of that, one of two things happens. If you have set a tendency for this
+      situation, your call is the whole answer \u2014 it replaces the engine's situational
+      reasoning entirely, because you <i>are</i> the situational reasoning now. Dial an
+      extreme and it stays extreme: an offense told to always throw will throw on third and
+      inches, and it will look exactly as stupid as that sounds.
+
+      If you have not set a tendency, an automatic layer reads the down for you. Third and
+      fourth down with a long way to go tilts toward the pass; third and fourth and short
+      tilts toward the run. Trailing badly with the half running out tilts to the pass;
+      leading comfortably with the half running out tilts to the run. That is the entire
+      list. It does not read your personnel, it does not read the defense, and it does not
+      know it is losing.`
+      },
+      {
+        heading: "Then the call gets narrower",
+        body: `A run is not just a run. Your left, middle, and right dials choose which side
+      of the line the play attacks. A pass is not just a pass: your depth mix chooses short,
+      intermediate, or deep, and your quarterback's aggression setting shifts that mix
+      underneath you \u2014 a gunslinger hunts depth past what you asked for, a caretaker checks
+      it down past what you asked for.
+
+      Only after the type is settled does a concept get picked \u2014 the actual play, drawn
+      against whatever coverage family the defense is in. That ordering matters and it is
+      worth internalising: the game decides <i>run or pass</i> first, then <i>where</i>, and
+      the concept is chosen last, to fit. Covered in <i>Calling a Game</i>.`
+      },
+      {
+        heading: "The shape of every contest",
+        body: `Nearly every one-on-one in this game is the same object wearing different
+      clothes. Two men, two blended attribute values, one difference between them, and that
+      difference bent through a curve into a probability.
+
+      The curve is the important part. It is smooth and it has no cliffs. A meaningful edge
+      wins the rep most of the time and loses it some of the time. There is no gap wide
+      enough to make a rep automatic, in either direction \u2014 your best pass rusher gets
+      stoned by a walk-on, occasionally, and that is not a bug, it is the only honest way to
+      model a sport where it happens every Saturday.
+
+      The consequence is the thing to actually plan around. A small edge is invisible on any
+      given snap and undeniable over a season. Advantages in this game pay out in volume,
+      not in moments. If you are evaluating a personnel decision by watching one drive, you
+      are reading noise.`
+      },
+      {
+        heading: "Where the team comes into it",
+        body: `Your team's overall strength relative to the opponent's is computed once and
+      applied as a small nudge to the same curve, on every rep, in the same direction. That
+      is the <b>only</b> place unit strength touches an individual matchup.
+
+      This is deliberate and it has a consequence worth understanding. The better roster
+      does not win by having one dominant player decide things; it wins by being slightly
+      more likely to win every single rep, all afternoon, until the scoreboard reflects it.
+      A talent gap in this game is a tax on the other team's every snap, not a hammer.`
+      },
+      {
+        heading: "The trenches resolve first",
+        body: `Whatever the call was, the line goes first. On a pass, each rusher is matched
+      to a blocker \u2014 edge rushers draw the tackles, interior rushers draw the guards and
+      center, and a designated blitzer comes clean unless a back or tight end in protection
+      picks him up. On a run, each defensive lineman is matched to a blocker by gap, and the
+      reps at the point of attack are weighted far more heavily than the reps away from it.
+
+      Everything downstream is conditioned on how that went. The pocket either holds, wobbles,
+      or collapses. The lane is either clean, muddy, or already occupied by a man in your
+      backfield. The quarterback's read, the receiver's route, the back's vision \u2014 none of it
+      gets a fair hearing if the line lost.
+
+      This is the honest answer to <i>where is a play decided</i>. It is decided in the
+      trenches, before the skill players are consulted, more often than anywhere else.`
+      },
+      {
+        heading: "Then the skill contest, then the aftermath",
+        body: `On a pass, each receiver runs a live duel against his coverage and the distance
+      between them at the throw is the separation number everything else eats. Your
+      quarterback reads those numbers \u2014 not perfectly, and not in a fixed order \u2014 and
+      throws. The ball in the air is its own contest: the catch, the break-up, the pick.
+
+      On a run, the line's verdict becomes physical at the mesh point, and from there the
+      carrier is loose against linebackers and safeties in a live chase.
+
+      Then the aftermath. Yards after contact, yards after the catch, who actually made the
+      tackle. Tackle credit is drawn by pursuit \u2014 closing speed, angles, and finishing \u2014
+      so your best pursuers lead the team without any one of them vacuuming up every stop.
+      Broken tackles happen here, and the carrier gets two ways out of every one: he can
+      make you miss or he can run through you, and he takes whichever is his better path.
+      Two backs with identical overalls break tackles in visibly different ways.`
+      },
+      {
+        heading: "What it does not model",
+        body: `Trust is worth more than coverage here, so: the field is not continuous. Passes
+      live in three depth bands, not at a measured yard line. Runs attack a side, not a
+      numbered gap. The simulation reasons in bands and lanes, and it is very good inside
+      them, but it does not know the difference between a twelve-yard dig and a fourteen-yard
+      dig.
+
+      Pressure has two states, not three. Your quarterback is either clean or hurried. There
+      is no tier of pressure so urgent that it forces a checkdown independently of the read
+      \u2014 when the rush truly gets home it is a sack, and the read never happens.
+
+      Penalties are not attributed to individual reps. They are rolled against team
+      discipline over the course of a drive, with pre-snap fouls driven by how well your
+      coordinator knows the package he just called. Your left tackle does not personally
+      false start because he personally lost his rep.
+
+      And nothing about the opponent enters your call. Your game plan is prepared against a
+      situation, not read off the defense across the ball. What the defense does is answered
+      by the eleven men executing it, which is the whole of <i>Defending a Game</i>.`
+      }
+    ]
+  };
+
+  // js/ui/manual/the-pre-snap-read.js
+  var chapter4 = {
+    id: "the-pre-snap-read",
+    icon: "\u{1F441}\uFE0F",
+    title: "The Pre-Snap Read",
+    blurb: "What your quarterback can see at the line, what the defense is lying about, and why the best checking quarterback in the league gets lied to the most.",
+    sections: [
+      {
+        heading: "He sees a picture, not a play",
+        body: `Your quarterback does not know the coverage. He knows the <b>box</b> \u2014 how many
+      bodies are down near the line, how committed they look, and how many safeties are
+      standing deep.
+
+      That is genuinely all of it, and it is enough, because those two things really do
+      correlate with what is about to happen. A single deep safety over a stacked front means
+      the run is being taken away. Two deep safeties over a light front means the pass is
+      being taken away and there is grass in the box.
+
+      What he cannot see is which specific call is behind the picture, whether the blitz is
+      coming, or which of your receivers is about to be bracketed. Those are resolved after
+      the snap, by the eleven men doing them.`
+      },
+      {
+        heading: "The kill call",
+        body: `When the picture is committed enough, your quarterback can get out of it. A loaded
+      box on a called run becomes the quick passing game. A light box on a called pass becomes
+      an inside run at the soft front.
+
+      Three things gate that. His awareness decides whether he sees it at all \u2014 this is the
+      most direct payoff for quarterback intelligence anywhere in the game. Your
+      line-of-scrimmage freedom setting decides how much rope he has. And the defense has to
+      have <i>committed</i>: a balanced defensive identity produces a picture with nothing to
+      read, and the kill call stays silent no matter how sharp your quarterback is.
+
+      Even with an elite processor and full freedom at the line, he is checking out of a
+      minority of his calls. The kill call is a relief valve, not a play-calling system. If
+      you want to be the one deciding, that is what the situational sheet is for.
+
+      Audibles are rationed by possession \u2014 a check-with-me, not a rebuild of the call sheet
+      every snap. Grant full freedom and he gets more, but the ration exists at every setting,
+      because real offenses do not re-huddle at the line all afternoon.`
+      },
+      {
+        heading: "The lie",
+        body: `The defense can show a shell it is not playing, and the substitution is always the
+      same direction: a committed look gets dressed up as a softer one. Single-high shows as
+      two-high. A pure man-and-blitz look shows as something with help over the top.
+
+      Two people sell it. Your opposing coordinator's blitz design is the acting coach \u2014 how
+      well the disguise is drawn up. The safeties' awareness is the acting: they are the men
+      who have to hold the fake alignment and rotate late, and a secondary that does not know
+      what it is doing gives it away by standing in the wrong place too early.
+
+      Whether your quarterback buys it is his read against their craft. Awareness leads that
+      read and technique supports it, in that order. An experienced quarterback against a
+      badly disguised defense is essentially never fooled. A raw one against a well-coached
+      secondary is fooled more often than not.`
+      },
+      {
+        heading: "Why the disguise is dangerous rather than annoying",
+        body: `The lie is told <b>before</b> your quarterback reads the box. That ordering is the
+      whole mechanism, and it turns the disguise from a nuisance into a trap.
+
+      A defense that stacks the box and shows two-high over the top is not just hiding. It is
+      <i>baiting the check</i>. Your quarterback reads a light box that is not there, kills
+      his pass into an inside run, and hands the ball off into eight men who were waiting for
+      exactly that. He was not beaten on the snap. He was beaten in the huddle by a picture.
+
+      And here is the part worth building around: a quarterback who audibles constantly gets
+      disguised <b>more</b>. Checking at the line is film. Defenses watch him do it, and they
+      start showing him things worth checking into. The cost of line-of-scrimmage freedom is
+      not the audible itself \u2014 it is that you have told the opposition which lever he pulls.`
+      },
+      {
+        heading: "Motion",
+        body: `A man crossing the formation before the snap does two things. First, a jam cannot
+      land on a moving target, so the motion man is harder to press and starts his route
+      cleaner. That gain is real against man coverage and against press specifically, and much
+      smaller against zone, which does not care who is standing where.
+
+      Second, how they travel it is a <b>tell</b>. Man follows him across. Zone passes him off.
+      Your quarterback watches which happens and now knows something he did not know a moment
+      ago \u2014 and a quarterback who knows the coverage bails off doomed throws instead of forcing
+      them into a receiver you told him to feed.
+
+      A disciplined, aware secondary muddies that travel. The tell is not a guarantee; it is
+      odds, and the sharper the defensive backs, the more often your quarterback reads it
+      backwards and plays the snap against a coverage that is not there. That is worse than not
+      having motioned at all.
+
+      How much motion you get is mostly the formation. Some looks live on it and some almost
+      never use it; your motion dial multiplies whatever your personnel grouping naturally
+      does, and certain concepts send a man deliberately regardless.`
+      },
+      {
+        heading: "The game inside the game",
+        body: `Once enough dropbacks have accumulated, the offense starts playing the film. A
+      defense that has shown single-high safeties all afternoon eventually gets the shot over
+      the top \u2014 an intermediate call becomes a deep one, because you have earned it. A defense
+      that has blitzed heavily all afternoon starts seeing more screens, because that is the
+      constraint on pressure.
+
+      Both are small, both need a real sample, and both work in either direction. It is not a
+      cheat code; it is the reason a coordinator's tendencies eventually cost him. If you are
+      playing a defense that commits to one shell every snap, the answer arrives on its own \u2014
+      but only if you stay in the game long enough to collect it.`
+      },
+      {
+        heading: "What tempo actually costs",
+        body: `Playing fast does not sharpen or dull the pre-snap read. What it does is exhaust
+      people, and it exhausts <b>both teams</b>.
+
+      A hurry-up offense cannot rotate its own bodies, and the defense cannot sub against pace
+      either. Fatigue accrues faster on every snap for everyone on the field, and fatigue is
+      not cosmetic here \u2014 it degrades the physical attributes directly, and a man who crosses
+      his limit comes off. Your quarterback, kicker, and punter never rotate out for it and
+      wear it all game anyway.
+
+      Conditioning is the attribute that decides how fast that happens and how quickly a man
+      recovers on the sideline. A well-conditioned team can play fast; a poorly conditioned one
+      is playing fast at its own expense and its opponent's, and losing that trade because it
+      has less to spend.
+
+      Milking the clock is the mirror image, and it is not a neutral choice either \u2014 it reduces
+      the number of possessions in the game for <i>both</i> teams. That is a lever about
+      variance, not about offense. Fewer possessions is what an underdog wants and what a
+      superior roster should not want.`
+      },
+      {
+        heading: "The other pre-snap failure",
+        body: `False starts, illegal motion, delay of game. These do not come from your players
+      being undisciplined about the snap count in isolation \u2014 they come from how well your
+      offensive coordinator knows the package that just got called.
+
+      A coordinator running a scheme he understands produces a clean line of scrimmage. A
+      coordinator asked to run something outside his knowledge produces flags, in whatever
+      formation the situation reached for. Team discipline \u2014 awareness and technique across
+      your roster \u2014 scales the flag rate on top of that, on both sides of the ball.
+
+      Your defense is not affected by any of this before the snap. They are not the ones who
+      have to go on a count.`
+      }
+    ]
+  };
+
+  // js/ui/manual/the-route-duel.js
+  var chapter5 = {
+    id: "the-route-duel",
+    icon: "\u{1F3F9}",
+    title: "The Route Duel",
+    blurb: "Separation is not a rating \u2014 it is run, live, every snap. What wins it, what technique costs, and why the throw is decided before the ball leaves.",
+    sections: [
+      {
+        heading: "Separation is played, not calculated",
+        body: `When your receiver comes off the ball, nothing is looked up. He runs. So does the
+      man covering him, and the two of them play the route out \u2014 the stem, the break, the
+      recovery \u2014 several times a second until the throw goes.
+
+      The distance between them at that moment is the <b>separation</b>, and it is the single
+      number the rest of the passing game consumes. Your quarterback's read is built from it.
+      The catch is built from it. The interception is built from it. Nothing else in the
+      passing game moves as much.
+
+      Because it is played rather than scored, attributes enter as <i>physics</i> rather than
+      as credit. Speed is top speed. Agility is how fast he reaches it and how well he keeps
+      his feet through a change of direction. Awareness is a reaction beat \u2014 the delay between
+      something happening and a defender responding to it. Technique is craft: selling the
+      stem, snapping the cut, landing the jam.`
+      },
+      {
+        heading: "The break is where separation comes from",
+        body: `A cut is not a turn. At full speed a man cannot swerve; he has to plant, kill
+      most of his momentum, redirect, and rebuild. That plant is the whole reason a route
+      break creates space, and it is why the intermediate game rewards a completely different
+      receiver than the deep game.
+
+      A polished route runner carries more of his speed through the plant. A raw one gives
+      most of it back and rebuilds from nearly nothing. Technique and agility both feed this,
+      and between two receivers with the same timed speed it is the whole difference on an
+      in-breaking route.
+
+      On a deep route there is no break \u2014 there is a lean, and then it is a footrace with a
+      head start. Everything that makes a receiver good at winning at the top of a route stops
+      mattering, and raw speed takes over almost entirely. This is why a burner and a
+      technician are not interchangeable and never rate the same on the same play.`
+      },
+      {
+        heading: "The sell, and the corner who is not fooled",
+        body: `Route craft freezes the defender at the break. The better your receiver's
+      technique relative to the man covering him, the longer that reaction beat runs, and the
+      more of the plant he gets for free.
+
+      It cuts exactly as hard the other way. A savvy, technically sound corner reads a raw
+      receiver's tell and jumps the route <i>early</i>. Craft is not a receiver stat that
+      defenders resist \u2014 it is a gap, and the sign of the gap decides who is guessing. This is
+      why a young receiver with real speed gets covered by an older corner with none.`
+      },
+      {
+        heading: "The four techniques, and what each one buys",
+        body: `<b>Press</b> starts with a jam. Strength, technique, and agility decide whether
+      it lands; the receiver answers with agility, technique, and strength of his own. Win the
+      jam and the route starts late and starts short \u2014 it never gets on schedule. Lose it and
+      you are flat-footed at the line while he is into a clean stem, and the further the route
+      goes, the worse that gets. Press is a bet, and the payout and the loss both scale with
+      depth.
+
+      <b>Man</b> is pure pursuit. He runs where the receiver <i>is</i>, not where he is going,
+      and that persistent lag is exactly where a speed advantage turns into yards. He gets a
+      beat of reaction at the break, then plants and recovers like anyone else.
+
+      <b>Off-man</b> hands you the underneath route and takes the deep one away. The cushion is
+      the lid \u2014 he is backpedaling at the snap, so nothing quick threatens him and nothing long
+      gets over him easily.
+
+      <b>Zone</b> defends grass. He sits at his landmark, shades the route developing in front
+      of him, and does nothing until the break \u2014 then triggers and drives. Awareness is that
+      trigger, and zone is the one place in coverage where awareness leads rather than
+      supports.`
+      },
+      {
+        heading: "What actually wins coverage",
+        body: `Across all of it, speed carries the most of a cover man's value and agility is
+      next \u2014 and those two are not close to the rest. Technique follows, then awareness, which
+      is smallest in the aggregate and largest where it pays, which is zone.
+
+      Strength does not show up in coverage at all, with one exception: the press jam. A
+      physical corner is physical for as long as the jam lasts, and then he is running, and
+      running is a speed problem. His strength cashes in on tackling instead.
+
+      The useful shape of this: separation allowed falls steadily as a cover man gets better
+      in <i>every</i> technique. No scheme rescues a bad corner and none wastes a good one.
+      Technique changes which kind of throw he gives up, not whether he gives them up.`
+      },
+      {
+        heading: "The read",
+        body: `Your quarterback sorts his targets by how open they are, and then he throws to
+      one of them \u2014 usually, but not reliably, the most open. Awareness governs how
+      concentrated that choice is. A sharp processor works to the best read far more often; a
+      scattered one sprays the ball around the route tree, hitting the third option on a snap
+      where the first was wide open.
+
+      Coverage he can see, he respects. A bracketed receiver is demoted before he is ever
+      looked at, and a receiver with no separation is not eligible at all \u2014 unless nobody is
+      open, at which point the ball goes into coverage anyway. That throw is the most expensive
+      one in the game.
+
+      Under a hurried pocket the progression collapses to the front of the list \u2014 everything
+      past the top of it is unavailable regardless of how open it was. This is most of what
+      pressure actually does. The throw is not worse; the throw is <i>earlier</i>.
+
+      Target share is a real thumb on the scale here, and it is a thumb your quarterback may
+      refuse. Feed a receiver heavily and a smart quarterback still bails off him when he is
+      covered; a raw one forces it because you told him to, and pays for it in picks.`
+      },
+      {
+        heading: "The ball in the air",
+        body: `Separation drives the catch, steeply. Around a genuinely contested window small
+      changes in separation swing the completion hard; out at either extreme it flattens, and
+      wide open is wide open.
+
+      Your quarterback contributes execution \u2014 accuracy and processing together \u2014 with real
+      diminishing returns above a good starter's level. Elite passers complete more; the
+      ceiling on that is deliberate and low.
+
+      His arm is two things, not one. Short and intermediate throws want velocity into a
+      closing window. Deep throws want distance. A quarterback can have one and not the other,
+      and the offense you should run behind him differs accordingly.
+
+      On tight windows at intermediate and deep range, and only there, the ball becomes a
+      contest at its apex: height, leaping, and hands against height, leaping, and the
+      defender's read. This is where the big possession receiver earns what his speed does not
+      show. On a wide-open throw it is worth nothing \u2014 there is nobody to box out.`
+      },
+      {
+        heading: "The interception",
+        body: `A pick is a chain, and each link has to hold. Read the quarterback, close on the
+      throw, finish at the catch point. Awareness leads it, closing speed follows, and the
+      finish is leaping and hands \u2014 the ball-hawk safety is instincts and burst and reliable
+      hands, not a generic athlete with a high overall.
+
+      Everything that makes a throw contested makes it more interceptable, in the same
+      direction and at the same time. Deep balls are picked far more than short ones. Forced
+      throws into coverage are picked dramatically more. A weak arm on a deep shot hangs the
+      ball and the defender gets there.
+
+      Scheme matters here in a way it does not elsewhere. Zone defenders play with their eyes
+      on the quarterback and zone defenses intercept more; man defenders play the receiver's
+      back and see less. The tighter windows man coverage creates do not make up the
+      difference \u2014 the eyes win.
+
+      And a quarterback who is both accurate and smart suppresses picks across the board,
+      independently of everything above. He is not avoiding risk by throwing it away; he is
+      simply not putting the ball where it can be taken. That is the most valuable thing a
+      passer does in this game, and it is invisible in his completion percentage.`
+      },
+      {
+        heading: "Nobody covering him",
+        body: `Occasionally a receiver comes free with nobody assigned to him. In zone he is very
+      open; in man he is as open as it is possible to be, and the throw is free.
+
+      That is the payoff for everything that looks decorative \u2014 the motion that beat a jam, the
+      blitz that emptied a zone. Both are covered elsewhere, in <i>The Pre-Snap Read</i> and
+      <i>Defending a Game</i>. It is worth knowing they cash out here, on the throw that never
+      had to be earned.`
+      }
+    ]
+  };
+
+  // js/ui/manual/the-pocket.js
+  var chapter6 = {
+    id: "the-pocket",
+    icon: "\u{1F6E1}\uFE0F",
+    title: "The Pocket",
+    blurb: "Protection is an assignment game, not five duels \u2014 and pressure is a race against a clock your quarterback is holding.",
+    sections: [
+      {
+        heading: "Who blocks whom",
+        body: `Before anything is contested, bodies get matched. Edge rushers draw your tackles.
+      Interior rushers draw your guards and center. That assignment is alignment, not style \u2014
+      a heavy five-technique lined up outside is still your tackle's problem even though he
+      is going to try to run through him rather than around him.
+
+      A designated blitzer is different. He comes free unless a back or tight end you kept in
+      protection picks him up, and whether that happens is close to a coin flip. A blitz buys an
+      unblocked rusher, some of the time \u2014 not a better one.
+
+      Keeping backs and tight ends in makes those pickups likelier and the pocket calmer. It
+      costs you a route. A protection-heavy call against a defense that is not blitzing has
+      spent bodies on nothing.`
+      },
+      {
+        heading: "What a pass set is made of",
+        body: `Pass protection and run blocking are different crafts and they read different
+      attributes. A pass set is <b>feet</b>. Blocking technique leads it, then the agility to
+      mirror a rusher, then hand placement, then recognition \u2014 knowing who to take. Raw power
+      and strength are in there, but they are the smaller half of a pass set, and this is the
+      single most common misread of an offensive lineman in this game.
+
+      A guard who is enormous and slow anchors well and gets beaten around the corner all
+      afternoon. A tackle with feet holds up against rushers he has no business handling. Buy
+      movement and craft to protect a passer; buy mass for the run game.`
+      },
+      {
+        heading: "The line that busts",
+        body: `There is a second, quieter term in every pass set, and it exists only on passing
+      downs. Protection is an <i>assignment</i> game \u2014 slides, stunt pickups, hot calls \u2014 and
+      a low-craft line fails those in ways that have nothing to do with the man in front of
+      any individual blocker.
+
+      So a good line's pocket is roughly as good as its reps say. A bad line's pocket is
+      <b>worse</b> than its reps say, because it also loses snaps to confusion. The lower the
+      level of football you are coaching, the more of your pressure allowed comes from this
+      rather than from anyone being beaten. Run blocking has no such term; a bad line runs
+      exactly as badly as it blocks.`
+      },
+      {
+        heading: "Two ways to rush, and the man who has both",
+        body: `A rusher attacking a pass has two paths. The speed path is twitch \u2014 get off,
+      bend, and beat the tackle around the edge, driven by speed and agility with technique
+      supporting. The power path is speed-to-power: convert momentum into force and put the
+      tackle in the quarterback's lap, driven by power and strength with tackling and
+      technique supporting.
+
+      An edge rusher aligned to win with speed takes <b>whichever path is better for him on
+      that rep</b>. That is the mechanic behind the modern edge defender who cannot be
+      set for: over-set to protect the corner and he runs through your tackle's outside
+      shoulder instead. A rusher whose whole identity is power does not get this. He anchors,
+      he bulls, and that is his rep.
+
+      Weight tips the scale both ways and only on a mismatch. A heavier blocker walls off a
+      lighter rusher; a heavier rusher drives a lighter blocker backward. At even weight it does
+      nothing, and it is muted on speed reps \u2014 mass does not help against a man who is not
+      touching you.
+
+      On running downs none of this applies \u2014 a run rep is a shed, not a rush, and it is
+      covered in <i>The Run Fit</i>.`
+      },
+      {
+        heading: "Pressure is a race",
+        body: `Once the reps are resolved, everyone who beat his man \u2014 or came unblocked \u2014
+      releases toward where your quarterback is going to throw from. Each of them has an
+      arrival time: how long it takes to shed and how long the trip takes. Your quarterback is
+      holding a clock.
+
+      If the first man home beats the clock, it is a sack. If he gets close without getting
+      there, it is a hurry. If nobody gets close, the pocket is clean and the read happens on
+      schedule.
+
+      The trip is not the same for everyone: an edge rusher travels further on faster legs, an
+      interior rusher travels less on slower ones. That is why the two produce pressure
+      differently even when they win reps at the same rate.`
+      },
+      {
+        heading: "Why the fourth rusher matters more than the third",
+        body: `The pocket does not collapse one man at a time. When more rushers get through,
+      the pocket caves <i>earlier for all of them</i> \u2014 escape lanes close, the launch point
+      moves up, and everyone's arrival time shortens together.
+
+      The result is that pressure rises much faster than the number of men through. One
+      penetrator is usually survivable. Two is trouble. When most of your protection loses at
+      once, the play is over almost regardless of who those rushers are.
+
+      This is the most important thing to know about building a pass rush in this world.
+      Pressure is a property of the front, not of a player. One elite rusher on a bad line
+      produces far less than his tape suggests, because he is generating one penetrator while
+      the rest get handled.
+
+      It is also what a blitz is really buying. An unblocked man looks like a guaranteed sack
+      and is not one \u2014 he is running from further away, and the hot throw beats him more often
+      than it should. What the blitz adds is <i>bodies in the race</i>, and the collapse does
+      the rest. The cost is exactly what you would expect: those bodies came out of coverage,
+      which is <i>Defending a Game</i>. A well-disguised blitz earns one thing more \u2014 the
+      protection works from bad information and the rush arrives against worse angles.`
+      },
+      {
+        heading: "Who gets credited, and why it is not who caved it",
+        body: `The sack has already happened before anyone is named. Then credit is assigned,
+      and the man who gets home first is usually the speed rusher. A heavy interior rusher who
+      collapsed the middle of the pocket typically <i>flushes</i> the quarterback into the edge
+      rusher's arms rather than finishing himself.
+
+      An unblocked blitzer who penetrated usually banks the credit when he was part of it.
+
+      Know this before you judge a lineman by his sack total. In an odd front especially, the
+      interior creates the pressure and the outside linebackers collect the statistics, exactly
+      as in real football. Judge your five-technique on what the front produces.`
+      },
+      {
+        heading: "Play action, and the price of the fake",
+        body: `A run fake freezes second-level defenders, and frozen defenders do not hurry
+      anybody. The fake also deepens the drop, and a deeper drop means more time exposed. So
+      play action buys you fewer hurried throws and, when protection genuinely does fail,
+      converts more of those failures into sacks.
+
+      The fake is a contract with your run game and it is only worth what the defense owes
+      you. A run-heavy identity with a credible back sells it hard. A pass-first offense
+      selling a run fake is fooling nobody, and it is paying the deeper drop for nothing. The
+      quarterback's own craft sells the ride, and a disciplined, aware linebacker corps is the
+      counter \u2014 they simply do not bite.
+
+      A defense keying the run bites <i>harder</i>. This is the single sharpest trap in the
+      game: the opponent who has committed to stopping your run is the opponent your play
+      action punishes most.`
+      },
+      {
+        heading: "The escape hatch",
+        body: `A quarterback about to be sacked may get out of it instead. Whether he can is
+      measured against <i>himself</i> \u2014 his athletic profile against his own passing baseline
+      \u2014 not against an absolute speed number. A quarterback who is more athlete than passer
+      scrambles a lot at any level of football. A pocket passer who happens to be quick for
+      his division does not, because he is still more passer than athlete.
+
+      Once he takes off he is a ball carrier and a fragile one. A smart, technically sound
+      quarterback slides early: he concedes ground and takes far less risk. A quarterback
+      without that judgement fights for the extra yard and gets hurt doing it, and quarterback
+      injuries here run from a bruise to a lost season. Durability helps. Judgement helps
+      more. Yards gained by a quarterback who will not go down are the most expensive yards
+      on your stat sheet.`
+      }
+    ]
+  };
+
+  // js/ui/manual/the-run-fit.js
+  var chapter7 = {
+    id: "the-run-fit",
+    icon: "\u{1F3C3}",
+    title: "The Run Fit",
+    blurb: "The line buys a crease and the back spends it. Where your yards come from, why the second level rarely gives up the house, and what a broken tackle actually is.",
+    sections: [
+      {
+        heading: "Who is carrying it",
+        body: `Your quarterback carries it at a rate set by the formation he is in plus whatever
+      you have dialed on top. If there is nobody in the backfield at all, he carries it
+      regardless of the dial \u2014 there is no one else, and no back is going to be summoned from
+      the sideline mid-snap.
+
+      Otherwise the ball goes to the committee. Your dialed carry shares are spread across
+      your running back depth and drawn from between plays, so backs rotate freely \u2014 a share
+      is a share whether or not that man was the one standing there on the previous snap.
+      Anything you have not allocated falls to a default: the fullback gets inside work, the
+      lead back gets outside work. Dial a back to the full budget and that default disappears,
+      short-yardage fullback carries and all.`
+      },
+      {
+        heading: "The line, weighted where the ball goes",
+        body: `Each defensive lineman is matched to a blocker by gap and the reps are resolved.
+      What comes out is a single verdict \u2014 the <b>lane</b> \u2014 and it is not a flat average of
+      the line. The reps at the point of attack count for far more than the reps away from it.
+
+      This is the whole reason your left, middle, and right dials exist. Running behind your
+      best linemen pays real yards; running at their best defender costs them. A line with one
+      good side and one bad side does not average out \u2014 it is a directional running team, and if
+      you do not direct it, you are handing carries to the bad side.
+
+      Anyone who won his rep against you is a <b>penetrator</b>, and he is not just a lost
+      block. He is a man standing in your backfield when the handoff happens, which is where
+      tackles for loss come from.`
+      },
+      {
+        heading: "Pulling, and what it costs",
+        body: `On a directional run with a pulling scheme, your backside guard leaves his gap and
+      arrives at the point of attack. You get an extra hat where the ball is going, and the
+      point of attack is exactly where the extra hat is worth the most.
+
+      What you gave up is behind the play. The defender in the vacated gap is unblocked, but he
+      is chasing from the backside rather than filling downhill, and he mostly does not get
+      there. Numbers where the ball goes, risk where it left. A good trade, not a free one \u2014 and
+      the snaps it costs you, it costs you badly.
+
+      Runs up the middle take a scheme's tilt without any of this. There is no backside to
+      leave.`
+      },
+      {
+        heading: "The crease becomes physical",
+        body: `At the mesh point the line's verdict stops being a number and starts being a
+      picture, and it decides two things at once.
+
+      A clean lane means your linemen got to the second level: the box linebackers are
+      blocked, late, and displaced, and your back hits the hole with a head of steam. A muddy
+      lane means the fillers are sitting free in the hole and your back arrives slowly into a
+      crowd. The lane does not just size the gap \u2014 it sets the speed the carrier enters it
+      with, and against second-level defenders that is most of the fight.
+
+      From there it is a live chase. Nothing about the yardage is drawn from a table.`
+      },
+      {
+        heading: "The backstop law",
+        body: `Safeties do not attack a runner in space. They play square, downhill, mirroring \u2014
+      giving ground slowly and breaking down late. That is why the second level of this
+      defense concedes chunks and almost never concedes the game. A back who beats the
+      linebackers is loose for a good gain; a back who is loose for a good gain still has to
+      beat a man who is deliberately refusing to guess.
+
+      Everything else has a job. A contain corner squeezes from the alley. Linemen chase from
+      behind, which makes a cutback a risk rather than a free lane. Late help arrives if the run
+      lasts long enough. And the sideline is a defender \u2014 the one that never misses.
+
+      Pursuit runs on a compressed scale, deliberately. Closing on a ball carrier is angles and
+      recognition far more than raw speed, so the gap between a fast defense and a slow one is
+      narrower than the gap between their forty times. This is the mechanism that keeps lower
+      levels of football watchable rather than turning every carry into a track meet.`
+      },
+      {
+        heading: "The broken tackle",
+        body: `When a defender arrives, the carrier gets two ways out and takes the better one.
+      He can make him miss \u2014 agility leading, speed and craft behind it \u2014 or he can run through
+      him \u2014 power leading, strength and pad level behind it. The defender answers both with
+      tackling form first, then whichever of change-of-direction or anchor the specific attempt
+      demands.
+
+      Because he takes his better path, two backs with identical overalls break tackles in
+      completely different ways. The big back with no wiggle still breaks them. The small back
+      with no power still breaks them. The back with neither breaks none, and his overall will
+      not tell you that. Weight adds a little above a normal frame \u2014 a thumb on the scale, not
+      the mechanism. Power is the mechanism.
+
+      A broken tackle redistributes who makes the stop. The beaten defender is charged with the
+      miss and the next man in the picture has to make the play, and if there is no next man in
+      the picture, that is where a long run comes from.`
+      },
+      {
+        heading: "Contact yards, and the ball",
+        body: `Every made tackle also settles a small argument about where the pile ends up. A
+      punishing runner against an ordinary tackler falls forward; a thumping tackler against an
+      ordinary runner stands him up and drives him back. At equal ratings it is a wash. It is
+      never many yards, and over a season it is the difference between converting third and
+      one and not.
+
+      Fumbles live here too, on the short-gain tackles where contact is hardest. A tackler with
+      strength and reliable form forces them; a carrier with real ball security and a heavier
+      frame resists them.
+
+      Your tackling style is a live dial on both. <b>Strip</b> hunts the ball: more forced
+      fumbles, and more tackles broken by carriers who were going down until your defender
+      reached for the ball instead of wrapping. <b>Wrap</b> is the mirror: fewer broken
+      tackles, fewer fumbles. There is no free option here, only a preference about which way
+      you want your variance to point.`
+      },
+      {
+        heading: "The breakaway",
+        body: `There is no separate roll for a long run. A breakaway is what it looks like when
+      the carrier clears the last man with enough speed that nobody behind him can close.
+
+      That has a consequence you should build around. Genuine top-end speed is not worth much
+      in the box, where the fight is power and vision and the space is measured in feet. It is
+      worth an enormous amount the moment the picture opens up, because it is the difference
+      between a good gain and a touchdown, decided by geometry rather than by dice.
+
+      So the fast back and the powerful back are not two flavours of the same thing. The
+      powerful back turns bad lanes into acceptable ones. The fast back turns good lanes into
+      points. If your line is winning, buy speed. If it is losing, speed will not save you.`
+      },
+      {
+        heading: "Who gets the tackle",
+        body: `Tackle credit is drawn by pursuit \u2014 closing speed first, then angles and
+      recognition, then finishing. Your best pursuers lead the team, comfortably, but the draw
+      is genuinely spread across the rotation and it is not the same defender every snap.
+
+      Linebackers get a thumb on the scale, because linebackers lead defenses in tackles in real
+      football, and a defense whose leading tackler is a safety is a defense with a problem
+      rather than a good safety.
+
+      One consequence worth stating plainly: a high tackle total is evidence a man was on the
+      field and around the ball. It is not evidence the defense was good. The linebacker on a
+      terrible run defense makes tackles all day, seven yards downfield.`
+      }
+    ]
+  };
+
+  // js/ui/manual/calling-a-game.js
+  var chapter8 = {
+    id: "calling-a-game",
+    icon: "\u{1F4CB}",
+    title: "Calling a Game",
+    blurb: "Every dial on the sheet, and the price of it. Nothing here is free, and the ones that look free are the expensive ones.",
+    sections: [
+      {
+        heading: "One situation, and only one",
+        body: `Every snap resolves to exactly one situation, and it is found by walking a fixed
+      ladder from the top until something matches. Goal line. Backed up. Two-minute and
+      trailing. Four-minute and leading. Red zone. Third and short, then medium, then long.
+      Second and long. First down. Base.
+
+      The order is the mechanic, and it will surprise you at least once. <b>Field zone
+      outranks down and distance.</b> Third and long inside the red zone is governed by your
+      red zone plan, not your third-and-long plan. Third and short at your own goal line is
+      governed by your backed-up plan. If you have built a beautiful third-down package and
+      it never seems to fire when you expect, this is why.
+
+      Both sidelines resolve their own situation from their own frame. The clock and the ball
+      are shared; the score is not. On the same snap, one team is in two-minute mode and the
+      other is in four-minute mode.`
+      },
+      {
+        heading: "Three sheets, two ways of stacking",
+        body: `Your base plan is the standing call. A situation cell overrides it for that
+      situation only, and any field you leave alone in that cell inherits the base \u2014 a cell
+      is a patch, not a replacement, so you can set one thing for the red zone and leave the
+      rest alone.
+
+      The weekly plan is where it gets interesting, because it works two different ways
+      depending on the dial. Pass lean, blitz rate, and run commit are <b>shifts</b> \u2014 they
+      stack additively on top of whatever your situational plan already produced. Coverage,
+      pass depth, tempo, and front are <b>overrides</b> \u2014 they replace the standing call
+      outright for the week.
+
+      The logic is that you made an override deliberately for this opponent, so it wins. In
+      practice a weekly coverage call silently ignores every coverage you set in every cell,
+      while a weekly blitz shift respects them all and nudges each one. Know which kind of dial
+      you are turning.`
+      },
+      {
+        heading: "Tendency, and the honest cost of an extreme",
+        body: `Leave a cell's tendency alone and it is on automatic: the engine applies its own
+      situational nudges \u2014 pass on third and long, run on third and short, chase points when
+      trailing late, drain clock when leading late. Set one and you own the situation
+      completely; the automatic nudges are gone, because you replaced them.
+
+      Coaches lose games to that. A sensible run-heavy call in a cell keeps running on third and
+      eleven, because you told it to and there is nothing underneath to say otherwise.
+
+      Extremes stay extreme by design. An offense told always to throw throws on third and
+      inches. That is not a bug to be worked around \u2014 it is what makes the dial mean
+      something, and it is why the middle settings are where most teams should live.`
+      },
+      {
+        heading: "The rest of the offensive sheet",
+        body: `<b>Pass depth</b> is a weight, not a percentage \u2014 the sliders do not have to sum
+      to anything, and the mix is read off their relative sizes. <b>Quarterback aggression</b>
+      then shifts that mix underneath you: a gunslinger swaps short for deep past what you
+      asked, and buys tighter windows and more interceptions doing it.
+
+      <b>Run direction</b> chooses which side of your line the ball attacks and is worth real
+      yards, because the point-of-attack reps dominate the lane \u2014 see <i>The Run Fit</i>.
+      <b>Protection emphasis</b> keeps backs and tight ends in to pick up blitzers, calming the
+      pocket at the price of a body in the route. <b>Play-action rate</b> and <b>motion rate</b>
+      multiply what your formation naturally does rather than setting it, so the same dial builds
+      very different offenses out of different personnel.
+
+      Every one of these has a named cost. No setting on the sheet is simply better, and if one
+      looks it, you have not found the bill yet.`
+      },
+      {
+        heading: "What a formation actually changes",
+        body: `More than it looks like. The formation puts specific bodies on the field, which
+      decides who is even available to be thrown to or hand the ball to. It carries a natural
+      pass lean that is applied to every snap out of it. It sets the baseline rate at which
+      your quarterback keeps the ball on a designed run, at which you play-action, and at
+      which a man goes in motion. It changes how your unit strength is computed for each play
+      type, because different looks ask different things of different positions.
+
+      And it gates which concepts you can call at all: a concept needing multiple receivers is
+      unavailable from a heavy set, and a coach-called play is confined to what that formation
+      carries. A formation mix is not decoration on top of your play calling \u2014 it is a large
+      fraction of your play calling, made once on a different screen.`
+      },
+      {
+        heading: "Concepts tilt; they do not carry",
+        body: `Each pass and run concept has an opinion about each coverage family \u2014 a small
+      advantage against some, a small disadvantage against others. Two things about those
+      numbers matter enormously and neither is obvious.
+
+      First, they are <b>small</b>. Personnel does the heavy lifting. A perfectly chosen
+      concept against exactly the wrong coverage is a nudge, not a touchdown; your receivers
+      still have to win.
+
+      Second, every concept's advantages and disadvantages roughly cancel across the coverage
+      families. Calling everything evenly is the baseline. This means a concept sheet is
+      <i>redistribution</i>, not free yards \u2014 you are choosing to be better against some
+      looks by being worse against others. If you weight your sheet toward beating single-high
+      coverage, you have built a team that struggles against two-high, and you did it on
+      purpose whether you meant to or not.
+
+      Execution scales the tilt in both directions. Each concept asks for specific attributes
+      from the specific men running it. Run a concept your personnel executes well and you get
+      more than it is drawn to give; run one they cannot execute and you get less. A concept
+      is not a play you own \u2014 it is a play you are attempting.`
+      },
+      {
+        heading: "Repetition is film",
+        body: `Defenses remember what you have shown them <i>this game</i>. Lean on one play
+      type past what a normal offense runs, or live in one formation, or call the same concept
+      over and over, and it starts getting met harder.
+
+      The penalty is small and capped, and it is scaled by how aware the defenders on the
+      field actually are. A sharp defense punishes predictability; a confused one does not
+      notice. It needs a real sample before it engages, and it resets every game.
+
+      This is what keeps a maximum-weighted sheet from being free. Call your best play constantly
+      and it stops being your best play by the fourth quarter \u2014 and the better the defense, the
+      sooner.`
+      },
+      {
+        heading: "Tempo and fourth down",
+        body: `Tempo scales how much clock each snap burns, which changes the number of
+      possessions in the game for <b>both</b> teams. Hurrying is not just your offense going
+      faster \u2014 it is handing the opponent more drives. Chewing clock is not just conservatism
+      \u2014 it is reducing the sample size of the game, which is what an underdog wants and a
+      favourite should refuse.
+
+      There is a smart automatic layer underneath: a team down two scores inside the last few
+      minutes of a half hurries, and a team up two scores chews, without you touching
+      anything. An explicit cell tempo or a weekly call still wins over it.
+
+      Your fourth-down approach scales one curve rather than adding special cases \u2014 the same
+      shape, more or less aggressive. It is covered properly in <i>Special Teams</i>, along
+      with the thing most coaches get wrong about their kicker's range.`
+      },
+      {
+        heading: "How to actually improve a sheet",
+        body: `Read the plan report. It aggregates every snap by the situation it actually
+      resolved to, and it will tell you things no amount of watching will: that your
+      third-and-medium package is quietly your worst, or that half the snaps you thought were
+      third-and-long were being governed by your red zone cell.
+
+      Then fix one thing. The dials interact, the concepts cancel, and the weekly plan
+      overrides some of it \u2014 a sheet changed in six places at once teaches you nothing about
+      any of them.`
+      }
+    ]
+  };
+
+  // js/ui/manual/defending-a-game.js
+  var chapter9 = {
+    id: "defending-a-game",
+    icon: "\u{1F9F1}",
+    title: "Defending a Game",
+    blurb: "A front and a shell answer different questions. What pressure really costs, and exactly what the other staff is reading when it game-plans you.",
+    sections: [
+      {
+        heading: "The front decides who is on the field",
+        body: `A front is a headcount before it is a scheme. It fixes how many linemen,
+      linebackers, and defensive backs are out there, and that is most of what it does. Going
+      to a nickel or dime look genuinely removes linebackers from the field and replaces them
+      with defensive backs \u2014 you are not disguising anything, you are substituting.
+
+      The front also decides which <i>roles</i> exist, and roles decide how men fight. An odd
+      front's outside linebackers are pass rushers; in an even front they are coverage
+      linebackers. The same player in the same position does a completely different job
+      depending on the front you called, and rates completely differently doing it.
+
+      Each front also weighs the position groups differently per play type. Your front is a
+      statement about which group your defense leans on, and matching it to your actual talent is
+      worth more than any dial on the sheet.
+
+      One front carries a mechanic of its own: an odd front's outside linebackers may bail
+      into coverage instead of rushing. Same rush count, different bodies, wrong angles \u2014 and
+      if a designated blitzer fires behind the drop, that is a fire zone, and the rush arrives
+      against protection that has guessed wrong.`
+      },
+      {
+        heading: "The shell decides where the help is",
+        body: `A coverage shell is about deep safeties and nothing else. Two-high suppresses the
+      deep ball and concedes underneath. Single-high does the reverse \u2014 it invites the shot
+      over the top and takes away the quick game.
+
+      What makes this more than a slider is that a shell is a <b>communication</b> scheme, only
+      as good as your safeties' awareness. A two-high lid played by a sharp pair takes the deep
+      ball away; played by a confused pair it does much less, because blown rotations are exactly
+      how deep balls get behind two-high looks in real football. Single-high inverts it \u2014 sharper
+      safeties give up <i>less</i> over the top than the alignment says.
+
+      The shell also decides how badly you bite on play action. A single-high defense is
+      already downhill and bites harder; a two-high defense is already sitting back and bites
+      less. If you are being killed by play action, the answer may be the shell rather than the
+      linebackers.`
+      },
+      {
+        heading: "Man or zone, and what each pays",
+        body: `Your shell and your style together produce the actual coverage family, and a
+      balanced setting is a genuine per-snap mix rather than a compromise \u2014 real defenses do
+      not run one call all game even at a fixed identity.
+
+      There is one hidden branch worth knowing: from a two-high zone look, smart safeties
+      pattern-match into quarters while a simpler crew sits in halves. You do not choose that.
+      Your personnel does.
+
+      The man-versus-zone trade is covered in <i>The Route Duel</i>. The short version: zone
+      defenses intercept more because their eyes are on the quarterback, and the tighter windows
+      man coverage creates do not make up the difference.`
+      },
+      {
+        heading: "Pressure is bought with coverage",
+        body: `Every blitzer is a man who was covering someone. That is the entire trade and the
+      game is unusually literal about it: a defensive back who blitzes <b>vacates his coverage
+      slot</b>, and the receiver running the deepest route gets meaningfully more open on that
+      snap.
+
+      How much more open depends on how well your coordinator disguises. A well-designed
+      pressure hides where the void is and the quarterback cannot find it quickly; a
+      telegraphed one might as well be pointing at the vacated grass. Blitz design is your
+      coordinator's attribute, not yours, and it is one of the more valuable things on a
+      defensive staff.
+
+      What the extra rusher buys is in <i>The Pocket</i>, and bears repeating: the free man is
+      barely faster to the quarterback than a rusher who won his rep. The pressure comes from
+      bodies in the race. You are paying a deep receiver's separation for one more body \u2014 so the
+      question is whether your front needed one.`
+      },
+      {
+        heading: "Run commit is the box lever",
+        body: `Loading the box helps against the run and leaves <i>every</i> receiver a touch
+      more open. Playing light does the reverse \u2014 coverage tightens everywhere, and your
+      defensive backs sitting on routes jump throws for interceptions, at the cost of the
+      run fit.
+
+      Commit also amplifies play action, badly. A defense keying the run bites harder on the
+      fake, so the loaded box that stops the run is the loaded box that gets beaten over the
+      middle by a run fake. Against a run-heavy team with a credible passer, this is the
+      sharpest trap on the defensive sheet.
+
+      Edge discipline is the horizontal version of the same idea. <b>Contain</b> sets the edge
+      against sweeps, jets, and screens and is executed with technique \u2014 a polished edge
+      defender sets it wider than a raw one told to do the same thing. It costs you a hotter
+      pocket. <b>Crash</b> pins the ears back for more edge rush and is out of the play the
+      moment the ball goes outside.`
+      },
+      {
+        heading: "What the other staff is actually reading",
+        body: `This is the most useful thing in this chapter, so read it twice. When the opposing
+      staff game-plans you during the week, it reads your <b>standing base gameplan</b> \u2014 your
+      tendency, your formation weights, your quarterback run rate. It does not read what you
+      actually called last week. It reads what is written on your sheet.
+
+      From that it builds a weekly plan: commit against the run if you look run-heavy, drop
+      everybody if you look pass-heavy, cap the deep ball against a vertical team, drop the extra
+      man in the box against a ground team, play zone against motion-heavy or quarterback-run
+      offenses, assign somebody to the pitch or the quarterback against a real option team. An
+      aggressive coordinator adds pressure against one-dimensional passing teams.
+
+      Two consequences follow. Your <i>paper</i> identity is what gets scouted, so a base plan
+      that misrepresents how you actually play is a genuine advantage, and your situational
+      cells are invisible to the scout. And the quality of the opposing staff is a difficulty
+      ladder: weaker staffs react less, sharper staffs react harder, and the weakest ones simply
+      mail it in some weeks and show up with no plan at all.`
+      },
+      {
+        heading: "The break",
+        body: `At halftime you get one adjustment. There are three of them and each is a different
+      kind of answer.
+
+      A <b>counter</b> targets a formation: every snap of that look plays downhill for you in
+      the second half. A <b>shadow</b> targets a receiver: he gets bracketed and his separation
+      drops. A <b>protection flip</b> is the offensive one: your pocket holds better.
+
+      All three scale with your adjustments grade as a coach, and that grade grows fastest when an
+      adjustment works. Meanwhile the opposing staff makes its own counter \u2014 lean on one formation
+      in the first half and expect it waiting. A genuinely mixed offense earns no counter at all,
+      which is the cleanest argument for formation variety in the game.`
+      },
+      {
+        heading: "How an adjustment is judged",
+        body: `Bluntly, and you should know how bluntly. A counter worked if the opponent scored
+      fewer points in the second half than the first. A shadow worked if the receiver gained
+      fewer yards in the second half than the first. A protection flip worked if you were sacked
+      fewer times.
+
+      That is the whole test. Nothing is controlled for. A half where you had the ball for most
+      of the clock will flatter a counter that did nothing; a half where the opponent needed to
+      throw will flatter a shadow that failed. The verdict is a comparison, not an analysis.
+
+      Take it as a rough signal and not as proof, and be aware that it is what feeds your
+      growth as an adjuster. Making adjustments in games that were going to regress anyway is,
+      mechanically, a way to get better at making adjustments.`
+      },
+      {
+        heading: "Predictability, both ways",
+        body: `Your defense builds a memory of what this offense has shown today, and overused
+      looks get met harder \u2014 capped, scaled by how aware your defenders are, and reset every
+      game. A sharp defense punishes a repetitive offense on its own.
+
+      The mirror applies to you. A defense that shows one shell every snap is a defense the
+      offense eventually gets a free shot against, and that is not a mistake by the offense \u2014
+      it is an earned answer. If you have found an identity that works, the reward for keeping
+      it is real and so is the bill.`
+      }
+    ]
+  };
+
+  // js/ui/manual/the-depth-chart.js
+  var chapter10 = {
+    id: "the-depth-chart",
+    icon: "\u{1F4CA}",
+    title: "The Depth Chart",
+    blurb: "How eleven men actually get onto the field, why naming a man changes everything, and what happens to a receiver you feed too often.",
+    sections: [
+      {
+        heading: "A formation is a list of jobs",
+        body: `Every formation is a set of numbered spots \u2014 a split end, a flanker, a Y tight
+      end, a lead back, a slot. Each spot has a position it expects, a place it lines up, and
+      a role it plays. Filling those spots is what the depth chart is for, and it happens in
+      a specific order that is worth understanding, because the order is the mechanic.
+
+      Two passes run over each spot. First, anyone you hand-picked is placed, and a player can
+      only fill one spot. Then whatever is left auto-fills from the best remaining man for
+      that job. A spot you never touched behaves sensibly on its own; a spot you named is
+      yours.`
+      },
+      {
+        heading: "The mesh spots",
+        body: `Most spots draw from their own position room. A handful draw from several, and
+      those are the interesting ones.
+
+      The <b>slot</b> is the joker: your best inside weapon, whoever he is \u2014 a receiver, a
+      tight end, a back. The <b>fullback</b> is a back or a tight end. The <b>wing</b> and the
+      <b>A-back</b> are the option-formation bodies, drawn from backs, tight ends, and
+      receivers. The <b>wildcat back</b> is whoever can take a direct snap. The <b>jet man</b>
+      is pure speed from either receiver or back. The <b>fade</b> spot wants a tall, sure-handed
+      body from the receivers or tight ends.
+
+      These exist because real football does not respect position labels in those places, and
+      the game refuses to either. What it will not let you do is put a back at split end or
+      flanker \u2014 those are receiver spots by hand as well as automatically \u2014 and a corner does
+      not play guard. Your cross-position weapon belongs in the slot, which is a real position
+      here rather than a third receiver.`
+      },
+      {
+        heading: "Naming a man is the switch",
+        body: `This is the rule that changes how you use the screen. If you leave the slot alone,
+      it resolves <b>last</b>: your top two receivers take the outside spots and the next man
+      goes inside. That is the sane default and it is what you want most of the time.
+
+      Name a joker and the slot resolves <b>first</b>. He claims the spot, and everyone else
+      slides up to fill what he vacated. That is how a tight end plays inside while your third
+      receiver moves up to a starting spot, and it cannot happen unless you name him \u2014 resolve
+      the tight ends first and your best one is already locked at Y before the slot ever looks.
+
+      The fullback works identically. By default the running spots claim from the back room
+      first, and the lead-blocking spot gets whoever is left. Name a fullback and he goes first,
+      even if he is also your best back. That is the whole point of naming him: the power back
+      leading and the speed back carrying is not expressible any other way.
+
+      So: leave it alone for sensible, name a man for deliberate. There is no third mode, and
+      the screen will not tell you which one you are in.`
+      },
+      {
+        heading: "Out of position",
+        body: `A man lined up somewhere he does not belong is degraded, and how much depends on
+      what the job asks of him. Measured physical tools travel intact \u2014 speed is speed
+      regardless of what is written next to his name. Coached skill mostly does not, because it
+      is specific to a job he has not been coached for. His motor and his conditioning come with
+      him untouched.
+
+      Adjacent positions soften it considerably. A safety at corner is a very different
+      proposition from a safety at guard, and the game knows the difference.
+
+      This is what makes an emergency lineup genuinely bad rather than cosmetically bad, and it
+      is the honest cost of the flexibility above. You can put a back in the slot. You cannot put
+      him there for free.`
+      },
+      {
+        heading: "Target share and carry share",
+        body: `A target share is a thumb on the scale in your quarterback's progression. Feed a
+      receiver and he is looked at more; the read is still driven by who is actually open, and
+      the share tilts it.
+
+      Carry share works differently and more literally: it is a draw. Your dialed shares are
+      spread across your backs and rolled between plays, so the rotation happens regardless of
+      who was standing there last snap. Anything you do not allocate falls back to a default \u2014
+      the fullback inside, the lead back outside \u2014 and dialing a back to the whole budget
+      removes that default entirely, short-yardage fullback work included.
+
+      If you have wondered why your fullback stopped getting goal-line carries after you gave
+      your star back everything, that is the reason, and it is not a bug.`
+      },
+      {
+        heading: "What happens to a receiver you overfeed",
+        body: `Two things, and they pull against each other.
+
+      Your quarterback may refuse. A smart passer reads the coverage on a heavily-featured
+      receiver who is bracketed or blanketed and bails to somebody open \u2014 the share boost gets
+      damped in proportion to how sharp he is. A raw passer forces it anyway, because you told
+      him to, and pays for it with interceptions. The same dial produces a good offense behind
+      one quarterback and a turnover machine behind another.
+
+      And the defense notices. Overuse is film, and it accrues a small capped edge scaled by how
+      aware the defenders are. Feeding your best receiver is correct. Feeding him to the exclusion
+      of everything else makes him progressively less open and your quarterback progressively
+      more likely to force it, and neither effect announces itself.`
+      },
+      {
+        heading: "Rotation and the snap cap",
+        body: `Every man on the depth chart carries a cap on the fraction of snaps he can play,
+      set by how deep he is at his position. Starters play nearly all of them \u2014 except running
+      backs, who are capped well below that so a second back gets real work. The next man down
+      gets a substantial share, and the one after that gets spot duty.
+
+      Quarterbacks, kickers, and punters never rotate. They play every snap, and they accumulate
+      fatigue anyway.
+
+      You can override the caps directly. If you want a rotation, dial it; if you want your
+      starters to play until they cannot, dial that instead and accept what happens to them in
+      the fourth quarter.`
+      },
+      {
+        heading: "Fatigue",
+        body: `Fatigue accrues on every snap a man is on the field and recovers while he is off it,
+      and conditioning governs both rates \u2014 a well-conditioned player tires slower <i>and</i>
+      recovers faster, which is why it compounds over a game rather than adding up.
+
+      What fatigue takes is physical only. Speed, strength, agility, power, leaping, tackling and
+      blocking all degrade. Instincts and technique do not \u2014 a tired veteran is still a smart
+      veteran. Hands degrade at half rate, on the theory that catching is partly muscle memory.
+
+      Past a threshold a man is pulled and the next man goes in; he comes back when he has
+      recovered past a lower one. The gap between those two is deliberate, and it is what stops
+      your rotation from flickering a man on and off every other snap.
+
+      The practical consequence: a thin roster does not lose in the first quarter. It loses in the
+      fourth, when its starters are degraded and the men replacing them are worse. Depth in this
+      game is not insurance against injury. It is a fourth-quarter attribute.`
+      }
+    ]
+  };
+
+  // js/ui/manual/special-teams.js
+  var chapter11 = {
+    id: "special-teams",
+    icon: "\u{1F9B5}",
+    title: "Special Teams",
+    blurb: "The third of your team most coaches never look at, and the one place a single roster spot decides games.",
+    sections: [
+      {
+        heading: "A kicker is two players",
+        body: `Every kicker has a <b>leg</b> and a <b>hand</b>, and they come from different
+      places. The leg is strength and power, weighted equally \u2014 it sets the distance he is
+      comfortable to, the centre of his range. The accuracy is technique and awareness,
+      weighted equally \u2014 it shifts his whole curve up or down at every distance.
+
+      The falloff around his comfortable range is smooth. There is no wall at the edge of it;
+      there is a probability that gets steadily worse the further out you go. And there is a
+      ceiling below certainty even on a chip shot, because college kickers miss chip shots and
+      pretending otherwise would be a lie.
+
+      A big leg with no accuracy is a long-range coin flip. A precise leg with no power is
+      automatic inside his range and useless outside it. Both are real players and they are
+      not interchangeable.`
+      },
+      {
+        heading: "The distance that actually matters",
+        body: `Here is the thing that costs coaches games. A field goal is not kicked from the
+      line of scrimmage. The snap and the hold put the kick a good distance behind it, and the
+      game measures the attempt from where the ball is actually struck.
+
+      Your range setting is a <b>comfort cap</b> you impose, not a statement of what your
+      kicker can do \u2014 and it is expressed in the same true terms. If you set it from where the
+      ball is spotted rather than where it is kicked, you have quietly told your team to attempt
+      kicks well beyond what you meant.
+
+      Go and look at what your kicker's leg actually supports, then set the cap to match it.
+      This single setting decides more games than most of the offensive sheet.`
+      },
+      {
+        heading: "Why a long miss is worse than a punt",
+        body: `When a field goal misses, the defense takes over at the <b>spot of the kick</b> \u2014
+      behind your line of scrimmage, not at it.
+
+      That is the real cost of a hopeful long attempt and it is much larger than the three points
+      you did not get. A punt from the same spot flips the field. A missed long field goal hands
+      the opponent a short one, in your territory, with a fresh set of downs.
+
+      There is also a floor on how far out an attempt is even considered: you need the ball
+      genuinely across midfield before a long try is treated as sane, regardless of your cap.`
+      },
+      {
+        heading: "A punter is not a kicker",
+        body: `The split is the same \u2014 leg from strength and power, accuracy from technique and
+      awareness \u2014 but the two halves do completely different jobs, and this is the most
+      under-appreciated roster fact in the game.
+
+      For a kicker, accuracy raises the chance the ball goes through. For a punter, accuracy
+      <b>reduces his variance</b>. A high-technique punter is reliable: his punts cluster. A
+      big-legged, low-technique punter booms some and shanks others, and the shanks are where
+      games are lost.
+
+      That asymmetry has a clear conclusion. Your punter's leg is capped from above anyway \u2014 a
+      punt that reaches the end zone is a touchback and the yardage past that is thrown away, so
+      a monster leg from midfield buys you nothing. His shanks are not capped. <b>Buy the
+      consistent punter.</b> Nobody does, and it is free value.`
+      },
+      {
+        heading: "The kicking game on kickoffs",
+        body: `Most kickoffs are touchbacks, and a stronger leg produces more of them. That is
+      mostly a good thing: a touchback is a known, decent outcome and it removes the return
+      entirely.
+
+      When it is returned, the value is a <b>gap</b> \u2014 the returner's ability against the kicking
+      team's coverage unit \u2014 not either number on its own. A dangerous returner against a fast,
+      sure-tackling cover team gets very little. A modest returner against a slow one does real
+      damage.
+
+      House calls are genuinely rare. If you are drafting your roster around a return touchdown
+      you are chasing an event that happens a handful of times a season across an entire league.`
+      },
+      {
+        heading: "Your coverage unit already exists",
+        body: `Coverage strength is read off the speed and tackling of your linebackers, safeties
+      and corners. There is no separate special-teams roster to build.
+
+      That is worth knowing because it means investment in your back seven pays twice \u2014 once on
+      defense, once on every kick and punt you cover all season \u2014 and it means a defense built
+      entirely out of big slow thumpers gives up field position on every change of possession
+      without anything appearing on a stat sheet you look at.
+
+      Your returner is picked from your backs, receivers, and defensive backs by fit for the job,
+      unless you designate one. Designating one is worth doing: the automatic pick is by return
+      fit alone and takes no view on whether you want that particular man taking hits.`
+      },
+      {
+        heading: "How fourth down is decided",
+        body: `A base willingness to go comes from distance first: short yardage is a real decision,
+      long yardage almost never is. Then the field zone modifies it. In no-man's-land \u2014 past your
+      own territory but out of kicking range \u2014 going up is <i>more</i> attractive, because a punt
+      from there nets you very little. Deep in your own end it is suppressed hard. Goal-to-go
+      pushes it back up.
+
+      Then the game state, which dominates everything else. Trailing late multiplies it sharply and
+      trailing by two scores multiplies it more; inside the final minutes while trailing, going for
+      it becomes close to automatic at any sensible distance. Leading late suppresses it hard, and
+      leading comfortably suppresses it further.
+
+      Your nerve setting scales that entire curve rather than adding exceptions. Aggressive is not
+      a different decision process, it is the same one turned up \u2014 and a weekly one-game call
+      outranks your standing philosophy, which is the right way to handle a game you have to win.
+
+      The kick is taken when it is available and going was not chosen, with one exception: down two
+      scores in the final minutes, the game stops settling for three, because three does not help.`
+      },
+      {
+        heading: "What to actually do",
+        body: `Set your range cap from the true kicking distance, and set it to what your kicker's leg
+      supports rather than to something aspirational. Take a punt over a long field goal in
+      no-man's-land, because a miss hands back the field behind you.
+
+      Recruit a consistent punter over a strong one, and treat your back seven's speed as special
+      teams value as well as defensive value. Name a returner rather than letting the automatic
+      pick decide.
+
+      And set your fourth-down nerve to what you actually believe, then leave it. It scales one
+      curve. If it is producing decisions you hate, the problem is the setting, not the model.`
+      }
+    ]
+  };
+
+  // js/ui/manual/building-a-player.js
+  var chapter12 = {
+    id: "building-a-player",
+    icon: "\u{1F4C8}",
+    title: "Building a Player",
+    blurb: "Three channels, only one of which you aim. What practice actually buys, and what four years of a gifted loafer looks like.",
+    sections: [
+      {
+        heading: "Three ways a player gets better",
+        body: `Growth arrives through three separate channels and they do not work alike.
+
+      <b>Practice</b> is the one you aim. You allocate minutes across drills and those minutes
+      become growth in specific attributes. <b>Potential</b> is talent rising toward a ceiling,
+      and it happens whether he played or not \u2014 the gifted freshman blooms on the bench. And
+      <b>performance</b> feeds the exact attributes his season actually exercised.
+
+      Understanding which channel you are pulling is most of coaching development well. Practice
+      is precise and small. Potential is large and mostly out of your hands. Performance is
+      earned on Saturday and cannot be faked in a drill.`
+      },
+      {
+        heading: "What a practice plan is",
+        body: `A plan is minutes across drills, and only the proportions matter \u2014 a drill's share of
+      your total time is what it buys. Each drill has a primary attribute it develops and a
+      secondary it develops at half rate, so the conditioning work is folded into the physical
+      drills and the mental work carries work ethic alongside it. There is no drill you can run
+      that only helps.
+
+      The cost of emphasising something is simply that you are not emphasising something else. It
+      is a fixed pool of minutes. There is no waste setting and no free setting \u2014 a plan is a
+      claim about which attributes matter for your team, and a plan that spreads evenly is a claim
+      that none of them do.
+
+      Practice runs at four moments: the development camp in the first week of camp, at a much
+      larger multiplier, and three checkpoints during the season. What matters is the plan that is
+      set <i>at</i> a checkpoint, not the plan you had most of the year. Covered in <i>The
+      Year</i>.
+
+      You can set plans per position, which is almost always right. A single plan for the whole
+      roster is spending your offensive line's minutes on hands drills.`
+      },
+      {
+        heading: "Boys becoming men",
+        body: `Physical and coached attributes grow on completely different curves through a college
+      career.
+
+      Physical tools <b>ramp</b>. A freshman's body is not finished and the growth in his measured
+      attributes accelerates through his career before it flattens. Craft grows steadily with reps
+      from day one.
+
+      The practical read: an underclassman with tools and no technique is a much better bet than
+      an underclassman with technique and no tools, because his tools are on the curve that
+      accelerates and the technique will come with reps anyway.
+
+      Growth also scales with how much room he has left to his ceiling \u2014 but with a floor
+      underneath it, so a senior closing on his ceiling still moves at real speed rather than
+      grinding to nothing. The last few points are slower. They are not unreachable.`
+      },
+      {
+        heading: "Work ethic is not a footnote",
+        body: `It multiplies the practice channel, which is significant. It gates the potential
+      channel far harder than that, because there the effect is raised to a power rather than
+      applied flat.
+
+      So here is what four years of a gifted, lazy player actually looks like. He arrives rated
+      well. He grows a little, mostly from practice minutes you spent on him. His ceiling \u2014 the
+      one you cannot see \u2014 stays a long way above him the entire time. He leaves as roughly the
+      player who arrived, and every year you will believe this is the year it clicks.
+
+      The grinder with a modest ceiling is the opposite. He reaches all of it, and he reaches it
+      early, which means he is contributing as a sophomore instead of as a senior.
+
+      It gets worse than stalling. A junior or senior with genuinely poor work ethic can go
+      <b>backward</b>, and only his craft rots \u2014 you do not get slower from loafing, you get
+      sloppier. Technique and instincts decay while the physical sheet holds. That is a player
+      whose measurables still test well and who is worse every year, and if you have wondered how
+      that happens, that is how.
+
+      Between two prospects with the same overall, take the worker. It is not close and it is not
+      a tiebreaker.`
+      },
+      {
+        heading: "Production feeds development",
+        body: `This is the channel most coaches never notice, and it changes how you should use your
+      bench.
+
+      A season's production grows the specific attributes that produced it. Completions grow a
+      quarterback's accuracy and processing. Carries grow ball security, agility and power. Broken
+      tackles grow power and agility. Catches grow hands and route craft; contested catches grow
+      leaping. Tackles grow tackling and recognition. Pressures and sacks grow the whole rush
+      toolkit. Interceptions and pass breakups grow awareness and leaping.
+
+      Snaps are therefore an investment, not just a reward. A young player who plays gets better at
+      the thing he did. A young player who sits grows only on potential and practice, and while
+      that is real, it is not the same.
+
+      The honest limitation: offensive linemen have no counting statistics, so they get nothing
+      from this channel at all. Their growth is potential and practice only. Your line develops
+      more slowly and more blindly than the rest of your roster, and playing a young lineman does
+      not accelerate him the way playing a young receiver does.`
+      },
+      {
+        heading: "What the coach and the building add",
+        body: `Your developer grade multiplies both the practice channel and the potential channel.
+      It is the single most compounding skill you have, because it applies to every player on
+      the roster, every season, forever.
+
+      Your training facilities multiply the same two channels. Better facilities mean more growth
+      from identical minutes.
+
+      Neither creates growth on its own. Both scale what is already happening, which means they
+      are worth most on a roster of young high-potential workers and worth very little on a roster
+      of seniors at their ceilings. Buy them early in a rebuild, not late.`
+      },
+      {
+        heading: "Camp focus is an allocation",
+        body: `At development camp you pick a focus \u2014 quarterbacks, skill positions, the offensive
+      line, the front seven, the secondary, or balanced.
+
+      Focus is not a bonus. Focused groups train hot and <b>everybody else cools</b>. Choosing
+      quarterbacks means choosing that your line develops less this year. Balanced means nobody is
+      hot and nobody is cold.
+
+      That makes it a genuine yearly decision rather than a free pick, and the right answer is
+      usually wherever your young high-potential workers happen to be clustered.`
+      },
+      {
+        heading: "Moving a man, and sitting a man",
+        body: `A position change costs a one-season haircut to his overall, reduced by your developer
+      grade, and his development runs slower for a couple of seasons while he relearns the craft.
+      Attributes do not change \u2014 the same body is being graded against a different job, which is
+      the whole of <i>Reading a Player</i>. Camp conversions are capped per offseason; a move made
+      outside camp is not.
+
+      A redshirt takes him off the field entirely, and finalising one clears him out of every
+      formation slot you had pinned him to \u2014 the resolver fills those spots with the next eligible
+      man automatically. True freshmen who will not crack the two-deep are redshirted for you
+      unless you intervene. Walk-ons are exempt, because there is nothing to protect.
+
+      The reason to redshirt is not to hide a bad player. It is that a year of potential growth
+      costs nothing while he sits, and the performance channel he is missing would have been small
+      anyway if he was not going to play. The reason <i>not</i> to redshirt a good one is the
+      inverse: snaps grow him in ways the bench cannot.`
+      }
+    ]
+  };
+
+  // js/ui/manual/recruiting.js
+  var chapter13 = {
+    id: "recruiting",
+    icon: "\u{1F3AF}",
+    title: "Recruiting",
+    blurb: "A contested race settled by share of the room, not by a bar you fill. What builds a lead, what an offer really is, and where the money comes from.",
+    sections: [
+      {
+        heading: "There is no bar to fill",
+        body: `A recruit's interest in you does not climb because you spent enough. It climbs because
+      you are <b>winning the room</b>.
+
+      Every week, every suitor's bid is settled against every other suitor's bid on that recruit at
+      the same time. Take more than an even share of the room and his interest in you rises. Take
+      less and it <i>falls</i> \u2014 his attention moves on. It is symmetric: when a rival outbids you,
+      your meter drops as his climbs.
+
+      Sit a week out entirely and you slide, because the room moved without you.
+
+      This single fact reorganises everything. A war chest always means something, because there is
+      no cap to hit. And a modest budget aimed at a recruit nobody else wants climbs fast, because
+      an uncontested room settles quickly. Walking away from a fight and redeploying onto a kid
+      nobody is fighting over is a real, rewarding decision rather than an admission of defeat.
+
+      Money burns. A lost race refunds nothing.`
+      },
+      {
+        heading: "What your dollars are worth",
+        body: `Your dollars are not the room's dollars. Before your money reaches the room it is
+      multiplied by how well you fit this specific kid, and the swing is enormous \u2014 the same
+      spending can land at double weight on one recruit and half on another.
+
+      Seven things multiply it. <b>Distance</b> \u2014 close is worth more and costs less. <b>Program
+      prestige.</b> Your <b>recruiter</b> grade, which is the largest of the coach multipliers.
+      Your <b>reputation</b> grade. Your <b>roots</b> grade, which applies only inside your home
+      radius and only to you, and inside that radius is the biggest lever in the game. Whether the
+      position fills a real hole in <b>this class</b>. And whether his <b>wants</b> are satisfied.
+
+      There is a single number on his card that reports the product of all of it. It is the most
+      decision-relevant thing on the screen, and it is the difference between a small program
+      beating a rich one and a small program wasting a season.`
+      },
+      {
+        heading: "What he wants",
+        body: `Most recruits carry a hidden want or two, revealed when you scout him. One wants
+      <b>development</b> and reads your developer grade. One wants <b>pedigree</b> and reads your
+      reputation grade. One wants a big <b>program</b> and reads your prestige against the ceiling
+      for your division.
+
+      Satisfying a want multiplies your money. Failing one divides it. Being neither \u2014 sitting in
+      the middle of the grade range \u2014 does nothing either way, which is its own kind of answer.
+
+      Separately, many recruits want <b>playing time</b>, and that one carries more weight than the
+      others. It is read off a projection: how many returning players are ahead of his projected
+      peak at his position. Graduating seniors do not count, so a kid sitting behind a senior is
+      not blocked at all.
+
+      That cuts both ways, hard. A clean path pulls a playing-time recruit toward you strongly. A
+      logjam pushes him away just as strongly, and no amount of money fixes it. If you have three
+      good young players at a position, you are not recruiting a fourth \u2014 you are wasting the
+      pitch.`
+      },
+      {
+        heading: "The actions, and the order to take them",
+        body: `<b>Scout</b> first, always. It reveals his true rating, his potential band, and his
+      wants \u2014 privately, to you alone. A rival scouting the same kid tells you nothing and learns
+      nothing from you. It also pays evaluator experience, once per recruit, with a bonus when the
+      man you scouted is genuinely better than he publicly looks. Scouting is the only action that
+      makes you permanently better at your job.
+
+      Then <b>visits</b> \u2014 campus, home, and game. Campus visits are capped per recruit. Better
+      recruiting facilities make every visit-type action land harder, which is the one place the
+      building directly buys interest.
+
+      Then the <b>offer</b>, which is discussed below.
+
+      Repeated contact with the same recruit has diminishing returns. Grinding one kid is worth
+      less each time you do it, which is another argument for spreading across a board and another
+      argument for scouting before you spend.`
+      },
+      {
+        heading: "What an offer actually is",
+        body: `Mechanically, an offer is a gate. A recruit cannot commit to you without one, no matter
+      how far ahead you are.
+
+      That makes interest without an offer worth far less than it looks. You can lead a recruit's
+      race all season and lose him on signing day to somebody behind you who put paper on the
+      table, and the meter will have told you nothing was wrong.
+
+      An offer consumes a scholarship slot while it is out. The slot comes back the moment he
+      commits somewhere else, so a lost battle is recoverable and the freed slot can be redeployed
+      \u2014 but while the race runs, that slot is spent.
+
+      He accepts when four things are all true at once: you lead his race, you hold an offer, his
+      interest in you is past his personal bar, and you lead second place by a real margin. On the
+      final day of the window the margin requirement is dropped, and every recruit whose leader is
+      offered and past the bar commits.`
+      },
+      {
+        heading: "How to actually close",
+        body: `His personal bar is not fixed. Higher work ethic lowers it \u2014 the diligent kid decides
+      sooner, which is one more reason to want him.
+
+      More importantly, the bar falls as the field narrows. A recruit in an eight-way scramble needs
+      an enormous number to feel settled. A recruit down to two suitors needs far less, because the
+      leader already owns most of a small room.
+
+      That is the closing mechanic, and it is not about spending more. It is about being the last
+      one standing. Driving rivals out of a room \u2014 or picking rooms they are not in \u2014 resolves races
+      during the season instead of leaving them to the deadline, and a recruit who signs in October
+      frees the slot and the attention for the rest of your board.`
+      },
+      {
+        heading: "Where the money comes from",
+        body: `Your recruiting pool is your athletic department's operating surplus, and it is
+      computed rather than granted.
+
+      A base amount by division, plus ticket revenue, plus whatever you carried over. Ticket revenue
+      is your stadium's effective capacity times how full it gets times ticket price times your
+      program's share. How full it gets rises with your prestige and with <b>last season's wins</b>.
+
+      Out of that comes facility upkeep and your staff's salaries. What is left is what you recruit
+      with.
+
+      So winning pays for recruiting, one year late, and it does so twice \u2014 once through attendance
+      and once through prestige, which also multiplies what every dollar is worth. A program on the
+      way up compounds. A program on the way down compounds too.
+
+      There is a floor under it and it is unpleasant: if a year's revenue cannot cover upkeep, your
+      biggest facility loses a level. A program that overbuilds and then stops winning does not
+      simply run lean \u2014 it decays.`
+      },
+      {
+        heading: "What to spend it on",
+        body: `Facilities are bought from the same pool, so every upgrade is recruiting money you did
+      not spend. Training multiplies development. Recruiting multiplies visits. Medicine shortens
+      injuries. The stadium raises effective capacity, which raises next year's pool \u2014 the only one
+      that pays itself back.
+
+      Scheduling guarantees also land here. Agreeing to be somebody's road opponent credits next
+      year's pool; buying a soft schedule charges it.
+
+      And the whole economy has one hard limit that money does not touch: scholarship slots. If your
+      slots are capped, being rich is irrelevant, because the room does not care how much you have
+      if you have nothing to offer. That is the position a program on probation is in, and the only
+      way out of it is developing the players you already have.`
+      }
+    ]
+  };
+
+  // js/ui/manual/the-portal.js
+  var chapter14 = {
+    id: "the-portal",
+    icon: "\u{1F501}",
+    title: "The Portal and the Roster",
+    blurb: "Everyone in the portal wants to play. What that means for who you can get, who you lose, and what a roster of walk-ons actually plays like.",
+    sections: [
+      {
+        heading: "Everyone here wants to play",
+        body: `The portal is not a talent market. Every player in it is looking for a <b>role</b>.
+
+      Three things put a man in it: he is buried on his depth chart, his coach walked, or his
+      program collapsed. Nobody enters for a bigger stage, more money, or a better conference.
+      Seniors do not enter \u2014 they are leaving anyway. Players below a quality floor do not enter.
+      A player redshirting this season does not enter; he is sitting on purpose, not stuck.
+
+      Your own roster is immune. Nobody transfers out from under you. The portal is incoming only,
+      and if that reads as generous, it is \u2014 it means the entire mechanic is an opportunity rather
+      than a threat.`
+      },
+      {
+        heading: "Role beats money",
+        body: `The pitch is scored on four things, and the first one dominates the other three
+      combined.
+
+      <b>Role</b> is read straight off your depth chart. If nobody at his position is better than
+      him, you are offering a starting job. If he would be in the two-deep, you are offering
+      rotation. If he would sit again, you are offering nothing a playing-time seeker wants, and no
+      amount of money changes that.
+
+      Then <b>prestige</b>, then <b>home comfort</b> \u2014 closer is better, and it drops off with
+      distance \u2014 and then <b>money</b>, which has heavy diminishing returns. Doubling your bid does
+      not double its effect.
+
+      The consequence is the best thing about this system: a small program with a genuine opening
+      beats a rich program that would bury him. If you have a hole, you can fill it from the portal
+      regardless of who you are. If you do not have a hole, you cannot buy your way into one.`
+      },
+      {
+        heading: "What you are allowed to reach for",
+        body: `A transfer is tiered by his <b>rating</b>, not by the division he is leaving. A school
+      can reach at most one tier above its own \u2014 never two.
+
+      So a small program can land a genuinely better player dropping down to start somewhere. It
+      cannot land an elite one, at any price, and he will not appear as an option. The board you see
+      is already filtered to what you can actually sign.
+
+      This is the mechanism that keeps the portal from being a shortcut past a rebuild. It lets you
+      skip a step. It does not let you skip the climb.`
+      },
+      {
+        heading: "How the war runs",
+        body: `It plays out over several rounds, like weeks. You pitch or raise on your targets, then
+      rival schools react \u2014 programs with a real opening counter-raise, priced-out ones stop, and a
+      player who has a clearly best home commits early rather than waiting.
+
+      Rivals only push hard where they have an opening of their own. A school that would bury him
+      does not bid at all, which means the competition you face on any given transfer is the set of
+      programs with the same hole you have.
+
+      It is funded from <b>leftover recruiting budget</b>. That is a real planning constraint: money
+      you spend chasing high schoolers in the autumn is money you do not have in the portal in the
+      winter, and the portal is where the proven players are.`
+      },
+      {
+        heading: "Transfer versus recruit",
+        body: `What is easier: you can see exactly what you are getting. There is no fog on a
+      transfer's rating, no scouting required, no potential band to guess at, and no two-year wait
+      before he helps. The race resolves in a handful of rounds rather than over a season.
+
+      What is harder: you cannot outspend a bad fit. Recruiting has seven multipliers on your money
+      and several of them are things you can improve or work around; the portal has one dominant
+      term and it is a fact about your depth chart. The caliber gate caps your ceiling absolutely.
+      And because every man in the pool wants a job, the very players you most want are the ones
+      your existing roster disqualifies you from signing.
+
+      Recruiting is where you build. The portal is where you patch. A program that lives in the
+      portal has a roster of players who were somebody else's problem, all of whom need to start.`
+      },
+      {
+        heading: "The roster math",
+        body: `There is a hard roster limit and it is the constraint everything else runs into.
+
+      Seniors graduate at the end of the season, which is the only thing that clears space
+      automatically. Then the offseason opens with cut day, and cut day <b>gates the portal</b>: you
+      cannot shop while over the cap, counting the seniors who are about to leave. If you arrive
+      bloated you will spend the stage trimming instead of signing.
+
+      Your signed class arrives before camp, and the player's program takes its whole class even
+      over the limit \u2014 which is why camp week three is a second, harder cut day. Nothing gets
+      silently dropped; you decide, and if you have not decided by then, you are deciding under
+      pressure.
+
+      Scholarship slots are the separate constraint. An outstanding offer holds a slot until the
+      recruit signs somewhere. Slots are what limit your class, and no amount of money substitutes
+      for one.`
+      },
+      {
+        heading: "Walk-ons are the floor",
+        body: `A walk-on is built like a low-division recruit and then crushed \u2014 every attribute pulled
+      down hard, topping out well below real talent. No upside: his potential band is ordinary and
+      nothing about him is hidden, because there is nothing to hide. He sits at the bottom of the
+      depth chart and he is exempt from automatic redshirting.
+
+      They exist for one reason. They stop a neglected roster from falling below playable size. That
+      is a floor on your <i>headcount</i>, and deliberately not a floor on your quality.
+
+      A roster carrying too many of them does not look broken. It looks like a team that loses a
+      few more reps than it should, on every snap, all afternoon. Every contest in this game is a
+      smooth curve \u2014 see <i>Anatomy of a Play</i> \u2014 so a slightly worse player does not fail
+      visibly, he just wins slightly less often. Across a season that is the difference between
+      contending and not, and you will struggle to point at the play where it happened.
+
+      The walk-on tryout stage only appears if you have scholarships going spare, which is the
+      honest signal: if that stage is offered to you, you have already failed to fill your class.`
+      },
+      {
+        heading: "How to use all of it",
+        body: `Cut before the offseason forces you to. Know your holes before the portal stage opens,
+      because the stage before it exists to show them to you.
+
+      Recruit for the future and patch with the portal, not the reverse. Hold budget back for the
+      winter if your roster has a hole you already know about.
+
+      And treat an open starting job as an <b>asset</b>. It is the strongest currency you have in
+      the portal and it is the one thing a wealthier program cannot manufacture. A thin position is
+      a problem in the autumn and a recruiting advantage in the winter.`
+      }
+    ]
+  };
+
+  // js/ui/manual/your-career.js
+  var chapter15 = {
+    id: "your-career",
+    icon: "\u{1F4BC}",
+    title: "Your Career",
+    blurb: "What the athletic director actually measures, how the seat warms, and which of your own grades are worth chasing.",
+    sections: [
+      {
+        heading: "You are measured against the banners",
+        body: `Your expectation is set by the <b>program's prestige</b>, not by last season, not by
+      your roster, and not by your schedule. A base number of wins plus a step for every point of
+      prestige. That is the whole calculation.
+
+      It follows that a bad roster at a proud program is a trap and a good roster at a modest one is
+      an opportunity, and neither fact is reflected anywhere in what you are asked to deliver.
+
+      There is one adjustment and it makes the trap worse. At a fallen power the expectation carries
+      a bonus set from what the program <i>used to be</i>. Prestige has decayed through the drought.
+      The athletic director's memory has not. You are being measured against banners hanging in a
+      building whose roster no longer resembles them.
+
+      Your mandate locks in the fourth week of camp and does not move afterwards. Whatever happens
+      to your roster in September, the number stays.`
+      },
+      {
+        heading: "The seat",
+        body: `At the end of each season your wins are compared to that expectation and the difference
+      moves your job-security meter \u2014 up when you beat it, down when you miss.
+
+      Prestige also adds a standing stabiliser. A meter at a proud program drifts upward on its own
+      and a meter at a poor one drifts down, independent of results. The blue blood gets slack the
+      minnow does not.
+
+      New hires cannot be fired for a grace period. After that, two things end a tenure: the meter
+      bottoming out, or missing badly two years in a row \u2014 the second of which can end you while the
+      meter still looks survivable.
+
+      You will always be warned. A warm seat produces a note about needing improvement; a hot seat
+      produces an explicit ultimatum. Being fired is never a surprise, which means being surprised
+      is a sign you were not reading the notes.`
+      },
+      {
+        heading: "The five skills",
+        body: `Five grades on a letter ladder, each step costing more experience than the last. They
+      are yours, they follow you between jobs, and each one does something specific.
+
+      <b>Evaluator</b> narrows the gap between a recruit's public number and his real one. It grows
+      by scouting \u2014 once per recruit, with a bonus for finding a player the market has misjudged.
+      It is the only skill that grows purely from paying attention.
+
+      <b>Recruiter</b> multiplies both your interest gain and what your dollars are worth. It is the
+      largest of the recruiting multipliers.
+
+      <b>Developer</b> multiplies both development channels for every player on your roster, every
+      season, and it reduces the cost of moving a man to a new position. It also satisfies the
+      recruits who want development. It is the most compounding grade you have.
+
+      <b>Reputation</b> multiplies recruiting modestly, satisfies the recruits who want pedigree,
+      and \u2014 most importantly \u2014 maps directly into your standing on the job market. It is the skill
+      that opens doors rather than the one that wins games.
+
+      <b>Roots</b> only applies to recruits inside your home radius and only to you. Inside that
+      radius it is the biggest multiplier in the game. It is the answer to being poor: you cannot
+      outbid anyone anywhere, but you can be unbeatable somewhere.`
+      },
+      {
+        heading: "Coach DNA",
+        body: `Separately from the skills, you accumulate an <b>identity</b> \u2014 ten axes earned by
+      actually playing a certain way, and they carry with you across careers rather than resetting.
+
+      Each grants a small, specific mechanical edge. Grinding teams down means your ball carriers
+      tire more slowly late. Attacking downfield sharpens your deep accuracy. Pressure reduces the
+      big-play risk of blitzing. Ball hawk lifts takeaways on contested throws; ball security
+      lowers your own turnovers. Discipline cuts pre-snap penalties. Riverboat improves what you
+      convert when you gamble. Road warrior reduces the hostile-crowd penalty. Special teams buys
+      kicking range and coverage. Adjustments strengthens your halftime moves.
+
+      None of these is large on its own. They are earned by doing what you were already doing, and
+      the point is that a coach with a real identity is measurably better at that identity than a
+      coach without one. Playing every style badly earns nothing.`
+      },
+      {
+        heading: "How the market sees you",
+        body: `Your attractiveness to other programs is three things: how far you have beaten your
+      expectation, how long you have <b>sustained</b> it, and your reputation grade.
+
+      The sustained part is the one that catches people out. A promotion requires a dominance
+      streak, not one good year. Beating the mandate once makes your seat comfortable. Beating it
+      repeatedly is what makes the phone ring.
+
+      School desirability works the other way and is simpler: division dominates and prestige is the
+      lever within it. Any job in a higher division outranks almost any job below it, and your
+      reputation grade is what determines how high you can reach.`
+      },
+      {
+        heading: "The carousel",
+        body: `Openings resolve from the most attractive job downward. Each seat is filled by the
+      hottest available coach at a less attractive program \u2014 and that hire opens the seat he left,
+      which re-enters the queue. The board cascades until it runs out.
+
+      Modest jobs can promote a strong coordinator to head coach instead of poaching a sitting one.
+      That is where new names enter the profession.
+
+      What this means for you: the good jobs go first and they go to coaches who have been winning
+      for a while. If you are waiting for the right opening, you are waiting behind everyone who
+      already sustained what you are still building.`
+      },
+      {
+        heading: "What prestige actually does",
+        body: `Prestige updates once a season against results and moves slowly within a band set by
+      your division. You cannot spike it and you cannot crash it in a year.
+
+      It is load-bearing in four places, and this is worth holding together in one place because it
+      is easy to under-rate. It sets what you are expected to win. It stabilises your seat. It
+      multiplies what every recruiting dollar is worth. And it drives attendance, which is where
+      next season's recruiting money comes from.
+
+      So raising a program is genuinely a spiral, in both directions. Winning makes recruiting
+      cheaper and the money larger, which makes winning easier. Losing does the same in reverse, and
+      the expectation you are measured against does not fall as fast as the program does.
+
+      Which is the real shape of this game: almost nothing you do pays off in the season you do it,
+      and almost everything pays off in the one after.`
+      },
+      {
+        heading: "Where to put your attention",
+        body: `Early, buy developer and training facilities. They multiply everything and they multiply
+      it for four years per player, so they compound harder the sooner you start.
+
+      If you are outgunned, buy roots and recruit your own backyard rather than fighting rich
+      programs for national names. Being unbeatable in one radius is worth more than being
+      competitive everywhere.
+
+      Scout constantly. It is the cheapest experience in the game, it reveals what a recruit wants
+      before you spend on him, and it is the only edge that is genuinely private.
+
+      And do not chase the seat. The meter follows results and results follow a roster, and the
+      roster follows decisions you made two years ago. Coaching the meter is how tenures end.`
+      }
+    ]
+  };
+
   // js/ui/manual/index.js
   var MANUAL_CHAPTERS = [
-    chapter
+    chapter,
+    chapter2,
+    chapter3,
+    chapter4,
+    chapter5,
+    chapter6,
+    chapter7,
+    chapter8,
+    chapter9,
+    chapter10,
+    chapter11,
+    chapter12,
+    chapter13,
+    chapter14,
+    chapter15
   ];
   var chapterById = (id) => MANUAL_CHAPTERS.find((c) => c.id === id) || null;
 
