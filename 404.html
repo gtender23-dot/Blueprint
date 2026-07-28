@@ -5168,7 +5168,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "b60aa66868";
+globalThis.__BUILD__ = "1b06c737c5";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -5236,7 +5236,7 @@ var _CFB = (() => {
         // (see CAPPED_ATTRS), per tier (1=D3,2=D2,3=D1). This is the ceiling he develops
         // toward, NOT where he spawns. Elite D3 tops out ~70; D2 ~84; D1 uncapped. This is
         // a SOFT cap — a high-work-ethic grinder can push a little past it (see CAP_WE_OVERAGE).
-        CAPPED_ATTRS: ["SPD", "AGI", "PWR", "STR", "JMP", "HND", "SEC", "BLK", "TKL", "TEC", "AWR"],
+        CAPPED_ATTRS: ["SPD", "AGI", "PWR", "STR", "JMP", "HND", "SEC", "TEC", "AWR"],
         // every attribute the division ceiling applies to (all but WE & CON)
         CAP_WE_OVERAGE: { pivot: 55, step: 0.22, max: 7 },
         // Archetype cap tilt: the division ceiling is not a flat wall on every attribute.
@@ -5415,11 +5415,14 @@ var _CFB = (() => {
         // tacklers whiff occasionally).
         PASSPRO_CENTER_ADJ: 11.5,
         // recenters the pass-set blend (PWR/STR added, PWR mean runs low) [parity-probed]
-        RUNBLOCK_CENTER_ADJ: 8,
-        // recenters the drive blend after PWR entered it [parity-probed]
-        RUSH_SPEED_CENTER_ADJ: -1.5,
-        // recenters SPD+AGI speed path [parity-probed]
-        RUSH_POWER_CENTER_ADJ: 0.4,
+        RUNBLOCK_CENTER_ADJ: 10.7,
+        // Phase 1a: run blend runs ~2.7 below the old BLK blend — recentered to hold [measured]
+        RUSH_SPEED_CENTER_ADJ: -5.5,
+        // finesse-path recenter; tuned to land sacks ~2.1 in the BLK+TKL-retired trench [150g probed]
+        RUSH_POWER_CENTER_ADJ: -3.5,
+        // Phase 2a-i: empirically tuned with speed path [probed]
+        SHED_CENTER_ADJ: 4.6,
+        // Phase 2a-i: holds run ceiling; shed ran ~2.7 low once TKL→AWR [measured]
         RUSH_S2P_CENTER_ADJ: 2.3,
         // recenters max(speed,power) for speed-aligned reps [parity-probed]   // recenters PWR+STR power path [parity-probed]
         JUMP_BALL_SCALE: 0.01,
@@ -5678,7 +5681,7 @@ var _CFB = (() => {
         AGE_CURVE_MEASURED: { FR: 0.8, SO: 1.1, JR: 1.4, SR: 1.5 },
         // SPD/AGI/PWR/STR/JMP
         AGE_CURVE_COACHED: { FR: 1.2, SO: 1.2, JR: 1.15, SR: 1.1 },
-        // HND/SEC/BLK/TKL/TEC/AWR + meta
+        // HND/SEC/TEC/AWR + meta
         WE_DEV_MIN: 0.7,
         WE_DEV_SCALE: 0.8,
         // [TUNE]
@@ -6475,91 +6478,76 @@ var _CFB = (() => {
         P: -14.6
       };
       POS_WEIGHTS = {
-        // Base was generated from the contest table; hand-tuned (Jul 2026) to treat STR &
-        // PWR as ATHLETIC attributes — like SPD/AGI they now carry a baseline at every
-        // position (a strong, powerful athlete rates better anywhere), not just the
-        // trenches. SEC's overall weight was trimmed (it was over-weighted for ball-carriers).
-        CB: { SPD: 25, AGI: 16, PWR: 6, STR: 5, JMP: 8, HND: 3, TKL: 7, TEC: 12, AWR: 24 },
-        DE: { SPD: 19, AGI: 11, PWR: 14, STR: 17, JMP: 3, TKL: 20, TEC: 13, AWR: 3 },
-        DT: { SPD: 14, AGI: 6, PWR: 20, STR: 21, JMP: 3, TKL: 22, TEC: 13, AWR: 1 },
-        FB: { SPD: 3, AGI: 8, PWR: 16, STR: 14, HND: 13, SEC: 5, BLK: 13, TEC: 13, AWR: 10 },
-        // Specialists: leg = STR + PWR (distance), accuracy = TEC + AWR (placement and
-        // composure). Keeps the old 50/50 leg-vs-accuracy split, just spread over the two
-        // attributes that actually drive each half in the sim.
+        // GENERATED from the contest table (average of each position's archetype
+        // roles) — edit tools/roleweights_from_contests.mjs, not this block.
+        CB: { SPD: 31, AGI: 19, PWR: 2, STR: 3, JMP: 8, HND: 3, TEC: 12, AWR: 22 },
+        DE: { SPD: 17, AGI: 12, PWR: 16, STR: 22, JMP: 3, TEC: 16, AWR: 14 },
+        DT: { SPD: 11, AGI: 6, PWR: 22, STR: 26, JMP: 3, TEC: 17, AWR: 15 },
+        FB: { SPD: 3, AGI: 3, PWR: 23, STR: 14, HND: 13, SEC: 10, TEC: 16, AWR: 18 },
         K: { PWR: 25, STR: 25, TEC: 25, AWR: 25 },
-        LB: { SPD: 24, AGI: 15, PWR: 8, STR: 8, JMP: 1, HND: 1, TKL: 18, TEC: 12, AWR: 15 },
-        OL: { SPD: 2, AGI: 16, PWR: 16, STR: 15, BLK: 27, TEC: 12, AWR: 11 },
-        OLB: { SPD: 25, AGI: 18, PWR: 7, STR: 8, JMP: 3, HND: 1, TKL: 16, TEC: 12, AWR: 11 },
+        LB: { SPD: 29, AGI: 17, PWR: 7, STR: 11, JMP: 2, HND: 1, TEC: 12, AWR: 21 },
+        OL: { SPD: 2, AGI: 3, PWR: 24, STR: 25, TEC: 23, AWR: 23 },
+        OLB: { SPD: 27, AGI: 22, PWR: 6, STR: 12, JMP: 3, HND: 1, TEC: 14, AWR: 15 },
         P: { PWR: 25, STR: 25, TEC: 25, AWR: 25 },
-        QB: { SPD: 7, AGI: 7, PWR: 11, STR: 15, SEC: 4, TEC: 23, AWR: 33 },
-        RB: { SPD: 19, AGI: 18, PWR: 11, STR: 8, HND: 12, SEC: 6, BLK: 1, TEC: 12, AWR: 13 },
-        S: { SPD: 25, AGI: 14, PWR: 6, STR: 5, JMP: 6, HND: 3, TKL: 12, TEC: 12, AWR: 23 },
-        TE: { SPD: 10, AGI: 13, PWR: 9, STR: 8, JMP: 7, HND: 24, BLK: 10, TEC: 12, AWR: 10 },
-        WR: { SPD: 22, AGI: 14, PWR: 6, STR: 5, JMP: 8, HND: 27, SEC: 3, BLK: 1, TEC: 12, AWR: 7 }
+        QB: { SPD: 7, AGI: 7, PWR: 2, STR: 17, SEC: 8, TEC: 25, AWR: 34 },
+        RB: { SPD: 19, AGI: 17, PWR: 10, STR: 5, HND: 12, SEC: 10, TEC: 12, AWR: 15 },
+        S: { SPD: 29, AGI: 16, PWR: 4, STR: 5, JMP: 6, HND: 3, TEC: 12, AWR: 25 },
+        TE: { SPD: 10, AGI: 9, PWR: 10, STR: 8, JMP: 7, HND: 26, TEC: 15, AWR: 15 },
+        WR: { SPD: 19, AGI: 12, PWR: 2, STR: 1, JMP: 10, HND: 30, SEC: 6, TEC: 12, AWR: 8 }
       };
       ROLE_WEIGHTS = {
         // GENERATED from the contest table — edit tools/roleweights_from_contests.mjs, not this block.
         "Returner": { SPD: 39, AGI: 15, PWR: 4, STR: 2, SEC: 13, TEC: 9, AWR: 18 },
-        // Ball-carrier roles now include a share of the TRUCK contest, not just the juke.
-        // Every carrier goes through runOutcome -> breaksTackle, where tackleTruck is
-        // { PWR .55, STR .27, TEC .18 } — but these roles were built from tackleEvadeOff only,
-        // so no QB, scat back, returner or slot carried any PWR. Generated by
-        // tools/roleweights_from_contests.mjs. Measured effect on the field:
-        // a QB's power moves him 4.23 -> 5.02 yds/carry (tools/qb_power_rush_probe.mjs).
         "QB-Pocket": { SPD: 3, AGI: 3, PWR: 1, STR: 19, SEC: 9, TEC: 27, AWR: 38 },
         "QB-Dual": { SPD: 12, AGI: 12, PWR: 3, STR: 14, SEC: 6, TEC: 23, AWR: 30 },
         "QB-Gunslinger": { SPD: 3, AGI: 3, PWR: 1, STR: 29, SEC: 6, TEC: 24, AWR: 34 },
         "QB-Game-Manager": { SPD: 2, AGI: 2, PWR: 1, STR: 11, SEC: 12, TEC: 31, AWR: 41 },
         "QB-Scrambler": { SPD: 15, AGI: 15, PWR: 4, STR: 12, SEC: 8, TEC: 20, AWR: 26 },
-        "TE-Receiving": { SPD: 13, AGI: 12, PWR: 2, STR: 2, JMP: 9, HND: 37, BLK: 3, TEC: 12, AWR: 10 },
-        "TE-Blocking": { SPD: 3, AGI: 12, PWR: 11, STR: 12, JMP: 4, HND: 16, BLK: 19, TEC: 13, AWR: 10 },
-        "TE-Hybrid": { SPD: 10, AGI: 12, PWR: 6, STR: 6, JMP: 7, HND: 26, BLK: 10, TEC: 13, AWR: 10 },
-        "TE-Move": { SPD: 14, AGI: 16, PWR: 6, STR: 5, JMP: 6, HND: 26, BLK: 6, TEC: 13, AWR: 8 },
-        "RB-Power": { SPD: 8, AGI: 6, PWR: 24, STR: 13, HND: 6, SEC: 12, BLK: 3, TEC: 13, AWR: 15 },
+        "TE-Receiving": { SPD: 13, AGI: 11, PWR: 3, STR: 3, JMP: 9, HND: 36, TEC: 13, AWR: 12 },
+        "TE-Blocking": { SPD: 3, AGI: 4, PWR: 19, STR: 16, JMP: 4, HND: 16, TEC: 18, AWR: 20 },
+        "TE-Hybrid": { SPD: 10, AGI: 8, PWR: 10, STR: 8, JMP: 7, HND: 27, TEC: 15, AWR: 15 },
+        "TE-Move": { SPD: 14, AGI: 14, PWR: 9, STR: 6, JMP: 6, HND: 24, TEC: 15, AWR: 12 },
+        "RB-Power": { SPD: 8, AGI: 5, PWR: 26, STR: 13, HND: 6, SEC: 12, TEC: 13, AWR: 17 },
         "RB-Scat": { SPD: 26, AGI: 22, PWR: 3, STR: 1, HND: 21, SEC: 7, TEC: 11, AWR: 9 },
         "RB-Elusive": { SPD: 21, AGI: 27, PWR: 2, STR: 1, HND: 12, SEC: 9, TEC: 12, AWR: 16 },
-        "RB-Workhorse": { SPD: 15, AGI: 12, PWR: 13, STR: 7, HND: 9, SEC: 14, BLK: 3, TEC: 11, AWR: 16 },
+        "RB-Workhorse": { SPD: 15, AGI: 11, PWR: 14, STR: 7, HND: 9, SEC: 14, TEC: 11, AWR: 19 },
         "RB-Speed": { SPD: 27, AGI: 22, PWR: 4, STR: 2, HND: 11, SEC: 9, TEC: 11, AWR: 14 },
         "WR-Deep": { SPD: 44, AGI: 10, JMP: 10, HND: 21, SEC: 4, TEC: 8, AWR: 3 },
         "WR-Poss": { SPD: 13, AGI: 12, JMP: 8, HND: 39, SEC: 8, TEC: 12, AWR: 8 },
         "WR-Slot": { SPD: 20, AGI: 23, PWR: 3, STR: 1, HND: 26, SEC: 6, TEC: 15, AWR: 6 },
-        "WR-Physical": { SPD: 10, AGI: 9, PWR: 2, STR: 3, JMP: 13, HND: 31, SEC: 6, BLK: 4, TEC: 12, AWR: 10 },
-        "WR-Fade": { SPD: 12, AGI: 8, PWR: 3, STR: 8, JMP: 26, HND: 28, SEC: 5, TEC: 6, AWR: 4 },
-        "DE-Speed": { SPD: 24, AGI: 18, PWR: 6, STR: 13, JMP: 4, TKL: 18, TEC: 13, AWR: 4 },
-        "DE-Power": { SPD: 14, AGI: 4, PWR: 20, STR: 20, JMP: 2, TKL: 23, TEC: 14, AWR: 3 },
-        "DE-Base": { SPD: 18, AGI: 11, PWR: 14, STR: 17, JMP: 3, TKL: 21, TEC: 14, AWR: 2 },
-        "OLB-Rush": { SPD: 26, AGI: 20, PWR: 4, STR: 9, JMP: 3, TKL: 18, TEC: 13, AWR: 7 },
-        "OLB-Cover": { SPD: 28, AGI: 19, PWR: 3, STR: 1, JMP: 2, HND: 2, TKL: 13, TEC: 13, AWR: 19 },
-        "OLB-Blitz": { SPD: 25, AGI: 19, PWR: 5, STR: 9, JMP: 3, TKL: 19, TEC: 13, AWR: 7 },
-        "DT-3tech": { SPD: 13, AGI: 4, PWR: 21, STR: 20, JMP: 3, TKL: 23, TEC: 14, AWR: 2 },
-        "DT-NT": { SPD: 11, AGI: 3, PWR: 22, STR: 23, JMP: 2, TKL: 24, TEC: 15 },
-        "DT-Balanced": { SPD: 13, AGI: 7, PWR: 19, STR: 21, JMP: 3, TKL: 23, TEC: 14 },
-        "DT-Quick": { SPD: 19, AGI: 10, PWR: 13, STR: 19, JMP: 4, TKL: 18, TEC: 14, AWR: 3 },
-        "LB-Thumper": { SPD: 20, AGI: 12, PWR: 10, STR: 8, JMP: 1, HND: 1, TKL: 24, TEC: 13, AWR: 11 },
-        "LB-Cover": { SPD: 28, AGI: 17, PWR: 3, JMP: 2, HND: 2, TKL: 13, TEC: 13, AWR: 22 },
-        "LB-Hybrid": { SPD: 25, AGI: 14, PWR: 6, STR: 5, JMP: 1, HND: 1, TKL: 19, TEC: 13, AWR: 16 },
-        "LB-Blitzer": { SPD: 24, AGI: 18, PWR: 6, STR: 8, JMP: 2, TKL: 21, TEC: 13, AWR: 8 },
-        "LB-Sideline": { SPD: 29, AGI: 16, PWR: 3, JMP: 1, HND: 1, TKL: 17, TEC: 12, AWR: 21 },
-        "CB-Press": { SPD: 28, AGI: 17, PWR: 1, JMP: 8, HND: 2, TKL: 6, TEC: 13, AWR: 25 },
-        "CB-Slot": { SPD: 27, AGI: 18, PWR: 2, JMP: 6, HND: 2, TKL: 9, TEC: 13, AWR: 23 },
-        "CB-Zone": { SPD: 26, AGI: 16, PWR: 2, JMP: 7, HND: 3, TKL: 8, TEC: 13, AWR: 25 },
-        "CB-Ball": { SPD: 26, AGI: 12, PWR: 1, JMP: 11, HND: 4, TKL: 4, TEC: 13, AWR: 29 },
-        "S-Free": { SPD: 25, AGI: 13, PWR: 2, JMP: 8, HND: 4, TKL: 9, TEC: 12, AWR: 27 },
-        "S-Strong": { SPD: 23, AGI: 15, PWR: 6, STR: 3, JMP: 2, HND: 2, TKL: 20, TEC: 12, AWR: 17 },
-        "S-Ball": { SPD: 26, AGI: 10, PWR: 1, JMP: 11, HND: 5, TKL: 6, TEC: 12, AWR: 29 },
-        "S-Hybrid": { SPD: 26, AGI: 14, PWR: 3, JMP: 6, HND: 2, TKL: 14, TEC: 12, AWR: 23 },
-        "S-Nickel": { SPD: 27, AGI: 17, PWR: 2, JMP: 5, HND: 2, TKL: 11, TEC: 13, AWR: 23 },
-        "OL-Mauler": { AGI: 13, PWR: 17, STR: 17, BLK: 28, TEC: 14, AWR: 11 },
-        "OL-PassPro": { AGI: 17, PWR: 15, STR: 13, BLK: 28, TEC: 14, AWR: 13 },
-        "OL-Balanced": { AGI: 15, PWR: 16, STR: 15, BLK: 28, TEC: 14, AWR: 12 },
-        "OL-Athletic": { SPD: 9, AGI: 24, PWR: 13, STR: 12, BLK: 22, TEC: 11, AWR: 9 },
-        "FB-Lead": { AGI: 6, PWR: 20, STR: 16, SEC: 10, BLK: 17, TEC: 13, AWR: 18 },
-        "FB-HBack": { SPD: 5, AGI: 9, PWR: 13, STR: 10, HND: 25, SEC: 10, BLK: 10, TEC: 13, AWR: 5 },
-        "FB-Hybrid": { SPD: 3, AGI: 8, PWR: 16, STR: 14, HND: 16, SEC: 10, BLK: 13, TEC: 14, AWR: 6 },
-        // Specialist roles mirror the sim's kicking model: leg = STR+PWR, accuracy = TEC+AWR
-        // (attemptFG / puntDistance, both 50/50). Generated by tools/roleweights_from_contests.mjs
-        // from the kickLeg / kickAccuracy blends. Before this, K-Power was STR 68 / TEC 32 and
-        // rated a big leg identically to a weak one.
+        "WR-Physical": { SPD: 10, AGI: 8, PWR: 4, STR: 3, JMP: 13, HND: 31, SEC: 6, TEC: 13, AWR: 12 },
+        "WR-Fade": { SPD: 6, AGI: 5, PWR: 2, STR: 1, JMP: 21, HND: 38, SEC: 4, TEC: 11, AWR: 12 },
+        "DE-Speed": { SPD: 23, AGI: 20, PWR: 7, STR: 18, JMP: 4, TEC: 16, AWR: 12 },
+        "DE-Power": { SPD: 11, AGI: 4, PWR: 24, STR: 27, JMP: 2, TEC: 16, AWR: 16 },
+        "DE-Base": { SPD: 17, AGI: 11, PWR: 16, STR: 24, JMP: 3, TEC: 16, AWR: 13 },
+        "OLB-Rush": { SPD: 25, AGI: 22, PWR: 6, STR: 15, JMP: 4, TEC: 15, AWR: 13 },
+        "OLB-Cover": { SPD: 33, AGI: 22, PWR: 4, STR: 6, JMP: 2, HND: 2, TEC: 12, AWR: 19 },
+        "OLB-Blitz": { SPD: 26, AGI: 21, PWR: 7, STR: 15, JMP: 3, TEC: 14, AWR: 14 },
+        "DT-3tech": { SPD: 10, AGI: 3, PWR: 25, STR: 27, JMP: 3, TEC: 17, AWR: 15 },
+        "DT-NT": { SPD: 6, AGI: 2, PWR: 25, STR: 30, JMP: 2, TEC: 17, AWR: 18 },
+        "DT-Balanced": { SPD: 10, AGI: 6, PWR: 22, STR: 29, JMP: 3, TEC: 17, AWR: 13 },
+        "DT-Quick": { SPD: 17, AGI: 12, PWR: 15, STR: 22, JMP: 4, TEC: 17, AWR: 13 },
+        "LB-Thumper": { SPD: 21, AGI: 12, PWR: 12, STR: 18, JMP: 1, HND: 1, TEC: 12, AWR: 23 },
+        "LB-Cover": { SPD: 33, AGI: 20, PWR: 4, STR: 5, JMP: 2, HND: 2, TEC: 12, AWR: 22 },
+        "LB-Hybrid": { SPD: 27, AGI: 16, PWR: 8, STR: 12, JMP: 1, HND: 1, TEC: 12, AWR: 23 },
+        "LB-Blitzer": { SPD: 25, AGI: 19, PWR: 8, STR: 15, JMP: 3, TEC: 14, AWR: 16 },
+        "LB-Sideline": { SPD: 33, AGI: 20, PWR: 5, STR: 6, JMP: 1, HND: 1, TEC: 11, AWR: 23 },
+        "CB-Press": { SPD: 31, AGI: 20, PWR: 2, STR: 3, JMP: 8, HND: 2, TEC: 13, AWR: 21 },
+        "CB-Slot": { SPD: 31, AGI: 21, PWR: 3, STR: 4, JMP: 6, HND: 2, TEC: 12, AWR: 21 },
+        "CB-Zone": { SPD: 32, AGI: 19, PWR: 2, STR: 3, JMP: 7, HND: 3, TEC: 12, AWR: 22 },
+        "CB-Ball": { SPD: 30, AGI: 15, PWR: 1, STR: 2, JMP: 11, HND: 4, TEC: 12, AWR: 25 },
+        "S-Free": { SPD: 30, AGI: 15, PWR: 2, STR: 3, JMP: 8, HND: 4, TEC: 12, AWR: 26 },
+        "S-Strong": { SPD: 25, AGI: 16, PWR: 8, STR: 11, JMP: 2, HND: 2, TEC: 12, AWR: 24 },
+        "S-Ball": { SPD: 28, AGI: 13, PWR: 1, STR: 2, JMP: 11, HND: 5, TEC: 12, AWR: 28 },
+        "S-Hybrid": { SPD: 29, AGI: 17, PWR: 4, STR: 6, JMP: 6, HND: 2, TEC: 12, AWR: 24 },
+        "S-Nickel": { SPD: 31, AGI: 19, PWR: 4, STR: 5, JMP: 5, HND: 2, TEC: 12, AWR: 22 },
+        "OL-Mauler": { PWR: 28, STR: 24, TEC: 22, AWR: 26 },
+        "OL-PassPro": { PWR: 24, STR: 28, TEC: 26, AWR: 22 },
+        "OL-Balanced": { PWR: 26, STR: 26, TEC: 24, AWR: 24 },
+        "OL-Athletic": { SPD: 9, AGI: 13, PWR: 20, STR: 20, TEC: 19, AWR: 19 },
+        "FB-Lead": { PWR: 27, STR: 18, SEC: 10, TEC: 17, AWR: 28 },
+        "FB-HBack": { SPD: 5, AGI: 6, PWR: 17, STR: 11, HND: 24, SEC: 10, TEC: 15, AWR: 12 },
+        "FB-Hybrid": { SPD: 3, AGI: 4, PWR: 23, STR: 14, HND: 16, SEC: 10, TEC: 16, AWR: 14 },
         "K-Accuracy": { PWR: 16, STR: 16, TEC: 34, AWR: 34 },
         "K-Power": { PWR: 34, STR: 34, TEC: 16, AWR: 16 },
         "K-Balanced": { PWR: 25, STR: 25, TEC: 25, AWR: 25 },
@@ -6567,6 +6555,11 @@ var _CFB = (() => {
         "P-Distance": { PWR: 33, STR: 33, TEC: 17, AWR: 17 },
         "P-Balanced": { PWR: 25, STR: 25, TEC: 25, AWR: 25 }
       };
+      Object.assign(ROLE_WEIGHTS, {
+        "OL-T": { STR: 28, TEC: 26, PWR: 18, AWR: 16, AGI: 12 },
+        "OL-IOL": { PWR: 30, STR: 26, AWR: 22, TEC: 22 },
+        "OL-C": { AWR: 32, STR: 24, PWR: 22, TEC: 22 }
+      });
       FRONT_ROLES = {
         "4-3": { DE: ["DE-Speed", "DE-Power"], DT: ["DT-3tech", "DT-3tech"], OLB: ["OLB-Blitz", "OLB-Cover"], LB: ["LB-Thumper"], CB: ["CB-Press", "CB-Press"], S: ["S-Free", "S-Strong"] },
         "3-4": { DE: ["DE-Power", "DE-Power"], DT: ["DT-NT"], OLB: ["OLB-Rush", "OLB-Rush"], LB: ["LB-Thumper", "LB-Cover"], CB: ["CB-Press", "CB-Press"], S: ["S-Free", "S-Strong"] },
@@ -6843,23 +6836,19 @@ var _CFB = (() => {
         JMP: { JMP: 1, CON: PRACTICE_SECONDARY },
         HND: { HND: 1, SEC: PRACTICE_SECONDARY },
         SEC: { SEC: 1, HND: PRACTICE_SECONDARY },
-        BLK: { BLK: 1, CON: PRACTICE_SECONDARY },
-        TKL: { TKL: 1, CON: PRACTICE_SECONDARY },
         TEC: { TEC: 1, WE: PRACTICE_SECONDARY },
         AWR: { AWR: 1, WE: PRACTICE_SECONDARY }
       };
       DEFAULT_PRACTICE = {
         SPD: 10,
-        AGI: 9,
-        PWR: 8,
-        STR: 10,
+        AGI: 11,
+        PWR: 11,
+        STR: 13,
         JMP: 5,
         HND: 9,
         SEC: 6,
-        BLK: 9,
-        TKL: 9,
-        TEC: 13,
-        AWR: 12
+        TEC: 17,
+        AWR: 18
       };
       PASS_TENDENCY = {
         "Always Pass": 0.82,
@@ -6871,7 +6860,7 @@ var _CFB = (() => {
         "Always Run": 0.18
       };
       POSITIONS = ["QB", "RB", "WR", "TE", "OL", "DE", "DT", "OLB", "LB", "CB", "S", "K", "P"];
-      ATTRIBUTES = ["SPD", "AGI", "PWR", "STR", "JMP", "HND", "SEC", "BLK", "TKL", "TEC", "AWR", "CON", "WE"];
+      ATTRIBUTES = ["SPD", "AGI", "PWR", "STR", "JMP", "HND", "SEC", "TEC", "AWR", "CON", "WE"];
       MEASURED_ATTRS = ["SPD", "AGI", "PWR", "STR", "JMP"];
       ATTR_LABELS = {};
       attrLabel = (a) => ATTR_LABELS[a] || a;
@@ -6943,34 +6932,34 @@ var _CFB = (() => {
         RB: { SPD: 34, AGI: 32, PWR: 22 },
         FB: { SPD: 24, STR: 34, PWR: 28 },
         WR: { SPD: 36, AGI: 32 },
-        TE: { SPD: 26, STR: 30, BLK: 20 },
+        TE: { SPD: 26, STR: 30, PWR: 20 },
         OL: { STR: 34, PWR: 26 },
         DE: { SPD: 26, STR: 30, PWR: 26 },
         DT: { STR: 36, PWR: 30 },
-        OLB: { SPD: 30, AGI: 26, TKL: 20 },
-        LB: { SPD: 26, STR: 26, TKL: 20 },
+        OLB: { SPD: 30, AGI: 26 },
+        LB: { SPD: 26, STR: 26 },
         CB: { SPD: 36, AGI: 32 },
-        S: { SPD: 32, AGI: 28, TKL: 18 },
+        S: { SPD: 32, AGI: 28 },
         K: { STR: 30, PWR: 30 },
         P: { STR: 30, PWR: 30 }
       };
       RECRUIT_CORE = {
         QB: { core: ["STR", "AWR", "TEC"], solid: [30, 35, 35], star: [40, 50, 40] },
         RB: { core: ["AGI", "SPD", "STR", "SEC", "TEC"], solid: [40, 35, 25, 26, 26], star: [55, 55, 35, 36, 36] },
-        FB: { core: ["BLK", "STR", "TEC"], solid: [35, 35, 30], star: [45, 45, 40] },
+        FB: { core: ["PWR", "STR", "TEC"], solid: [35, 35, 30], star: [45, 45, 40] },
         WR: { core: ["HND", "SPD", "AWR", "AGI", "TEC", "JMP"], solid: [40, 35, 25, 30, 26, 24], star: [55, 45, 35, 40, 36, 34] },
-        TE: { core: ["STR", "BLK", "AWR", "TEC", "JMP"], solid: [35, 40, 30, 26, 22], star: [45, 50, 40, 36, 32] },
-        OL: { core: ["STR", "BLK", "AWR", "TEC"], solid: [40, 45, 25, 34], star: [50, 50, 35, 44] },
+        TE: { core: ["STR", "PWR", "AWR", "TEC", "JMP"], solid: [35, 40, 30, 26, 22], star: [45, 50, 40, 36, 32] },
+        OL: { core: ["STR", "PWR", "AWR", "TEC"], solid: [40, 45, 25, 34], star: [50, 50, 35, 44] },
         // [Stress-lab census, Jul 2026] AWR added to DE and CB cores: both rolled
         // AWR as junk (means 28 / 37) while the sim now reads it everywhere —
         // option keys, edge discipline, jet/draw/screen sniffing, zone coverage.
         // Without this, zone corners and assignment-sound ends don't exist to recruit.
-        DE: { core: ["SPD", "STR", "TKL", "TEC", "JMP", "AWR"], solid: [35, 35, 30, 30, 22, 25], star: [50, 45, 45, 40, 34, 35] },
-        OLB: { core: ["SPD", "TKL", "AWR", "TEC"], solid: [35, 32, 28, 28], star: [48, 45, 40, 38] },
-        DT: { core: ["STR", "TKL", "AWR", "TEC", "JMP"], solid: [45, 40, 15, 30, 22], star: [55, 50, 30, 40, 34] },
-        LB: { core: ["STR", "TKL", "AWR", "TEC"], solid: [35, 35, 30, 26], star: [45, 45, 45, 36] },
+        DE: { core: ["SPD", "STR", "TEC", "JMP", "AWR"], solid: [35, 35, 30, 22, 25], star: [50, 45, 40, 34, 35] },
+        OLB: { core: ["SPD", "AWR", "TEC"], solid: [35, 28, 28], star: [48, 40, 38] },
+        DT: { core: ["STR", "AWR", "TEC", "JMP"], solid: [45, 15, 30, 22], star: [55, 30, 40, 34] },
+        LB: { core: ["STR", "AWR", "TEC"], solid: [35, 30, 26], star: [45, 45, 36] },
         CB: { core: ["SPD", "AGI", "HND", "TEC", "JMP", "AWR"], solid: [40, 35, 25, 30, 24, 28], star: [55, 45, 40, 40, 34, 38] },
-        S: { core: ["SPD", "TKL", "AWR", "TEC", "JMP"], solid: [35, 30, 35, 26, 22], star: [50, 40, 45, 36, 32] },
+        S: { core: ["SPD", "AWR", "TEC", "JMP"], solid: [35, 35, 26, 22], star: [50, 45, 36, 32] },
         // PWR and AWR are core for specialists because the kicking model reads them. Leave
         // them non-core and they spawn ~15-30 points below STR/TEC, which drops league FG%
         // from ~74% to ~62% (tools/kicking_model_probe.mjs).
@@ -7959,6 +7948,10 @@ var _CFB = (() => {
       "OL-PassPro": "PASS",
       "OL-Balanced": "BAL",
       "OL-Athletic": "ATH",
+      // OL position-fit grades (T / IOL / C)
+      "OL-T": "TACKLE",
+      "OL-IOL": "INTERIOR",
+      "OL-C": "CENTER",
       // FB
       "FB-Lead": "LEAD",
       "FB-HBack": "HBACK",
@@ -8558,7 +8551,7 @@ var _CFB = (() => {
     const distance = distanceMiles(schoolLat, schoolLng, loc.lat, loc.lng);
     {
       const roll = Math.random();
-      const M = ["SPD", "AGI", "PWR", "STR", "JMP"], K = ["HND", "SEC", "BLK", "TKL", "TEC", "AWR"];
+      const M = ["SPD", "AGI", "PWR", "STR", "JMP"], K = ["HND", "SEC", "TEC", "AWR"];
       if (roll < 0.06) {
         for (const a of M) attrs[a] = clamp2(attrs[a] + randInt3(12, 24), 1, 99);
         for (const a of K) attrs[a] = clamp2(attrs[a] - randInt3(6, 16), 1, 99);
@@ -8858,10 +8851,10 @@ var _CFB = (() => {
           const speedLean = axisLean(p, ["SPD"], ["STR", "AGI"]);
           const eluLean = axisLean(p, ["AGI"], ["STR", "SPD"]);
           const powerLean = axisLean(p, ["STR"], ["SPD", "AGI"]);
-          const blockLean = axisLean(p, ["BLK", "STR"], ["SPD", "AGI"]);
+          const blockLean = axisLean(p, ["PWR", "STR"], ["SPD", "AGI"]);
           const a = p.attributes || {};
           if (blockLean > 26 && (a.SPD || 50) < 62) {
-            const recvLean = axisLean(p, ["HND", "JMP"], ["STR", "BLK"]);
+            const recvLean = axisLean(p, ["HND", "JMP"], ["STR", "PWR"]);
             if (recvLean > -19) return "FB-HBack";
             if (recvLean < -31) return "FB-Lead";
             return "FB-Hybrid";
@@ -8882,8 +8875,8 @@ var _CFB = (() => {
           return "WR-Poss";
         },
         TE(p) {
-          const blockLean = axisLean(p, ["STR", "BLK"], ["HND", "SPD"]);
-          const athLean = axisLean(p, ["AGI", "SPD"], ["STR", "BLK"]);
+          const blockLean = axisLean(p, ["STR", "PWR"], ["HND", "SPD"]);
+          const athLean = axisLean(p, ["AGI", "SPD"], ["STR", "PWR"]);
           if (blockLean < 16) return "TE-Receiving";
           if (athLean > -13) return "TE-Move";
           if (blockLean > 35) return "TE-Blocking";
@@ -8916,7 +8909,7 @@ var _CFB = (() => {
           return "DE-Base";
         },
         OLB(p) {
-          const coverLean = axisLean(p, ["AWR", "SPD"], ["STR", "TKL"]);
+          const coverLean = axisLean(p, ["AWR", "SPD"], ["STR", "PWR"]);
           const rushLean = axisLean(p, ["SPD", "AGI"], ["AWR"]);
           if (coverLean > 13) return "OLB-Cover";
           if (rushLean > 5) return "OLB-Rush";
@@ -8930,11 +8923,11 @@ var _CFB = (() => {
           return "DT-NT";
         },
         LB(p) {
-          const coverLean = axisLean(p, ["SPD", "AGI"], ["STR", "TKL"]);
+          const coverLean = axisLean(p, ["SPD", "AGI"], ["STR", "PWR"]);
           if (coverLean < -33) return "LB-Thumper";
           if (coverLean < -21) return "LB-Hybrid";
           if (coverLean < -12) return "LB-Cover";
-          const blitzLean = axisLean(p, ["SPD", "TKL"], ["PWR", "STR"]);
+          const blitzLean = axisLean(p, ["SPD", "AGI"], ["PWR", "STR"]);
           return blitzLean >= 2 ? "LB-Blitzer" : "LB-Sideline";
         },
         CB(p) {
@@ -8949,8 +8942,8 @@ var _CFB = (() => {
         S(p) {
           const ballLean = axisLean(p, ["HND"], ["STR"]);
           const nickelLean = axisLean(p, ["AGI"], ["STR"]);
-          const freeLean = axisLean(p, ["SPD", "AGI"], ["STR", "TKL"]);
-          const boxLean = axisLean(p, ["STR", "TKL"], ["SPD", "AGI"]);
+          const freeLean = axisLean(p, ["SPD", "AGI"], ["STR", "PWR"]);
+          const boxLean = axisLean(p, ["STR", "PWR"], ["SPD", "AGI"]);
           if (ballLean > 8) return "S-Ball";
           if (nickelLean > 6) return "S-Nickel";
           if (freeLean > 6) return "S-Free";
@@ -13525,11 +13518,11 @@ var _CFB = (() => {
   var init_constants_field = __esm({
     "js/constants_field.js"() {
       OL_SLOTS = [
-        { id: "OL_LT", pos: "OL", label: "LT", x: 0.3, y: 0.5, role: "OL-PassPro" },
-        { id: "OL_LG", pos: "OL", label: "LG", x: 0.4, y: 0.5, role: "OL-Mauler" },
-        { id: "OL_C", pos: "OL", label: "C", x: 0.5, y: 0.5, role: "OL-Balanced" },
-        { id: "OL_RG", pos: "OL", label: "RG", x: 0.6, y: 0.5, role: "OL-Mauler" },
-        { id: "OL_RT", pos: "OL", label: "RT", x: 0.7, y: 0.5, role: "OL-PassPro" }
+        { id: "OL_LT", pos: "OL", label: "LT", x: 0.3, y: 0.5, role: "OL-T" },
+        { id: "OL_LG", pos: "OL", label: "LG", x: 0.4, y: 0.5, role: "OL-IOL" },
+        { id: "OL_C", pos: "OL", label: "C", x: 0.5, y: 0.5, role: "OL-C" },
+        { id: "OL_RG", pos: "OL", label: "RG", x: 0.6, y: 0.5, role: "OL-IOL" },
+        { id: "OL_RT", pos: "OL", label: "RT", x: 0.7, y: 0.5, role: "OL-T" }
       ];
       OFF_FIELD_LAYOUTS = {
         "Pro Set": {
@@ -14343,14 +14336,15 @@ var _CFB = (() => {
     }
     if (s.tackles) {
       const p = s.tackles / D.tackles;
-      add("TKL", p * 0.6);
+      add("STR", p * 0.3);
+      add("PWR", p * 0.3);
       add("AWR", p * 0.4);
     }
     const rush = (s.pressures || 0) / D.pressures + (s.sacks || 0) / D.sacks;
     if (rush) {
       add("SPD", rush * 0.3);
       add("STR", rush * 0.3);
-      add("TKL", rush * 0.2);
+      add("PWR", rush * 0.2);
       add("TEC", rush * 0.2);
     }
     const hawk = (s.ints || 0) + (s.passBreakups || 0) * 0.5;
@@ -14981,16 +14975,16 @@ var _CFB = (() => {
           phase: "aftermath",
           off: { AGI: 0.55, SPD: 0.27, TEC: 0.18 },
           // the juke is craft
-          def: { TKL: 0.4, AGI: 0.3, SPD: 0.16, TEC: 0.14 },
-          // form + change of direction + closing speed (46% measured)
+          def: { AGI: 0.34, SPD: 0.26, AWR: 0.22, TEC: 0.18 },
+          // get-there: mirror the juke (Phase 2a-ii: TKL out)
           pbp: { win: "jukes {def} out of his cleats", lose: null }
         },
         tackleTruck: {
           phase: "aftermath",
           off: { PWR: 0.55, STR: 0.27, TEC: 0.18 },
           // pad level wins collisions
-          def: { TKL: 0.4, STR: 0.2, PWR: 0.14, SPD: 0.12, TEC: 0.14 },
-          // anchor + pop; measured 46%
+          def: { STR: 0.34, PWR: 0.28, TEC: 0.2, AWR: 0.18 },
+          // finish: anchor+pop — DBs bounce off here (Phase 2a-ii)
           pbp: { win: "runs right through {def}", lose: null }
         },
         // Fall forward — contact yards, signed: a thumper stones you backward,
@@ -14998,7 +14992,7 @@ var _CFB = (() => {
         fallForward: {
           phase: "aftermath",
           off: { PWR: 0.85, TEC: 0.15 },
-          def: { TKL: 0.85, TEC: 0.15 }
+          def: { STR: 0.6, PWR: 0.25, TEC: 0.15 }
         }
       };
     }
@@ -15501,7 +15495,7 @@ var _CFB = (() => {
     d.y += d.vy * dt;
   }
   function geoYAC(receiver, coveringDef, pursuitDefs, sep, _trace = null) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l;
+    var _a, _b, _c, _d, _e, _f, _g;
     const ra = receiver.attributes || {};
     const car = { x: 0, y: 0, top: spdYps(ra.SPD), acc: accel(ra.AGI), vx: 0, vy: 0 };
     const lean = (Math.random() - 0.5) * 0.6;
@@ -15523,7 +15517,7 @@ var _CFB = (() => {
         // why the rally, not the beaten man, makes most of these tackles (the
         // old model's credit shift, now a physical fact).
         react: 0.08,
-        tkl: (_c = da.TKL) != null ? _c : 50,
+        tkl: finishOf(da),
         burned: 0
       };
       const d0 = Math.hypot(cd.x, cd.y) || 1e-6;
@@ -15550,7 +15544,7 @@ var _CFB = (() => {
         top: spdYps(da.SPD) * 0.99,
         acc: accel(da.AGI),
         react: 0.04,
-        tkl: (_d = da.TKL) != null ? _d : 50,
+        tkl: finishOf(da),
         burned: 0
       } : {
         ref: d,
@@ -15560,7 +15554,7 @@ var _CFB = (() => {
         top: spdYps(da.SPD) * 0.99,
         acc: accel(da.AGI),
         react: reactS(da.AWR),
-        tkl: (_e = da.TKL) != null ? _e : 50,
+        tkl: finishOf(da),
         burned: 0
       };
       first = false;
@@ -15587,7 +15581,7 @@ var _CFB = (() => {
           vx: 0,
           vy: -spdYps(da.SPD) * 0.35,
           react: 0.1,
-          tkl: ((_f = da.TKL) != null ? _f : 50) + 6,
+          tkl: finishOf(da) + 6,
           burned: 0
           // open-field pros
         });
@@ -15616,7 +15610,7 @@ var _CFB = (() => {
             vx: 0,
             vy: -spdYps(da.SPD) * 0.5,
             react: 0,
-            tkl: (_g = da.TKL) != null ? _g : 50,
+            tkl: finishOf(da),
             burned: 0
           });
         }
@@ -15695,13 +15689,17 @@ var _CFB = (() => {
     const yacYds = Math.max(0, Math.min(MAX_Y, Math.round(car.y)));
     return {
       yacYds,
-      tacklerId: (_j = (_i = (_h = tackler == null ? void 0 : tackler.ref) == null ? void 0 : _h.id) != null ? _i : coveringDef == null ? void 0 : coveringDef.id) != null ? _j : null,
-      assistId: (_l = (_k = assist == null ? void 0 : assist.ref) == null ? void 0 : _k.id) != null ? _l : null
+      tacklerId: (_e = (_d = (_c = tackler == null ? void 0 : tackler.ref) == null ? void 0 : _c.id) != null ? _d : coveringDef == null ? void 0 : coveringDef.id) != null ? _e : null,
+      assistId: (_g = (_f = assist == null ? void 0 : assist.ref) == null ? void 0 : _f.id) != null ? _g : null
     };
   }
-  var TICK, MAX_T, MAX_Y, RADIUS, spdYps, accel, reactS;
+  var finishOf, TICK, MAX_T, MAX_Y, RADIUS, spdYps, accel, reactS;
   var init_yacgeo = __esm({
     "js/engine/yacgeo.js"() {
+      finishOf = (a) => {
+        var _a, _b, _c, _d;
+        return ((_a = a.STR) != null ? _a : 50) * 0.34 + ((_b = a.PWR) != null ? _b : 50) * 0.28 + ((_c = a.TEC) != null ? _c : 50) * 0.2 + ((_d = a.AWR) != null ? _d : 50) * 0.18;
+      };
       TICK = 0.1;
       MAX_T = 5;
       MAX_Y = 72;
@@ -15735,17 +15733,17 @@ var _CFB = (() => {
     d.y += d.vy * dt;
   }
   function defaultFinish(carrier, defender) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l;
     const c = carrier.attributes || {}, d = defender.attributes || {};
-    const evade = ((_a = c.AGI) != null ? _a : 50) * 0.6 + ((_b = c.SPD) != null ? _b : 50) * 0.4 - (((_c = d.TKL) != null ? _c : 50) * 0.6 + ((_d = d.AGI) != null ? _d : 50) * 0.4);
-    const truck = ((_f = (_e = c.PWR) != null ? _e : c.STR) != null ? _f : 50) * 0.6 + ((_g = c.STR) != null ? _g : 50) * 0.4 - (((_h = d.TKL) != null ? _h : 50) * 0.6 + ((_i = d.STR) != null ? _i : 50) * 0.4);
+    const evade = ((_a = c.AGI) != null ? _a : 50) * 0.6 + ((_b = c.SPD) != null ? _b : 50) * 0.4 - (((_c = d.AGI) != null ? _c : 50) * 0.5 + ((_d = d.SPD) != null ? _d : 50) * 0.25 + ((_e = d.AWR) != null ? _e : 50) * 0.25 + 8);
+    const truck = ((_g = (_f = c.PWR) != null ? _f : c.STR) != null ? _g : 50) * 0.6 + ((_h = c.STR) != null ? _h : 50) * 0.4 - (((_i = d.STR) != null ? _i : 50) * 0.45 + ((_j = d.PWR) != null ? _j : 50) * 0.35 + ((_k = d.TEC) != null ? _k : 50) * 0.2 + 6);
     const gap = Math.max(evade, truck) - 8;
-    const weightOver = Math.max(0, ((_j = carrier.weight) != null ? _j : 210) - 210);
+    const weightOver = Math.max(0, ((_l = carrier.weight) != null ? _l : 210) - 210);
     const broke = Math.random() < Math.max(0, Math.min(0.4, 0.03 + gap * 0.016 + weightOver * 75e-5));
     return { broke, style: broke ? truck > evade ? "truck" : "evade" : null };
   }
   function runFit(carrier, opts = {}) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l;
+    var _a, _b, _c, _d, _e;
     const { lane = 0.5, penetrator = null, vision = 0, trace = null } = opts;
     const secondLevel = (opts.secondLevel || []).filter(Boolean);
     const deepLevel = (opts.deepLevel || []).filter(Boolean);
@@ -15774,7 +15772,7 @@ var _CFB = (() => {
         top: dSpd(da.SPD) * 0.95,
         acc: dAcc(da.AGI),
         react: 0.08,
-        tkl: (_a = da.TKL) != null ? _a : 50,
+        tkl: finishOf2(da),
         burned: 0
       });
       const d0 = hyp(pd.x - car.x, pd.y - car.y) || 1e-6;
@@ -15792,7 +15790,7 @@ var _CFB = (() => {
           top: dSpd(da.SPD) * 0.93,
           acc: dAcc(da.AGI),
           react: 0.15,
-          tkl: (_b = da.TKL) != null ? _b : 50,
+          tkl: finishOf2(da),
           burned: 0,
           vx: 0,
           vy: -dSpd(da.SPD) * 0.35
@@ -15819,7 +15817,7 @@ var _CFB = (() => {
         // twice, and that spread IS the 1-7 yard band's texture.
         react: blocked ? 0.85 + Math.random() * 0.85 : 0.18 + Math.random() * 0.7 + reactS2(da.AWR),
         shed: blocked,
-        tkl: (_c = da.TKL) != null ? _c : 50,
+        tkl: finishOf2(da),
         burned: 0,
         vx: 0,
         vy: blocked ? 0 : -dSpd(da.SPD) * 0.3
@@ -15848,7 +15846,7 @@ var _CFB = (() => {
         vx: 0,
         vy: -dSpd(da.SPD) * 0.3,
         react: 0.3,
-        tkl: ((_d = da.TKL) != null ? _d : 50) + 6,
+        tkl: finishOf2(da) + 6,
         burned: 0
         // open-field pros
       });
@@ -15867,7 +15865,7 @@ var _CFB = (() => {
         vx: 0,
         vy: 0,
         react: 1.3 + Math.random() * 0.9,
-        tkl: (_e = da.TKL) != null ? _e : 50,
+        tkl: finishOf2(da),
         burned: 0
       });
     }
@@ -15921,7 +15919,7 @@ var _CFB = (() => {
             vx: 0,
             vy: -dSpd(da.SPD) * 0.4,
             react: 0.12,
-            tkl: (_f = da.TKL) != null ? _f : 50,
+            tkl: finishOf2(da),
             burned: 0
           });
         }
@@ -15944,7 +15942,7 @@ var _CFB = (() => {
             vx: 0,
             vy: -dSpd(da.SPD) * 0.45,
             react: 0,
-            tkl: (_g = da.TKL) != null ? _g : 50,
+            tkl: finishOf2(da),
             burned: 0
           });
         }
@@ -15964,7 +15962,7 @@ var _CFB = (() => {
           }
         }
         if (nearest) {
-          const bend = Math.max(0.5, Math.min(1.3, 0.7 + (((_h = ra.AGI) != null ? _h : 50) - 50) * 4e-3)) * (4.5 - nd) / 4.5;
+          const bend = Math.max(0.5, Math.min(1.3, 0.7 + (((_a = ra.AGI) != null ? _a : 50) - 50) * 4e-3)) * (4.5 - nd) / 4.5;
           tx += (laneX >= nearest.x ? 1 : -1) * bend * 1.4;
         }
         const ty = 2.5;
@@ -16083,17 +16081,21 @@ var _CFB = (() => {
     const isTFL = tackler != null && (yards < 0 || yards === 0 && (contactY != null ? contactY : 1) < 0.5 && Math.random() < 0.35);
     return {
       yards,
-      tacklerId: (_j = (_i = tackler == null ? void 0 : tackler.ref) == null ? void 0 : _i.id) != null ? _j : null,
-      assistId: (_l = (_k = assist == null ? void 0 : assist.ref) == null ? void 0 : _k.id) != null ? _l : null,
+      tacklerId: (_c = (_b = tackler == null ? void 0 : tackler.ref) == null ? void 0 : _b.id) != null ? _c : null,
+      assistId: (_e = (_d = assist == null ? void 0 : assist.ref) == null ? void 0 : _d.id) != null ? _e : null,
       tflId: isTFL ? tackler.ref.id : null,
       brokenById,
       btStyle,
       breakaway: !tackler && clearedDeep && yards >= 18
     };
   }
-  var TICK2, MAX_T2, MAX_Y2, MIN_Y, RADIUS2, LANE_RECENTER, hyp, spdYps2, accel2, dSpd, dAcc, reactS2;
+  var finishOf2, TICK2, MAX_T2, MAX_Y2, MIN_Y, RADIUS2, LANE_RECENTER, hyp, spdYps2, accel2, dSpd, dAcc, reactS2;
   var init_run2geo = __esm({
     "js/engine/run2geo.js"() {
+      finishOf2 = (a) => {
+        var _a, _b, _c, _d;
+        return ((_a = a.STR) != null ? _a : 50) * 0.34 + ((_b = a.PWR) != null ? _b : 50) * 0.28 + ((_c = a.TEC) != null ? _c : 50) * 0.2 + ((_d = a.AWR) != null ? _d : 50) * 0.18;
+      };
       TICK2 = 0.1;
       MAX_T2 = 7;
       MAX_Y2 = 100;
@@ -16519,10 +16521,10 @@ var _CFB = (() => {
   }
   function blockRep(blocker, rusher, speedRush, contextBoost = 0, powerPass = false, isPass = false) {
     var _a, _b;
-    const blkVal = (isPass ? blocker.attributes.BLK * 0.28 + blocker.attributes.AGI * 0.2 + blocker.attributes.PWR * 0.14 + blocker.attributes.STR * 0.1 + blocker.attributes.TEC * 0.14 + blocker.attributes.AWR * 0.14 + C.PASSPRO_CENTER_ADJ : blocker.attributes.BLK * 0.28 + blocker.attributes.STR * 0.2 + blocker.attributes.PWR * 0.18 + blocker.attributes.TEC * 0.14 + blocker.attributes.AWR * 0.1 + blocker.attributes.AGI * 0.1 + C.RUNBLOCK_CENTER_ADJ) + (blocker._olContBonus || 0);
-    const speedPath = rusher.attributes.SPD * 0.28 + rusher.attributes.AGI * 0.28 + rusher.attributes.TEC * 0.14 + rusher.attributes.STR * 0.12 + rusher.attributes.TKL * 0.11 + rusher.attributes.JMP * 0.07 + C.RUSH_SPEED_CENTER_ADJ;
-    const powerPath = rusher.attributes.PWR * 0.28 + rusher.attributes.STR * 0.21 + rusher.attributes.TKL * 0.19 + rusher.attributes.TEC * 0.14 + rusher.attributes.SPD * 0.12 + rusher.attributes.JMP * 0.06 + C.RUSH_POWER_CENTER_ADJ;
-    const shedVal = rusher.attributes.STR * 0.3 + rusher.attributes.TKL * 0.25 + rusher.attributes.PWR * 0.2 + rusher.attributes.TEC * 0.15 + rusher.attributes.SPD * 0.1;
+    const blkVal = (isPass ? blocker.attributes.STR * 0.3 + blocker.attributes.TEC * 0.28 + blocker.attributes.PWR * 0.22 + blocker.attributes.AWR * 0.2 + C.PASSPRO_CENTER_ADJ : blocker.attributes.PWR * 0.3 + blocker.attributes.AWR * 0.28 + blocker.attributes.STR * 0.22 + blocker.attributes.TEC * 0.2 + C.RUNBLOCK_CENTER_ADJ) + (blocker._olContBonus || 0);
+    const speedPath = rusher.attributes.SPD * 0.3 + rusher.attributes.AGI * 0.3 + rusher.attributes.TEC * 0.18 + rusher.attributes.STR * 0.14 + rusher.attributes.JMP * 0.08 + C.RUSH_SPEED_CENTER_ADJ;
+    const powerPath = rusher.attributes.PWR * 0.34 + rusher.attributes.STR * 0.28 + rusher.attributes.TEC * 0.2 + rusher.attributes.SPD * 0.12 + rusher.attributes.JMP * 0.06 + C.RUSH_POWER_CENTER_ADJ;
+    const shedVal = rusher.attributes.STR * 0.34 + rusher.attributes.AWR * 0.28 + rusher.attributes.PWR * 0.22 + rusher.attributes.TEC * 0.16 + C.SHED_CENTER_ADJ;
     const rushVal = !isPass ? shedVal : speedRush ? Math.max(speedPath, powerPath) - C.RUSH_S2P_CENTER_ADJ : powerPath;
     const dampedRushVal = powerPass ? rushVal * C.POWER_PASS_DAMP : rushVal;
     const sizeMute = speedRush ? C.BLOCK_SIZE_EDGE_MUTE : 1;
@@ -16643,8 +16645,7 @@ var _CFB = (() => {
         STR: p.attributes.STR,
         PWR: p.attributes.PWR,
         TEC: p.attributes.TEC,
-        AWR: p.attributes.AWR,
-        TKL: p.attributes.TKL
+        AWR: p.attributes.AWR
       } : null;
       globalThis.__rushCap.push({
         reps: reps.length,
@@ -16833,7 +16834,7 @@ var _CFB = (() => {
     if (cands.length === 1) return cands[0];
     const weights = cands.map((d) => {
       const a = d.attributes;
-      const pursuit = a.SPD * 0.38 + a.AWR * 0.28 + a.TKL * 0.18 + a.AGI * 0.08 + a.TEC * 0.08;
+      const pursuit = a.SPD * 0.42 + a.AWR * 0.3 + a.AGI * 0.18 + a.TEC * 0.1;
       const n = pursuit / 100;
       let wgt = Math.max(0.08, Math.pow(n, 1.4));
       const pos = d.position || "";
@@ -16871,8 +16872,8 @@ var _CFB = (() => {
     const finish = (carP, defP) => {
       const styleOut = { style: null };
       let broke = breaksTackle(carP, defP, styleOut);
-      if (!broke && _tkStyle === "strip" && Math.random() < clamp2(0.09 - (defP.attributes.TKL - 50) * 1e-3, 0.03, 0.12)) broke = true;
-      if (broke && _tkStyle === "wrap" && Math.random() < clamp2(0.1 + (defP.attributes.TKL - 50) * 2e-3, 0.05, 0.22)) broke = false;
+      if (!broke && _tkStyle === "strip" && Math.random() < clamp2(0.09 - ((defP.attributes.STR + defP.attributes.PWR) / 2 - 50) * 1e-3, 0.03, 0.12)) broke = true;
+      if (broke && _tkStyle === "wrap" && Math.random() < clamp2(0.1 + ((defP.attributes.STR + defP.attributes.PWR) / 2 - 50) * 2e-3, 0.05, 0.22)) broke = false;
       return { broke, style: styleOut.style };
     };
     const fit = runFit(carrier, {
@@ -16896,7 +16897,7 @@ var _CFB = (() => {
     const tackler = tacklerId ? (_b = allDefs.find((d) => d.id === tacklerId)) != null ? _b : null : null;
     if (tackler && !fit.tflId && finalYards >= 0 && finalYards <= 4) {
       let ffChance = clamp2(
-        tackler.attributes.STR * 3e-3 + tackler.attributes.TKL * 2e-3 - carrier.attributes.CON * 3e-3,
+        tackler.attributes.STR * 3e-3 + tackler.attributes.PWR * 2e-3 - carrier.attributes.CON * 3e-3,
         5e-3,
         0.06
       );
@@ -18035,7 +18036,7 @@ var _CFB = (() => {
     result.runGap = isOutside ? runDir === "middle" ? "edge" : `${runDir} edge` : runDir === "middle" ? "A-gap" : `${runDir} B-gap`;
     if (pulls) result.pulled = true;
     const containPen = !optionOverride && _optKey === "qb" && useQBCarrier && Math.random() < 0.35 ? defRoster.find((pl) => pl.id === (defPersonnel.OLB || [])[0]) || defRoster.find((pl) => pl.id === (defPersonnel.DE || [])[0]) || null : null;
-    const bestPenetrator = ((_m = optionOverride == null ? void 0 : optionOverride.forcePenetrator) != null ? _m : containPen) ? (_n = optionOverride == null ? void 0 : optionOverride.forcePenetrator) != null ? _n : containPen : penetrators.length > 0 ? penetrators.reduce((best, d) => d.attributes.TKL + d.attributes.SPD > best.attributes.TKL + best.attributes.SPD ? d : best) : null;
+    const bestPenetrator = ((_m = optionOverride == null ? void 0 : optionOverride.forcePenetrator) != null ? _m : containPen) ? (_n = optionOverride == null ? void 0 : optionOverride.forcePenetrator) != null ? _n : containPen : penetrators.length > 0 ? penetrators.reduce((best, d) => d.attributes.STR + d.attributes.SPD > best.attributes.STR + best.attributes.SPD ? d : best) : null;
     const dbIds = defPersonnel.DB || [];
     const secondLevel = lbIds.map((id) => defRoster.find((p) => p.id === id)).filter(Boolean);
     const deepLevel = dbIds.map((id) => defRoster.find((p) => p.id === id)).filter(Boolean);
@@ -18372,7 +18373,7 @@ var _CFB = (() => {
   }
   function coverageStrength(roster, stGrade = 0) {
     const cov = roster.filter((p) => ["LB", "S", "CB"].includes(p.position)).slice(0, 8);
-    const base = cov.length ? cov.reduce((s, p) => s + (p.attributes.SPD + p.attributes.TKL) / 2, 0) / cov.length : 55;
+    const base = cov.length ? cov.reduce((s, p) => s + (p.attributes.SPD + p.attributes.STR) / 2, 0) / cov.length : 55;
     return base * (1 + (stGrade || 0) * 0.01);
   }
   function returnOutcome(retRating, cov, startLine, base) {
@@ -20432,7 +20433,7 @@ var _CFB = (() => {
       _tkStyle = "balanced";
       _optKey = "balanced";
       _conceptCtx = null;
-      FATIGUE_PHYSICAL = ["SPD", "STR", "AGI", "PWR", "JMP", "TKL", "BLK"];
+      FATIGUE_PHYSICAL = ["SPD", "STR", "AGI", "PWR", "JMP"];
       REAL_SLOTS = /* @__PURE__ */ new Set(["QB", "RB", "WR", "TE", "OL", "DE", "DT", "OLB", "LB", "CB", "S", "K", "P"]);
       _rosterByIdCache = /* @__PURE__ */ new WeakMap();
       TYPE_BASELINE = {
@@ -21633,7 +21634,7 @@ var _CFB = (() => {
     const weakness = findWeakestGroup(school.roster);
     const minutes = __spreadValues({}, DEFAULT_PRACTICE);
     if (weakness === "OL") {
-      minutes.BLK += 6;
+      minutes.PWR += 6;
       minutes.STR += 6;
       minutes.SPD -= 6;
       minutes.HND -= 6;
@@ -21642,12 +21643,12 @@ var _CFB = (() => {
       minutes.TEC += 6;
       minutes.AWR += 6;
       minutes.HND -= 6;
-      minutes.BLK -= 6;
+      minutes.PWR -= 6;
     }
     if (weakness === "DB") {
       minutes.HND += 6;
       minutes.SPD += 6;
-      minutes.BLK -= 6;
+      minutes.PWR -= 6;
       minutes.STR -= 6;
     }
     school.practiceMinutes = minutes;
@@ -26318,7 +26319,7 @@ var _CFB = (() => {
     const sideVal = (idx) => {
       const ps = idx.map((i) => ols[i]).filter(Boolean);
       if (!ps.length) return 0;
-      return Math.round(ps.reduce((s, p) => s + p.attributes.BLK * 0.55 + p.attributes.STR * 0.3 + p.attributes.AWR * 0.15, 0) / ps.length);
+      return Math.round(ps.reduce((s, p) => s + p.attributes.PWR * 0.35 + p.attributes.STR * 0.3 + p.attributes.AWR * 0.2 + p.attributes.TEC * 0.15, 0) / ps.length);
     };
     const L = sideVal([0, 1]), M = sideVal([1, 2, 3]), R = sideVal([3, 4]);
     const dir = gp.runDirection || { left: 33, middle: 34, right: 33 };
@@ -31738,8 +31739,6 @@ var _CFB = (() => {
     { id: "JMP", header: "JMP", sortKey: "JMP", cell: (p) => `<td class="attr-cell ${ratingColor(p.attributes.JMP)}">${p.attributes.JMP}</td>` },
     { id: "HND", header: "HND", sortKey: "HND", cell: (p) => `<td class="attr-cell ${ratingColor(p.attributes.HND)}">${p.attributes.HND}</td>` },
     { id: "SEC", header: "SEC", sortKey: "SEC", cell: (p) => `<td class="attr-cell ${ratingColor(p.attributes.SEC)}">${p.attributes.SEC}</td>` },
-    { id: "BLK", header: "BLK", sortKey: "BLK", cell: (p) => `<td class="attr-cell ${ratingColor(p.attributes.BLK)}">${p.attributes.BLK}</td>` },
-    { id: "TKL", header: "TKL", sortKey: "TKL", cell: (p) => `<td class="attr-cell ${ratingColor(p.attributes.TKL)}">${p.attributes.TKL}</td>` },
     { id: "TEC", header: "TEC", sortKey: "TEC", cell: (p) => `<td class="attr-cell ${ratingColor(p.attributes.TEC)}">${p.attributes.TEC}</td>` },
     { id: "AWR", header: "AWR", sortKey: "AWR", cell: (p) => `<td class="attr-cell ${ratingColor(p.attributes.AWR)}">${p.attributes.AWR}</td>` },
     { id: "CON", header: "CON", sortKey: "CON", cell: (p) => `<td class="attr-cell ${ratingColor(p.attributes.CON)}">${p.attributes.CON}</td>` },
@@ -31957,8 +31956,6 @@ var _CFB = (() => {
     { key: "JMP", hdr: "JMP", cell: (p) => `<td class="attr-cell ${ratingColor(p.attributes.JMP)}">${p.attributes.JMP}</td>` },
     { key: "HND", hdr: "HND", cell: (p) => `<td class="attr-cell ${ratingColor(p.attributes.HND)}">${p.attributes.HND}</td>` },
     { key: "SEC", hdr: "SEC", cell: (p) => `<td class="attr-cell ${ratingColor(p.attributes.SEC)}">${p.attributes.SEC}</td>` },
-    { key: "BLK", hdr: "BLK", cell: (p) => `<td class="attr-cell ${ratingColor(p.attributes.BLK)}">${p.attributes.BLK}</td>` },
-    { key: "TKL", hdr: "TKL", cell: (p) => `<td class="attr-cell ${ratingColor(p.attributes.TKL)}">${p.attributes.TKL}</td>` },
     { key: "TEC", hdr: "TEC", cell: (p) => `<td class="attr-cell ${ratingColor(p.attributes.TEC)}">${p.attributes.TEC}</td>` },
     { key: "AWR", hdr: "AWR", cell: (p) => `<td class="attr-cell ${ratingColor(p.attributes.AWR)}">${p.attributes.AWR}</td>` }
   ];
@@ -34285,7 +34282,7 @@ var _CFB = (() => {
     const canSee = hasScouted(state.playerCoach, r.id) || skillGradeIndex(state.playerCoach, "evaluator") >= 4 || ((_a = state.settings) == null ? void 0 : _a.revealScouting);
     if (!canSee || !r.attributes) return "";
     const avg2 = (ks) => ks.reduce((s, a) => s + (r.attributes[a] || 0), 0) / ks.length;
-    const gap = avg2(["SPD", "AGI", "PWR", "STR", "JMP"]) - avg2(["HND", "SEC", "BLK", "TKL", "TEC", "AWR"]) - (POS_GAP_BASE[r.position] || 0);
+    const gap = avg2(["SPD", "AGI", "PWR", "STR", "JMP"]) - avg2(["HND", "SEC", "TEC", "AWR"]) - (POS_GAP_BASE[r.position] || 0);
     if (gap >= 17) return ' <span class="build-tag tag-raw" title="Elite testing sheet, raw skills \u2014 tests better than he plays">\u26A0 raw</span>';
     if (gap <= -15) return ' <span class="build-tag tag-gamer" title="Plays above the sheet \u2014 skills outrun the testing numbers">\u{1F3C8} gamer</span>';
     return "";
@@ -34417,7 +34414,7 @@ var _CFB = (() => {
         <div class="sf-attrs">
           <div class="sf-attrs-head">
             <label class="filter-label">ATTRIBUTE FILTERS</label>
-            <span class="sf-attrs-hint">Stack conditions to find scheme fits \u2014 e.g. STR \u2265 50 AND BLK \u2265 50</span>
+            <span class="sf-attrs-hint">Stack conditions to find scheme fits \u2014 e.g. STR \u2265 50 AND PWR \u2265 50</span>
           </div>
           <div class="sf-attr-rows">
             ${searchFilters.attrFilters.map((f, i) => `
@@ -35501,9 +35498,10 @@ var _CFB = (() => {
 
       A quarterback is graded first on what he sees and how fast he processes it; his arm
       matters, his legs matter least. A corner is graded first on speed, then on awareness,
-      then on the agility to change direction with a receiver \u2014 his tackling is a minor
-      note. A guard is graded first on blocking, then on the power and balance to hold up
-      against a bull rush. A receiver is graded first on his hands, then his speed.
+      then on the agility to change direction with a receiver \u2014 the strength to finish a tackle
+      is a minor note, which is why a corner will run a back down and then bounce off him. A
+      guard is graded first on the power to drive and the strength to anchor a bull rush, then
+      the technique in his hands and the awareness to pick up a stunt. A receiver is graded first on his hands, then his speed.
 
       This is why moving a player is not free and not fatal. A safety with a corner's
       attribute shape rates well at corner. A safety who plays like a linebacker does not.
@@ -36265,14 +36263,18 @@ var _CFB = (() => {
       {
         heading: "What a pass set is made of",
         body: `Pass protection and run blocking are different crafts and they read different
-      attributes. A pass set is <b>feet</b>. Blocking technique leads it, then the agility to
-      mirror a rusher, then hand placement, then recognition \u2014 knowing who to take. Raw power
-      and strength are in there, but they are the smaller half of a pass set, and this is the
-      single most common misread of an offensive lineman in this game.
+      attributes. A pass set is an <b>anchor</b>. The strength to hold your ground leads it,
+      then the technique in your hands, then the power to stop a bull rush, then recognition \u2014
+      knowing who to take. A run block flips the order: the power to drive leads, then the
+      awareness to work a combination and climb to the second level, with strength and hands
+      behind.
 
-      A guard who is enormous and slow anchors well and gets beaten around the corner all
-      afternoon. A tackle with feet holds up against rushers he has no business handling. Buy
-      movement and craft to protect a passer; buy mass for the run game.`
+      The tackle spots carry one demand the interior does not \u2014 the agility to mirror a speed
+      rusher off the edge \u2014 which is why the depth chart grades a tackle on quickness a guard is
+      never asked for. A guard who is enormous and slow anchors well inside; ask him to mirror an
+      edge bender and he is beaten around the corner all afternoon. Grade your linemen for the
+      spot: interior on power and anchor, tackle on feet, center on the awareness to make the
+      calls.`
       },
       {
         heading: "The line that busts",
@@ -36292,8 +36294,8 @@ var _CFB = (() => {
         body: `A rusher attacking a pass has two paths. The speed path is twitch \u2014 get off,
       bend, and beat the tackle around the edge, driven by speed and agility with technique
       supporting. The power path is speed-to-power: convert momentum into force and put the
-      tackle in the quarterback's lap, driven by power and strength with tackling and
-      technique supporting.
+      tackle in the quarterback's lap, driven by power and strength with technique
+      supporting.
 
       An edge rusher aligned to win with speed takes <b>whichever path is better for him on
       that rep</b>. That is the mechanic behind the modern edge defender who cannot be
@@ -36483,9 +36485,10 @@ var _CFB = (() => {
         heading: "The broken tackle",
         body: `When a defender arrives, the carrier gets two ways out and takes the better one.
       He can make him miss \u2014 agility leading, speed and craft behind it \u2014 or he can run through
-      him \u2014 power leading, strength and pad level behind it. The defender answers both with
-      tackling form first, then whichever of change-of-direction or anchor the specific attempt
-      demands.
+      him \u2014 power leading, strength and pad level behind it. The defender answers from two
+      directions at once: the speed and agility to close and break down in space, then the
+      strength and power to finish. A man who gets there but can't finish \u2014 a corner in the
+      open field \u2014 gets run through.
 
       Because he takes his better path, two backs with identical overalls break tackles in
       completely different ways. The big back with no wiggle still breaks them. The small back
@@ -36991,8 +36994,7 @@ var _CFB = (() => {
       and conditioning governs both rates \u2014 a well-conditioned player tires slower <i>and</i>
       recovers faster, which is why it compounds over a game rather than adding up.
 
-      What fatigue takes is physical only. Speed, strength, agility, power, leaping, tackling and
-      blocking all degrade. Instincts and technique do not \u2014 a tired veteran is still a smart
+      What fatigue takes is physical only. Speed, strength, agility, power and leaping all degrade. Instincts and technique do not \u2014 a tired veteran is still a smart
       veteran. Hands degrade more slowly than the rest, on the theory that catching is partly muscle memory.
 
       Past a threshold a man is pulled and the next man goes in; he comes back when he has
@@ -37231,7 +37233,7 @@ var _CFB = (() => {
       A season's production grows the specific attributes that produced it. Completions grow a
       quarterback's accuracy and processing. Carries grow ball security, agility and power. Broken
       tackles grow power and agility. Catches grow hands and route craft; contested catches grow
-      leaping. Tackles grow tackling and recognition. Pressures and sacks grow the whole rush
+      leaping. Tackles grow strength, power and recognition. Pressures and sacks grow the whole rush
       toolkit. Interceptions and pass breakups grow awareness and leaping.
 
       Snaps are therefore an investment, not just a reward. A young player who plays gets better at
@@ -39419,24 +39421,22 @@ var _CFB = (() => {
     JMP: "Plyometrics",
     HND: "Catching Drills",
     SEC: "Ball Security",
-    BLK: "Blocking",
-    TKL: "Tackling",
     TEC: "Technique Drills",
     AWR: "Film Study"
   };
   var TOOL_LABELS_BY_POS = {
     QB: { AGI: "Pocket Mobility", TEC: "Throwing Mechanics", SEC: "Ball Handling" },
-    RB: { AGI: "Cut & Change Direction", BLK: "Pass Blocking", SEC: "High-and-Tight Drills", HND: "Receiving Drills" },
-    FB: { AGI: "Lead Block Footwork", BLK: "Lead Blocking", SEC: "High-and-Tight Drills", HND: "Receiving Drills" },
-    WR: { AGI: "Route Breaks", TEC: "Release Technique", BLK: "Stalk Blocking", JMP: "High-Point Drills" },
-    TE: { AGI: "Seam Route Breaks", TEC: "Release Technique", BLK: "In-Line Blocking", JMP: "High-Point Drills" },
-    OL: { AGI: "Pass Set Footwork", TEC: "Block Technique", BLK: "Run Blocking" },
-    DE: { AGI: "First-Step Quickness", TEC: "Pass Rush Technique", TKL: "Pursuit Angles" },
-    OLB: { AGI: "Lateral Movement", TEC: "Blitz Technique", TKL: "Tackling" },
-    DT: { AGI: "First-Step Quickness", TEC: "Pass Rush Technique", TKL: "Pursuit Angles" },
-    LB: { AGI: "Lateral Movement", TEC: "Blitz Technique", TKL: "Tackling" },
-    CB: { TEC: "Press Coverage", HND: "Ball Skills", TKL: "Open-Field Tackling", JMP: "High-Point Drills" },
-    S: { TEC: "Press Coverage", HND: "Ball Skills", TKL: "Open-Field Tackling" },
+    RB: { AGI: "Cut & Change Direction", SEC: "High-and-Tight Drills", HND: "Receiving Drills" },
+    FB: { AGI: "Lead Block Footwork", SEC: "High-and-Tight Drills", HND: "Receiving Drills" },
+    WR: { AGI: "Route Breaks", TEC: "Release Technique", JMP: "High-Point Drills" },
+    TE: { AGI: "Seam Route Breaks", TEC: "Release Technique", JMP: "High-Point Drills" },
+    OL: { AGI: "Pass Set Footwork", TEC: "Block Technique" },
+    DE: { AGI: "First-Step Quickness", TEC: "Pass Rush Technique" },
+    OLB: { AGI: "Lateral Movement", TEC: "Blitz Technique" },
+    DT: { AGI: "First-Step Quickness", TEC: "Pass Rush Technique" },
+    LB: { AGI: "Lateral Movement", TEC: "Blitz Technique" },
+    CB: { TEC: "Press Coverage", HND: "Ball Skills", JMP: "High-Point Drills" },
+    S: { TEC: "Press Coverage", HND: "Ball Skills" },
     K: { TEC: "Kicking Mechanics" },
     P: { TEC: "Punting Mechanics" }
   };
