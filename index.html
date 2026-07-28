@@ -2498,6 +2498,27 @@ input[type="range"] { accent-color: var(--team-1); }
 }
 .dev-action-btn { font-size: 11px; padding: 6px 13px; }
 
+.dev-notepad-card { margin-top: 12px; }
+.dev-notepad {
+  display: block;
+  width: 100%;
+  min-height: 240px;
+  resize: vertical;
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-top: 1px solid var(--border-sub);
+  border-radius: 0 0 10px 10px;
+  color: var(--text-1);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.65;
+  box-sizing: border-box;
+}
+.dev-notepad:focus { outline: none; border-color: var(--team-1); }
+.dev-notepad::placeholder { color: var(--text-3, var(--text-2)); }
+
 /* ── Board manage row (drop / rescind) ─────────────────────────────────── */
 .board-manage {
   display: flex; gap: 6px; align-items: center;
@@ -4733,7 +4754,7 @@ body.theme-school .data-table tr:hover td {
 .wf-first { stroke: #ffd54a; stroke-width: 0.5; opacity: 0.85; }
 .wf-goal { stroke: #e5533d; stroke-width: 0.7; }
 .wf-goal-lbl { font-size: 3px; fill: rgba(229,83,61,0.8); text-anchor: middle; font-weight: 800; letter-spacing: 0.3em; }
-.wf-num { font-size: 2.8px; fill: rgba(255,255,255,0.4); font-weight: 700; }
+.wf-num { font-size: 3.3px; fill: rgba(255,255,255,0.82); font-weight: 800; paint-order: stroke; stroke: rgba(0,0,0,0.5); stroke-width: 0.4px; }
 .wf-num-r { text-anchor: end; }
 .wo-c { fill: #eaeaea; stroke: #222; stroke-width: 0.3; }
 .wo-c.wo-qb { fill: #ffd54a; }
@@ -5147,7 +5168,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "6591da062c";
+globalThis.__BUILD__ = "b60aa66868";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -19892,6 +19913,12 @@ var _CFB = (() => {
     if (distance <= 6 && fieldPos >= 55 && !canFG) return true;
     return false;
   }
+  function fourthDownIsCoachCall(sit) {
+    const { distance, fieldPos, canFG } = sit;
+    if (canFG) return true;
+    if (distance <= 6 && fieldPos >= 40) return true;
+    return fourthDownIsMoment(sit);
+  }
   function runToken(token) {
     while (!token.pending) {
       if (token.stage === 1) {
@@ -20070,7 +20097,11 @@ var _CFB = (() => {
     if ((opts == null ? void 0 : opts.callMode) && opts.callMode !== "off" && opts.playerSide) {
       token.playerSide = opts.playerSide;
       token.callMode = opts.callMode;
-      token.askFourth = (sit) => token.callMode && token.callMode !== "off" && fourthDownIsMoment(sit) ? "ASK" : null;
+      token.askFourth = (sit) => {
+        if (!token.callMode || token.callMode === "off") return null;
+        const gate = token.callMode === "all" ? fourthDownIsCoachCall : fourthDownIsMoment;
+        return gate(sit) ? "ASK" : null;
+      };
       token.stopAfterHalf = 1;
       token.pending = null;
       token.stage = 1;
@@ -34099,9 +34130,6 @@ var _CFB = (() => {
     pos: "",
     arch: "",
     maxDist: 9999,
-    minRating: 0,
-    minWE: 0,
-    minRas: 0,
     status: "undecided",
     sort: "visionRating",
     thenBy: "",
@@ -34234,9 +34262,6 @@ var _CFB = (() => {
       if (searchFilters.arch && derivedArchetype(r) !== searchFilters.arch) return false;
       const dist = recruitDistance(r, school);
       if (dist > searchFilters.maxDist) return false;
-      if (r.visionRating < searchFilters.minRating) return false;
-      if (r.attributes.WE < searchFilters.minWE) return false;
-      if ((r.ras || 0) < (searchFilters.minRas || 0)) return false;
       if (searchFilters.status === "undecided" && r.committed) return false;
       for (const f of searchFilters.attrFilters) if (!applyAttrFilter(r, f)) return false;
       return true;
@@ -34341,15 +34366,6 @@ var _CFB = (() => {
         <!-- Row 2: dropdown grid like WIS -->
         <div class="sf-grid">
           <div class="sf-field">
-            <label class="filter-label">MIN RAS</label>
-            <select class="form-select" id="sf-minras">
-              ${opt(0, searchFilters.minRas || 0, "Any")}
-              ${opt(3, searchFilters.minRas || 0, "3.0+")}
-              ${opt(5, searchFilters.minRas || 0, "5.0+ (combine-caliber)")}
-              ${opt(7, searchFilters.minRas || 0, "7.0+ (elite)")}
-            </select>
-          </div>
-          <div class="sf-field">
             <label class="filter-label">MAX DISTANCE</label>
             <select class="form-select" id="sf-dist">
               ${opt(9999, searchFilters.maxDist, "Any")}
@@ -34374,14 +34390,6 @@ var _CFB = (() => {
               ${opt("undecided", searchFilters.status, "Unsigned")}
               ${opt("all", searchFilters.status, "All")}
             </select>
-          </div>
-          <div class="sf-field">
-            <label class="filter-label">MIN VISIBILITY</label>
-            <input class="gp-num" type="number" id="sf-rating" value="${searchFilters.minRating}" min="0" max="99" />
-          </div>
-          <div class="sf-field">
-            <label class="filter-label">MIN WORK ETHIC</label>
-            <input class="gp-num" type="number" id="sf-we" value="${searchFilters.minWE}" min="0" max="99" />
           </div>
           <div class="sf-field">
             <label class="filter-label">ORDER BY</label>
@@ -35106,7 +35114,7 @@ var _CFB = (() => {
     }).join("");
   }
   function setupListeners10() {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+    var _a, _b, _c, _d, _e, _f;
     const school = getPlayerSchool();
     const coach = state.playerCoach;
     document.querySelectorAll(".rec-tab").forEach((btn) => {
@@ -35186,31 +35194,19 @@ var _CFB = (() => {
       searchFilters.maxDist = parseInt(e.target.value);
       rerender();
     });
-    (_b = document.getElementById("sf-minras")) == null ? void 0 : _b.addEventListener("change", (e) => {
-      searchFilters.minRas = parseInt(e.target.value);
-      rerender();
-    });
-    (_c = document.getElementById("sf-posrank")) == null ? void 0 : _c.addEventListener("change", (e) => {
+    (_b = document.getElementById("sf-posrank")) == null ? void 0 : _b.addEventListener("change", (e) => {
       searchFilters.posRank = parseInt(e.target.value) || 0;
       rerender();
     });
-    (_d = document.getElementById("sf-rating")) == null ? void 0 : _d.addEventListener("change", (e) => {
-      searchFilters.minRating = parseInt(e.target.value) || 0;
-      rerender();
-    });
-    (_e = document.getElementById("sf-we")) == null ? void 0 : _e.addEventListener("change", (e) => {
-      searchFilters.minWE = parseInt(e.target.value) || 0;
-      rerender();
-    });
-    (_f = document.getElementById("sf-status")) == null ? void 0 : _f.addEventListener("change", (e) => {
+    (_c = document.getElementById("sf-status")) == null ? void 0 : _c.addEventListener("change", (e) => {
       searchFilters.status = e.target.value;
       rerender();
     });
-    (_g = document.getElementById("sf-sort")) == null ? void 0 : _g.addEventListener("change", (e) => {
+    (_d = document.getElementById("sf-sort")) == null ? void 0 : _d.addEventListener("change", (e) => {
       searchFilters.sort = e.target.value;
       rerender();
     });
-    (_h = document.getElementById("sf-thenby")) == null ? void 0 : _h.addEventListener("change", (e) => {
+    (_e = document.getElementById("sf-thenby")) == null ? void 0 : _e.addEventListener("change", (e) => {
       searchFilters.thenBy = e.target.value;
       rerender();
     });
@@ -35235,7 +35231,7 @@ var _CFB = (() => {
         rerender();
       });
     });
-    (_i = document.getElementById("sf-clear-attrs")) == null ? void 0 : _i.addEventListener("click", () => {
+    (_f = document.getElementById("sf-clear-attrs")) == null ? void 0 : _f.addEventListener("click", () => {
       searchFilters.attrFilters = searchFilters.attrFilters.map(() => ({ attr: "", op: "gte", val: 0 }));
       rerender();
     });
@@ -38667,11 +38663,12 @@ var _CFB = (() => {
   // js/ui/views/settings.js
   init_state();
   init_persistence();
+  init_coachprofile();
   init_state();
   init_utils();
   var settingsTab = "game";
   function renderSettings() {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e, _f;
     const s = state.settings || {};
     const SETTINGS_TABS = [["game", "Game"], ["program", "Program"], ["save", "Save"], ["dev", "Dev"]];
     if (!SETTINGS_TABS.some(([id]) => id === settingsTab)) settingsTab = "game";
@@ -38885,6 +38882,14 @@ var _CFB = (() => {
           <button class="btn-ghost dev-action-btn" id="dev-sim-season">Sim to Playoffs</button>
         </div>
       </div>
+
+      <div class="card settings-card dev-notepad-card">
+        <div class="card-header">
+          <span class="card-title">\u{1F4DD} NOTEPAD</span>
+          <span class="card-sub" id="dev-notepad-status">${state._coachId ? "travels with your coach" : "saved with your dynasty"}</span>
+        </div>
+        <textarea class="dev-notepad" id="dev-notepad" rows="12" spellcheck="false" placeholder="Scratch notes \u2014 ideas, bugs, to-dos\u2026 anything. Follows your coach across every dynasty.">${escapeHtml((state._coachId ? (_f = getCoach(state._coachId)) == null ? void 0 : _f.notes : state.devNotes) || "")}</textarea>
+      </div>
       </div>
     </div>
   `;
@@ -39077,6 +39082,29 @@ var _CFB = (() => {
       await devSimToPlayoffs();
       notify("Simulated to playoffs \u2014 check inbox for results", "info");
     });
+    const _np = document.getElementById("dev-notepad");
+    if (_np) {
+      const _npStatus = document.getElementById("dev-notepad-status");
+      let _npTimer = null;
+      _np.addEventListener("input", () => {
+        const val = _np.value;
+        if (_npStatus) _npStatus.textContent = "saving\u2026";
+        clearTimeout(_npTimer);
+        _npTimer = setTimeout(() => {
+          if (state._coachId) {
+            const ok = !!updateCoach(state._coachId, (c) => {
+              c.notes = val;
+            });
+            if (_npStatus) _npStatus.textContent = ok ? "saved \xB7 travels with your coach" : "save failed";
+          } else {
+            state.devNotes = val;
+            saveNow().then((ok) => {
+              if (_npStatus) _npStatus.textContent = ok ? "saved" : "save failed";
+            });
+          }
+        }, 700);
+      });
+    }
   }
 
   // js/ui/views/history.js
@@ -41930,11 +41958,15 @@ var _CFB = (() => {
     ];
     const _selFormId = state.ui.callFormation || ((school == null ? void 0 : school.gameplan) == null ? void 0 : school.gameplan.offFormation) || "Pro Set";
     const _pkg = FORMATION_PACKAGES[_selFormId] || FORMATION_PACKAGES["Pro Set"] || {};
-    const _wrCount = (_pkg.WR || 0) + (_pkg.SLOT || 0);
     const _drillCat = state.ui.callDrill || null;
     const _carriedIds = (((school == null ? void 0 : school.gameplan) == null ? void 0 : school.gameplan.offFormations) || []).map((f) => f && f.id).filter((id) => id && FORMATION_PACKAGES[id]);
     const _pbForms = state.ui.callFormation ? [state.ui.callFormation] : _carriedIds.length ? _carriedIds : [_selFormId];
     const _activePlaybook = formationPlaybookSet(_pbForms);
+    const _wrOf = (id) => {
+      const p = FORMATION_PACKAGES[id] || {};
+      return (p.WR || 0) + (p.SLOT || 0);
+    };
+    const _wrCount = state.ui.callFormation ? (_pkg.WR || 0) + (_pkg.SLOT || 0) : _carriedIds.length ? Math.max(..._carriedIds.map(_wrOf)) : _wrOf(_selFormId);
     const conceptsFor = (grp) => {
       var _a2;
       const names = ((_a2 = ctx2.conceptsByGroup) == null ? void 0 : _a2[grp]) || [];
@@ -42268,7 +42300,7 @@ var _CFB = (() => {
     return seq;
   }
   function initWatchMode(r, isHome, opts = {}) {
-    var _a;
+    var _a, _b;
     const root = document.getElementById("watch-root");
     if (!root) return;
     const key = (_a = opts.key) != null ? _a : r;
@@ -42291,7 +42323,9 @@ var _CFB = (() => {
     }
     const w = _watch;
     const isLive = !!w.onFinish;
-    const finalLabel = isLive ? "Skip to Final \u23ED" : "End \u23ED";
+    const _lwStage = (_b = state.ui.liveWatch) == null ? void 0 : _b.stage;
+    const finalLabel = !isLive ? "End \u23ED" : _lwStage === "halftime" ? "Skip to Halftime \u23ED" : "Skip to Final \u23ED";
+    const finalTitle = !isLive ? "Jump to the end" : _lwStage === "halftime" ? "Skip the rest of the half and go to the locker room" : "Skip the rest and jump to the final";
     root.innerHTML = `
     <div class="watch-bug" id="watch-bug"></div>
     <div class="watch-ticker" id="watch-ticker">Kickoff coming up\u2026</div>
@@ -42303,7 +42337,7 @@ var _CFB = (() => {
       ${isLive ? "" : `<button class="bc-btn bc-icon" id="watch-stepfwd" title="Step forward">\u23ED</button>`}
       <button class="bc-btn bc-speed" id="watch-speed" title="Playback speed">1\xD7</button>
       ${isLive ? "" : `<button class="bc-btn bc-text" id="watch-nextdrive" title="Next drive">Next Drive \u23ED</button>`}
-      <button class="bc-btn bc-text bc-final" id="watch-final" title="${isLive ? "Skip the rest and jump to the final" : "Jump to the end"}">${finalLabel}</button>
+      <button class="bc-btn bc-text bc-final" id="watch-final" title="${finalTitle}">${finalLabel}</button>
       <span class="watch-progress" id="watch-progress"></span>
     </div>
     <div class="watch-drives" id="watch-drives"></div>`;
@@ -42432,7 +42466,7 @@ var _CFB = (() => {
       if (pt[1] > yHi) yHi = pt[1];
     }
     const CAM_ASPECT = 100 / 62;
-    let camH = 44;
+    let camH = 52;
     let camW = camH * CAM_ASPECT;
     const fyLo = yLo - 6, fyHi = yHi + 6;
     const clampCam = (v, lo, hi) => Math.max(lo, Math.min(Math.max(lo, hi), v));
@@ -42479,7 +42513,7 @@ var _CFB = (() => {
           spotN.style.opacity = "1";
         } else spotN.style.opacity = "0";
       }
-      const hTarget = Math.max(40, Math.min(62, Math.abs(by - yHi) + 20));
+      const hTarget = Math.max(50, Math.min(62, Math.abs(by - yHi) + 24));
       camH += (hTarget - camH) * 0.06;
       camW = camH * CAM_ASPECT;
       const tX = clampCam(bx - camW / 2, 0, 100 - camW);
@@ -42574,7 +42608,7 @@ var _CFB = (() => {
           lines += `<text x="50" y="${(y + (abs === 100 ? -1.6 : 3.8)).toFixed(1)}" class="wf-goal-lbl">GOAL</text>`;
         } else if (abs % 10 === 0) {
           const num = abs <= 50 ? abs : 100 - abs;
-          lines += `<text x="3" y="${(y - 1).toFixed(1)}" class="wf-num">${num}</text><text x="97" y="${(y - 1).toFixed(1)}" class="wf-num wf-num-r">${num}</text>`;
+          lines += `<text x="16" y="${(y - 1).toFixed(1)}" class="wf-num">${num}</text><text x="84" y="${(y - 1).toFixed(1)}" class="wf-num wf-num-r">${num}</text>`;
         }
       }
       if (p.down && p.distance != null && fp + p.distance <= 100) {
@@ -42618,7 +42652,7 @@ var _CFB = (() => {
     return `${dd ? dd + " \xB7 " : ""}${form}${action}`;
   }
   function watchTickBody(w, immediate = false) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
     if (!document.getElementById("watch-board")) {
       watchStop();
       return;
@@ -42691,7 +42725,20 @@ var _CFB = (() => {
       ticker.innerHTML = `<span class="wt-result">${escapeHtml(team)}: ${formatDriveResult(item.d)}${item.d.points > 0 ? ` (+${item.d.points})` : ""}</span>`;
       holdMs = baseMs * 0.8;
     } else {
-      watchBug(null, {});
+      const trueEnd = !w.onFinish || ((_g = state.ui.liveWatch) == null ? void 0 : _g.stage) === "final";
+      if (trueEnd) {
+        watchBug(null, {});
+      } else {
+        let lp = null, ld = null;
+        for (let i = w.seq.length - 1; i >= 0; i--) {
+          if (w.seq[i].kind === "play") {
+            lp = w.seq[i].p;
+            ld = w.seq[i].d;
+            break;
+          }
+        }
+        watchBug(lp, ld || {});
+      }
       watchBoard(null);
       if (w.onFinish) {
         var _lw = state.ui.liveWatch;
@@ -42707,7 +42754,7 @@ var _CFB = (() => {
         } else {
           ticker.innerHTML = `<span class="wt-final">${w.liveLabel || "That\u2019s the half."}</span>
           <button class="btn-primary watch-continue" id="watch-continue">Continue \u2192</button>`;
-          (_g = document.getElementById("watch-continue")) == null ? void 0 : _g.addEventListener("click", () => {
+          (_h = document.getElementById("watch-continue")) == null ? void 0 : _h.addEventListener("click", () => {
             const fn = w.onFinish;
             watchStop();
             _watch = null;
@@ -42715,7 +42762,7 @@ var _CFB = (() => {
           });
         }
       } else {
-        ticker.innerHTML = `<span class="wt-final">FINAL \u2014 ${escapeHtml(((_h = w.r.homeSchool) == null ? void 0 : _h.name) || "")} ${w.r.homeScore}, ${escapeHtml(((_i = w.r.awaySchool) == null ? void 0 : _i.name) || "")} ${w.r.awayScore}</span>`;
+        ticker.innerHTML = `<span class="wt-final">FINAL \u2014 ${escapeHtml(((_i = w.r.homeSchool) == null ? void 0 : _i.name) || "")} ${w.r.homeScore}, ${escapeHtml(((_j = w.r.awaySchool) == null ? void 0 : _j.name) || "")} ${w.r.awayScore}</span>`;
       }
       watchDriveChart();
       const prog2 = document.getElementById("watch-progress");
