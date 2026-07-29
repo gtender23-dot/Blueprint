@@ -5168,7 +5168,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "6d51ecc557";
+globalThis.__BUILD__ = "d3207ebf33";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -5214,7 +5214,7 @@ var _CFB = (() => {
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
   // js/constants.js
-  var SAVE_VERSION, C, OVR_POS_ADJ, POS_WEIGHTS, ROLE_WEIGHTS, FRONT_ROLES, OUT_OF_POS, SUB_ADJACENT, SLOT_ELIGIBILITY, ARCHETYPE_DISTANCE, OFF_ROLE_BY_PLAY, FORMATION_ROLE_OVERRIDE, OFF_WEIGHTS, DEF_WEIGHTS, FORMATION_PACKAGES, FORMATION_WEIGHTS, DEF_FRONTS, DEF_FRONT_WEIGHTS, MATCHUP_MATRIX, FORMATION_SITUATIONAL, PRACTICE_SECONDARY, PRACTICE_TOOLS, DEFAULT_PRACTICE, PASS_TENDENCY, POSITIONS, ATTRIBUTES, MEASURED_ATTRS, ATTR_LABELS, attrLabel, PENALTY_CATALOG, CLASS_YEARS, ROSTER_TARGETS, STARTER_COUNTS, ROSTER_POS_MIN, ROSTER_POS_MAX, FORMATIONS, ATTR_FLOORS, RECRUIT_CORE, SIZE_BANDS, FORMATION_PLAYBOOK;
+  var SAVE_VERSION, C, OVR_POS_ADJ, POS_WEIGHTS, ROLE_WEIGHTS, FRONT_ROLES, OUT_OF_POS, SUB_ADJACENT, SLOT_ELIGIBILITY, ARCHETYPE_DISTANCE, OFF_ROLE_BY_PLAY, FORMATION_ROLE_OVERRIDE, OFF_WEIGHTS, DEF_WEIGHTS, FORMATION_PACKAGES, FORMATION_WEIGHTS, DEF_FRONTS, DEF_FRONT_WEIGHTS, MATCHUP_MATRIX, FORMATION_SITUATIONAL, PRACTICE_SECONDARY, PRACTICE_TOOLS, DEFAULT_PRACTICE, PASS_TENDENCY, POSITIONS, ATTRIBUTES, MEASURED_ATTRS, ATTR_LABELS, attrLabel, PENALTY_CATALOG, CLASS_YEARS, ROSTER_TARGETS, STARTER_COUNTS, ROSTER_POS_MIN, ROSTER_POS_MAX, FORMATIONS, FORMATION_ALIAS, aliasFormation, ATTR_FLOORS, RECRUIT_CORE, SIZE_BANDS, FORMATION_PLAYBOOK;
   var init_constants = __esm({
     "js/constants.js"() {
       SAVE_VERSION = 16;
@@ -5555,9 +5555,9 @@ var _CFB = (() => {
         SCHEME_FIT_MOD: 0.08,
         POWER_PASS_DAMP: 0.9,
         // 5-tech (DE-Power) PASS-rep efficiency vs his run anchor — bull rush is real but edges finish [TUNE]
-        CLOCK_RUN: { mean: 30, sd: 6 },
-        CLOCK_PASS: { mean: 24, sd: 8 },
-        // [TUNE Jul 2026] 28/20 produced ~76 plays/team (real ~65-72); ~24s/snap avg was too fast a baseline pace
+        CLOCK_RUN: { mean: 29, sd: 6 },
+        CLOCK_PASS: { mean: 23, sd: 8 },
+        // [TUNE Jul 2026] 30/24 held ~69 plays w/ rush light; 29/23 (+ Balanced run-rate 0.44) lifts to ~71 plays so rush att/yds reach the real band, pass/sacks/points still in-band
         HALF_SECONDS: 1800,
         TIMEOUTS_PER_HALF: 3,
         // each team gets 3 timeouts per half to stop the clock late in a half/game
@@ -5602,7 +5602,7 @@ var _CFB = (() => {
         //              conflict defender is already leaning.
         //   Air Raid — a drop-back system; RPOs exist in it but aren't its language,
         //              and with no back in the box there's little run to threaten.
-        //   Pro Set / Power-I — under center. The QB turns his back to the box at the
+        //   Power-I — under center. The QB turns his back to the box at the
         //              mesh: he physically cannot read the defender he's optioning.
         //              Not zero (a rare peek play), but close to it.
         RPO_FIT: {
@@ -5610,7 +5610,6 @@ var _CFB = (() => {
           "Spread": 0.85,
           "Trips/Bunch": 0.7,
           "Air Raid": 0.45,
-          "Pro Set": 0.15,
           "Power-I": 0.05,
           // Expansion five: Single Back is under center (peek plays only). Empty
           // has no back to option — the "R" in RPO doesn't exist. The 'bone and
@@ -6645,7 +6644,6 @@ var _CFB = (() => {
         pass_deep: { DB: 0.6, DL: 0.25, LB: 0.15 }
       };
       FORMATION_PACKAGES = {
-        "Pro Set": { RB: 2, FB: 0, TE: 1, WR: 2 },
         "Power-I": { RB: 1, FB: 1, TE: 2, WR: 1 },
         "Spread": { RB: 1, FB: 0, TE: 1, WR: 3 },
         "Air Raid": { RB: 1, FB: 0, TE: 0, WR: 4 },
@@ -6664,13 +6662,6 @@ var _CFB = (() => {
         // direct snap to the back; QB split wide
       };
       FORMATION_WEIGHTS = {
-        "Pro Set": {
-          run_inside: { OL: 0.45, RB: 0.3, FB: 0.1, TE: 0.1, QB: 0.05 },
-          run_outside: { OL: 0.32, RB: 0.32, FB: 0.08, TE: 0.1, WR: 0.1, QB: 0.08 },
-          pass_short: { QB: 0.4, OL: 0.2, WR: 0.2, TE: 0.1, RB: 0.1 },
-          pass_medium: { QB: 0.45, WR: 0.3, OL: 0.15, TE: 0.1 },
-          pass_deep: { QB: 0.4, WR: 0.4, OL: 0.2 }
-        },
         "Power-I": {
           run_inside: { OL: 0.38, RB: 0.34, FB: 0.16, TE: 0.08, QB: 0.04 },
           run_outside: { OL: 0.34, RB: 0.28, FB: 0.12, TE: 0.1, WR: 0.08, QB: 0.08 },
@@ -6799,7 +6790,6 @@ var _CFB = (() => {
         }
       };
       MATCHUP_MATRIX = {
-        "Pro Set": { "4-3": 1, "3-4": 1, "Nickel": 0.99, "Dime": 0.98, "46/Bear": 0.99 },
         "Power-I": { "4-3": 0.99, "3-4": 1, "Nickel": 1.1, "Dime": 1.15, "46/Bear": 0.88 },
         "Spread": { "4-3": 1.05, "3-4": 1.04, "Nickel": 0.98, "Dime": 0.95, "46/Bear": 1.08 },
         "Air Raid": { "4-3": 1.08, "3-4": 1.06, "Nickel": 0.96, "Dime": 0.93, "46/Bear": 1.12 },
@@ -6814,7 +6804,6 @@ var _CFB = (() => {
         "Wildcat": { "4-3": 0.98, "3-4": 0.99, "Nickel": 1.09, "Dime": 1.13, "46/Bear": 0.85 }
       };
       FORMATION_SITUATIONAL = {
-        "Pro Set": { shortYardage: 1.03, thirdLong: 0.97, twoMinute: 0.99, redZone: 1.01, standard: 1 },
         "Power-I": { shortYardage: 1.14, thirdLong: 0.86, twoMinute: 0.88, redZone: 1.08, standard: 1 },
         "Spread": { shortYardage: 0.95, thirdLong: 1.05, twoMinute: 1.06, redZone: 0.97, standard: 1 },
         "Air Raid": { shortYardage: 0.88, thirdLong: 1.1, twoMinute: 1.08, redZone: 0.94, standard: 1 },
@@ -6854,11 +6843,11 @@ var _CFB = (() => {
         "Always Pass": 0.82,
         "Heavy Pass": 0.68,
         "Pass": 0.58,
-        "Balanced": 0.48,
+        "Balanced": 0.44,
         "Run": 0.41,
         "Heavy Run": 0.32,
         "Always Run": 0.18
-        // Balanced nudged 0.50→0.48 (college skews run) to hold rush volume as YPC was recentered down
+        // Balanced 0.44 (run ~56%): college skews run; lifts rush att into the real band while pass holds
       };
       POSITIONS = ["QB", "RB", "WR", "TE", "OL", "DE", "DT", "OLB", "LB", "CB", "S", "K", "P"];
       ATTRIBUTES = ["SPD", "AGI", "PWR", "STR", "JMP", "HND", "SEC", "TEC", "AWR", "CON", "WE"];
@@ -6915,7 +6904,6 @@ var _CFB = (() => {
       ROSTER_POS_MIN = { QB: 2, RB: 4, WR: 6, TE: 2, OL: 9, DE: 3, DT: 3, OLB: 3, LB: 3, CB: 4, S: 3, K: 1, P: 1 };
       ROSTER_POS_MAX = { QB: 5, RB: 9, WR: 13, TE: 6, OL: 19, DE: 7, DT: 7, OLB: 7, LB: 7, CB: 9, S: 7, K: 3, P: 2 };
       FORMATIONS = {
-        "Pro Set": { passLean: 0, runIn: 0.55, runOut: 0.45, identity: "balanced", label: "Pro Set", desc: "Balanced \u2014 2 RB, 1 TE, 2 WR" },
         "Power-I": { passLean: -0.15, runIn: 0.75, runOut: 0.25, identity: "run_inside", label: "Power-I", desc: "Power run \u2014 FB, 2 TE, 1 WR" },
         "Spread": { passLean: 0.15, runIn: 0.4, runOut: 0.6, identity: "pass_medium", label: "Spread", desc: "Pass-lean \u2014 1 TE, 3 WR, tempo" },
         "Air Raid": { passLean: 0.3, runIn: 0.3, runOut: 0.7, identity: "pass_deep", label: "Air Raid", desc: "Heavy pass \u2014 4 WR, no TE" },
@@ -6928,6 +6916,8 @@ var _CFB = (() => {
         "Flexbone": { passLean: -0.25, runIn: 0.45, runOut: 0.55, identity: "run_inside", label: "Flexbone", desc: "Option + motion \u2014 FB, 2 slotbacks" },
         "Wildcat": { passLean: -0.35, runIn: 0.6, runOut: 0.4, identity: "run_inside", label: "Wildcat", desc: "Direct snap \u2014 QB split wide" }
       };
+      FORMATION_ALIAS = { "Pro Set": "Single Back" };
+      aliasFormation = (id) => FORMATION_ALIAS[id] || id;
       ATTR_FLOORS = {
         QB: { SPD: 22, STR: 30 },
         RB: { SPD: 34, AGI: 32, PWR: 22 },
@@ -7063,7 +7053,6 @@ var _CFB = (() => {
         }
       };
       FORMATION_PLAYBOOK = {
-        "Pro Set": ["Inside Zone", "Power", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Red-Zone Fade"],
         "Single Back": ["Inside Zone", "Power", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Red-Zone Fade"],
         "Power-I": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "RB Screen", "Smash", "Curl-Flat", "Y-Cross", "PA Deep Cross", "Red-Zone Fade"],
         "Wishbone": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "RB Screen", "Curl-Flat", "Y-Cross", "PA Deep Cross", "Red-Zone Fade"],
@@ -7610,7 +7599,7 @@ var _CFB = (() => {
     var _a;
     const coord = (_a = school == null ? void 0 : school.staff) == null ? void 0 : _a.oc;
     if (!coord) return 48;
-    const forms = (gameplan == null ? void 0 : gameplan.offFormations) && gameplan.offFormations.length ? gameplan.offFormations : [{ id: (gameplan == null ? void 0 : gameplan.offFormation) || "Pro Set", weight: 100 }];
+    const forms = (gameplan == null ? void 0 : gameplan.offFormations) && gameplan.offFormations.length ? gameplan.offFormations : [{ id: (gameplan == null ? void 0 : gameplan.offFormation) || "Single Back", weight: 100 }];
     const totalWeight = forms.reduce((s, f) => s + (f.weight || 0), 0) || 1;
     return forms.reduce((s, f) => {
       var _a2, _b;
@@ -7631,7 +7620,7 @@ var _CFB = (() => {
       }
       coord.seasons = (coord.seasons || 0) + 1;
     };
-    const offUsage = gp.offFormations && gp.offFormations.length ? gp.offFormations.map((f) => ({ id: f.id, w: f.weight || 0 })) : [{ id: gp.offFormation || "Pro Set", w: 100 }];
+    const offUsage = gp.offFormations && gp.offFormations.length ? gp.offFormations.map((f) => ({ id: f.id, w: f.weight || 0 })) : [{ id: gp.offFormation || "Single Back", w: 100 }];
     grow((_a = school == null ? void 0 : school.staff) == null ? void 0 : _a.oc, offUsage);
     grow((_b = school == null ? void 0 : school.staff) == null ? void 0 : _b.dc, [{ id: gp.defFront && gp.defFront !== "auto" ? gp.defFront : "4-3", w: 100 }]);
   }
@@ -11282,9 +11271,9 @@ var _CFB = (() => {
     school.gameplan.defBaseFront = defFront || "4-3";
     const OFF_BY_QB = {
       "QB-Scrambler": { formations: [{ id: "Pistol/RPO", weight: 55 }, { id: "Spread", weight: 30 }, { id: "Power-I", weight: 15 }], tendency: "Balanced" },
-      "QB-Gunslinger": { formations: [{ id: "Air Raid", weight: 45 }, { id: "Spread", weight: 40 }, { id: "Pro Set", weight: 15 }], tendency: "Heavy Pass" },
-      "QB-Pocket": { formations: [{ id: "Pro Set", weight: 45 }, { id: "Spread", weight: 30 }, { id: "Power-I", weight: 25 }], tendency: "Balanced" },
-      "QB-Game-Manager": { formations: [{ id: "Pro Set", weight: 40 }, { id: "Power-I", weight: 35 }, { id: "Spread", weight: 25 }], tendency: "Heavy Run" }
+      "QB-Gunslinger": { formations: [{ id: "Air Raid", weight: 45 }, { id: "Spread", weight: 40 }, { id: "Single Back", weight: 15 }], tendency: "Heavy Pass" },
+      "QB-Pocket": { formations: [{ id: "Single Back", weight: 45 }, { id: "Spread", weight: 30 }, { id: "Power-I", weight: 25 }], tendency: "Balanced" },
+      "QB-Game-Manager": { formations: [{ id: "Single Back", weight: 40 }, { id: "Power-I", weight: 35 }, { id: "Spread", weight: 25 }], tendency: "Heavy Run" }
     };
     const off = OFF_BY_QB[qbPref];
     if (off) {
@@ -11597,7 +11586,7 @@ var _CFB = (() => {
   function defaultGameplan() {
     return {
       offFormations: [
-        { id: "Pro Set", weight: 40 },
+        { id: "Single Back", weight: 40 },
         { id: "Spread", weight: 35 },
         { id: "Power-I", weight: 25 }
       ],
@@ -13891,7 +13880,7 @@ var _CFB = (() => {
     const fa = gp.fieldAssignments;
     if (!fa.offense) fa.offense = {};
     if (!fa.defense) fa.defense = {};
-    for (const fid of Object.keys(OFF_FIELD_LAYOUTS)) {
+    for (const fid of Object.keys(OFF_FIELD_LAYOUTS).filter((_fid) => FORMATIONS[_fid])) {
       const layout = OFF_FIELD_LAYOUTS[fid];
       if (!fa.offense[fid]) fa.offense[fid] = { slots: {}, shares: {} };
       const entry = fa.offense[fid];
@@ -13935,6 +13924,7 @@ var _CFB = (() => {
   var init_fieldassign = __esm({
     "js/engine/fieldassign.js"() {
       init_constants_field();
+      init_constants();
       SLOT_ELIGIBLE_POS = {
         WR: ["WR"],
         // X and Z: split end / flanker — receivers only
@@ -15203,7 +15193,7 @@ var _CFB = (() => {
     return out;
   }
   function resolvePersonnel(formationId, depthChart) {
-    const pkg = FORMATION_PACKAGES[formationId] || FORMATION_PACKAGES["Pro Set"];
+    const pkg = FORMATION_PACKAGES[aliasFormation(formationId)] || FORMATION_PACKAGES["Single Back"];
     if (!pkg) return null;
     const used = /* @__PURE__ */ new Set();
     const personnel = {
@@ -15335,16 +15325,23 @@ var _CFB = (() => {
     return assigned;
   }
   function rollFormation(offFormations) {
-    const live = (offFormations || []).filter((f) => f && FORMATION_PACKAGES[f.id]);
-    if (!live.length) return "Pro Set";
+    const live = (offFormations || []).filter((f) => f && FORMATION_PACKAGES[aliasFormation(f.id)]);
+    if (!live.length) return "Single Back";
     const total = live.reduce((s, f) => s + (f.weight || 0), 0);
-    if (total <= 0) return live[0].id;
-    let r = Math.random() * total;
-    for (const f of live) {
-      r -= f.weight || 0;
-      if (r <= 0) return f.id;
+    let pick2 = live[live.length - 1].id;
+    if (total <= 0) {
+      pick2 = live[0].id;
+    } else {
+      let r = Math.random() * total;
+      for (const f of live) {
+        r -= f.weight || 0;
+        if (r <= 0) {
+          pick2 = f.id;
+          break;
+        }
+      }
     }
-    return live[live.length - 1].id;
+    return aliasFormation(pick2);
   }
   function selectDefFront(baseFront, down, distance, clock, half, trailing, offFormationId = null, philosophy = "auto") {
     const base = baseFront || "4-3";
@@ -17037,7 +17034,7 @@ var _CFB = (() => {
     }
     return assigned;
   }
-  function resolvePassPlay(playType, offPersonnel, defPersonnel, offRoster, defRoster, qb, offUnit, defUnit, offPlan, defPlan, frontId, shareByPlayerId = null, blitzShareByPlayerId = null, offFormationId = "Pro Set", roleBySlotPlayer = null, dropShareById = null) {
+  function resolvePassPlay(playType, offPersonnel, defPersonnel, offRoster, defRoster, qb, offUnit, defUnit, offPlan, defPlan, frontId, shareByPlayerId = null, blitzShareByPlayerId = null, offFormationId = "Single Back", roleBySlotPlayer = null, dropShareById = null) {
     var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa;
     const result = {
       type: playType,
@@ -17074,7 +17071,6 @@ var _CFB = (() => {
     if (playType !== "pass_short") {
       const PA_RATE = {
         "Power-I": 0.34,
-        "Pro Set": 0.27,
         "Trips/Bunch": 0.21,
         "Spread": 0.17,
         "Pistol/RPO": 0.3,
@@ -17509,7 +17505,6 @@ var _CFB = (() => {
         "Spread": 0.28,
         "Air Raid": 0.25,
         "Pistol/RPO": 0.22,
-        "Pro Set": 0.2,
         "Power-I": 0.12,
         // Expansion five: Flexbone A-back motion is constant
         // (it's the formation's heartbeat); Wildcat lives on
@@ -18256,7 +18251,7 @@ var _CFB = (() => {
   }
   function pickPlayType(formationId, gameplan, sitTendency, down, distance, fieldPos, score, clock) {
     var _a, _b, _c, _d, _e, _f;
-    const formInfo = FORMATIONS[formationId] || FORMATIONS["Pro Set"] || Object.values(FORMATIONS)[0];
+    const formInfo = FORMATIONS[aliasFormation(formationId)] || Object.values(FORMATIONS)[0];
     const formLean = formInfo.passLean * 0.5;
     let passRate;
     if (sitTendency != null) {
@@ -18692,7 +18687,7 @@ var _CFB = (() => {
             fourthDecided,
             clock: gameState.clock,
             sit: __spreadProps(__spreadValues({}, sit), {
-              formations: formations.length ? formations : [offPlan.offFormation || "Pro Set"],
+              formations: formations.length ? formations : [aliasFormation(offPlan.offFormation || "Single Back")],
               conceptsByGroup: conceptGroups(),
               // the sheet's ≈% follow the SITUATION (wizard grid)
               conceptWeights: (_j = askEff.conceptWeights) != null ? _j : null
@@ -18848,7 +18843,7 @@ var _CFB = (() => {
         _dnaPressure: ((_w = defSchool == null ? void 0 : defSchool._dnaGrades) == null ? void 0 : _w.pressure) || 0,
         _dnaBallHawk: ((defSchool == null ? void 0 : defSchool._dnaGrades) == null ? void 0 : defSchool._dnaGrades.ballHawk) || 0
       });
-      const offFormationId = (forcedCall == null ? void 0 : forcedCall.formationId) && FORMATION_PACKAGES[forcedCall.formationId] ? forcedCall.formationId : rollFormation(offEff.offFormations) || offPlan.offFormation || "Pro Set";
+      const offFormationId = (forcedCall == null ? void 0 : forcedCall.formationId) && FORMATION_PACKAGES[forcedCall.formationId] ? forcedCall.formationId : aliasFormation(rollFormation(offEff.offFormations) || offPlan.offFormation || "Single Back");
       const defFrontId = defEff.defFront !== "auto" ? defEff.defFront : selectDefFront(
         defPlan.defBaseFront || "4-3",
         down,
@@ -20382,7 +20377,6 @@ var _CFB = (() => {
       init_rushgeo();
       QB_RUN_BASE = {
         "Power-I": 0.04,
-        "Pro Set": 0.08,
         "Air Raid": 0.08,
         "Trips/Bunch": 0.12,
         "Spread": 0.18,
@@ -20414,7 +20408,6 @@ var _CFB = (() => {
         "Air Raid": 0.1,
         "Empty": 0.1,
         "Single Back": 0.08,
-        "Pro Set": 0.06,
         "Power-I": 0.04
       };
       DRAW_DEFAULT = 8;
@@ -20427,7 +20420,6 @@ var _CFB = (() => {
         "Empty": ["WR_S", "WR_F"],
         "Pistol/RPO": ["WR_S"],
         "Single Back": ["WR_Z", "TE_U"],
-        "Pro Set": ["WR_Z"],
         "Power-I": ["WR_X"]
       };
       _passCtx = { covStyle: "balanced", qbAggr: 50 };
@@ -20981,17 +20973,16 @@ var _CFB = (() => {
     const day = state2.day;
     if (day < 1 || day > 4) return { ok: true };
     const ctx2 = devCtx(state2);
-    if (day === 1 && !ctx2.devDone) {
-      runDevCamp(state2);
-      events.push({ type: "info", text: `Development camp auto-ran (avg gain +${ctx2.campAvgGain}). Report on the Week 1 card.` });
-    }
-    if (day === 2 && !ctx2.springResult) {
-      const sg = playSpringGame(state2);
-      if (sg.ok) events.push({ type: "info", text: `Spring game simmed: ${sg.result.nameA} ${sg.result.scoreA}\u2013${sg.result.scoreB} ${sg.result.nameB}.` });
-    }
-    if (day === 4) {
+    if (day === 1) {
       commitSeasonGoals(state2, state2.season);
       events.push({ type: "info", text: "AD expectations locked for the season." });
+    }
+    if (day === 3) {
+      if (!ctx2.devDone) runDevCamp(state2);
+      if (!ctx2.springResult) {
+        const sg = playSpringGame(state2);
+        if (sg.ok) events.push({ type: "info", text: `Spring game auto-ran \u2014 camp avg gain +${ctx2.campAvgGain}, ${sg.result.nameA} ${sg.result.scoreA}\u2013${sg.result.scoreB} ${sg.result.nameB}.` });
+      }
     }
     return { ok: true };
   }
@@ -21306,10 +21297,10 @@ var _CFB = (() => {
         }
       ];
       PRESEASON_WEEKS = {
-        1: { id: "camp", label: "Development Camp" },
-        2: { id: "spring", label: "Spring Game" },
-        3: { id: "redshirts", label: "Redshirt Finalization" },
-        4: { id: "expectations", label: "Expectations" }
+        1: { id: "expectations", label: "Expectations" },
+        2: { id: "recruiting", label: "Recruiting" },
+        3: { id: "spring", label: "Spring Game" },
+        4: { id: "redshirts", label: "Redshirt Finalization" }
       };
       FOCUS_GROUPS = [
         { id: "balanced", label: "Balanced", positions: null },
@@ -21440,7 +21431,7 @@ var _CFB = (() => {
     const offFormations = pickFormations(bucket, mobile, wrDeepBias);
     const frontLean = lbStr - dlStr + randNorm(0, 1.5);
     const defBaseFront = frontLean > -2 ? "3-4" : "4-3";
-    const primaryFormation = ((_a = offFormations[0]) == null ? void 0 : _a.id) || "Pro Set";
+    const primaryFormation = ((_a = offFormations[0]) == null ? void 0 : _a.id) || "Single Back";
     const isOptionTeam = primaryFormation === "Flexbone" || primaryFormation === "Wishbone";
     let qbRunPct = 0;
     if (isOptionTeam) qbRunPct = randInt3(5, 12);
@@ -21578,7 +21569,7 @@ var _CFB = (() => {
     const lean = (_a = PASS_TENDENCY[gp.tendency || "Balanced"]) != null ? _a : 0.5;
     const bucket = lean <= 0.35 ? "runHeavy" : lean <= 0.44 ? "run" : lean >= 0.65 ? "passHeavy" : lean >= 0.56 ? "pass" : "balanced";
     const agg = (_d = (_c = (_b = school.coach) == null ? void 0 : _b.personality) == null ? void 0 : _c.aggression) != null ? _d : 0.5;
-    gp.situations = buildAISituations(bucket, gp.offFormations || [{ id: "Pro Set", weight: 100 }], agg);
+    gp.situations = buildAISituations(bucket, gp.offFormations || [{ id: "Single Back", weight: 100 }], agg);
   }
   function aiSetWeeklyReaction(school, opponent, iq = "varsity") {
     var _a, _b, _c, _d, _e, _f, _g, _h, _i;
@@ -21680,8 +21671,8 @@ var _CFB = (() => {
       init_concepts();
       FORMATION_TEMPLATES = {
         runHeavy: {
-          mobile: [["Pistol/RPO", 50], ["Power-I", 30], ["Pro Set", 20]],
-          pocket: [["Power-I", 45], ["Pro Set", 30], ["Single Back", 25]],
+          mobile: [["Pistol/RPO", 50], ["Power-I", 30], ["Single Back", 20]],
+          pocket: [["Power-I", 45], ["Single Back", 55]],
           // Service-academy branch: a slice of run-heavy mobile-QB staffs are true
           // triple-option programs (Jul 2026, expansion five). Rolled per-school in
           // pickFormations, not a bucket of its own — option ball is a philosophy
@@ -21689,16 +21680,16 @@ var _CFB = (() => {
           option: [["Flexbone", 45], ["Wishbone", 35], ["Power-I", 20]]
         },
         run: {
-          mobile: [["Pistol/RPO", 40], ["Pro Set", 30], ["Power-I", 20], ["Single Back", 10]],
-          pocket: [["Pro Set", 35], ["Power-I", 30], ["Single Back", 20], ["Pistol/RPO", 15]]
+          mobile: [["Pistol/RPO", 40], ["Single Back", 40], ["Power-I", 20]],
+          pocket: [["Single Back", 55], ["Power-I", 30], ["Pistol/RPO", 15]]
         },
         balanced: {
-          mobile: [["Spread", 35], ["Pistol/RPO", 35], ["Pro Set", 30]],
-          pocket: [["Pro Set", 35], ["Spread", 25], ["Single Back", 20], ["Power-I", 20]]
+          mobile: [["Spread", 35], ["Pistol/RPO", 35], ["Single Back", 30]],
+          pocket: [["Single Back", 55], ["Spread", 25], ["Power-I", 20]]
         },
         pass: {
           deep: [["Air Raid", 35], ["Spread", 30], ["Trips/Bunch", 20], ["Empty", 15]],
-          short: [["Trips/Bunch", 40], ["Spread", 35], ["Pro Set", 25]]
+          short: [["Trips/Bunch", 40], ["Spread", 35], ["Single Back", 25]]
         },
         passHeavy: {
           deep: [["Air Raid", 45], ["Spread", 25], ["Empty", 15], ["Trips/Bunch", 15]],
@@ -21909,7 +21900,8 @@ var _CFB = (() => {
   function recruitAssistLevel(state2) {
     var _a, _b;
     const lvl = (_a = state2.settings) == null ? void 0 : _a.recruitAssist;
-    if (lvl === "off" || lvl === "assist" || lvl === "full") return lvl;
+    if (lvl === "off") return "off";
+    if (lvl === "full" || lvl === "assist") return "full";
     return ((_b = state2.settings) == null ? void 0 : _b.autoRecruit) ? "full" : "off";
   }
   function defaultRecruitStrategy() {
@@ -21945,8 +21937,8 @@ var _CFB = (() => {
     }
     return null;
   }
-  function assistOfferBar(level, aggr) {
-    let bar = level === "full" ? 35 : 50;
+  function assistOfferBar(aggr) {
+    let bar = 35;
     if (aggr === "aggressive") bar -= 8;
     else if (aggr === "conservative") bar += 8;
     return bar;
@@ -22006,10 +21998,11 @@ var _CFB = (() => {
       }
       const perPosCap = (pos) => {
         const need = openNeed(pos);
-        if (level === "assist") return need > 0 ? Math.min(5, need + 2) : 0;
         return need > 0 ? Math.min(5, need + 2) : 2;
       };
-      const cands = recruits.filter((r) => !r.committed && !boardIds.has(r.id) && autoCalibReVisible(r, myTier) && (r.visionRating || 0) >= floor && (level === "full" || openNeed(r.position) > 0)).map((r) => {
+      const cands = recruits.filter(
+        (r) => !r.committed && !boardIds.has(r.id) && autoCalibReVisible(r, myTier) && (r.visionRating || 0) >= floor
+      ).map((r) => {
         const need = openNeed(r.position);
         const score = (need > 0 ? 500 : 0) - priIndex(r.position) * 30 + Math.min(need, 4) * 40 + (r.visionRating || 0) * 0.6 + distScore(recruitDistance(r, school)) * 2;
         return { r, score };
@@ -22028,14 +22021,14 @@ var _CFB = (() => {
     const perDay = (coach.budget || 0) / remainingDays;
     const contactFrac = aggr === "aggressive" ? 0.7 : aggr === "conservative" ? 0.45 : 0.58;
     const dailyCap = perDay * 0.45;
-    const offerBar = assistOfferBar(level, aggr);
+    const offerBar = assistOfferBar(aggr);
     const sorted = [...board].sort((a, b) => {
       if (!!a.eliminated !== !!b.eliminated) return a.eliminated ? 1 : -1;
       return (b.interest || 0) + distScore(entryDist(b)) - ((a.interest || 0) + distScore(entryDist(a)));
     });
     const MIN_RATE = 100;
     const MAX_RATE = aggr === "aggressive" ? 900 : aggr === "conservative" ? 500 : 700;
-    const focusCap = (level === "full" ? 8 : 0) + (aggr === "aggressive" ? 22 : aggr === "conservative" ? 12 : 18);
+    const focusCap = 8 + (aggr === "aggressive" ? 22 : aggr === "conservative" ? 12 : 18);
     const sustainableContact = perDay * contactFrac;
     const activeCount = sorted.filter((e) => !e.eliminated).length;
     const focusCount = Math.max(1, Math.min(activeCount, focusCap, Math.floor(sustainableContact / MIN_RATE)));
@@ -22061,7 +22054,7 @@ var _CFB = (() => {
       focusRank++;
       const alloc = focusRank <= focusCount ? perRecruit : 0;
       if ((entry.contactAlloc || 0) !== alloc) setContactAlloc(entry, alloc);
-      const wantOffer = !entry.offered && (coach.scholarshipsAvailable || 0) > 0 && (entry.interest || 0) >= offerBar && (level === "full" || openNeed(pos) > 0);
+      const wantOffer = !entry.offered && (coach.scholarshipsAvailable || 0) > 0 && (entry.interest || 0) >= offerBar;
       const action = wantOffer && (coach.budget || 0) >= (actionCost("offer", dist) || C.RECRUIT_ACTION_COST.offer || 0) ? "offer" : autoLegworkAction(coach, recruit, entry, dist);
       if (!action) continue;
       const cost = actionCost(action, dist) || C.RECRUIT_ACTION_COST[action] || 0;
@@ -26291,7 +26284,6 @@ var _CFB = (() => {
     const paWord = paCred >= 0.7 ? "sells hard" : paCred >= 0.45 ? "credible" : paCred >= 0.25 ? "thin" : "nobody bites";
     const PA_RATE = {
       "Power-I": 0.34,
-      "Pro Set": 0.27,
       "Trips/Bunch": 0.21,
       "Spread": 0.17,
       "Pistol/RPO": 0.3,
@@ -26307,7 +26299,6 @@ var _CFB = (() => {
       "Spread": 0.28,
       "Air Raid": 0.25,
       "Pistol/RPO": 0.22,
-      "Pro Set": 0.2,
       "Power-I": 0.12,
       "Single Back": 0.22,
       "Empty": 0.3,
@@ -26315,7 +26306,7 @@ var _CFB = (() => {
       "Flexbone": 0.45,
       "Wildcat": 0.4
     };
-    const forms = gp.offFormations || [{ id: gp.offFormation || "Pro Set", weight: 100 }];
+    const forms = gp.offFormations || [{ id: gp.offFormation || "Single Back", weight: 100 }];
     const tot = forms.reduce((s, f) => s + (f.weight || 0), 0) || 1;
     const wavg = (table) => forms.reduce((s, f) => {
       var _a2;
@@ -26356,7 +26347,7 @@ var _CFB = (() => {
     })()}
       ${(() => {
       var _a2;
-      const JET_FORMS = ["Wildcat", "Flexbone", "Pistol/RPO", "Spread", "Trips/Bunch", "Air Raid", "Empty", "Single Back", "Pro Set", "Power-I"];
+      const JET_FORMS = ["Wildcat", "Flexbone", "Pistol/RPO", "Spread", "Trips/Bunch", "Air Raid", "Empty", "Single Back", "Power-I"];
       const jetShare = forms.filter((f) => JET_FORMS.includes(f.id)).reduce((s, f) => s + (f.weight || 0), 0) / tot;
       if (jetShare <= 0.05) return "";
       return `<div class="id-row"><span class="id-lbl">\u{1F680} Jet sweeps</span><span>~${Math.round(jetShare * ((_a2 = gp.jetRate) != null ? _a2 : 15))}% of outside runs hit the motion man</span></div>`;
@@ -26522,10 +26513,10 @@ var _CFB = (() => {
                 <span class="gp-slider-hi">60%</span>
                 <span class="gp-slider-val" id="rpo-val">${(_b = gp.rpoRate) != null ? _b : 40}%</span>
               </div>
-              <div class="gp-tip tip-info">\u25B8 RPOs run from ANY formation \u2014 what changes is whether your QB can read the mesh. Pistol is what the concept was built for (100% of the dial); Spread is nearly as good (85%); Trips telegraphs it (70%); Air Raid is a drop-back system (45%). Under center \u2014 Pro Set (15%) and Power-I (5%) \u2014 he turns his back on the defender he's optioning, so the read barely exists. Higher = more mesh reads: a smart QB (AWR) pulls it against a crashing box for the free slant.</div>
+              <div class="gp-tip tip-info">\u25B8 RPOs run from ANY formation \u2014 what changes is whether your QB can read the mesh. Pistol is what the concept was built for (100% of the dial); Spread is nearly as good (85%); Trips telegraphs it (70%); Air Raid is a drop-back system (45%). Under center \u2014 Power-I (5%) \u2014 he turns his back on the defender he's optioning, so the read barely exists. Higher = more mesh reads: a smart QB (AWR) pulls it against a crashing box for the free slant.</div>
             </div>
 
-            ${["Wildcat", "Flexbone", "Pistol/RPO", "Spread", "Trips/Bunch", "Air Raid", "Empty", "Single Back", "Pro Set", "Power-I"].some((f) => selectedIds.has(f)) ? `
+            ${["Wildcat", "Flexbone", "Pistol/RPO", "Spread", "Trips/Bunch", "Air Raid", "Empty", "Single Back", "Power-I"].some((f) => selectedIds.has(f)) ? `
             <div class="gp-row">
               <label class="gp-label">Jet Sweep Rate <span class="gp-hint">(outside runs to your motion man)</span></label>
               <div class="gp-slider-wrap">
@@ -26534,7 +26525,7 @@ var _CFB = (() => {
                 <span class="gp-slider-hi">40%</span>
                 <span class="gp-slider-val" id="jet-rate-val">${(_d = gp.jetRate) != null ? _d : 15}%</span>
               </div>
-              <div class="gp-tip tip-info">\u25B8 The ball goes to your motion man at full speed \u2014 the slot joker (Spread/Trips/Air Raid/Empty/Pistol), an A-back (Flexbone), the JET spot (Wildcat), or your flanker/wing in pro sets (Single Back/Pro Set/Power-I, at naturally lower rates). Boom or bust: a displaced edge is a footrace your burner wins, a sniffed one (edge AWR, loaded boxes) is a TFL waiting in the alley. Only the Wishbone abstains \u2014 nobody jets out of the full house.</div>
+              <div class="gp-tip tip-info">\u25B8 The ball goes to your motion man at full speed \u2014 the slot joker (Spread/Trips/Air Raid/Empty/Pistol), an A-back (Flexbone), the JET spot (Wildcat), or your flanker/wing in pro sets (Single Back/Power-I, at naturally lower rates). Boom or bust: a displaced edge is a footrace your burner wins, a sniffed one (edge AWR, loaded boxes) is a TFL waiting in the alley. Only the Wishbone abstains \u2014 nobody jets out of the full house.</div>
             </div>` : ""}
 
             <div class="gp-row">
@@ -27887,17 +27878,21 @@ var _CFB = (() => {
     return parts.join(" \xB7 ");
   }
   function normalizeFormations(offFormations, offFormation) {
-    if (Array.isArray(offFormations) && offFormations.length > 0) return offFormations;
     const legacyMap = {
-      "Pro-Set": "Pro Set",
+      "Pro-Set": "Single Back",
+      "Pro Set": "Single Back",
       "I-Form": "Power-I",
       "Shotgun": "Spread",
       "Wishbone": "Power-I",
       "Trips": "Trips/Bunch",
       "ND Box": "Power-I"
     };
-    const migrated = legacyMap[offFormation] || offFormation || "Pro Set";
-    const validId = ALL_FORMATIONS.includes(migrated) ? migrated : "Pro Set";
+    const fixId = (id) => {
+      const m = legacyMap[id] || id;
+      return ALL_FORMATIONS.includes(m) ? m : "Single Back";
+    };
+    if (Array.isArray(offFormations) && offFormations.length > 0) return offFormations.map((f) => __spreadProps(__spreadValues({}, f), { id: fixId(f.id) }));
+    const validId = fixId(offFormation);
     return [
       { id: validId, weight: 50 },
       { id: "Spread", weight: 30 },
@@ -28375,11 +28370,10 @@ var _CFB = (() => {
       </div>
 
       ${(() => {
-      const ra = s.recruitAssist === "assist" || s.recruitAssist === "full" ? s.recruitAssist : "off";
+      const ra = s.recruitAssist === "assist" || s.recruitAssist === "full" ? "full" : "off";
       const RA = [
         ["off", "Off", "You run recruiting yourself \u2014 full control of the board."],
-        ["assist", "Assist", "Your staff covers your roster needs; you handle the rest. Override anytime."],
-        ["full", "Full", "Your staff builds and closes the whole class, hands-off."]
+        ["full", "On", "Your staff builds and closes the whole class, hands-off."]
       ];
       return `
       <div class="ob-setting-row">
@@ -30757,7 +30751,7 @@ var _CFB = (() => {
     var _a, _b;
     if (!opp) return "";
     const og = opp.gameplan || {};
-    const topForm = (Array.isArray(og.offFormations) && og.offFormations.length ? og.offFormations.slice().sort((a, b) => (b.weight || 0) - (a.weight || 0))[0].id : og.offFormation) || "Pro Set";
+    const topForm = (Array.isArray(og.offFormations) && og.offFormations.length ? og.offFormations.slice().sort((a, b) => (b.weight || 0) - (a.weight || 0))[0].id : og.offFormation) || "Single Back";
     const passPct = Math.round(((_a = PASS_TENDENCY[og.tendency]) != null ? _a : 0.5) * 100);
     const threats = (opp.roster || []).filter((p) => ["QB", "RB", "WR", "TE"].includes(p.position)).sort((a, b) => b.compositeRating - a.compositeRating).slice(0, 2);
     const threatStr = threats.map((p) => `<span class="player-link" data-pcard="${p.id}">${escapeHtml(`${p.name.first[0]}. ${p.name.last}`)}</span> (${p.position} ${Math.round(p.compositeRating)})`).join(" and ");
@@ -30888,8 +30882,8 @@ var _CFB = (() => {
     const riv = state.rivalry;
     const rivGame = riv ? (state.schedule || []).find((g) => !g.result && [g.homeId, g.awayId].includes(school == null ? void 0 : school.id) && [g.homeId, g.awayId].includes(riv.schoolId)) : null;
     let body = "";
-    if (focusMeta.id === "camp") {
-      body = renderPreseasonCamp(school, pre);
+    if (focusMeta.id === "recruiting") {
+      body = renderPreseasonRecruiting(school, pre);
     } else if (focusMeta.id === "spring") {
       body = renderPreseasonSpring(school, pre);
     } else if (focusMeta.id === "redshirts") {
@@ -30933,39 +30927,17 @@ var _CFB = (() => {
       <div class="attr-gain-row">${attrGainChips(r.attrGains)}</div>
     </div>`;
   }
-  function renderPreseasonCamp(school, pre) {
-    if (pre.devDone) {
-      const report = pre.campReport || [];
-      return `
-      <div class="offseason-item" style="margin-top:8px">
-        <span class="offseason-label">Camp Report \u2014 entire roster</span>
-        <span class="offseason-detail">${report.length} players \xB7 team avg ${pre.campAvgGain >= 0 ? "+" : ""}${pre.campAvgGain} \xB7 freshmen included</span>
-      </div>
-      ${devReportList(report)}`;
-    }
-    const focus = pre.devFocus || "balanced";
-    const focusBtns = FOCUS_GROUPS.map((f) => `
-    <button class="btn-ghost btn-sm focus-btn" data-focus="${f.id}"
-      style="margin:3px 3px 0 0;${focus === f.id ? "border-color:var(--green);color:var(--green)" : ""}">
-      ${escapeHtml(f.label)}${focus === f.id ? " \u2713" : ""}
-    </button>`).join("");
-    const changes = pre.posChanges || [];
+  function renderPreseasonRecruiting(school, pre) {
+    const coach = state.playerCoach;
+    const assistOn = recruitAssistLevel(state) !== "off";
+    const boardCount = ((coach == null ? void 0 : coach.recruitBoard) || []).filter((e) => e && !e.committed && !e.eliminated).length;
     return `
-    <div class="offseason-label" style="font-size:11px;letter-spacing:.5px;opacity:.7;margin-top:8px">TRAINING FOCUS</div>
-    <div>${focusBtns}</div>
-    <button class="btn-primary" id="btn-run-camp" style="margin-top:14px;width:100%">Run Development Camp</button>
-    <p class="offseason-hint" style="margin-top:6px">Freshmen are in camp too. Skipping ahead runs it automatically.</p>
-
-    <div class="offseason-item" style="margin-top:16px">
-      <span class="offseason-label">Position changes
-        <span class="muted" style="font-weight:400">\xB7 ${changes.filter((c) => !c.anytime).length}/${C.POS_CHANGE_CAP} camp${changes.some((c) => c.anytime) ? ` + ${changes.filter((c) => c.anytime).length} roster` : ""}</span></span>
-      <span class="offseason-detail" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        ${changes.map((ch) => `<span class="dash-qs-item">${ch.from} \u2192 ${ch.to} \u2713</span>`).join("")}
-        <button class="btn-ghost btn-sm" id="btn-conv-toggle">${convBoardOpen ? "Close board" : "Open board"}</button>
-      </span>
+    <div class="offseason-item" style="margin-top:8px">
+      <span class="offseason-label">Recruiting is open</span>
+      <span class="offseason-detail">${assistOn ? "Staff assist: ON" : boardCount > 0 ? `${boardCount} on your board` : "Board is empty"}</span>
     </div>
-    ${convBoardOpen ? `<p class="offseason-hint" style="margin:2px 0 0">Convert a player to a new position \u2014 pick a target position to see everyone's projected rating there (conversion penalty included). Changes lock when camp runs.</p>
-         ${positionChangeBoard(school, pre)}` : ""}`;
+    <p class="offseason-hint" style="margin-top:6px">This is where next season's roster is won. Scout prospects and make offers yourself on the <b>Search</b> board, or hand the legwork to your staff under <b>Assist</b> and set the strategy \u2014 either way, the class you build now is the program you coach later. You can come back to it on any recruiting day.</p>
+    <button class="btn-primary" id="btn-goto-recruiting" style="margin-top:12px;width:100%">Open Recruiting \u2192</button>`;
   }
   function conversionPreviewPanel() {
     var _a, _b;
@@ -31087,12 +31059,32 @@ var _CFB = (() => {
   function renderPreseasonSpring(school, pre) {
     const sr = pre.springResult;
     if (!sr) {
+      const focus = pre.devFocus || "balanced";
+      const focusBtns = FOCUS_GROUPS.map((f) => `
+      <button class="btn-ghost btn-sm focus-btn" data-focus="${f.id}"
+        style="margin:3px 3px 0 0;${focus === f.id ? "border-color:var(--green);color:var(--green)" : ""}">
+        ${escapeHtml(f.label)}${focus === f.id ? " \u2713" : ""}
+      </button>`).join("");
+      const changes = pre.posChanges || [];
       return `
-      <button class="btn-primary" id="btn-spring-play" style="margin-top:8px;width:100%">Kick off the Spring Game</button>
-      <p class="offseason-hint" style="margin-top:6px">White vs Black on post-camp ratings. Full box score, nothing counts \u2014 and everyone banks game reps.</p>`;
+      <div class="offseason-label" style="font-size:11px;letter-spacing:.5px;opacity:.7;margin-top:8px">TRAINING FOCUS</div>
+      <div>${focusBtns}</div>
+      <button class="btn-primary" id="btn-spring-play" style="margin-top:14px;width:100%">Run Spring Game</button>
+      <p class="offseason-hint" style="margin-top:6px">Development camp works the whole roster (freshmen too), then White vs Black runs on post-camp ratings \u2014 full box score, nothing counts, everyone banks reps. Position changes below lock when it runs. Skipping ahead runs it automatically.</p>
+
+      <div class="offseason-item" style="margin-top:16px">
+        <span class="offseason-label">Position changes
+          <span class="muted" style="font-weight:400">\xB7 ${changes.length}/${C.POS_CHANGE_CAP}</span></span>
+        <span class="offseason-detail" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          ${changes.map((ch) => `<span class="dash-qs-item">${ch.from} \u2192 ${ch.to} \u2713</span>`).join("")}
+          <button class="btn-ghost btn-sm" id="btn-conv-toggle">${convBoardOpen ? "Close board" : "Open board"}</button>
+        </span>
+      </div>
+      ${convBoardOpen ? `<p class="offseason-hint" style="margin:2px 0 0">Convert a player to a new position \u2014 pick a target position to see everyone's projected rating there (conversion penalty included). Changes lock when the spring game runs.</p>
+           ${positionChangeBoard(school, pre)}` : ""}`;
     }
     const rows = (list) => list.map((x) => `<div class="offseason-item"><span class="offseason-label">${escapeHtml(x.name)} (${x.pos})</span><span class="offseason-detail">${escapeHtml(x.line)}</span></div>`).join("");
-    const dev = sr.devReport || [];
+    const report = pre.campReport || [];
     return `
     <div class="offseason-item" style="margin-top:8px">
       <span class="offseason-label">${escapeHtml(sr.nameA)} ${sr.scoreA} \u2014 ${sr.scoreB} ${escapeHtml(sr.nameB)}</span>
@@ -31106,9 +31098,12 @@ var _CFB = (() => {
         <span class="offseason-detail" style="color:var(--green)">+${b.gain}</span>
         ${b.attrGains ? `<div class="attr-gain-row">${attrGainChips(b.attrGains)}</div>` : ""}
       </div>`).join("")}` : ""}
-    ${dev.length ? `
-      <div class="offseason-label" style="font-size:11px;opacity:.7;margin-top:10px">GAME REPS \u2014 WHO GOT BETTER (${dev.length})</div>
-      ${devReportList(dev)}` : ""}`;
+    ${report.length ? `
+      <div class="offseason-item" style="margin-top:12px">
+        <span class="offseason-label">Preseason Development \u2014 entire roster</span>
+        <span class="offseason-detail">${report.length} players \xB7 team avg ${pre.campAvgGain >= 0 ? "+" : ""}${pre.campAvgGain} \xB7 freshmen included</span>
+      </div>
+      ${devReportList(report)}` : ""}`;
   }
   function renderRedshirtRow(p, checked, recommended = false) {
     return `
@@ -31496,12 +31491,9 @@ var _CFB = (() => {
       state.ui.convPending = null;
       rerender();
     });
-    (_g = document.getElementById("btn-run-camp")) == null ? void 0 : _g.addEventListener("click", () => {
-      const res = runDevCamp(state);
-      if (!res.ok) notify(res.reason, "warning");
-      rerender();
-    });
-    (_h = document.getElementById("btn-spring-play")) == null ? void 0 : _h.addEventListener("click", () => {
+    (_g = document.getElementById("btn-spring-play")) == null ? void 0 : _g.addEventListener("click", () => {
+      var _a2;
+      if (!((_a2 = state.preseason) == null ? void 0 : _a2.devDone)) runDevCamp(state);
       const res = playSpringGame(state);
       if (!res.ok) {
         notify(res.reason, "warning");
@@ -31514,6 +31506,9 @@ var _CFB = (() => {
         state.ui.gameResultTab = "boxscore";
       }
       rerender();
+    });
+    (_h = document.getElementById("btn-goto-recruiting")) == null ? void 0 : _h.addEventListener("click", () => {
+      navigate("recruiting");
     });
     document.querySelectorAll(".clinic-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -31812,7 +31807,6 @@ var _CFB = (() => {
         </div>
       </div>
 
-      ${conversionPreviewPanel()}
 
       <div class="card">
         <div class="table-scroll"><table class="data-table roster-table">
@@ -31852,15 +31846,10 @@ var _CFB = (() => {
     const diff = ovr - rawOvr;
     const schemeCls = Math.abs(diff) >= 2 ? diff > 0 ? " scheme-up" : " scheme-dn" : "";
     const schemeTtl = Math.abs(diff) >= 2 ? ` title="Scheme fit: ${frontId}"` : "";
-    const posOpts = POSITIONS.filter((pos) => pos !== p.position).map((pos) => `<option value="${pos}">${posLabel(pos)}</option>`).join("");
     return `
     <tr class="player-row${p.injuryGamesOut > 0 ? " injured" : ""}" data-player-id="${p.id}">
       <td class="pos-cell">
         <span class="pos-chip pos-${p.position}">${posLabel(p.position)}</span>
-        <select class="pos-change-select" data-pos-change="${p.id}" title="Change position (anytime \u2014 out-of-position penalty applies)">
-          <option value="">\u21C4</option>
-          ${posOpts}
-        </select>
       </td>
       <td class="player-name-cell">
         <span class="player-name">${escapeHtml(fullName(p))}</span>
@@ -31900,31 +31889,6 @@ var _CFB = (() => {
         }
         rerender();
       });
-    });
-    document.querySelectorAll("[data-pos-change]").forEach((sel) => {
-      sel.addEventListener("click", (e) => e.stopPropagation());
-      sel.addEventListener("change", (e) => {
-        e.stopPropagation();
-        const newPos = sel.value;
-        if (!newPos) return;
-        state.ui.convPending = { playerId: sel.dataset.posChange, to: newPos, anytime: true };
-        rerender();
-      });
-    });
-    const rConvConfirm = document.getElementById("conv-confirm");
-    if (rConvConfirm) rConvConfirm.addEventListener("click", () => {
-      const pend = state.ui.convPending;
-      if (!pend) return;
-      const res = convertPosition(state, pend.playerId, pend.to, { anytime: pend.anytime });
-      if (res.ok) notify(`${res.name}: ${res.from} \u2192 ${pend.to} (${res.before} \u2192 ${res.after} OVR).`, "success");
-      else notify(res.reason || "Can\u2019t change position", "warning");
-      state.ui.convPending = null;
-      rerender();
-    });
-    const rConvCancel = document.getElementById("conv-cancel");
-    if (rConvCancel) rConvCancel.addEventListener("click", () => {
-      state.ui.convPending = null;
-      rerender();
     });
     document.querySelectorAll(".player-row").forEach((row) => {
       row.addEventListener("click", () => {
@@ -32344,9 +32308,9 @@ var _CFB = (() => {
     const gp = (school == null ? void 0 : school.gameplan) || {};
     ensureFieldAssignments(gp);
     if (gameplanIsSimple() && school) applySimplePlan(school);
-    const selectedOff = Object.keys(OFF_FIELD_LAYOUTS);
+    const selectedOff = Object.keys(OFF_FIELD_LAYOUTS).filter((_fid) => FORMATIONS[_fid]);
     if (!activeOffFormation || !selectedOff.includes(activeOffFormation)) {
-      activeOffFormation = selectedOff[0] || "Pro Set";
+      activeOffFormation = selectedOff[0] || "Single Back";
     }
     const baseFront = gp.defBaseFront || "4-3";
     return `
@@ -32432,7 +32396,7 @@ var _CFB = (() => {
     const roster = school.roster || [];
     const activeDepth = buildActiveDepth(school);
     const ratingById = buildRatingById(school);
-    for (const fid of Object.keys(OFF_FIELD_LAYOUTS)) {
+    for (const fid of Object.keys(OFF_FIELD_LAYOUTS).filter((_fid) => FORMATIONS[_fid])) {
       const layout = OFF_FIELD_LAYOUTS[fid];
       const e = gp.fieldAssignments.offense[fid] || (gp.fieldAssignments.offense[fid] = { slots: {}, shares: {} });
       if (!e.shares) e.shares = {};
@@ -32557,7 +32521,7 @@ var _CFB = (() => {
   };
   var UNIQUE_DEPTH_OFF = [
     { pos: "SLOT", label: "SLOT RECEIVER", role: "WR-Slot", from: ["WR", "TE", "RB"], forms: ["Spread", "Air Raid", "Pistol/RPO", "Trips/Bunch", "Empty"] },
-    { pos: "FADE", label: "FADE / JUMP-BALL", role: "WR-Fade", from: ["WR", "TE"], forms: ["Pro Set", "Single Back", "Power-I", "Wishbone", "Flexbone", "Wildcat", "Spread", "Trips/Bunch", "Pistol/RPO", "Air Raid", "Empty"] },
+    { pos: "FADE", label: "FADE / JUMP-BALL", role: "WR-Fade", from: ["WR", "TE"], forms: ["Single Back", "Power-I", "Wishbone", "Flexbone", "Wildcat", "Spread", "Trips/Bunch", "Pistol/RPO", "Air Raid", "Empty"] },
     { pos: "FB", label: "FULLBACK", role: "FB-Lead", from: ["RB", "TE"], forms: ["Power-I", "Wishbone", "Flexbone", "Wildcat"] },
     { pos: "WING", label: "WISHBONE HB", role: "RB-Power", from: ["RB", "TE"], forms: ["Wishbone"] },
     { pos: "ABACK", label: "FLEXBONE A-BACK", role: "RB-Scat", from: ["RB", "WR", "TE"], forms: ["Flexbone"] },
@@ -34980,8 +34944,7 @@ var _CFB = (() => {
     const board = (coach == null ? void 0 : coach.recruitBoard) || [];
     const LEVELS = [
       ["off", "Off", "You run recruiting yourself."],
-      ["assist", "Assist", "Your staff covers your roster needs \u2014 scouting, contact, and offers \u2014 and leaves the surplus to you. Override anytime (rescind, drop, add)."],
-      ["full", "Full", "Your staff builds and closes the entire class to your last scholarship. Fully hands-off."]
+      ["full", "On", "Your staff builds and closes the entire class down to your last scholarship \u2014 scouting, contact, and offers, following the strategy you set. Fully hands-off; override anytime (rescind, drop, add)."]
     ];
     const levelPicker = `
     <div class="assist-levels">
@@ -34994,7 +34957,7 @@ var _CFB = (() => {
     if (level === "off") {
       return `<div class="card">
       <div class="card-header"><span class="card-title">RECRUITING ASSIST</span></div>
-      <p class="offseason-hint">Love recruiting? Leave this off. Want help? <b>Assist</b> handles the legwork and offers on your needs; <b>Full</b> runs the whole class hands-off \u2014 either way it follows the strategy you set.</p>
+      <p class="offseason-hint">Love recruiting? Leave this off. Want it handled? Turn it <b>On</b> and your staff runs the whole class hands-off \u2014 following the strategy you set.</p>
       ${levelPicker}
     </div>`;
     }
@@ -35031,7 +34994,7 @@ var _CFB = (() => {
     }).join("");
     const committedTotal = Object.values(committedAt).reduce((a, b) => a + b, 0);
     return `<div class="card">
-    <div class="card-header"><span class="card-title">RECRUITING ASSIST</span><span class="assist-level-tag">${level === "full" ? "FULL \u2014 hands-off" : "ASSIST \u2014 covering your needs"}</span></div>
+    <div class="card-header"><span class="card-title">RECRUITING ASSIST</span><span class="assist-level-tag">ON \u2014 hands-off</span></div>
     ${levelPicker}
     <div class="assist-strategy">
       <div class="assist-strat-block">
@@ -35636,39 +35599,46 @@ var _CFB = (() => {
     sections: [
       {
         heading: "The shape of a year",
-        body: `Six phases, in order. <b>Preseason</b> \u2014 four weeks of camp before anyone plays.
-      <b>Non-conference</b>, then <b>conference play</b>, then the <b>conference championship</b>.
-      Then the <b>playoffs</b>, and then the <b>offseason</b>, which is a guided sequence rather
-      than a stretch of calendar.
+        body: `Six phases, in order. <b>Preseason</b> \u2014 four weeks before anyone plays: expectations,
+      recruiting, the spring game, then redshirts. <b>Non-conference</b>, then <b>conference play</b>,
+      then the <b>conference championship</b>. Then the <b>playoffs</b>, and then the <b>offseason</b>,
+      which is a guided sequence rather than a stretch of calendar.
 
-      The one window that does not line up with the phases is recruiting. It opens on the first
-      day of camp \u2014 before you have played a snap \u2014 and closes at the end of championship week.
-      The playoffs run with the class already locked. Nothing you do in the postseason affects
-      who signs.
+      The one window that does not line up with the phases is recruiting. It opens in the preseason \u2014
+      it gets its own dedicated week two, before you have played a snap \u2014 and closes at the end of
+      championship week. The playoffs run with the class already locked. Nothing you do in the
+      postseason affects who signs.
 
       That is worth sitting with, because it inverts the instinct. Your best recruiting weeks are
       the ones nobody is watching, and the deep run that would sell the program happens after the
       selling is over.`
       },
       {
-        heading: "What each week of camp is for",
+        heading: "What each preseason week is for",
         body: `The four preseason weeks are not filler. Each has a job and each has something that
       stops being possible once it passes.
 
-      <b>Week one is development camp.</b> The whole league develops, your practice plan shapes
-      it, and your chosen focus group trains hot while everyone else cools. Position changes lock
-      when camp runs \u2014 after that, a conversion is a different, unrestricted path rather than a
-      camp decision.
+      <b>Week one is expectations.</b> The athletic director's mandate for the season locks here \u2014
+      what you are being measured against is fixed on the first week and does not move afterwards,
+      no matter what happens to your roster.
 
-      <b>Week two is the spring game.</b> Week three is quiet \u2014 it has no event of its own; your
-      freshmen simply bed in. There is <i>no</i> preseason cut gate: the hard roster-limit decision
-      was already made back at the offseason's <b>Cut Day</b>, before camp opened, so nothing about
-      the cap is settled in the preseason weeks. <b>Week four is when the athletic director's
-      expectations lock</b> for the season. What you are being measured against is fixed there, and
-      it does not move afterwards no matter what happens to your roster.
+      <b>Week two is recruiting.</b> A dedicated week to open your board: scout prospects and make
+      offers yourself on the Search side, or hand the legwork to your staff under Assist and set
+      the strategy. You can come back to it on any recruiting day, but this is where the class
+      ahead gets its first real attention.
 
-      Redshirt decisions you have not confirmed are applied automatically when the first game week
-      arrives. If you were planning to think about it during non-conference, you were not.`
+      <b>Week three is the spring game.</b> Development camp and the spring game run together here.
+      The whole league develops, your practice plan shapes it, your chosen focus group trains hot
+      while everyone else cools \u2014 and then White vs Black plays out on the post-camp ratings.
+      <b>Position changes lock when it runs.</b> Conversions are a preseason decision only now:
+      there is no in-season path to move a man off his position, so the spring-game board is the
+      window.
+
+      <b>Week four is redshirt finalization.</b> There is <i>no</i> preseason cut gate \u2014 the hard
+      roster-limit decision was already made back at the offseason's <b>Cut Day</b>, before the
+      preseason opened, so nothing about the cap is settled in these weeks. Redshirt decisions you
+      have not confirmed are applied automatically when the first game week arrives. If you were
+      planning to think about it during non-conference, you were not.`
       },
       {
         heading: "What happens when you advance a day",
@@ -35689,7 +35659,8 @@ var _CFB = (() => {
       evaluate anybody \u2014 so coaches are hired and fired against results that are already on the
       books. At the very end, seniors graduate and your finishers bank their experience \u2014 but the
       season's development tick does <i>not</i> run here. It was moved forward to next season's
-      Week-1 camp, which is why camp week, not the season's close, is where your roster grows.`
+      spring-game week (Week 3), which is why the spring-game week, not the season's close, is where
+      your roster grows.`
       },
       {
         heading: "The practice checkpoints",
@@ -35708,11 +35679,12 @@ var _CFB = (() => {
         heading: "The deadlines that bite",
         body: `Five, and each one takes something away permanently.
 
-      <b>Camp week one</b> ends position changes as a camp decision. <b>Camp week four</b> locks
-      your mandate. <b>The first game week</b> finalizes your redshirts \u2014 any you have not confirmed
-      are applied for you, and that window shuts. <b>The end of championship week</b> closes
-      recruiting \u2014 every recruit still undecided resolves without you, and every dollar left in the
-      pool bought nothing.
+      <b>Week one</b> locks your mandate \u2014 the AD's expectations are fixed and stop moving.
+      <b>The spring-game week</b> ends position changes: conversions are a preseason decision only,
+      so once it runs there is no path to move a man off his spot for the rest of the year.
+      <b>The first game week</b> finalizes your redshirts \u2014 any you have not confirmed are applied
+      for you, and that window shuts. <b>The end of championship week</b> closes recruiting \u2014 every
+      recruit still undecided resolves without you, and every dollar left in the pool bought nothing.
 
       And in the offseason, <b>cut day gates the portal</b>. You cannot shop for transfers while
       over the cap, because every player you added would have to be cut again. If you arrive at
@@ -37184,11 +37156,11 @@ var _CFB = (() => {
       claim about which attributes matter for your team, and a plan that spreads evenly is a claim
       that none of them do.
 
-      Practice runs at five moments: the development camp in the first week of camp, at a much
-      larger multiplier; the spring game, a smaller second preseason tick that runs on the
-      post-camp roster; and three checkpoints during the season. What matters is the plan that is
-      set <i>at</i> a checkpoint, not the plan you had most of the year. Covered in <i>The
-      Year</i>.
+      Practice runs at five moments: the development camp and the spring game \u2014 which now run
+      together on the spring-game week, the camp tick at a much larger multiplier and then a
+      smaller spring-game tick on the post-camp roster; and three checkpoints during the season.
+      What matters is the plan that is set <i>at</i> a checkpoint, not the plan you had most of the
+      year. Covered in <i>The Year</i>.
 
       You can set plans per position, which is almost always right. A single plan for the whole
       roster is spending your offensive line's minutes on hands drills.`
@@ -37268,8 +37240,8 @@ var _CFB = (() => {
       },
       {
         heading: "Camp focus is an allocation",
-        body: `At development camp you pick a focus \u2014 quarterbacks, skill positions, the offensive
-      line, the front seven, the secondary, or balanced.
+        body: `At the spring game's development camp you pick a focus \u2014 quarterbacks, skill positions,
+      the offensive line, the front seven, the secondary, or balanced.
 
       Focus is not a bonus. Focused groups train hot and <b>everybody else cools</b>. Choosing
       quarterbacks means choosing that your line develops less this year. Balanced means nobody is
@@ -37283,8 +37255,9 @@ var _CFB = (() => {
         body: `A position change costs a one-season haircut to his overall, reduced by your developer
       grade, and his development runs slower for a couple of seasons while he relearns the craft.
       Attributes do not change \u2014 the same body is being graded against a different job, which is
-      the whole of <i>Reading a Player</i>. Camp conversions are capped per offseason; a move made
-      outside camp is not.
+      the whole of <i>Reading a Player</i>. Position changes are a preseason decision only now \u2014
+      made on the spring-game week's board and capped per offseason. There is no in-season path to
+      move a man off his position, so if a switch is coming, it happens before the opener.
 
       A redshirt takes him off the field entirely, and finalising one clears him out of every
       formation slot you had pinned him to \u2014 the resolver fills those spots with the next eligible
@@ -38859,7 +38832,7 @@ var _CFB = (() => {
               <div class="setting-desc">Off: you recruit. Assist: your staff handles the legwork and offers on your roster needs. Full: your staff runs the whole class hands-off. Fine-tune the strategy on the Recruiting screen's Assist tab</div>
             </div>
             <div class="gp-options" style="flex-wrap:nowrap">
-              ${[["off", "Off"], ["assist", "Assist"], ["full", "Full"]].map(([v, l]) => `<button class="gp-option gp-option-sm${(s.recruitAssist || (s.autoRecruit ? "full" : "off")) === v ? " active" : ""}" data-assist-level="${v}">${l}</button>`).join("")}
+              ${[["off", "Off"], ["full", "On"]].map(([v, l]) => `<button class="gp-option gp-option-sm${(s.recruitAssist || (s.autoRecruit ? "full" : "off")) === v ? " active" : ""}" data-assist-level="${v}">${l}</button>`).join("")}
             </div>
           </div>
 
@@ -40624,7 +40597,7 @@ var _CFB = (() => {
     const tab = VALID_TABS.includes(state.ui.halftimeTab) ? state.ui.halftimeTab : "adjust";
     const accent = ((_a = school == null ? void 0 : school.colors) == null ? void 0 : _a[0]) || "var(--green)";
     if (!gp.offFormations || !gp.offFormations.length) {
-      gp.offFormations = [{ id: gp.offFormation || "Pro Set", weight: 100 }];
+      gp.offFormations = [{ id: gp.offFormation || "Single Back", weight: 100 }];
     }
     if (!gp.situations) gp.situations = {};
     const mid = midGameReport(token);
@@ -40640,7 +40613,7 @@ var _CFB = (() => {
     };
     const oppGP = isHome ? token.awayGP : token.homeGP;
     const oppForms = (oppGP.offFormations || []).slice().sort((a, b) => (b.weight || 0) - (a.weight || 0));
-    const topForm = ((_b = oppForms[0]) == null ? void 0 : _b.id) || "Pro Set";
+    const topForm = ((_b = oppForms[0]) == null ? void 0 : _b.id) || "Single Back";
     const oppPS = isHome ? mid.awayPlayerStats : mid.homePlayerStats;
     let hotId = null, hotYds = 0, hotName = "their top target";
     for (const pid in oppPS || {}) {
@@ -41826,7 +41799,7 @@ var _CFB = (() => {
     let scoutHtml = "";
     if (opp) {
       const og = opp.gameplan || {};
-      const topForm = (Array.isArray(og.offFormations) && og.offFormations.length ? og.offFormations.slice().sort((a, b) => (b.weight || 0) - (a.weight || 0))[0].id : og.offFormation) || "Pro Set";
+      const topForm = (Array.isArray(og.offFormations) && og.offFormations.length ? og.offFormations.slice().sort((a, b) => (b.weight || 0) - (a.weight || 0))[0].id : og.offFormation) || "Single Back";
       const passPct = Math.round(((_d = PASS_TENDENCY[og.tendency]) != null ? _d : 0.5) * 100);
       const threats = (opp.roster || []).filter((p) => ["QB", "RB", "WR", "TE"].includes(p.position)).sort((a, b) => b.compositeRating - a.compositeRating).slice(0, 2);
       const threatStr = threats.map((p) => `<span class="player-link" data-pcard="${p.id}">${escapeHtml(`${p.name.first[0]}. ${p.name.last}`)}</span> (${p.position} ${Math.round(p.compositeRating)})`).join(" and ");
@@ -41964,8 +41937,8 @@ var _CFB = (() => {
       ["pass_deep", "\u{1F680} DEEP SHOT", "shots"],
       ["gadget", "\u{1F0CF} GADGET", "gadgets"]
     ];
-    const _selFormId = state.ui.callFormation || ((school == null ? void 0 : school.gameplan) == null ? void 0 : school.gameplan.offFormation) || "Pro Set";
-    const _pkg = FORMATION_PACKAGES[_selFormId] || FORMATION_PACKAGES["Pro Set"] || {};
+    const _selFormId = state.ui.callFormation || ((school == null ? void 0 : school.gameplan) == null ? void 0 : school.gameplan.offFormation) || "Single Back";
+    const _pkg = FORMATION_PACKAGES[aliasFormation(_selFormId)] || FORMATION_PACKAGES["Single Back"] || {};
     const _drillCat = state.ui.callDrill || null;
     const _carriedIds = (((school == null ? void 0 : school.gameplan) == null ? void 0 : school.gameplan.offFormations) || []).map((f) => f && f.id).filter((id) => id && FORMATION_PACKAGES[id]);
     const _pbForms = state.ui.callFormation ? [state.ui.callFormation] : _carriedIds.length ? _carriedIds : [_selFormId];
