@@ -5168,7 +5168,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "7f3783b3af";
+globalThis.__BUILD__ = "ad712154e4";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -24579,7 +24579,7 @@ var _CFB = (() => {
     getUpcomingGame: () => getUpcomingGame,
     getWeekLabel: () => getWeekLabel,
     getWeekShort: () => getWeekShort,
-    liveWatchOn: () => liveWatchOn2,
+    liveWatchOn: () => liveWatchOn,
     loadFromSlot: () => loadFromSlot,
     navigate: () => navigate,
     navigateBack: () => navigateBack,
@@ -24987,7 +24987,7 @@ var _CFB = (() => {
         }
       }
       const token = (_b = state.pendingHalftime) == null ? void 0 : _b.token;
-      if ((liveWatchOn2() || state.ui.autoRun) && token && unwatchedPlayCount(token) > 0) {
+      if ((liveWatchOn() || state.ui.autoRun) && token && unwatchedPlayCount(token) > 0) {
         state.ui.liveWatch = { stage: "call", boardDone: false };
       } else if (stop.type === "fourthdown") {
         state.ui.showFourthDown = true;
@@ -25003,7 +25003,7 @@ var _CFB = (() => {
       state.ui.showCallSheet = false;
       state.ui.halftimeTab = "offense";
       state.ui.halftimeOpenSitKey = null;
-      if (liveWatchOn2()) {
+      if (liveWatchOn()) {
         state.ui.showHalftime = false;
         state.ui.liveWatch = { stage: "halftime" };
       } else {
@@ -25024,7 +25024,7 @@ var _CFB = (() => {
   function unwatchedPlayCount(token) {
     return tokenAllPlays(token).length - ((token == null ? void 0 : token._watchedPlays) || 0);
   }
-  function liveWatchOn2() {
+  function liveWatchOn() {
     var _a;
     return ((_a = state.settings) == null ? void 0 : _a.liveWatch) !== false;
   }
@@ -25062,7 +25062,7 @@ var _CFB = (() => {
     state.ui.callDrill = null;
     state.ui.showCallSheet = false;
     if (handleGamePendingEvents(events)) return;
-    state.ui._finalWatched = liveWatchOn2() && (token == null ? void 0 : token._watchedPlays) || null;
+    state.ui._finalWatched = liveWatchOn() && (token == null ? void 0 : token._watchedPlays) || null;
     processEvents(events);
     await autosave();
     rerender();
@@ -25091,7 +25091,7 @@ var _CFB = (() => {
     const events = resumeFromFourthDown(state, decision);
     state.ui.showFourthDown = false;
     if (handleGamePendingEvents(events)) return;
-    state.ui._finalWatched = liveWatchOn2() && (token == null ? void 0 : token._watchedPlays) || null;
+    state.ui._finalWatched = liveWatchOn() && (token == null ? void 0 : token._watchedPlays) || null;
     processEvents(events);
     await autosave();
     rerender();
@@ -25139,7 +25139,7 @@ var _CFB = (() => {
           addInboxMessage(`Season ${state.season} Game Result`, `${won ? "W" : "L"} ${myScore}-${oppScore} vs ${opp == null ? void 0 : opp.name}`);
           if (!suppressModal && ((_d = state.settings) == null ? void 0 : _d.showGameResultModal) !== false) {
             state.ui.lastGameResult = r;
-            if (liveWatchOn2()) {
+            if (liveWatchOn()) {
               state.ui.liveWatch = { stage: "final" };
               state.ui.showGameResult = false;
               state.ui.autoRun = false;
@@ -25448,520 +25448,7 @@ var _CFB = (() => {
     }
   });
 
-  // js/ui/logo.js
-  var BLUEPRINT_MARK;
-  var init_logo = __esm({
-    "js/ui/logo.js"() {
-      BLUEPRINT_MARK = `
-<svg class="bp-mark" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Blueprint">
-  <rect x="0" y="0" width="512" height="512" fill="#0c2340"/>
-  <g stroke="#FFFFFF" stroke-opacity="0.15" stroke-width="1.4">
-    <path d="M64 0V512M128 0V512M192 0V512M256 0V512M320 0V512M384 0V512M448 0V512"/>
-    <path d="M0 64H512M0 128H512M0 192H512M0 256H512M0 320H512M0 384H512M0 448H512"/>
-  </g>
-  <g stroke="#DCEBFB" stroke-opacity="0.5" stroke-width="2" fill="none">
-    <rect x="26" y="26" width="460" height="460"/>
-    <path d="M26 74H62M26 438H62M450 74H486M450 438H486M74 26V62M438 26V62M74 450V486M438 450V486"/>
-  </g>
-  <path d="M256 118 V394" stroke="#3FE04B" stroke-width="6" stroke-linecap="round"/>
-  <g fill="none" stroke="#255FA6" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M84 256 Q256 104 428 256 Q256 408 84 256 Z"/>
-    <path d="M118 256 H394" stroke-width="4"/>
-    <path d="M158 256 Q256 160 354 256" stroke-width="3.5" stroke-dasharray="13 10" stroke-opacity="0.9"/>
-    <path d="M158 256 Q256 352 354 256" stroke-width="3.5" stroke-dasharray="13 10" stroke-opacity="0.9"/>
-    <path d="M150 208 V304 M362 208 V304" stroke-width="4"/>
-  </g>
-  <g stroke="#255FA6" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="194" y="228" width="124" height="56" rx="28" fill="#4E9BEA" stroke-width="6.5"/>
-    <g fill="none" stroke-width="5">
-      <path d="M214 222 V290 M232 222 V290 M250 222 V290 M268 222 V290 M286 222 V290 M304 222 V290"/>
-    </g>
-  </g>
-  <g stroke="#255FA6" stroke-width="3" fill="none" stroke-linecap="round">
-    <path d="M150 150 V362"/>
-    <path d="M142 158 L150 148 L158 158"/><path d="M142 354 L150 364 L158 354"/>
-    <path d="M176 196 H336"/><path d="M184 189 L174 197 L184 205"/><path d="M328 189 L338 197 L328 205"/>
-    <path d="M176 316 H336"/><path d="M184 309 L174 317 L184 325"/><path d="M328 309 L338 317 L328 325"/>
-    <path d="M172 256 H196 M172 248 V264"/>
-  </g>
-  <g stroke="#3FE04B" stroke-width="5" stroke-linecap="round">
-    <path d="M144 210 H156"/><path d="M144 302 H156"/>
-  </g>
-</svg>`;
-    }
-  });
-
-  // js/ui/views/mainmenu.js
-  var mainmenu_exports = {};
-  __export(mainmenu_exports, {
-    renderMainMenu: () => renderMainMenu,
-    setupListeners: () => setupListeners2
-  });
-  function buildId() {
-    return typeof globalThis !== "undefined" && globalThis.__BUILD__ || "dev";
-  }
-  function renderMainMenu() {
-    const saves = state.ui.saves || [];
-    const autoSave = saves.find((s) => s.slot === "auto");
-    const hasRecord = (autoSave == null ? void 0 : autoSave.record) && (autoSave.record.wins > 0 || autoSave.record.losses > 0);
-    return `
-    <div class="mainmenu-screen">
-      <div class="mm-bg-grid"></div>
-
-      <div class="mm-content">
-        <div class="mm-logo">
-          <div class="mm-logo-badge">${BLUEPRINT_MARK}</div>
-          <h1 class="mm-title">BLUE<span class="mm-title-cfb">PRINT</span></h1>
-          <p class="mm-subtitle">College Football Dynasty \xB7 D1 \xB7 D2 \xB7 D3</p>
-        </div>
-
-        ${mmCoachId ? renderCoachHome() : renderCoachSelect(autoSave)}
-
-        <div class="mm-footer">
-          <span class="mm-version">320+ Schools \xB7 29 Conferences \xB7 3 Divisions \xB7 Fixed D1 \xB7 Procedural D2/D3</span>
-          <span class="mm-build" title="Build ID. This is also the service-worker cache name \u2014 if a device is serving a stale build, this is how you spot it.">build ${buildId()}</span>
-        </div>
-      </div>
-
-      ${renderLoadModal(saves)}
-    </div>
-  `;
-  }
-  function renderCoachSelect(autoSave) {
-    const coaches = listCoaches();
-    return `
-    <div class="mm-actions">
-      <div class="mm-section-label">YOUR COACHES</div>
-      ${coaches.map((c) => {
-      var _a;
-      const armed = mmDeleteArmed === c.id;
-      return `
-        <div class="mm-coach-row${armed ? " mm-coach-armed" : ""}">
-          <button class="btn-mm-primary mm-coach-card" data-mm-coach="${c.id}">
-            <span class="btn-mm-label">\u{1F393} ${escapeHtml(c.name.first)} ${escapeHtml(c.name.last)}</span>
-            <span class="btn-mm-meta">${Object.keys(c.worlds || {}).length}/${MAX_WORLDS} worlds \xB7 ${(((_a = c.plans) == null ? void 0 : _a.gameplans) || []).length} saved game plans</span>
-          </button>
-          <button class="mm-coach-del${armed ? " armed" : ""}" data-mm-coach-del="${c.id}" title="${armed ? "Tap again to permanently delete this coach and all their worlds" : "Delete coach"}">${armed ? "Delete?" : "\u{1F5D1}"}</button>
-        </div>`;
-    }).join("")}
-      ${coaches.length < MAX_COACHES ? mmNewCoach ? `
-        <div class="mm-newcoach">
-          <input class="form-input" id="mm-nc-first" type="text" placeholder="First" maxlength="16" autocomplete="off" />
-          <input class="form-input" id="mm-nc-last" type="text" placeholder="Last" maxlength="16" autocomplete="off" />
-          <button class="btn-mm btn-mm-new" id="mm-nc-create">CREATE</button>
-        </div>` : `
-        <button class="btn-mm btn-mm-new" id="btn-mm-newcoach">+ NEW COACH</button>` : ""}
-      ${autoSave ? `<button class="btn-mm btn-mm-secondary" id="btn-mm-continue" style="margin-top:8px">\u25B6 Legacy save \xB7 ${escapeHtml(autoSave.school || "?")} S${autoSave.season}</button>` : ""}
-      <button class="btn-mm-guide" id="btn-mm-guide">\u{1F4D6} The Manual</button>
-    </div>`;
-  }
-  function renderCoachDna(c) {
-    const dna = coachDNA(c.id) || { axes: {}, badges: [] };
-    const grades = dnaGrades(c.id);
-    const rows = Object.entries(DNA_AXES).map(([k, meta]) => {
-      var _a;
-      const xp = ((_a = dna.axes) == null ? void 0 : _a[k]) || 0;
-      const g = grades[k] || 0;
-      const nextAt = dnaXpForNextGrade(g);
-      const bonus = dnaBonus(k, g);
-      return { k, meta, xp, g, nextAt, bonus };
-    }).sort((a, b) => b.g - a.g || b.xp - a.xp);
-    return `
-    <div class="mm-actions">
-      <div class="mm-section-label">${escapeHtml(c.name.first.toUpperCase())} \u2014 DNA & BONUSES</div>
-      <div class="mm-dna-title">${escapeHtml(dnaTitle(dna))} \xB7 ${(dna.badges || []).length} \u{1F3C5}</div>
-      <p class="mm-hub-hint">Your identity forms from how you coach. Every grade earns a permanent, live bonus \u2014 carried into every world.</p>
-      <div class="mm-dna-list">
-        ${rows.map((r) => `
-          <div class="mm-dna-item${r.g === 0 ? " mm-dna-locked" : ""}">
-            <div class="mm-dna-head">
-              <span class="mm-dna-axis">${r.meta.icon} ${r.meta.label}</span>
-              <span class="dna-grade-num">G${r.g}</span>
-            </div>
-            <div class="mm-dna-meter">
-              <span class="dna-bar"><span class="dna-bar-fill" style="width:${Math.min(100, Math.round(r.xp / r.nextAt * 100))}%"></span></span>
-              <span class="dna-xp-num">${r.g >= 10 ? "MAX" : `${r.xp}/${r.nextAt}`}</span>
-            </div>
-            <div class="mm-dna-bonus${r.g === 0 ? " muted" : ""}">${r.g ? "\u25B8 " : ""}${escapeHtml(r.bonus.label)}</div>
-          </div>`).join("")}
-      </div>
-      <button class="btn-mm btn-mm-secondary" data-mm-view="back" style="margin-top:12px">\u2190 Back</button>
-    </div>`;
-  }
-  function renderCoachRecordBook(c) {
-    const R = c.records || {};
-    const career = R.career || {};
-    const game = R.game || {};
-    const season = R.season || {};
-    const indiv = R.seasonIndiv || {};
-    const team = R.seasonTeam || {};
-    const dna = coachDNA(c.id) || { badges: [] };
-    const ctxStr = (ctx2) => {
-      if (!ctx2) return "";
-      const bits = [];
-      if (ctx2.school) bits.push(ctx2.school);
-      if (ctx2.world) bits.push(`W${ctx2.world}`);
-      if (ctx2.season != null) bits.push(`S${ctx2.season}`);
-      return bits.length ? ` \u2014 ${escapeHtml(bits.join(" \xB7 "))}` : "";
-    };
-    const recRow = (label, rec, suffix = "") => rec && rec.v != null ? `
-      <div class="mm-rec-row"><span class="mm-rec-lbl">${escapeHtml(label)}</span><span class="mm-rec-val">${rec.v}${suffix}<span class="mm-rec-ctx">${ctxStr(rec.ctx)}</span></span></div>` : "";
-    const indivRow = (label, rec, suffix = "") => rec && rec.v != null ? `
-      <div class="mm-rec-row"><span class="mm-rec-lbl">${escapeHtml(label)}</span><span class="mm-rec-val">${rec.v}${suffix}<span class="mm-rec-ctx">${rec.name ? ` \u2014 ${escapeHtml(rec.name)}${rec.pos ? ` (${escapeHtml(rec.pos)})` : ""}` : ""}${ctxStr(rec.ctx)}</span></span></div>` : "";
-    const wins = c.careerWins || 0, losses = c.careerLosses || 0;
-    const winPct = wins + losses > 0 ? (wins / (wins + losses)).toFixed(3).replace(/^0/, "") : "\u2014";
-    const gameHtml = [
-      recRow("Best passing game", game.passYds, " yds"),
-      recRow("Best rushing game", game.rushYds, " yds"),
-      recRow("Most sacks (game)", game.sacks),
-      recRow("Most takeaways (game)", game.takeaways),
-      recRow("Biggest win margin", game.margin, " pts")
-    ].join("");
-    const seasonHtml = [
-      season.bestRecord ? `<div class="mm-rec-row"><span class="mm-rec-lbl">Best season record</span><span class="mm-rec-val">${season.bestRecord.v}${ctxStr(season.bestRecord.ctx)}</span></div>` : "",
-      recRow("Longest win streak", season.longestStreak, " games"),
-      season.bestRank && season.bestRank.v ? `<div class="mm-rec-row"><span class="mm-rec-lbl">Highest final ranking</span><span class="mm-rec-val">#${season.bestRank.v}${ctxStr(season.bestRank.ctx)}</span></div>` : ""
-    ].join("");
-    const indivHtml = [
-      indivRow("Passing yards (season)", indiv.passYds, " yds"),
-      indivRow("Rushing yards (season)", indiv.rushYds, " yds"),
-      indivRow("Receiving yards (season)", indiv.recYds, " yds"),
-      indivRow("Sacks (season)", indiv.sacks),
-      indivRow("Interceptions (season)", indiv.ints)
-    ].join("");
-    const teamHtml = [
-      recRow("Points scored (season)", team.pointsFor, " pts"),
-      recRow("Total yards (season)", team.totalYds, " yds")
-    ].join("");
-    const badges = (dna.badges || []).slice().reverse();
-    const badgeHtml = badges.length ? (() => {
-      const bySeason = {};
-      for (const b of badges) (bySeason[b.season] = bySeason[b.season] || []).push(b);
-      return Object.keys(bySeason).sort((a, b) => b - a).map((s) => `
-        <div class="dna-season-group">
-          <div class="dna-season-hdr">SEASON ${s}</div>
-          ${bySeason[s].map((b) => `<span class="dna-chip">\u{1F3C5} ${escapeHtml(b.label)}</span>`).join("")}
-        </div>`).join("");
-    })() : '<p class="mm-hub-hint">No milestones yet \u2014 they log here as you earn them.</p>';
-    const section = (title, body, empty) => `
-      <div class="mm-rec-section">
-        <div class="mm-rec-hdr">${title}</div>
-        ${body || `<p class="mm-hub-hint">${empty}</p>`}
-      </div>`;
-    return `
-    <div class="mm-actions">
-      <div class="mm-section-label">${escapeHtml(c.name.first.toUpperCase())} ${escapeHtml(c.name.last.toUpperCase())} \u2014 RECORD BOOK</div>
-      <p class="mm-hub-hint">Career bests across every world you've coached.</p>
-      ${section("CAREER TOTALS", `
-        <div class="mm-rec-row"><span class="mm-rec-lbl">Record</span><span class="mm-rec-val">${wins}\u2013${losses} <span class="mm-rec-ctx">(${winPct})</span></span></div>
-        ${career.confTitles ? `<div class="mm-rec-row"><span class="mm-rec-lbl">Conference titles</span><span class="mm-rec-val">${career.confTitles}</span></div>` : ""}
-        <div class="mm-rec-row"><span class="mm-rec-lbl">National titles</span><span class="mm-rec-val">${c.titles || 0}</span></div>
-        ${career.playoffApps ? `<div class="mm-rec-row"><span class="mm-rec-lbl">Playoff appearances</span><span class="mm-rec-val">${career.playoffApps}</span></div>` : ""}
-        ${career.bowlWins != null || career.bowlLosses != null ? `<div class="mm-rec-row"><span class="mm-rec-lbl">Bowl record</span><span class="mm-rec-val">${career.bowlWins || 0}\u2013${career.bowlLosses || 0}</span></div>` : ""}
-      `, "")}
-      ${section("SINGLE-GAME RECORDS", gameHtml, "Play some games and your bests show up here.")}
-      ${section("SEASON BESTS", seasonHtml, "Finish a season to set your marks.")}
-      ${section("SINGLE-SEASON \u2014 INDIVIDUAL", indivHtml, "Your players' best statistical seasons will appear here.")}
-      ${section("SINGLE-SEASON \u2014 TEAM", teamHtml, "Your best team seasons will appear here.")}
-      ${section("MILESTONE LOG", badgeHtml, "")}
-      <button class="btn-mm btn-mm-secondary" data-mm-view="back" style="margin-top:12px">\u2190 Back</button>
-    </div>`;
-  }
-  function renderCoachHome() {
-    var _a, _b, _c;
-    const c = getCoach(mmCoachId);
-    if (!c) {
-      mmCoachId = null;
-      mmView = null;
-      return renderCoachSelect(null);
-    }
-    if (mmView === "dna") return renderCoachDna(c);
-    if (mmView === "records") return renderCoachRecordBook(c);
-    const slots = Array.from({ length: MAX_WORLDS }, (_, i) => i + 1);
-    return `
-    <div class="mm-actions">
-      <div class="mm-section-label">COACH ${escapeHtml(c.name.first.toUpperCase())} ${escapeHtml(c.name.last.toUpperCase())}</div>
-      <div class="mm-dna-title">${escapeHtml(dnaTitle(coachDNA(c.id)))} \xB7 ${(((_a = coachDNA(c.id)) == null ? void 0 : _a.badges) || []).length} \u{1F3C5}</div>
-      <div class="mm-hub-btns">
-        <button class="btn-mm btn-mm-hub" data-mm-view="dna">\u{1F9EC} DNA & Bonuses</button>
-        <button class="btn-mm btn-mm-hub" data-mm-view="records">\u{1F4D6} Record Book</button>
-      </div>
-      <div class="mm-section-label" style="margin-top:12px">SELECT A WORLD</div>
-      ${slots.map((n) => {
-      var _a2, _b2, _c2;
-      const wMeta = (_a2 = c.worlds) == null ? void 0 : _a2[n];
-      return wMeta ? `
-          <div class="mm-world-row">
-            <button class="btn-mm-primary mm-world-card" data-mm-world="${n}">
-              <span class="btn-mm-label">\u{1F30D} WORLD ${n} \u2014 ${escapeHtml(wMeta.school || "?")}${wMeta.division ? ` <span class="mm-w-div">${wMeta.division}</span>` : ""}${wMeta.prestige != null ? ` <span class="mm-w-star">${wMeta.prestige}\u2605</span>` : ""}</span>
-              <span class="btn-mm-meta">Season ${wMeta.season}${wMeta.record ? ` \xB7 ${fmtRecord(wMeta.record.wins, wMeta.record.losses)}` : ""} \xB7 ${formatDate(wMeta.timestamp)}</span>
-              ${wMeta.careerWins != null || wMeta.titles ? `
-                <span class="mm-w-career">Career ${(_b2 = wMeta.careerWins) != null ? _b2 : 0}\u2013${(_c2 = wMeta.careerLosses) != null ? _c2 : 0}${wMeta.titles ? ` \xB7 ${wMeta.titles}\u{1F3C6}` : ""}${wMeta.jobSecurity != null ? ` \xB7 seat ${wMeta.jobSecurity}` : ""}</span>` : ""}
-              ${wMeta.skills ? `<span class="mm-w-skills">${[["evaluator", "EVL"], ["recruiter", "REC"], ["developer", "DEV"], ["reputation", "REP"], ["roots", "ROO"]].map(([k, lbl]) => {
-        var _a3;
-        return `${lbl} ${gradeFromXP((_a3 = wMeta.skills[k]) != null ? _a3 : 0)}`;
-      }).join(" \xB7 ")}</span>` : ""}
-            </button>
-            <button class="btn-mm-del" data-mm-world-del="${n}" title="Delete world">\u2715</button>
-          </div>` : `
-          <button class="btn-mm btn-mm-new mm-world-empty" data-mm-world-new="${n}">\uFF0B WORLD ${n} \u2014 start a new dynasty</button>`;
-    }).join("")}
-      <div class="mm-section-label" style="margin-top:14px">PLAYBOOK LIBRARY</div>
-      <div class="mm-library">
-        ${(((_b = c.plans) == null ? void 0 : _b.gameplans) || []).length || (((_c = c.plans) == null ? void 0 : _c.practice) || []).length ? `
-          ${(c.plans.gameplans || []).map((p) => `<div class="mm-lib-row"><span>\u{1F4CB} ${escapeHtml(p.name)}</span><button class="btn-mm-del" data-mm-lib-del="gp:${escapeHtml(p.name)}">\u2715</button></div>`).join("")}
-          ${(c.plans.practice || []).map((p) => `<div class="mm-lib-row"><span>\u{1F3CB} ${escapeHtml(p.name)}</span><button class="btn-mm-del" data-mm-lib-del="pp:${escapeHtml(p.name)}">\u2715</button></div>`).join("")}
-        ` : '<div class="mm-lib-empty muted">Save game plans and practice plans in-game \u2014 they follow this coach into every new world.</div>'}
-      </div>
-      <button class="btn-mm btn-mm-secondary" id="mm-back-coaches" style="margin-top:10px">\u2190 Coaches</button>
-    </div>`;
-  }
-  function renderLoadModal(saves) {
-    if (!state.ui.showLoadModal) return "";
-    const SLOT_LABELS2 = { auto: "Auto", slot1: "Slot 1", slot2: "Slot 2", slot3: "Slot 3", slot4: "Slot 4" };
-    const ALL_SLOTS2 = ["auto", "slot1", "slot2", "slot3", "slot4"];
-    return `
-    <div class="modal-overlay" id="load-modal-overlay">
-      <div class="modal save-modal">
-        <div class="modal-header">
-          <h2>Load Game</h2>
-          <button class="modal-close" id="close-load-modal">\u2715</button>
-        </div>
-        <div class="save-slots">
-          ${ALL_SLOTS2.map((slot) => {
-      const save = saves.find((s) => s.slot === slot);
-      const hasRec = (save == null ? void 0 : save.record) && (save.record.wins > 0 || save.record.losses > 0);
-      return `
-              <div class="save-slot ${save ? "save-slot-filled" : "save-slot-empty"}"
-                   data-load-slot="${slot}" ${!save ? "data-disabled" : ""}>
-                <div class="save-slot-label">${SLOT_LABELS2[slot]}</div>
-                ${save ? `
-                  <div class="save-slot-info">
-                    <div class="save-slot-school">${escapeHtml(save.school || "Unknown")}</div>
-                    <div class="save-slot-meta">Season ${save.season} \xB7 ${weekLabel(save.day)}${hasRec ? ` \xB7 ${fmtRecord(save.record.wins, save.record.losses)}` : ""}</div>
-                    <div class="save-slot-date">${formatDate(save.timestamp)}</div>
-                  </div>
-                ` : `
-                  <div class="save-slot-empty-label">Empty</div>
-                `}
-              </div>
-            `;
-    }).join("")}
-        </div>
-      </div>
-    </div>
-  `;
-  }
-  function formatDate(ts) {
-    if (!ts) return "";
-    return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-  }
-  async function setupListeners2() {
-    var _a, _b, _c, _d, _e, _f, _g, _h;
-    (_a = document.getElementById("btn-mm-guide")) == null ? void 0 : _a.addEventListener("click", () => {
-      navigate("manual");
-    });
-    await refreshSaves();
-    (_b = document.getElementById("btn-mm-continue")) == null ? void 0 : _b.addEventListener("click", async () => {
-      await loadFromSlot("auto");
-    });
-    document.querySelectorAll("[data-mm-coach]").forEach((b) => b.addEventListener("click", () => {
-      mmDeleteArmed = null;
-      mmCoachId = b.dataset.mmCoach;
-      mmNewCoach = false;
-      rerender();
-    }));
-    document.querySelectorAll("[data-mm-coach-del]").forEach((b) => b.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const id = b.dataset.mmCoachDel;
-      if (mmDeleteArmed !== id) {
-        mmDeleteArmed = id;
-        rerender();
-        return;
-      }
-      const c = getCoach(id);
-      if (c) {
-        for (const slot of Object.keys(c.worlds || {})) {
-          const key = worldSlotKey(id, slot);
-          Promise.resolve().then(() => (init_persistence(), persistence_exports)).then((m) => {
-            var _a2;
-            return (_a2 = m.deleteSlotData) == null ? void 0 : _a2.call(m, key);
-          });
-        }
-      }
-      deleteCoach(id);
-      mmDeleteArmed = null;
-      if (mmCoachId === id) {
-        mmCoachId = null;
-        mmView = null;
-      }
-      rerender();
-    }));
-    (_c = document.getElementById("btn-mm-newcoach")) == null ? void 0 : _c.addEventListener("click", () => {
-      mmDeleteArmed = null;
-      mmNewCoach = true;
-      rerender();
-      setTimeout(() => {
-        var _a2;
-        return (_a2 = document.getElementById("mm-nc-first")) == null ? void 0 : _a2.focus();
-      }, 30);
-    });
-    (_d = document.getElementById("mm-nc-create")) == null ? void 0 : _d.addEventListener("click", () => {
-      var _a2, _b2, _c2, _d2;
-      const f = (_b2 = (_a2 = document.getElementById("mm-nc-first")) == null ? void 0 : _a2.value) == null ? void 0 : _b2.trim();
-      const l = (_d2 = (_c2 = document.getElementById("mm-nc-last")) == null ? void 0 : _c2.value) == null ? void 0 : _d2.trim();
-      if (!f && !l) return;
-      const c = createCoach(f || "Coach", l || "");
-      if (c) {
-        mmCoachId = c.id;
-        mmNewCoach = false;
-      }
-      rerender();
-    });
-    (_e = document.getElementById("mm-back-coaches")) == null ? void 0 : _e.addEventListener("click", () => {
-      mmCoachId = null;
-      mmView = null;
-      rerender();
-    });
-    document.querySelectorAll("[data-mm-view]").forEach((b) => b.addEventListener("click", () => {
-      const v = b.dataset.mmView;
-      mmView = v === "back" ? null : v;
-      rerender();
-    }));
-    document.querySelectorAll("[data-mm-world]").forEach((b) => b.addEventListener("click", async () => {
-      const slot = worldSlotKey(mmCoachId, b.dataset.mmWorld);
-      const ok = await loadFromSlot(slot);
-      if (ok !== false) {
-        state._coachId = mmCoachId;
-        state._worldSlot = b.dataset.mmWorld;
-        state._saveSlot = slot;
-      }
-    }));
-    document.querySelectorAll("[data-mm-world-del]").forEach((b) => b.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (!confirm("Delete this world? The save is gone for good.")) return;
-      clearWorldSlot(mmCoachId, b.dataset.mmWorldDel);
-      Promise.resolve().then(() => (init_persistence(), persistence_exports)).then((m) => m.saveGame && indexedDB.deleteDatabase ? null : null);
-      rerender();
-    }));
-    document.querySelectorAll("[data-mm-world-new]").forEach((b) => b.addEventListener("click", () => {
-      const c = getCoach(mmCoachId);
-      state._coachId = mmCoachId;
-      state._worldSlot = b.dataset.mmWorldNew;
-      state._saveSlot = worldSlotKey(mmCoachId, b.dataset.mmWorldNew);
-      state._coachProfileName = c ? { first: c.name.first, last: c.name.last } : null;
-      navigate("newgame");
-    }));
-    document.querySelectorAll("[data-mm-lib-del]").forEach((b) => b.addEventListener("click", () => {
-      const [kind, ...rest] = b.dataset.mmLibDel.split(":");
-      deleteLibraryPlan(mmCoachId, kind === "pp" ? "practice" : "gameplan", rest.join(":"));
-      rerender();
-    }));
-    (_f = document.getElementById("btn-mm-load")) == null ? void 0 : _f.addEventListener("click", () => {
-      state.ui.showLoadModal = true;
-      rerender();
-    });
-    (_g = document.getElementById("close-load-modal")) == null ? void 0 : _g.addEventListener("click", () => {
-      state.ui.showLoadModal = false;
-      Promise.resolve().then(() => (init_state(), state_exports)).then((m) => m.rerender());
-    });
-    (_h = document.getElementById("load-modal-overlay")) == null ? void 0 : _h.addEventListener("click", (e) => {
-      if (e.target.id === "load-modal-overlay") {
-        state.ui.showLoadModal = false;
-        Promise.resolve().then(() => (init_state(), state_exports)).then((m) => m.rerender());
-      }
-    });
-    document.querySelectorAll("[data-load-slot]").forEach((el) => {
-      if (el.dataset.disabled !== void 0) return;
-      el.addEventListener("click", async () => {
-        await loadFromSlot(el.dataset.loadSlot);
-      });
-    });
-  }
-  var mmCoachId, mmNewCoach, mmView, mmDeleteArmed;
-  var init_mainmenu = __esm({
-    "js/ui/views/mainmenu.js"() {
-      init_state();
-      init_utils();
-      init_coach();
-      init_season();
-      init_coachprofile();
-      init_logo();
-      mmCoachId = null;
-      mmNewCoach = false;
-      mmView = null;
-    }
-  });
-
-  // js/ui/app.js
-  var app_exports = {};
-  __export(app_exports, {
-    init: () => init
-  });
-  init_state();
-  init_constants();
-  init_concepts();
-  init_persistence();
-  init_season();
-  init_player();
-
   // js/ui/views/gameplan.js
-  init_state();
-  init_coachprofile();
-  init_persistence();
-  init_constants();
-  init_situations();
-  init_concepts();
-  init_utils();
-  var gameplanSection = "offense";
-  var offSubTab = "package";
-  var defSubTab = "front";
-  var sitSide = "offense";
-  var openSitKey = null;
-  var SIT_DESCS = {
-    goal_line: "Ball inside the 5 \u2014 score or stop",
-    backed_up: "Ball inside the offense's own 5",
-    two_min_trail: "Under 5:00 in the half, down 11+",
-    four_min_lead: "Under 5:00 in the half, up 11+",
-    red_zone: "Ball inside the 20",
-    third_short: "3rd or 4th down, 2 or less",
-    third_medium: "3rd or 4th down, 3\u20136 to go",
-    third_long: "3rd or 4th down, 7+ to go",
-    second_long: "2nd down, 8+ to go",
-    first_ten: "Every 1st down",
-    base: "Everything else (2nd & short/medium)"
-  };
-  var SIT_NUDGE = {
-    third_long: "calls +30% more pass here",
-    third_short: "calls \u221225% pass (leans run) here",
-    two_min_trail: "calls +20% more pass here",
-    four_min_lead: "calls \u221225% pass (milks it) here"
-  };
-  var SIT_TIPS = {
-    goal_line: "\u25B8 Governs every snap inside the 5 for BOTH sides of your plan \u2014 punching it in on offense, and goal-line defense when they're knocking. A Power-I pin with a QB-keep dial is the classic offensive build; 46/Bear + run commit the defensive one.",
-    backed_up: "\u25B8 Offense: pinned at your own goal line \u2014 safe calls protect against the safety. Defense: you have THEM pinned \u2014 this cell is your chance to hunt a safety or a short field.",
-    two_min_trail: "\u25B8 Desperation time. AUTO already airs it out; take over to pin your best passing package and shift depth toward deep shots.",
-    four_min_lead: "\u25B8 Salt the game away. AUTO leans run; take over to go full Heavy Run out of Power-I and drain the half.",
-    red_zone: "\u25B8 The field shrinks \u2014 deep routes die inside the 20. This cell rules the whole red zone, including 3rd downs; a short-depth, run-lean plan is the conventional build.",
-    third_short: "\u25B8 AUTO leans run by 25% here (also covers 4th-and-short goes). The defense knows it too \u2014 46/Bear fronts and stacked boxes live on this down.",
-    third_medium: "\u25B8 The true coin-flip down. No AUTO adjustment \u2014 whatever edge you build here is pure scheme.",
-    third_long: "\u25B8 AUTO passes 30% more often here. Take over to pin a package \u2014 but remember the defense knows it's a passing down too.",
-    second_long: "\u25B8 After a 1st-down stuff. Screens and draws punish a defense teeing off; going conservative concedes 3rd & long.",
-    first_ten: "\u25B8 The identity down \u2014 most snaps in a game start here. Changing this cell reshapes your whole offense more than any other.",
-    base: "\u25B8 The fallback for anything no other situation claims (mostly 2nd & short/medium)."
-  };
-  var PIN_FRONTS = ["4-3", "3-4", "Nickel", "Dime", "46/Bear"];
-  var COV_OPTIONS = [["balanced", "Balanced"], ["lockTop", "Lock WR1"], ["bracketTop", "Bracket WR1"]];
-  var ALL_FORMATIONS = Object.keys(FORMATIONS);
-  var DEF_FRONTS2 = ["4-3", "3-4"];
-  var DEF_FRONT_DESCS = {
-    "4-3": "4 DL \xB7 3 LB \xB7 4 DB \u2014 balanced base, auto-subs to Nickel/Dime/46",
-    "3-4": "3 DL \xB7 4 LB \xB7 4 DB \u2014 versatile, blitz-friendly, auto-subs by situation"
-  };
-  var DEF_FRONT_NEEDS = {
-    "4-3": "Wants 3-tech DTs, pass-rush DEs, a thumper MLB and rangy cover LBs.",
-    "3-4": "Wants a two-gap nose tackle, edge-rush OLBs and downhill inside LBs."
-  };
   function gameplanIsSimple() {
     var _a;
     return ((_a = state.settings) == null ? void 0 : _a.gameplanMode) === "simple";
@@ -26058,40 +25545,6 @@ var _CFB = (() => {
           </div>
         </div>`;
   }
-  var SIMPLE_DIALS = [
-    {
-      key: "simpleOffId",
-      label: "Offensive Identity",
-      lo: "Run-heavy",
-      hi: "Pass-heavy",
-      opts: [["run", "Run-heavy"], ["balanced", "Balanced"], ["pass", "Pass-heavy"]],
-      tip: "How you want to move the ball. Run-heavy leans on the ground and sells play-action; pass-heavy airs it out."
-    },
-    {
-      key: "simpleOffAggr",
-      label: "Offensive Aggression",
-      lo: "Play it safe",
-      hi: "Aggressive",
-      opts: [["safe", "Play it safe"], ["balanced", "Balanced"], ["aggr", "Aggressive"]],
-      tip: "Protect the ball and take what's there, or push the ball downfield and go for it on 4th."
-    },
-    {
-      key: "simpleDefPosture",
-      label: "Defensive Posture",
-      lo: "Bend, don't break",
-      hi: "Attack",
-      opts: [["bend", "Bend, don't break"], ["balanced", "Balanced"], ["attack", "Attack"]],
-      tip: "Sit back and keep everything in front of you, or bring pressure and press up to force mistakes."
-    },
-    {
-      key: "simpleTempo",
-      label: "Tempo",
-      lo: "Ball control",
-      hi: "Fast",
-      opts: [["slow", "Ball control"], ["normal", "Normal"], ["fast", "Fast"]],
-      tip: "Milk the clock and shorten the game, or play fast and run more plays."
-    }
-  ];
   function currentSimpleDial(gp, key) {
     if (key === "simpleOffId") {
       const p = PASS_TENDENCY[gp.tendency] != null ? PASS_TENDENCY[gp.tendency] : 0.5;
@@ -26176,12 +25629,6 @@ var _CFB = (() => {
     </div>
     ${renderSimpleSituations(gp)}`;
   }
-  var SIMPLE_SITS = [
-    { key: "third", label: "3rd Down", cells: ["third_short", "third_medium", "third_long"] },
-    { key: "red_zone", label: "Red Zone", cells: ["red_zone"] },
-    { key: "two_min_trail", label: "When Trailing Late", cells: ["two_min_trail"] },
-    { key: "four_min_lead", label: "When Leading Late", cells: ["four_min_lead"] }
-  ];
   function currentSimpleSit(gp, cells, lever) {
     const sits = gp.situations || {};
     const cell = sits[cells[0]] || {};
@@ -28082,22 +27529,560 @@ var _CFB = (() => {
     }).join("")}
   `;
   }
+  var gameplanSection, offSubTab, defSubTab, sitSide, openSitKey, SIT_DESCS, SIT_NUDGE, SIT_TIPS, PIN_FRONTS, COV_OPTIONS, ALL_FORMATIONS, DEF_FRONTS2, DEF_FRONT_DESCS, DEF_FRONT_NEEDS, SIMPLE_DIALS, SIMPLE_SITS;
+  var init_gameplan = __esm({
+    "js/ui/views/gameplan.js"() {
+      init_state();
+      init_coachprofile();
+      init_persistence();
+      init_constants();
+      init_situations();
+      init_concepts();
+      init_utils();
+      gameplanSection = "offense";
+      offSubTab = "package";
+      defSubTab = "front";
+      sitSide = "offense";
+      openSitKey = null;
+      SIT_DESCS = {
+        goal_line: "Ball inside the 5 \u2014 score or stop",
+        backed_up: "Ball inside the offense's own 5",
+        two_min_trail: "Under 5:00 in the half, down 11+",
+        four_min_lead: "Under 5:00 in the half, up 11+",
+        red_zone: "Ball inside the 20",
+        third_short: "3rd or 4th down, 2 or less",
+        third_medium: "3rd or 4th down, 3\u20136 to go",
+        third_long: "3rd or 4th down, 7+ to go",
+        second_long: "2nd down, 8+ to go",
+        first_ten: "Every 1st down",
+        base: "Everything else (2nd & short/medium)"
+      };
+      SIT_NUDGE = {
+        third_long: "calls +30% more pass here",
+        third_short: "calls \u221225% pass (leans run) here",
+        two_min_trail: "calls +20% more pass here",
+        four_min_lead: "calls \u221225% pass (milks it) here"
+      };
+      SIT_TIPS = {
+        goal_line: "\u25B8 Governs every snap inside the 5 for BOTH sides of your plan \u2014 punching it in on offense, and goal-line defense when they're knocking. A Power-I pin with a QB-keep dial is the classic offensive build; 46/Bear + run commit the defensive one.",
+        backed_up: "\u25B8 Offense: pinned at your own goal line \u2014 safe calls protect against the safety. Defense: you have THEM pinned \u2014 this cell is your chance to hunt a safety or a short field.",
+        two_min_trail: "\u25B8 Desperation time. AUTO already airs it out; take over to pin your best passing package and shift depth toward deep shots.",
+        four_min_lead: "\u25B8 Salt the game away. AUTO leans run; take over to go full Heavy Run out of Power-I and drain the half.",
+        red_zone: "\u25B8 The field shrinks \u2014 deep routes die inside the 20. This cell rules the whole red zone, including 3rd downs; a short-depth, run-lean plan is the conventional build.",
+        third_short: "\u25B8 AUTO leans run by 25% here (also covers 4th-and-short goes). The defense knows it too \u2014 46/Bear fronts and stacked boxes live on this down.",
+        third_medium: "\u25B8 The true coin-flip down. No AUTO adjustment \u2014 whatever edge you build here is pure scheme.",
+        third_long: "\u25B8 AUTO passes 30% more often here. Take over to pin a package \u2014 but remember the defense knows it's a passing down too.",
+        second_long: "\u25B8 After a 1st-down stuff. Screens and draws punish a defense teeing off; going conservative concedes 3rd & long.",
+        first_ten: "\u25B8 The identity down \u2014 most snaps in a game start here. Changing this cell reshapes your whole offense more than any other.",
+        base: "\u25B8 The fallback for anything no other situation claims (mostly 2nd & short/medium)."
+      };
+      PIN_FRONTS = ["4-3", "3-4", "Nickel", "Dime", "46/Bear"];
+      COV_OPTIONS = [["balanced", "Balanced"], ["lockTop", "Lock WR1"], ["bracketTop", "Bracket WR1"]];
+      ALL_FORMATIONS = Object.keys(FORMATIONS);
+      DEF_FRONTS2 = ["4-3", "3-4"];
+      DEF_FRONT_DESCS = {
+        "4-3": "4 DL \xB7 3 LB \xB7 4 DB \u2014 balanced base, auto-subs to Nickel/Dime/46",
+        "3-4": "3 DL \xB7 4 LB \xB7 4 DB \u2014 versatile, blitz-friendly, auto-subs by situation"
+      };
+      DEF_FRONT_NEEDS = {
+        "4-3": "Wants 3-tech DTs, pass-rush DEs, a thumper MLB and rangy cover LBs.",
+        "3-4": "Wants a two-gap nose tackle, edge-rush OLBs and downhill inside LBs."
+      };
+      SIMPLE_DIALS = [
+        {
+          key: "simpleOffId",
+          label: "Offensive Identity",
+          lo: "Run-heavy",
+          hi: "Pass-heavy",
+          opts: [["run", "Run-heavy"], ["balanced", "Balanced"], ["pass", "Pass-heavy"]],
+          tip: "How you want to move the ball. Run-heavy leans on the ground and sells play-action; pass-heavy airs it out."
+        },
+        {
+          key: "simpleOffAggr",
+          label: "Offensive Aggression",
+          lo: "Play it safe",
+          hi: "Aggressive",
+          opts: [["safe", "Play it safe"], ["balanced", "Balanced"], ["aggr", "Aggressive"]],
+          tip: "Protect the ball and take what's there, or push the ball downfield and go for it on 4th."
+        },
+        {
+          key: "simpleDefPosture",
+          label: "Defensive Posture",
+          lo: "Bend, don't break",
+          hi: "Attack",
+          opts: [["bend", "Bend, don't break"], ["balanced", "Balanced"], ["attack", "Attack"]],
+          tip: "Sit back and keep everything in front of you, or bring pressure and press up to force mistakes."
+        },
+        {
+          key: "simpleTempo",
+          label: "Tempo",
+          lo: "Ball control",
+          hi: "Fast",
+          opts: [["slow", "Ball control"], ["normal", "Normal"], ["fast", "Fast"]],
+          tip: "Milk the clock and shorten the game, or play fast and run more plays."
+        }
+      ];
+      SIMPLE_SITS = [
+        { key: "third", label: "3rd Down", cells: ["third_short", "third_medium", "third_long"] },
+        { key: "red_zone", label: "Red Zone", cells: ["red_zone"] },
+        { key: "two_min_trail", label: "When Trailing Late", cells: ["two_min_trail"] },
+        { key: "four_min_lead", label: "When Leading Late", cells: ["four_min_lead"] }
+      ];
+    }
+  });
 
-  // js/ui/app.js
-  init_sim();
-  init_mainmenu();
+  // js/ui/logo.js
+  var BLUEPRINT_MARK;
+  var init_logo = __esm({
+    "js/ui/logo.js"() {
+      BLUEPRINT_MARK = `
+<svg class="bp-mark" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Blueprint">
+  <rect x="0" y="0" width="512" height="512" fill="#0c2340"/>
+  <g stroke="#FFFFFF" stroke-opacity="0.15" stroke-width="1.4">
+    <path d="M64 0V512M128 0V512M192 0V512M256 0V512M320 0V512M384 0V512M448 0V512"/>
+    <path d="M0 64H512M0 128H512M0 192H512M0 256H512M0 320H512M0 384H512M0 448H512"/>
+  </g>
+  <g stroke="#DCEBFB" stroke-opacity="0.5" stroke-width="2" fill="none">
+    <rect x="26" y="26" width="460" height="460"/>
+    <path d="M26 74H62M26 438H62M450 74H486M450 438H486M74 26V62M438 26V62M74 450V486M438 450V486"/>
+  </g>
+  <path d="M256 118 V394" stroke="#3FE04B" stroke-width="6" stroke-linecap="round"/>
+  <g fill="none" stroke="#255FA6" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M84 256 Q256 104 428 256 Q256 408 84 256 Z"/>
+    <path d="M118 256 H394" stroke-width="4"/>
+    <path d="M158 256 Q256 160 354 256" stroke-width="3.5" stroke-dasharray="13 10" stroke-opacity="0.9"/>
+    <path d="M158 256 Q256 352 354 256" stroke-width="3.5" stroke-dasharray="13 10" stroke-opacity="0.9"/>
+    <path d="M150 208 V304 M362 208 V304" stroke-width="4"/>
+  </g>
+  <g stroke="#255FA6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="194" y="228" width="124" height="56" rx="28" fill="#4E9BEA" stroke-width="6.5"/>
+    <g fill="none" stroke-width="5">
+      <path d="M214 222 V290 M232 222 V290 M250 222 V290 M268 222 V290 M286 222 V290 M304 222 V290"/>
+    </g>
+  </g>
+  <g stroke="#255FA6" stroke-width="3" fill="none" stroke-linecap="round">
+    <path d="M150 150 V362"/>
+    <path d="M142 158 L150 148 L158 158"/><path d="M142 354 L150 364 L158 354"/>
+    <path d="M176 196 H336"/><path d="M184 189 L174 197 L184 205"/><path d="M328 189 L338 197 L328 205"/>
+    <path d="M176 316 H336"/><path d="M184 309 L174 317 L184 325"/><path d="M328 309 L338 317 L328 325"/>
+    <path d="M172 256 H196 M172 248 V264"/>
+  </g>
+  <g stroke="#3FE04B" stroke-width="5" stroke-linecap="round">
+    <path d="M144 210 H156"/><path d="M144 302 H156"/>
+  </g>
+</svg>`;
+    }
+  });
+
+  // js/ui/views/mainmenu.js
+  var mainmenu_exports = {};
+  __export(mainmenu_exports, {
+    renderMainMenu: () => renderMainMenu,
+    setupListeners: () => setupListeners2
+  });
+  function buildId() {
+    return typeof globalThis !== "undefined" && globalThis.__BUILD__ || "dev";
+  }
+  function renderMainMenu() {
+    const saves = state.ui.saves || [];
+    const autoSave = saves.find((s) => s.slot === "auto");
+    const hasRecord = (autoSave == null ? void 0 : autoSave.record) && (autoSave.record.wins > 0 || autoSave.record.losses > 0);
+    return `
+    <div class="mainmenu-screen">
+      <div class="mm-bg-grid"></div>
+
+      <div class="mm-content">
+        <div class="mm-logo">
+          <div class="mm-logo-badge">${BLUEPRINT_MARK}</div>
+          <h1 class="mm-title">BLUE<span class="mm-title-cfb">PRINT</span></h1>
+          <p class="mm-subtitle">College Football Dynasty \xB7 D1 \xB7 D2 \xB7 D3</p>
+        </div>
+
+        ${mmCoachId ? renderCoachHome() : renderCoachSelect(autoSave)}
+
+        <div class="mm-footer">
+          <span class="mm-version">320+ Schools \xB7 29 Conferences \xB7 3 Divisions \xB7 Fixed D1 \xB7 Procedural D2/D3</span>
+          <span class="mm-build" title="Build ID. This is also the service-worker cache name \u2014 if a device is serving a stale build, this is how you spot it.">build ${buildId()}</span>
+        </div>
+      </div>
+
+      ${renderLoadModal(saves)}
+    </div>
+  `;
+  }
+  function renderCoachSelect(autoSave) {
+    const coaches = listCoaches();
+    return `
+    <div class="mm-actions">
+      <div class="mm-section-label">YOUR COACHES</div>
+      ${coaches.map((c) => {
+      var _a;
+      const armed = mmDeleteArmed === c.id;
+      return `
+        <div class="mm-coach-row${armed ? " mm-coach-armed" : ""}">
+          <button class="btn-mm-primary mm-coach-card" data-mm-coach="${c.id}">
+            <span class="btn-mm-label">\u{1F393} ${escapeHtml(c.name.first)} ${escapeHtml(c.name.last)}</span>
+            <span class="btn-mm-meta">${Object.keys(c.worlds || {}).length}/${MAX_WORLDS} worlds \xB7 ${(((_a = c.plans) == null ? void 0 : _a.gameplans) || []).length} saved game plans</span>
+          </button>
+          <button class="mm-coach-del${armed ? " armed" : ""}" data-mm-coach-del="${c.id}" title="${armed ? "Tap again to permanently delete this coach and all their worlds" : "Delete coach"}">${armed ? "Delete?" : "\u{1F5D1}"}</button>
+        </div>`;
+    }).join("")}
+      ${coaches.length < MAX_COACHES ? mmNewCoach ? `
+        <div class="mm-newcoach">
+          <input class="form-input" id="mm-nc-first" type="text" placeholder="First" maxlength="16" autocomplete="off" />
+          <input class="form-input" id="mm-nc-last" type="text" placeholder="Last" maxlength="16" autocomplete="off" />
+          <button class="btn-mm btn-mm-new" id="mm-nc-create">CREATE</button>
+        </div>` : `
+        <button class="btn-mm btn-mm-new" id="btn-mm-newcoach">+ NEW COACH</button>` : ""}
+      ${autoSave ? `<button class="btn-mm btn-mm-secondary" id="btn-mm-continue" style="margin-top:8px">\u25B6 Legacy save \xB7 ${escapeHtml(autoSave.school || "?")} S${autoSave.season}</button>` : ""}
+      <button class="btn-mm-guide" id="btn-mm-guide">\u{1F4D6} The Manual</button>
+    </div>`;
+  }
+  function renderCoachDna(c) {
+    const dna = coachDNA(c.id) || { axes: {}, badges: [] };
+    const grades = dnaGrades(c.id);
+    const rows = Object.entries(DNA_AXES).map(([k, meta]) => {
+      var _a;
+      const xp = ((_a = dna.axes) == null ? void 0 : _a[k]) || 0;
+      const g = grades[k] || 0;
+      const nextAt = dnaXpForNextGrade(g);
+      const bonus = dnaBonus(k, g);
+      return { k, meta, xp, g, nextAt, bonus };
+    }).sort((a, b) => b.g - a.g || b.xp - a.xp);
+    return `
+    <div class="mm-actions">
+      <div class="mm-section-label">${escapeHtml(c.name.first.toUpperCase())} \u2014 DNA & BONUSES</div>
+      <div class="mm-dna-title">${escapeHtml(dnaTitle(dna))} \xB7 ${(dna.badges || []).length} \u{1F3C5}</div>
+      <p class="mm-hub-hint">Your identity forms from how you coach. Every grade earns a permanent, live bonus \u2014 carried into every world.</p>
+      <div class="mm-dna-list">
+        ${rows.map((r) => `
+          <div class="mm-dna-item${r.g === 0 ? " mm-dna-locked" : ""}">
+            <div class="mm-dna-head">
+              <span class="mm-dna-axis">${r.meta.icon} ${r.meta.label}</span>
+              <span class="dna-grade-num">G${r.g}</span>
+            </div>
+            <div class="mm-dna-meter">
+              <span class="dna-bar"><span class="dna-bar-fill" style="width:${Math.min(100, Math.round(r.xp / r.nextAt * 100))}%"></span></span>
+              <span class="dna-xp-num">${r.g >= 10 ? "MAX" : `${r.xp}/${r.nextAt}`}</span>
+            </div>
+            <div class="mm-dna-bonus${r.g === 0 ? " muted" : ""}">${r.g ? "\u25B8 " : ""}${escapeHtml(r.bonus.label)}</div>
+          </div>`).join("")}
+      </div>
+      <button class="btn-mm btn-mm-secondary" data-mm-view="back" style="margin-top:12px">\u2190 Back</button>
+    </div>`;
+  }
+  function renderCoachRecordBook(c) {
+    const R = c.records || {};
+    const career = R.career || {};
+    const game = R.game || {};
+    const season = R.season || {};
+    const indiv = R.seasonIndiv || {};
+    const team = R.seasonTeam || {};
+    const dna = coachDNA(c.id) || { badges: [] };
+    const ctxStr = (ctx2) => {
+      if (!ctx2) return "";
+      const bits = [];
+      if (ctx2.school) bits.push(ctx2.school);
+      if (ctx2.world) bits.push(`W${ctx2.world}`);
+      if (ctx2.season != null) bits.push(`S${ctx2.season}`);
+      return bits.length ? ` \u2014 ${escapeHtml(bits.join(" \xB7 "))}` : "";
+    };
+    const recRow = (label, rec, suffix = "") => rec && rec.v != null ? `
+      <div class="mm-rec-row"><span class="mm-rec-lbl">${escapeHtml(label)}</span><span class="mm-rec-val">${rec.v}${suffix}<span class="mm-rec-ctx">${ctxStr(rec.ctx)}</span></span></div>` : "";
+    const indivRow = (label, rec, suffix = "") => rec && rec.v != null ? `
+      <div class="mm-rec-row"><span class="mm-rec-lbl">${escapeHtml(label)}</span><span class="mm-rec-val">${rec.v}${suffix}<span class="mm-rec-ctx">${rec.name ? ` \u2014 ${escapeHtml(rec.name)}${rec.pos ? ` (${escapeHtml(rec.pos)})` : ""}` : ""}${ctxStr(rec.ctx)}</span></span></div>` : "";
+    const wins = c.careerWins || 0, losses = c.careerLosses || 0;
+    const winPct = wins + losses > 0 ? (wins / (wins + losses)).toFixed(3).replace(/^0/, "") : "\u2014";
+    const gameHtml = [
+      recRow("Best passing game", game.passYds, " yds"),
+      recRow("Best rushing game", game.rushYds, " yds"),
+      recRow("Most sacks (game)", game.sacks),
+      recRow("Most takeaways (game)", game.takeaways),
+      recRow("Biggest win margin", game.margin, " pts")
+    ].join("");
+    const seasonHtml = [
+      season.bestRecord ? `<div class="mm-rec-row"><span class="mm-rec-lbl">Best season record</span><span class="mm-rec-val">${season.bestRecord.v}${ctxStr(season.bestRecord.ctx)}</span></div>` : "",
+      recRow("Longest win streak", season.longestStreak, " games"),
+      season.bestRank && season.bestRank.v ? `<div class="mm-rec-row"><span class="mm-rec-lbl">Highest final ranking</span><span class="mm-rec-val">#${season.bestRank.v}${ctxStr(season.bestRank.ctx)}</span></div>` : ""
+    ].join("");
+    const indivHtml = [
+      indivRow("Passing yards (season)", indiv.passYds, " yds"),
+      indivRow("Rushing yards (season)", indiv.rushYds, " yds"),
+      indivRow("Receiving yards (season)", indiv.recYds, " yds"),
+      indivRow("Sacks (season)", indiv.sacks),
+      indivRow("Interceptions (season)", indiv.ints)
+    ].join("");
+    const teamHtml = [
+      recRow("Points scored (season)", team.pointsFor, " pts"),
+      recRow("Total yards (season)", team.totalYds, " yds")
+    ].join("");
+    const badges = (dna.badges || []).slice().reverse();
+    const badgeHtml = badges.length ? (() => {
+      const bySeason = {};
+      for (const b of badges) (bySeason[b.season] = bySeason[b.season] || []).push(b);
+      return Object.keys(bySeason).sort((a, b) => b - a).map((s) => `
+        <div class="dna-season-group">
+          <div class="dna-season-hdr">SEASON ${s}</div>
+          ${bySeason[s].map((b) => `<span class="dna-chip">\u{1F3C5} ${escapeHtml(b.label)}</span>`).join("")}
+        </div>`).join("");
+    })() : '<p class="mm-hub-hint">No milestones yet \u2014 they log here as you earn them.</p>';
+    const section = (title, body, empty) => `
+      <div class="mm-rec-section">
+        <div class="mm-rec-hdr">${title}</div>
+        ${body || `<p class="mm-hub-hint">${empty}</p>`}
+      </div>`;
+    return `
+    <div class="mm-actions">
+      <div class="mm-section-label">${escapeHtml(c.name.first.toUpperCase())} ${escapeHtml(c.name.last.toUpperCase())} \u2014 RECORD BOOK</div>
+      <p class="mm-hub-hint">Career bests across every world you've coached.</p>
+      ${section("CAREER TOTALS", `
+        <div class="mm-rec-row"><span class="mm-rec-lbl">Record</span><span class="mm-rec-val">${wins}\u2013${losses} <span class="mm-rec-ctx">(${winPct})</span></span></div>
+        ${career.confTitles ? `<div class="mm-rec-row"><span class="mm-rec-lbl">Conference titles</span><span class="mm-rec-val">${career.confTitles}</span></div>` : ""}
+        <div class="mm-rec-row"><span class="mm-rec-lbl">National titles</span><span class="mm-rec-val">${c.titles || 0}</span></div>
+        ${career.playoffApps ? `<div class="mm-rec-row"><span class="mm-rec-lbl">Playoff appearances</span><span class="mm-rec-val">${career.playoffApps}</span></div>` : ""}
+        ${career.bowlWins != null || career.bowlLosses != null ? `<div class="mm-rec-row"><span class="mm-rec-lbl">Bowl record</span><span class="mm-rec-val">${career.bowlWins || 0}\u2013${career.bowlLosses || 0}</span></div>` : ""}
+      `, "")}
+      ${section("SINGLE-GAME RECORDS", gameHtml, "Play some games and your bests show up here.")}
+      ${section("SEASON BESTS", seasonHtml, "Finish a season to set your marks.")}
+      ${section("SINGLE-SEASON \u2014 INDIVIDUAL", indivHtml, "Your players' best statistical seasons will appear here.")}
+      ${section("SINGLE-SEASON \u2014 TEAM", teamHtml, "Your best team seasons will appear here.")}
+      ${section("MILESTONE LOG", badgeHtml, "")}
+      <button class="btn-mm btn-mm-secondary" data-mm-view="back" style="margin-top:12px">\u2190 Back</button>
+    </div>`;
+  }
+  function renderCoachHome() {
+    var _a, _b, _c;
+    const c = getCoach(mmCoachId);
+    if (!c) {
+      mmCoachId = null;
+      mmView = null;
+      return renderCoachSelect(null);
+    }
+    if (mmView === "dna") return renderCoachDna(c);
+    if (mmView === "records") return renderCoachRecordBook(c);
+    const slots = Array.from({ length: MAX_WORLDS }, (_, i) => i + 1);
+    return `
+    <div class="mm-actions">
+      <div class="mm-section-label">COACH ${escapeHtml(c.name.first.toUpperCase())} ${escapeHtml(c.name.last.toUpperCase())}</div>
+      <div class="mm-dna-title">${escapeHtml(dnaTitle(coachDNA(c.id)))} \xB7 ${(((_a = coachDNA(c.id)) == null ? void 0 : _a.badges) || []).length} \u{1F3C5}</div>
+      <div class="mm-hub-btns">
+        <button class="btn-mm btn-mm-hub" data-mm-view="dna">\u{1F9EC} DNA & Bonuses</button>
+        <button class="btn-mm btn-mm-hub" data-mm-view="records">\u{1F4D6} Record Book</button>
+      </div>
+      <div class="mm-section-label" style="margin-top:12px">SELECT A WORLD</div>
+      ${slots.map((n) => {
+      var _a2, _b2, _c2;
+      const wMeta = (_a2 = c.worlds) == null ? void 0 : _a2[n];
+      return wMeta ? `
+          <div class="mm-world-row">
+            <button class="btn-mm-primary mm-world-card" data-mm-world="${n}">
+              <span class="btn-mm-label">\u{1F30D} WORLD ${n} \u2014 ${escapeHtml(wMeta.school || "?")}${wMeta.division ? ` <span class="mm-w-div">${wMeta.division}</span>` : ""}${wMeta.prestige != null ? ` <span class="mm-w-star">${wMeta.prestige}\u2605</span>` : ""}</span>
+              <span class="btn-mm-meta">Season ${wMeta.season}${wMeta.record ? ` \xB7 ${fmtRecord(wMeta.record.wins, wMeta.record.losses)}` : ""} \xB7 ${formatDate(wMeta.timestamp)}</span>
+              ${wMeta.careerWins != null || wMeta.titles ? `
+                <span class="mm-w-career">Career ${(_b2 = wMeta.careerWins) != null ? _b2 : 0}\u2013${(_c2 = wMeta.careerLosses) != null ? _c2 : 0}${wMeta.titles ? ` \xB7 ${wMeta.titles}\u{1F3C6}` : ""}${wMeta.jobSecurity != null ? ` \xB7 seat ${wMeta.jobSecurity}` : ""}</span>` : ""}
+              ${wMeta.skills ? `<span class="mm-w-skills">${[["evaluator", "EVL"], ["recruiter", "REC"], ["developer", "DEV"], ["reputation", "REP"], ["roots", "ROO"]].map(([k, lbl]) => {
+        var _a3;
+        return `${lbl} ${gradeFromXP((_a3 = wMeta.skills[k]) != null ? _a3 : 0)}`;
+      }).join(" \xB7 ")}</span>` : ""}
+            </button>
+            <button class="btn-mm-del" data-mm-world-del="${n}" title="Delete world">\u2715</button>
+          </div>` : `
+          <button class="btn-mm btn-mm-new mm-world-empty" data-mm-world-new="${n}">\uFF0B WORLD ${n} \u2014 start a new dynasty</button>`;
+    }).join("")}
+      <div class="mm-section-label" style="margin-top:14px">PLAYBOOK LIBRARY</div>
+      <div class="mm-library">
+        ${(((_b = c.plans) == null ? void 0 : _b.gameplans) || []).length || (((_c = c.plans) == null ? void 0 : _c.practice) || []).length ? `
+          ${(c.plans.gameplans || []).map((p) => `<div class="mm-lib-row"><span>\u{1F4CB} ${escapeHtml(p.name)}</span><button class="btn-mm-del" data-mm-lib-del="gp:${escapeHtml(p.name)}">\u2715</button></div>`).join("")}
+          ${(c.plans.practice || []).map((p) => `<div class="mm-lib-row"><span>\u{1F3CB} ${escapeHtml(p.name)}</span><button class="btn-mm-del" data-mm-lib-del="pp:${escapeHtml(p.name)}">\u2715</button></div>`).join("")}
+        ` : '<div class="mm-lib-empty muted">Save game plans and practice plans in-game \u2014 they follow this coach into every new world.</div>'}
+      </div>
+      <button class="btn-mm btn-mm-secondary" id="mm-back-coaches" style="margin-top:10px">\u2190 Coaches</button>
+    </div>`;
+  }
+  function renderLoadModal(saves) {
+    if (!state.ui.showLoadModal) return "";
+    const SLOT_LABELS2 = { auto: "Auto", slot1: "Slot 1", slot2: "Slot 2", slot3: "Slot 3", slot4: "Slot 4" };
+    const ALL_SLOTS2 = ["auto", "slot1", "slot2", "slot3", "slot4"];
+    return `
+    <div class="modal-overlay" id="load-modal-overlay">
+      <div class="modal save-modal">
+        <div class="modal-header">
+          <h2>Load Game</h2>
+          <button class="modal-close" id="close-load-modal">\u2715</button>
+        </div>
+        <div class="save-slots">
+          ${ALL_SLOTS2.map((slot) => {
+      const save = saves.find((s) => s.slot === slot);
+      const hasRec = (save == null ? void 0 : save.record) && (save.record.wins > 0 || save.record.losses > 0);
+      return `
+              <div class="save-slot ${save ? "save-slot-filled" : "save-slot-empty"}"
+                   data-load-slot="${slot}" ${!save ? "data-disabled" : ""}>
+                <div class="save-slot-label">${SLOT_LABELS2[slot]}</div>
+                ${save ? `
+                  <div class="save-slot-info">
+                    <div class="save-slot-school">${escapeHtml(save.school || "Unknown")}</div>
+                    <div class="save-slot-meta">Season ${save.season} \xB7 ${weekLabel(save.day)}${hasRec ? ` \xB7 ${fmtRecord(save.record.wins, save.record.losses)}` : ""}</div>
+                    <div class="save-slot-date">${formatDate(save.timestamp)}</div>
+                  </div>
+                ` : `
+                  <div class="save-slot-empty-label">Empty</div>
+                `}
+              </div>
+            `;
+    }).join("")}
+        </div>
+      </div>
+    </div>
+  `;
+  }
+  function formatDate(ts) {
+    if (!ts) return "";
+    return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+  async function setupListeners2() {
+    var _a, _b, _c, _d, _e, _f, _g, _h;
+    (_a = document.getElementById("btn-mm-guide")) == null ? void 0 : _a.addEventListener("click", () => {
+      navigate("manual");
+    });
+    await refreshSaves();
+    (_b = document.getElementById("btn-mm-continue")) == null ? void 0 : _b.addEventListener("click", async () => {
+      await loadFromSlot("auto");
+    });
+    document.querySelectorAll("[data-mm-coach]").forEach((b) => b.addEventListener("click", () => {
+      mmDeleteArmed = null;
+      mmCoachId = b.dataset.mmCoach;
+      mmNewCoach = false;
+      rerender();
+    }));
+    document.querySelectorAll("[data-mm-coach-del]").forEach((b) => b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = b.dataset.mmCoachDel;
+      if (mmDeleteArmed !== id) {
+        mmDeleteArmed = id;
+        rerender();
+        return;
+      }
+      const c = getCoach(id);
+      if (c) {
+        for (const slot of Object.keys(c.worlds || {})) {
+          const key = worldSlotKey(id, slot);
+          Promise.resolve().then(() => (init_persistence(), persistence_exports)).then((m) => {
+            var _a2;
+            return (_a2 = m.deleteSlotData) == null ? void 0 : _a2.call(m, key);
+          });
+        }
+      }
+      deleteCoach(id);
+      mmDeleteArmed = null;
+      if (mmCoachId === id) {
+        mmCoachId = null;
+        mmView = null;
+      }
+      rerender();
+    }));
+    (_c = document.getElementById("btn-mm-newcoach")) == null ? void 0 : _c.addEventListener("click", () => {
+      mmDeleteArmed = null;
+      mmNewCoach = true;
+      rerender();
+      setTimeout(() => {
+        var _a2;
+        return (_a2 = document.getElementById("mm-nc-first")) == null ? void 0 : _a2.focus();
+      }, 30);
+    });
+    (_d = document.getElementById("mm-nc-create")) == null ? void 0 : _d.addEventListener("click", () => {
+      var _a2, _b2, _c2, _d2;
+      const f = (_b2 = (_a2 = document.getElementById("mm-nc-first")) == null ? void 0 : _a2.value) == null ? void 0 : _b2.trim();
+      const l = (_d2 = (_c2 = document.getElementById("mm-nc-last")) == null ? void 0 : _c2.value) == null ? void 0 : _d2.trim();
+      if (!f && !l) return;
+      const c = createCoach(f || "Coach", l || "");
+      if (c) {
+        mmCoachId = c.id;
+        mmNewCoach = false;
+      }
+      rerender();
+    });
+    (_e = document.getElementById("mm-back-coaches")) == null ? void 0 : _e.addEventListener("click", () => {
+      mmCoachId = null;
+      mmView = null;
+      rerender();
+    });
+    document.querySelectorAll("[data-mm-view]").forEach((b) => b.addEventListener("click", () => {
+      const v = b.dataset.mmView;
+      mmView = v === "back" ? null : v;
+      rerender();
+    }));
+    document.querySelectorAll("[data-mm-world]").forEach((b) => b.addEventListener("click", async () => {
+      const slot = worldSlotKey(mmCoachId, b.dataset.mmWorld);
+      const ok = await loadFromSlot(slot);
+      if (ok !== false) {
+        state._coachId = mmCoachId;
+        state._worldSlot = b.dataset.mmWorld;
+        state._saveSlot = slot;
+      }
+    }));
+    document.querySelectorAll("[data-mm-world-del]").forEach((b) => b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!confirm("Delete this world? The save is gone for good.")) return;
+      clearWorldSlot(mmCoachId, b.dataset.mmWorldDel);
+      Promise.resolve().then(() => (init_persistence(), persistence_exports)).then((m) => m.saveGame && indexedDB.deleteDatabase ? null : null);
+      rerender();
+    }));
+    document.querySelectorAll("[data-mm-world-new]").forEach((b) => b.addEventListener("click", () => {
+      const c = getCoach(mmCoachId);
+      state._coachId = mmCoachId;
+      state._worldSlot = b.dataset.mmWorldNew;
+      state._saveSlot = worldSlotKey(mmCoachId, b.dataset.mmWorldNew);
+      state._coachProfileName = c ? { first: c.name.first, last: c.name.last } : null;
+      navigate("newgame");
+    }));
+    document.querySelectorAll("[data-mm-lib-del]").forEach((b) => b.addEventListener("click", () => {
+      const [kind, ...rest] = b.dataset.mmLibDel.split(":");
+      deleteLibraryPlan(mmCoachId, kind === "pp" ? "practice" : "gameplan", rest.join(":"));
+      rerender();
+    }));
+    (_f = document.getElementById("btn-mm-load")) == null ? void 0 : _f.addEventListener("click", () => {
+      state.ui.showLoadModal = true;
+      rerender();
+    });
+    (_g = document.getElementById("close-load-modal")) == null ? void 0 : _g.addEventListener("click", () => {
+      state.ui.showLoadModal = false;
+      Promise.resolve().then(() => (init_state(), state_exports)).then((m) => m.rerender());
+    });
+    (_h = document.getElementById("load-modal-overlay")) == null ? void 0 : _h.addEventListener("click", (e) => {
+      if (e.target.id === "load-modal-overlay") {
+        state.ui.showLoadModal = false;
+        Promise.resolve().then(() => (init_state(), state_exports)).then((m) => m.rerender());
+      }
+    });
+    document.querySelectorAll("[data-load-slot]").forEach((el) => {
+      if (el.dataset.disabled !== void 0) return;
+      el.addEventListener("click", async () => {
+        await loadFromSlot(el.dataset.loadSlot);
+      });
+    });
+  }
+  var mmCoachId, mmNewCoach, mmView, mmDeleteArmed;
+  var init_mainmenu = __esm({
+    "js/ui/views/mainmenu.js"() {
+      init_state();
+      init_utils();
+      init_coach();
+      init_season();
+      init_coachprofile();
+      init_logo();
+      mmCoachId = null;
+      mmNewCoach = false;
+      mmView = null;
+    }
+  });
 
   // js/ui/views/newgame.js
-  init_world();
-  init_constants();
-  init_staff();
-  init_starts();
-  init_coachprofile();
-  init_state();
-  init_utils();
-  init_logo();
-  var obStep = 0;
-  var _obWorld = null;
+  var newgame_exports = {};
+  __export(newgame_exports, {
+    devTakeJobStart: () => devTakeJobStart,
+    renderNewGame: () => renderNewGame,
+    setupListeners: () => setupListeners3
+  });
   function obGetWorld() {
     if (!_obWorld) {
       try {
@@ -28108,163 +28093,6 @@ var _CFB = (() => {
     }
     return _obWorld;
   }
-  var ob = {
-    first: "",
-    last: "",
-    state: null,
-    division: null,
-    qbPref: null,
-    defFront: null,
-    challenge: "takejob",
-    schoolId: null,
-    oc: null,
-    dc: null,
-    custom: { prestige: 2, jobSecurity: 60, budgetPct: 100 }
-  };
-  var pending = null;
-  var generating = false;
-  var legacyMode = false;
-  var activeDivision = "D1";
-  var selectedSchoolId = null;
-  var REGION_LABELS = {
-    Northeast: "Northeast",
-    MidAtlantic: "Mid-Atlantic",
-    Southeast: "Southeast",
-    DeepSouth: "Deep South",
-    MidSouth: "Mid-South",
-    GreatLakes: "Great Lakes",
-    Midwest: "Midwest",
-    UpperMidwest: "Upper Midwest",
-    Plains: "Plains",
-    Southwest: "Southwest",
-    MountainWest: "Mountain West",
-    PacificNW: "Pacific Northwest",
-    // The 'California' region spans CA, NV and AZ — labelling it "California"
-    // filed Nevada under a state it isn't in. The internal key stays California
-    // (worldgen, nicknames, name patterns all reference it); only the label moves.
-    California: "West Coast",
-    Hawaii: "Hawaii",
-    Alaska: "Alaska"
-  };
-  var STATE_NAMES = {
-    AL: "Alabama",
-    AR: "Arkansas",
-    AZ: "Arizona",
-    CA: "California",
-    CO: "Colorado",
-    CT: "Connecticut",
-    DE: "Delaware",
-    FL: "Florida",
-    GA: "Georgia",
-    IA: "Iowa",
-    ID: "Idaho",
-    IL: "Illinois",
-    IN: "Indiana",
-    KS: "Kansas",
-    KY: "Kentucky",
-    LA: "Louisiana",
-    MA: "Massachusetts",
-    MD: "Maryland",
-    ME: "Maine",
-    MI: "Michigan",
-    MN: "Minnesota",
-    MO: "Missouri",
-    MS: "Mississippi",
-    MT: "Montana",
-    NC: "North Carolina",
-    ND: "North Dakota",
-    NE: "Nebraska",
-    NH: "New Hampshire",
-    NJ: "New Jersey",
-    NM: "New Mexico",
-    NV: "Nevada",
-    NY: "New York",
-    OH: "Ohio",
-    OK: "Oklahoma",
-    OR: "Oregon",
-    PA: "Pennsylvania",
-    RI: "Rhode Island",
-    SC: "South Carolina",
-    SD: "South Dakota",
-    TN: "Tennessee",
-    TX: "Texas",
-    UT: "Utah",
-    VA: "Virginia",
-    VT: "Vermont",
-    WA: "Washington",
-    WI: "Wisconsin",
-    WV: "West Virginia",
-    WY: "Wyoming"
-  };
-  var QB_CARDS = [
-    {
-      id: "QB-Pocket",
-      icon: "\u{1F3AF}",
-      title: "THE SURGEON",
-      sub: "Pro-Style Pocket Passer",
-      desc: "Wins from the chalkboard \u2014 timing, protections, progressions. The pocket is a fortress, not a cage."
-    },
-    {
-      id: "QB-Scrambler",
-      icon: "\u26A1",
-      title: "THE ESCAPE ARTIST",
-      sub: "Dual-Threat Scrambler",
-      desc: "When the pocket dies, the play is just getting started. Pistol/RPO looks, designed keepers, broken-play magic."
-    },
-    {
-      id: "QB-Gunslinger",
-      icon: "\u{1F52B}",
-      title: "THE GUNSLINGER",
-      sub: "Air Raid Big Arm",
-      desc: "Big arm, bigger risks. Vertical shots, tight windows, and a fanbase with a heart condition."
-    },
-    {
-      id: "QB-Game-Manager",
-      icon: "\u265F\uFE0F",
-      title: "THE CHESS PLAYER",
-      sub: "Game Manager",
-      desc: "Protect the ball, lean on the ground game, win field position. Boring is beautiful in November."
-    }
-  ];
-  var FRONT_CARDS = [
-    {
-      id: "4-3",
-      icon: "\u{1F6E1}\uFE0F",
-      title: "4-3 FRONT",
-      sub: "4 DL \xB7 3 LB \xB7 4 DB",
-      desc: "Balanced base built on speed off the edge. Your DEs hunt quarterbacks; the MIKE cleans up everything else."
-    },
-    {
-      id: "3-4",
-      icon: "\u{1F9F1}",
-      title: "3-4 FRONT",
-      sub: "3 DL \xB7 4 LB \xB7 4 DB",
-      desc: "Two-gapping 5-tech ends anchor the line so your stand-up OLBs can hunt. Versatile, blitz-friendly, built on mass."
-    }
-  ];
-  var DIV_CARDS = [
-    {
-      id: "D1",
-      icon: "\u{1F3DF}\uFE0F",
-      title: "DIVISION I",
-      sub: "The Big Time",
-      desc: "90,000-seat cathedrals and TV money. You start in a mid-major \u2014 the powers don't know your name yet."
-    },
-    {
-      id: "D2",
-      icon: "\u{1F3C8}",
-      title: "DIVISION II",
-      sub: "The Proving Ground",
-      desc: "Real scholarships, real bus rides. Close the gap between here and the big time."
-    },
-    {
-      id: "D3",
-      icon: "\u{1F331}",
-      title: "DIVISION III",
-      sub: "The Grassroots",
-      desc: "Where dynasties are born in 3,000-seat stadiums. Every great story starts somewhere small."
-    }
-  ];
   function renderNewGame() {
     if (legacyMode) return renderLegacy();
     if (state._coachProfileName && obStep === 0 && !ob.first && !ob.last) {
@@ -28314,7 +28142,6 @@ var _CFB = (() => {
         return stepSignature();
     }
   }
-  var obCand = { oc: [], dc: [], key: null };
   function stepStaff() {
     var _a;
     const key = ob.qbPref + "|" + ob.defFront + "|" + ob.division;
@@ -28433,39 +28260,6 @@ var _CFB = (() => {
       </div>
     </div>`;
   }
-  var CHALLENGE_CARDS = [
-    {
-      id: "takejob",
-      icon: "\u{1F3C8}",
-      title: "Take the Job",
-      desc: "Pick any program in the country and go to work. Some have banners and a century of hate; some have never won anything. You choose which."
-    },
-    {
-      id: "outpost",
-      icon: "\u{1F3DD}\uFE0F",
-      title: "The Outpost",
-      desc: "Found the first program in Hawaii or Alaska. Every recruit alive is an ocean away \u2014 your dollars land at a fraction and flying one kid in costs what the mainland pays for four. But nobody crosses that water to poach your islands either."
-    },
-    {
-      id: "ashes",
-      icon: "\u{1F9F1}",
-      title: "The Ashes",
-      desc: "Inherit a league penalty. Your class is capped at 14 for three years while rivals sign full \u2014 you develop your way out, or you don't. The AD knows, so the leash is long."
-    },
-    {
-      id: "hotseat",
-      icon: "\u{1F525}",
-      title: "The Hot Seat",
-      desc: "A fallen power. A loaded roster, a wall of banners, and an AD who measures you against the trophy case instead of last season. Every loss costs double."
-    },
-    {
-      id: "heir",
-      icon: "\u{1F451}",
-      title: "The Heir",
-      desc: "Follow a legend who just retired. His numbers are literally your mandate and his assistants are on your payroll at his prices. It can only get worse."
-    }
-  ];
-  var _previewCache = { key: null, val: null };
   function renderStartPreview() {
     if (!ob.division || !ob.challenge) return "";
     if (ob.challenge === "takejob" || ob.challenge === "outpost") return "";
@@ -28772,6 +28566,28 @@ var _CFB = (() => {
     result.startId = ob.challenge;
     if (ob.oc && ob.dc) result.school.staff = { oc: ob.oc, dc: ob.dc };
     return { world, result };
+  }
+  function devTakeJobStart() {
+    const rand2 = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    const world = obGetWorld() || generateWorld();
+    _obWorld = world;
+    const d1 = world.schools.filter((s) => s.division === "D1");
+    const school = rand2(d1.length ? d1 : world.schools);
+    ob.challenge = "takejob";
+    ob.first = ob.first || "Dev";
+    ob.last = ob.last || "Coach";
+    ob.schoolId = school.id;
+    ob.state = school.state;
+    ob.division = school.division;
+    ob.qbPref = rand2(QB_CARDS).id;
+    ob.defFront = rand2(FRONT_CARDS).id;
+    ob.oc = null;
+    ob.dc = null;
+    const p = buildPending();
+    obStep = 0;
+    startNewGamePrepared({ first: ob.first, last: ob.last }, p.world, p.result.school, p.result);
+    state.settings = state.settings || {};
+    state.settings.challenge = "takejob";
   }
   function saveNameInputs() {
     const f = document.getElementById("ob-first");
@@ -29108,6 +28924,229 @@ var _CFB = (() => {
       }
     });
   }
+  var obStep, _obWorld, ob, pending, generating, legacyMode, activeDivision, selectedSchoolId, REGION_LABELS, STATE_NAMES, QB_CARDS, FRONT_CARDS, DIV_CARDS, obCand, CHALLENGE_CARDS, _previewCache;
+  var init_newgame = __esm({
+    "js/ui/views/newgame.js"() {
+      init_world();
+      init_constants();
+      init_staff();
+      init_starts();
+      init_coachprofile();
+      init_state();
+      init_utils();
+      init_logo();
+      init_gameplan();
+      obStep = 0;
+      _obWorld = null;
+      ob = {
+        first: "",
+        last: "",
+        state: null,
+        division: null,
+        qbPref: null,
+        defFront: null,
+        challenge: "takejob",
+        schoolId: null,
+        oc: null,
+        dc: null,
+        custom: { prestige: 2, jobSecurity: 60, budgetPct: 100 }
+      };
+      pending = null;
+      generating = false;
+      legacyMode = false;
+      activeDivision = "D1";
+      selectedSchoolId = null;
+      REGION_LABELS = {
+        Northeast: "Northeast",
+        MidAtlantic: "Mid-Atlantic",
+        Southeast: "Southeast",
+        DeepSouth: "Deep South",
+        MidSouth: "Mid-South",
+        GreatLakes: "Great Lakes",
+        Midwest: "Midwest",
+        UpperMidwest: "Upper Midwest",
+        Plains: "Plains",
+        Southwest: "Southwest",
+        MountainWest: "Mountain West",
+        PacificNW: "Pacific Northwest",
+        // The 'California' region spans CA, NV and AZ — labelling it "California"
+        // filed Nevada under a state it isn't in. The internal key stays California
+        // (worldgen, nicknames, name patterns all reference it); only the label moves.
+        California: "West Coast",
+        Hawaii: "Hawaii",
+        Alaska: "Alaska"
+      };
+      STATE_NAMES = {
+        AL: "Alabama",
+        AR: "Arkansas",
+        AZ: "Arizona",
+        CA: "California",
+        CO: "Colorado",
+        CT: "Connecticut",
+        DE: "Delaware",
+        FL: "Florida",
+        GA: "Georgia",
+        IA: "Iowa",
+        ID: "Idaho",
+        IL: "Illinois",
+        IN: "Indiana",
+        KS: "Kansas",
+        KY: "Kentucky",
+        LA: "Louisiana",
+        MA: "Massachusetts",
+        MD: "Maryland",
+        ME: "Maine",
+        MI: "Michigan",
+        MN: "Minnesota",
+        MO: "Missouri",
+        MS: "Mississippi",
+        MT: "Montana",
+        NC: "North Carolina",
+        ND: "North Dakota",
+        NE: "Nebraska",
+        NH: "New Hampshire",
+        NJ: "New Jersey",
+        NM: "New Mexico",
+        NV: "Nevada",
+        NY: "New York",
+        OH: "Ohio",
+        OK: "Oklahoma",
+        OR: "Oregon",
+        PA: "Pennsylvania",
+        RI: "Rhode Island",
+        SC: "South Carolina",
+        SD: "South Dakota",
+        TN: "Tennessee",
+        TX: "Texas",
+        UT: "Utah",
+        VA: "Virginia",
+        VT: "Vermont",
+        WA: "Washington",
+        WI: "Wisconsin",
+        WV: "West Virginia",
+        WY: "Wyoming"
+      };
+      QB_CARDS = [
+        {
+          id: "QB-Pocket",
+          icon: "\u{1F3AF}",
+          title: "THE SURGEON",
+          sub: "Pro-Style Pocket Passer",
+          desc: "Wins from the chalkboard \u2014 timing, protections, progressions. The pocket is a fortress, not a cage."
+        },
+        {
+          id: "QB-Scrambler",
+          icon: "\u26A1",
+          title: "THE ESCAPE ARTIST",
+          sub: "Dual-Threat Scrambler",
+          desc: "When the pocket dies, the play is just getting started. Pistol/RPO looks, designed keepers, broken-play magic."
+        },
+        {
+          id: "QB-Gunslinger",
+          icon: "\u{1F52B}",
+          title: "THE GUNSLINGER",
+          sub: "Air Raid Big Arm",
+          desc: "Big arm, bigger risks. Vertical shots, tight windows, and a fanbase with a heart condition."
+        },
+        {
+          id: "QB-Game-Manager",
+          icon: "\u265F\uFE0F",
+          title: "THE CHESS PLAYER",
+          sub: "Game Manager",
+          desc: "Protect the ball, lean on the ground game, win field position. Boring is beautiful in November."
+        }
+      ];
+      FRONT_CARDS = [
+        {
+          id: "4-3",
+          icon: "\u{1F6E1}\uFE0F",
+          title: "4-3 FRONT",
+          sub: "4 DL \xB7 3 LB \xB7 4 DB",
+          desc: "Balanced base built on speed off the edge. Your DEs hunt quarterbacks; the MIKE cleans up everything else."
+        },
+        {
+          id: "3-4",
+          icon: "\u{1F9F1}",
+          title: "3-4 FRONT",
+          sub: "3 DL \xB7 4 LB \xB7 4 DB",
+          desc: "Two-gapping 5-tech ends anchor the line so your stand-up OLBs can hunt. Versatile, blitz-friendly, built on mass."
+        }
+      ];
+      DIV_CARDS = [
+        {
+          id: "D1",
+          icon: "\u{1F3DF}\uFE0F",
+          title: "DIVISION I",
+          sub: "The Big Time",
+          desc: "90,000-seat cathedrals and TV money. You start in a mid-major \u2014 the powers don't know your name yet."
+        },
+        {
+          id: "D2",
+          icon: "\u{1F3C8}",
+          title: "DIVISION II",
+          sub: "The Proving Ground",
+          desc: "Real scholarships, real bus rides. Close the gap between here and the big time."
+        },
+        {
+          id: "D3",
+          icon: "\u{1F331}",
+          title: "DIVISION III",
+          sub: "The Grassroots",
+          desc: "Where dynasties are born in 3,000-seat stadiums. Every great story starts somewhere small."
+        }
+      ];
+      obCand = { oc: [], dc: [], key: null };
+      CHALLENGE_CARDS = [
+        {
+          id: "takejob",
+          icon: "\u{1F3C8}",
+          title: "Take the Job",
+          desc: "Pick any program in the country and go to work. Some have banners and a century of hate; some have never won anything. You choose which."
+        },
+        {
+          id: "outpost",
+          icon: "\u{1F3DD}\uFE0F",
+          title: "The Outpost",
+          desc: "Found the first program in Hawaii or Alaska. Every recruit alive is an ocean away \u2014 your dollars land at a fraction and flying one kid in costs what the mainland pays for four. But nobody crosses that water to poach your islands either."
+        },
+        {
+          id: "ashes",
+          icon: "\u{1F9F1}",
+          title: "The Ashes",
+          desc: "Inherit a league penalty. Your class is capped at 14 for three years while rivals sign full \u2014 you develop your way out, or you don't. The AD knows, so the leash is long."
+        },
+        {
+          id: "hotseat",
+          icon: "\u{1F525}",
+          title: "The Hot Seat",
+          desc: "A fallen power. A loaded roster, a wall of banners, and an AD who measures you against the trophy case instead of last season. Every loss costs double."
+        },
+        {
+          id: "heir",
+          icon: "\u{1F451}",
+          title: "The Heir",
+          desc: "Follow a legend who just retired. His numbers are literally your mandate and his assistants are on your payroll at his prices. It can only get worse."
+        }
+      ];
+      _previewCache = { key: null, val: null };
+    }
+  });
+
+  // js/ui/app.js
+  var app_exports = {};
+  __export(app_exports, {
+    init: () => init
+  });
+  init_state();
+  init_constants();
+  init_concepts();
+  init_persistence();
+  init_season();
+  init_player();
+  init_gameplan();
+  init_sim();
+  init_mainmenu();
+  init_newgame();
 
   // js/ui/views/dashboard.js
   init_state();
@@ -32283,6 +32322,7 @@ var _CFB = (() => {
   init_constants_field();
   init_fieldassign();
   init_world();
+  init_gameplan();
   var depthTab = "offense";
   var activeOffFormation = null;
   var picker = null;
@@ -33367,6 +33407,7 @@ var _CFB = (() => {
   }
 
   // js/ui/app.js
+  init_gameplan();
   init_situations();
   init_constants_field();
 
@@ -41787,6 +41828,9 @@ var _CFB = (() => {
       state.ui.liveWatch = null;
       renderApp();
     });
+    document.querySelectorAll("[data-cs-quickcat]").forEach((btn) => btn.addEventListener("click", () => {
+      if (callTapOk()) answerPlayCall({ category: btn.dataset.csQuickcat });
+    }));
     (_F = document.getElementById("cs-autorun")) == null ? void 0 : _F.addEventListener("click", () => {
       var _a2, _b2, _c2;
       state.ui.autoRun = true;
@@ -41864,12 +41908,21 @@ var _CFB = (() => {
     }
   }
   async function init() {
+    var _a;
     setRenderFn(renderApp);
     setNotifyFn(patchToast);
     await refreshSaves();
     state.ui.view = "mainmenu";
     renderApp();
     installSaveGuards();
+    try {
+      if (new URLSearchParams(location.search).has("dev") || location.hash.replace("#", "") === "dev") {
+        const m = await Promise.resolve().then(() => (init_newgame(), newgame_exports));
+        (_a = m.devTakeJobStart) == null ? void 0 : _a.call(m);
+      }
+    } catch (e) {
+      console.error("[dev] quick-start failed:", e);
+    }
   }
   function installSaveGuards() {
     const flushNow = () => {
@@ -42241,7 +42294,14 @@ var _CFB = (() => {
       }
     }
     const stranded = isCall && !auto && boardDone && !embed;
-    const recover = stranded ? `<div class="cs-footer"><button class="btn-primary" id="cs-recover">\u25B6\uFE0F Continue \u2014 let the sheet make the call</button></div>` : "";
+    const recover = stranded ? `<div class="cs-footer cs-recover" style="flex-wrap:wrap;gap:6px">
+         <button class="btn-secondary" data-cs-quickcat="run_inside">\u{1F3C3} Inside Run</button>
+         <button class="btn-secondary" data-cs-quickcat="run_outside">\u{1F300} Outside Run</button>
+         <button class="btn-secondary" data-cs-quickcat="pass_short">\u26A1 Short Pass</button>
+         <button class="btn-secondary" data-cs-quickcat="pass_medium">\u{1F3AF} Medium Pass</button>
+         <button class="btn-secondary" data-cs-quickcat="pass_deep">\u{1F680} Deep Shot</button>
+         <button class="btn-primary" id="cs-recover">\u{1F4CB} Let the sheet decide</button>
+       </div>` : "";
     const headerBtn = auto ? `<button class="bc-btn bc-text" id="cs-autorun-stop">\u23F8 Stop \u2014 take the headset back</button>` : !boardDone ? `<button class="bc-btn bc-text" id="watch-live-skip">Skip \u23E9</button>` : "";
     return `
     <div class="modal-overlay watch-live-overlay">
