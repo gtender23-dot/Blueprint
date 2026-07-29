@@ -4824,6 +4824,17 @@ body.theme-school .data-table tr:hover td {
 .bc-text { height: 34px; padding: 0 12px; font-size: 0.82em; }
 .bc-final { margin-left: 2px; }
 
+/* ── Unified time-control bar: the same set on the broadcast strip AND above the
+   formations on the call sheet. On the strip it flows inline next to the speed
+   control; on the sheet it's its own row. ── */
+.tc-bar { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 10px; }
+.broadcast-bar .tc-bar { display: contents; }          /* merge into the strip's flex */
+.tc-bar .bc-btn { height: 34px; padding: 0 12px; font-size: 0.82em; }
+.tc-bar .tc-coach, .broadcast-bar .tc-coach {
+  background: var(--team-1, #ffd54a); color: #12161c; border-color: transparent;
+}
+.tc-bar .tc-coach:hover, .broadcast-bar .tc-coach:hover { filter: brightness(1.08); }
+
 /* ── Live watch + animated board ── */
 .watch-live-overlay { z-index: 1200; }
 .watch-live-opt { display: flex; align-items: center; gap: 8px; font-size: 0.85em; opacity: 0.85;
@@ -5168,7 +5179,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "ad712154e4";
+globalThis.__BUILD__ = "51dc6ba073";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -24596,6 +24607,7 @@ var _CFB = (() => {
     setGroupTab: () => setGroupTab,
     setNotifyFn: () => setNotifyFn,
     setRenderFn: () => setRenderFn,
+    simToBreak: () => simToBreak,
     simToQuarterEnd: () => simToQuarterEnd,
     skipToOffseason: () => skipToOffseason,
     startNewGame: () => startNewGame,
@@ -25082,6 +25094,15 @@ var _CFB = (() => {
     if (!p) return;
     const clock = p.kind === "fourth" ? p.clock : (_e = (_d = (_c = (_b = p.drive) == null ? void 0 : _b.sit) == null ? void 0 : _c.clock) != null ? _d : p.clock) != null ? _e : 0;
     if (p.half !== 3) token.skipUntil = { half: p.half, clock: clock > 900 ? 900 : 0 };
+    if (p.kind === "fourth") await answerFourthDown("auto");
+    else await answerPlayCall({ concept: "sheet" });
+  }
+  async function simToBreak() {
+    var _a;
+    const token = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
+    const p = token == null ? void 0 : token.pending;
+    if (!p) return;
+    if (p.half !== 3) token.skipUntil = { half: p.half, clock: 0 };
     if (p.kind === "fourth") await answerFourthDown("auto");
     else await answerPlayCall({ concept: "sheet" });
   }
@@ -30240,9 +30261,6 @@ var _CFB = (() => {
         </div>
       </div>
       ${renderThisWeek(opp, school)}
-      <div class="next-game-actions" style="margin-top:14px;display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn-primary" data-nav="gameplan" style="flex:1;min-width:160px">Set Game Plan \u2192</button>
-      </div>
     </div>
     ${renderLeagueHeadlines(school)}
   `;
@@ -41515,7 +41533,7 @@ var _CFB = (() => {
     return labels[d.result] || d.result;
   }
   function setupGlobalListeners() {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L;
     document.querySelectorAll("[data-nav]").forEach((el) => {
       el.addEventListener("click", () => {
         state.ui.sidebarOpen = false;
@@ -41831,13 +41849,45 @@ var _CFB = (() => {
     document.querySelectorAll("[data-cs-quickcat]").forEach((btn) => btn.addEventListener("click", () => {
       if (callTapOk()) answerPlayCall({ category: btn.dataset.csQuickcat });
     }));
-    (_F = document.getElementById("cs-autorun")) == null ? void 0 : _F.addEventListener("click", () => {
+    (_F = document.getElementById("tc-skipback")) == null ? void 0 : _F.addEventListener("click", () => {
+      if (state.ui.liveWatch) {
+        state.ui.liveWatch.replay = true;
+        state.ui.liveWatch.boardDone = false;
+        renderApp();
+      }
+    });
+    (_G = document.getElementById("tc-keydowns")) == null ? void 0 : _G.addEventListener("click", () => {
+      if (callTapOk()) setCallModeMidGame("keydowns");
+    });
+    (_H = document.getElementById("tc-headset")) == null ? void 0 : _H.addEventListener("click", () => {
+      var _a2, _b2;
+      state.ui.autoRun = true;
+      const lw = state.ui.liveWatch;
+      if (lw && !lw.boardDone) {
+        renderApp();
+        return;
+      }
+      const t = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token;
+      if (((_b2 = t == null ? void 0 : t.pending) == null ? void 0 : _b2.kind) === "fourth") answerFourthDown("auto");
+      else answerPlayCall({ concept: "sheet" });
+    });
+    (_I = document.getElementById("tc-jumpin")) == null ? void 0 : _I.addEventListener("click", () => {
+      state.ui.autoRun = false;
+      watchStop();
+      _watch = null;
+      if (state.ui.liveWatch) state.ui.liveWatch.boardDone = true;
+      renderApp();
+    });
+    (_J = document.getElementById("tc-skipbreak")) == null ? void 0 : _J.addEventListener("click", () => {
+      if (callTapOk()) simToBreak();
+    });
+    (_K = document.getElementById("cs-autorun")) == null ? void 0 : _K.addEventListener("click", () => {
       var _a2, _b2, _c2;
       state.ui.autoRun = true;
       if (((_c2 = (_b2 = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token) == null ? void 0 : _b2.pending) == null ? void 0 : _c2.kind) === "fourth") answerFourthDown("auto");
       else answerPlayCall({ concept: "sheet" });
     });
-    (_G = document.getElementById("cs-autorun-stop")) == null ? void 0 : _G.addEventListener("click", () => {
+    (_L = document.getElementById("cs-autorun-stop")) == null ? void 0 : _L.addEventListener("click", () => {
       state.ui.autoRun = false;
       watchStop();
       _watch = null;
@@ -42064,14 +42114,18 @@ var _CFB = (() => {
     const t = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
     return !!t && watchDrivesOf(t).some((d) => (d.plays || []).length > 0);
   }
-  function watchControlsHtml(token, ctx2, fourth = false) {
-    const inKeyDowns = token.callMode === "keydowns";
-    const sheetBtn = fourth ? `<button class="btn-secondary" id="fourth-auto">\u{1F4CB} Let the sheet decide</button>` : `<button class="btn-secondary" id="cs-sheet-call">\u{1F4CB} Let the sheet call it</button>`;
-    const modeToggle = inKeyDowns ? `<button class="btn-secondary" id="cs-mode-everycall">\u{1F3A7} Coach every call</button>` : `<button class="btn-secondary" id="cs-mode-keydowns">\u23E9 Sim to next key down</button>`;
-    const headsetOff = `<button class="btn-secondary" id="cs-mode-off">\u{1F3C1} Headset off \u2014 sim to final</button>`;
-    const replay = hasReplayablePlay() ? `<button class="btn-secondary" id="cs-replay">\u21BB Replay last play</button>` : "";
-    const autorun = fourth ? "" : `<button class="btn-secondary cs-autorun-btn" id="cs-autorun">\u25B6\uFE0F Auto-run \u2014 watch to the end</button>`;
-    return `<div class="cs-footer">${sheetBtn}${modeToggle}${headsetOff}${replay}${autorun}</div>`;
+  function timeControlBar() {
+    var _a;
+    const lw = state.ui.liveWatch;
+    const token = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
+    if (!(token == null ? void 0 : token.pending) || (lw == null ? void 0 : lw.stage) !== "call") return "";
+    const half = token.pending.half;
+    const auto = !!state.ui.autoRun;
+    const breakLabel = half === 1 ? "\u23ED Skip to halftime" : "\u23ED Skip to final";
+    const replay = hasReplayablePlay() ? `<button class="bc-btn bc-text" id="tc-skipback" title="Show the last play again">\u23EE Replay</button>` : "";
+    const mid = auto ? `<button class="bc-btn bc-text tc-coach" id="tc-jumpin" title="Take the headset back and call the plays yourself">\u{1F3A7} Coach up</button>` : `<button class="bc-btn bc-text" id="tc-keydowns" title="Game plan runs the sim; stops at the next key down">\u23E9 Sim to next key down</button>
+       <button class="bc-btn bc-text" id="tc-headset" title="Headset off \u2014 the game plan calls it and you watch">\u{1F3A7} Headset off</button>`;
+    return `<div class="tc-bar">${replay}${mid}<button class="bc-btn bc-text" id="tc-skipbreak" title="Sim straight to the ${half === 1 ? "locker room" : "final gun"}">${breakLabel}</button></div>`;
   }
   function callSheetPanelHtml() {
     var _a, _b, _c, _d, _e, _f;
@@ -42211,6 +42265,7 @@ var _CFB = (() => {
         ${fieldBar}
         ${adjChip ? `<div class="cs-adj-row">${adjChip}</div>` : ""}
         ${renderCallFeed(token)}
+        ${timeControlBar()}
         ${formStrip}
         ${_drillCat ? drillBlock : `<div class="cs-cats">${tiles}</div>`}
         ${(() => {
@@ -42227,8 +42282,7 @@ var _CFB = (() => {
             <button class="cs-st-btn" data-cs-st="punt">\u{1F9E4} Punt \u2014 flip the field</button>
           </div>` : ""}
         </div>`;
-    })()}
-        ${watchControlsHtml(token, ctx2, false)}`;
+    })()}`;
   }
   function renderFourthDownModal() {
     if (!state.ui.showFourthDown) return "";
@@ -42259,6 +42313,7 @@ var _CFB = (() => {
           <span class="cs-score">${escapeHtml((school == null ? void 0 : school.name) || "You")} ${ctx2.scoreOff} \u2014 ${ctx2.scoreDef} ${escapeHtml((opp == null ? void 0 : opp.name) || "")}</span>
         </div>
         ${renderCallFeed(token)}
+        ${timeControlBar()}
         <p class="fourth-frame">${frame}</p>
         <div class="fourth-opts">
           <button class="fourth-opt" data-fourth="go">
@@ -42273,8 +42328,7 @@ var _CFB = (() => {
             <span class="fourth-opt-title">\u{1F9E4} PUNT</span>
             <span class="fourth-opt-desc">Flip the field and trust the defense.</span>
           </button>
-        </div>
-        ${watchControlsHtml(token, ctx2, true)}`;
+        </div>`;
   }
   function renderLiveWatchOverlay() {
     var _a, _b, _c;
@@ -42302,7 +42356,7 @@ var _CFB = (() => {
          <button class="btn-secondary" data-cs-quickcat="pass_deep">\u{1F680} Deep Shot</button>
          <button class="btn-primary" id="cs-recover">\u{1F4CB} Let the sheet decide</button>
        </div>` : "";
-    const headerBtn = auto ? `<button class="bc-btn bc-text" id="cs-autorun-stop">\u23F8 Stop \u2014 take the headset back</button>` : !boardDone ? `<button class="bc-btn bc-text" id="watch-live-skip">Skip \u23E9</button>` : "";
+    const headerBtn = !boardDone && !auto ? `<button class="bc-btn bc-text" id="watch-live-skip">Skip \u23E9</button>` : "";
     return `
     <div class="modal-overlay watch-live-overlay">
       <div class="modal game-result-modal${embed ? " watch-call-mode" : ""}${boardDone ? " watch-board-collapsed" : ""}">
@@ -42502,7 +42556,7 @@ var _CFB = (() => {
     return seq;
   }
   function initWatchMode(r, isHome, opts = {}) {
-    var _a, _b;
+    var _a, _b, _c;
     const root = document.getElementById("watch-root");
     if (!root) return;
     const key = (_a = opts.key) != null ? _a : r;
@@ -42526,6 +42580,7 @@ var _CFB = (() => {
     const w = _watch;
     const isLive = !!w.onFinish;
     const _lwStage = (_b = state.ui.liveWatch) == null ? void 0 : _b.stage;
+    const liveCall = isLive && _lwStage === "call";
     const finalLabel = !isLive ? "End \u23ED" : _lwStage === "halftime" ? "Skip to Halftime \u23ED" : "Skip to Final \u23ED";
     const finalTitle = !isLive ? "Jump to the end" : _lwStage === "halftime" ? "Skip the rest of the half and go to the locker room" : "Skip the rest and jump to the final";
     root.innerHTML = `
@@ -42539,7 +42594,7 @@ var _CFB = (() => {
       ${isLive ? "" : `<button class="bc-btn bc-icon" id="watch-stepfwd" title="Step forward">\u23ED</button>`}
       <button class="bc-btn bc-speed" id="watch-speed" title="Playback speed">1\xD7</button>
       ${isLive ? "" : `<button class="bc-btn bc-text" id="watch-nextdrive" title="Next drive">Next Drive \u23ED</button>`}
-      <button class="bc-btn bc-text bc-final" id="watch-final" title="${finalTitle}">${finalLabel}</button>
+      ${liveCall ? timeControlBar() : `<button class="bc-btn bc-text bc-final" id="watch-final" title="${finalTitle}">${finalLabel}</button>`}
       <span class="watch-progress" id="watch-progress"></span>
     </div>
     <div class="watch-drives" id="watch-drives"></div>`;
@@ -42577,7 +42632,7 @@ var _CFB = (() => {
       w.speed = w.speed === 1 ? 2 : w.speed === 2 ? 0.5 : 1;
       document.getElementById("watch-speed").textContent = w.speed === 0.5 ? "\xBD\xD7" : `${w.speed}\xD7`;
     });
-    document.getElementById("watch-final").addEventListener("click", () => {
+    (_c = document.getElementById("watch-final")) == null ? void 0 : _c.addEventListener("click", () => {
       w.idx = w.seq.length - 1;
       watchStop();
       watchTick(true);
