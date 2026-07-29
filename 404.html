@@ -5191,7 +5191,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "f246f79de6";
+globalThis.__BUILD__ = "e4c92277c8";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -15355,9 +15355,10 @@ var _CFB = (() => {
     }
     return assigned;
   }
-  function rollFormation(offFormations) {
-    const live = (offFormations || []).filter((f) => f && FORMATION_PACKAGES[aliasFormation(f.id)]);
-    if (!live.length) return "Single Back";
+  function rollFormation(offFormations, eligible = null) {
+    const liveAll = (offFormations || []).filter((f) => f && FORMATION_PACKAGES[aliasFormation(f.id)]);
+    if (!liveAll.length) return "Single Back";
+    const live = eligible ? liveAll.filter((f) => eligible(aliasFormation(f.id))).length ? liveAll.filter((f) => eligible(aliasFormation(f.id))) : liveAll : liveAll;
     const total = live.reduce((s, f) => s + (f.weight || 0), 0);
     let pick2 = live[live.length - 1].id;
     if (total <= 0) {
@@ -18888,7 +18889,9 @@ var _CFB = (() => {
         _dnaPressure: ((_w = defSchool == null ? void 0 : defSchool._dnaGrades) == null ? void 0 : _w.pressure) || 0,
         _dnaBallHawk: ((defSchool == null ? void 0 : defSchool._dnaGrades) == null ? void 0 : defSchool._dnaGrades.ballHawk) || 0
       });
-      const offFormationId = (forcedCall == null ? void 0 : forcedCall.formationId) && FORMATION_PACKAGES[forcedCall.formationId] ? forcedCall.formationId : aliasFormation(rollFormation(offEff.offFormations) || offPlan.offFormation || "Single Back");
+      const _namedPlay = forcedCall && forcedCall.concept && forcedCall.concept !== "sheet" && FORMATION_PLAYBOOK && Object.values(FORMATION_PLAYBOOK).some((l) => l.includes(forcedCall.concept)) ? forcedCall.concept : null;
+      const _formEligible = _namedPlay ? ((id) => (FORMATION_PLAYBOOK[id] || []).includes(_namedPlay)) : null;
+      const offFormationId = (forcedCall == null ? void 0 : forcedCall.formationId) && FORMATION_PACKAGES[forcedCall.formationId] ? forcedCall.formationId : aliasFormation(rollFormation(offEff.offFormations, _formEligible) || offPlan.offFormation || "Single Back");
       const defFrontId = defEff.defFront !== "auto" ? defEff.defFront : selectDefFront(
         defPlan.defBaseFront || "4-3",
         down,
@@ -42204,11 +42207,11 @@ var _CFB = (() => {
         <div class="cs-drill">
           <div class="cs-drill-head">
             <button class="cs-drill-back" data-cs-drillback="1">\u2190 Plays</button>
-            <span class="cs-drill-title">${meta ? escapeHtml(meta[1]) : "Plays"}${_selFormId ? ` \xB7 <span class="muted">${escapeHtml(_selFormId)}</span>` : ""}</span>
+            <span class="cs-drill-title">${meta ? escapeHtml(meta[1]) : "Plays"} \xB7 <span class="muted">${state.ui.callFormation ? escapeHtml(state.ui.callFormation) : "Auto"}</span></span>
           </div>
           <div class="cs-concepts">
             <button class="cs-concept" data-cs-concept="__surprise" data-cs-cat="${_drillCat.cat}">\u{1F3B2} Surprise me</button>
-            ${list.map((nm) => `<button class="cs-concept" data-cs-concept="${escapeHtml(nm)}">${escapeHtml(nm)}</button>`).join("") || '<div class="muted" style="padding:6px">No plays fit this formation \u2014 try Surprise me.</div>'}
+            ${list.map((nm) => `<button class="cs-concept" data-cs-concept="${escapeHtml(nm)}">${escapeHtml(nm)}</button>`).join("") || `<div class="muted" style="padding:6px">No plays fit ${state.ui.callFormation ? "this formation" : "your carried formations"} \u2014 try Surprise me.</div>`}
           </div>
         </div>`;
     }
@@ -42330,7 +42333,7 @@ var _CFB = (() => {
     const isCall = lw.stage === "call";
     const auto = isCall && state.ui.autoRun;
     const boardDone = isCall && lw.boardDone && !auto;
-    const label = lw.replay ? "REPLAY \u2014 LAST PLAY" : lw.stage === "halftime" ? "1ST HALF \u2014 LIVE" : isCall ? auto ? "AUTO-RUN \u2014 WATCHING" : boardDone ? "YOUR CALL" : "LIVE \u2014 HEADSET ON" : "2ND HALF \u2014 LIVE";
+    const label = lw.stage === "halftime" ? "1ST HALF \u2014 LIVE" : isCall ? auto ? "AUTO-RUN \u2014 WATCHING" : boardDone ? "YOUR CALL" : "LIVE \u2014 HEADSET ON" : "2ND HALF \u2014 LIVE";
     let embed = "";
     if (isCall && !auto && boardDone) {
       try {
@@ -42405,7 +42408,7 @@ var _CFB = (() => {
     return out;
   }
   function mountLiveWatch() {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
+    var _a, _b, _c, _d, _e, _f, _g;
     const lw = state.ui.liveWatch;
     if (!lw || lw.boardDone) return;
     let gameLike = null, isHome = true, watchKey = `live-${lw.stage}-${state.day}-${state.season}`;
@@ -42417,48 +42420,7 @@ var _CFB = (() => {
       }
       return names;
     };
-    if (lw.replay && ((_a = state.pendingHalftime) == null ? void 0 : _a.token)) {
-      const t = state.pendingHalftime.token;
-      const all = watchDrivesOf(t);
-      let lastDrive = null, lastPlay = null;
-      for (let di = all.length - 1; di >= 0 && !lastPlay; di--) {
-        const ps = all[di].plays || [];
-        if (ps.length) {
-          lastDrive = all[di];
-          lastPlay = ps[ps.length - 1];
-        }
-      }
-      if (!lastPlay) {
-        lw.replay = false;
-        lw.boardDone = true;
-        return;
-      }
-      const back = () => {
-        const l = state.ui.liveWatch;
-        if (l) {
-          l.replay = false;
-          l.boardDone = true;
-        }
-        watchStop();
-        _watch = null;
-        renderApp();
-      };
-      gameLike = {
-        drives: [__spreadProps(__spreadValues({}, lastDrive), { plays: [lastPlay], result: null })],
-        homeSchool: t.homeSchool,
-        awaySchool: t.awaySchool,
-        homeScore: t.homeScore,
-        awayScore: t.awayScore,
-        playerNames: rosterNames(t)
-      };
-      isHome = ((_b = t.homeSchool) == null ? void 0 : _b.id) === (school == null ? void 0 : school.id);
-      watchKey = `replay-${state.season}-${state.day}-${lw._replayN = (lw._replayN || 0) + 1}`;
-      initWatchMode(gameLike, isHome, { key: watchKey, onFinish: back });
-      if (_watch) _watch.liveLabel = "Rolling it back \u2014 the last snap.";
-      (_c = document.getElementById("watch-live-skip")) == null ? void 0 : _c.addEventListener("click", back);
-      return;
-    }
-    if (lw.stage === "call" && ((_e = (_d = state.pendingHalftime) == null ? void 0 : _d.token) == null ? void 0 : _e.pending)) {
+    if (lw.stage === "call" && ((_b = (_a = state.pendingHalftime) == null ? void 0 : _a.token) == null ? void 0 : _b.pending)) {
       const t = state.pendingHalftime.token;
       const total = watchDrivesOf(t).reduce((n, d) => {
         var _a2;
@@ -42478,8 +42440,8 @@ var _CFB = (() => {
         awayScore: t.awayScore,
         playerNames: rosterNames(t)
       };
-      isHome = ((_f = t.homeSchool) == null ? void 0 : _f.id) === (school == null ? void 0 : school.id);
-    } else if (lw.stage === "halftime" && ((_g = state.pendingHalftime) == null ? void 0 : _g.token)) {
+      isHome = ((_c = t.homeSchool) == null ? void 0 : _c.id) === (school == null ? void 0 : school.id);
+    } else if (lw.stage === "halftime" && ((_d = state.pendingHalftime) == null ? void 0 : _d.token)) {
       const t = state.pendingHalftime.token;
       const from = t.callMode && t.callMode !== "off" ? t._watchedPlays || 0 : 0;
       t._watchedPlays = (t.drives || []).reduce((n, d) => {
@@ -42494,7 +42456,7 @@ var _CFB = (() => {
         awayScore: t.awayScore,
         playerNames: rosterNames(t)
       };
-      isHome = ((_h = t.homeSchool) == null ? void 0 : _h.id) === (school == null ? void 0 : school.id);
+      isHome = ((_e = t.homeSchool) == null ? void 0 : _e.id) === (school == null ? void 0 : school.id);
     } else if (lw.stage === "final" && state.ui.lastGameResult) {
       const r = state.ui.lastGameResult;
       const fw = state.ui._finalWatched;
@@ -42503,7 +42465,7 @@ var _CFB = (() => {
         return cut >= 0 ? r.drives.slice(cut) : r.drives;
       })();
       gameLike = __spreadProps(__spreadValues({}, r), { drives });
-      isHome = ((_i = r.homeSchool) == null ? void 0 : _i.id) === (school == null ? void 0 : school.id);
+      isHome = ((_f = r.homeSchool) == null ? void 0 : _f.id) === (school == null ? void 0 : school.id);
     }
     if (!gameLike) {
       liveWatchFinish();
@@ -42511,7 +42473,7 @@ var _CFB = (() => {
     }
     initWatchMode(gameLike, isHome, { key: watchKey, onFinish: liveWatchFinish });
     if (_watch) _watch.liveLabel = lw.stage === "halftime" ? "End of the first half \u2014 the locker room is waiting." : lw.stage === "call" ? "The headset crackles \u2014 your call." : "That\u2019s the ballgame.";
-    (_j = document.getElementById("watch-live-skip")) == null ? void 0 : _j.addEventListener("click", () => {
+    (_g = document.getElementById("watch-live-skip")) == null ? void 0 : _g.addEventListener("click", () => {
       var _a2;
       watchStop();
       _watch = null;
