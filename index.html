@@ -5168,7 +5168,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "1800c88b4b";
+globalThis.__BUILD__ = "135648bbe2";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -18757,6 +18757,7 @@ var _CFB = (() => {
               scoreOff: gameState.score.off,
               scoreDef: gameState.score.def
             });
+            forcedCall = null;
             continue;
           } else if (!onOffense) {
             const rawPos = fieldPos + yds;
@@ -18793,6 +18794,7 @@ var _CFB = (() => {
               scoreOff: gameState.score.off,
               scoreDef: gameState.score.def
             });
+            forcedCall = null;
             continue;
           }
         }
@@ -19063,7 +19065,7 @@ var _CFB = (() => {
         fam: covFam
       };
       offPlanEff._forcePANative = !!(concept.name && PASS_CONCEPTS[concept.name] && PASS_CONCEPTS[concept.name].paNative);
-      const offUnit = baseOffUnit * (1 + concept.mod) * (fakeSurprise ? 1.1 : 1) * h2Counter * coordIqMod(offSchool, "off", offFormationId) * (2 - coordIqMod(defSchool, "def", defFrontId)) * getMatchupEdge(offFormationId, defFrontId) * getSituationalMod(offFormationId, down, distance, gameState.clock, fieldPos) * shortYardagePower(playType, distance, offPersonnel, offRoster) * (1 + (((__ = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : __.groundPound) || 0) * 8e-3) * (down === 4 ? 1 + (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.riverboat) || 0) * 0.01 : 1) * (offense.isHome ? C.HOME_EDGE : 1 - (1 - (2 - C.HOME_EDGE)) * (1 - (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.roadWarrior) || 0) * 0.08)) * ((_$ = offense.form) != null ? _$ : 1) * (2 - ((_aa = defense.form) != null ? _aa : 1)) * ((_ba = offense.execMult) != null ? _ba : 1) * (2 - ((_ca = defense.execMult) != null ? _ca : 1));
+      const offUnit = baseOffUnit * (1 + concept.mod) * (fakeSurprise ? 1.1 : 1) * h2Counter * coordIqMod(offSchool, "off", offFormationId) * (2 - coordIqMod(defSchool, "def", defFrontId)) * getMatchupEdge(offFormationId, defFrontId) * getSituationalMod(offFormationId, down, distance, gameState.clock, fieldPos) * shortYardagePower(playType, distance, offPersonnel, offRoster) * (1 + (((__ = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : __.groundPound) || 0) * 8e-3) * (down === 4 ? 1 + (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.riverboat) || 0) * 0.01 : 1) * (offense.isHome ? C.HOME_EDGE : 1 - (1 - (2 - C.HOME_EDGE)) * (1 - (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.roadWarrior) || 0) * 0.08)) * ((_$ = offense.form) != null ? _$ : 1) * (2 - ((_aa = defense.form) != null ? _aa : 1)) * ((_ba = offense.execMult) != null ? _ba : 1) * (2 - ((_ca = defense.execMult) != null ? _ca : 1)) + ((offPlan == null ? void 0 : offPlan._h2OffLean) ? offPlan._h2OffLean.eff * C.K_CONTEXT : 0);
       const rcDef = defEff.runCommit || 0;
       const shellRunMult = playType === "run_inside" || playType === "run_outside" ? defEff.covShell === "single" ? 1.04 : defEff.covShell === "two" ? 0.95 : 1 : 1;
       const edgeRunMult = defEff.edgePlay === "contain" ? playType === "run_outside" ? 1.04 : playType === "run_inside" ? 0.98 : 1 : defEff.edgePlay === "crash" ? playType === "run_outside" ? 0.96 : playType === "run_inside" ? 1.02 : 1 : 1;
@@ -19080,7 +19082,7 @@ var _CFB = (() => {
         const hot = Object.entries(oppMem.targets).sort((a, b) => b[1] - a[1])[0];
         defPlanEff._hotTargetId = hot && hot[1] >= 3 ? hot[0] : null;
       }
-      const defUnit = (rcDef && (playType === "run_inside" || playType === "run_outside") ? baseDefUnit * (1 + rcDef * C.RUNCOMMIT_RUN_SCALE) : baseDefUnit) * edgeRunMult * shellRunMult * famMult * (1 + conceptSpamPen(oppMem, playType, concept.name, defAwrFactor));
+      const defUnit = (rcDef && (playType === "run_inside" || playType === "run_outside") ? baseDefUnit * (1 + rcDef * C.RUNCOMMIT_RUN_SCALE) : baseDefUnit) * edgeRunMult * shellRunMult * famMult * (1 + conceptSpamPen(oppMem, playType, concept.name, defAwrFactor)) + ((defPlan == null ? void 0 : defPlan._h2DefLean) ? defPlan._h2DefLean.eff * C.K_CONTEXT : 0);
       const onFieldOff = Object.values(offPersonnel).flat();
       const onFieldDef = Object.values(defPersonnel).flat();
       const effOffRoster = makeEffectiveRoster(
@@ -19326,6 +19328,8 @@ var _CFB = (() => {
       const _gpGrade = ((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.groundPound) || 0;
       const _late = (gameState.half || 1) >= 2;
       const _gpFatigueMult = _late ? 1 - _gpGrade * 0.015 : 1;
+      const _offFresh = (offPlan == null ? void 0 : offPlan._h2Fresh) ? 1 - offPlan._h2Fresh.eff : 1;
+      const _defFresh = (defPlan == null ? void 0 : defPlan._h2Fresh) ? 1 - defPlan._h2Fresh.eff : 1;
       updateFatigue(
         offRoster,
         offPersonnel,
@@ -19333,8 +19337,8 @@ var _CFB = (() => {
         defRoster,
         defPersonnel,
         defCtx,
-        (isHurry ? C.TEMPO_FATIGUE_OFF : 1) * _gpFatigueMult,
-        isHurry ? C.TEMPO_FATIGUE_DEF : 1
+        (isHurry ? C.TEMPO_FATIGUE_OFF : 1) * _gpFatigueMult * _offFresh,
+        (isHurry ? C.TEMPO_FATIGUE_DEF : 1) * _defFresh
       );
       if (!offPlanEff._injuriesOff && playResult.qbInjured && playResult.qbInjuryGames > 0 && playResult.rusherId) {
         const injQb = offRoster.find((p) => p.id === playResult.rusherId);
@@ -22697,7 +22701,7 @@ var _CFB = (() => {
     return { results, halftimeGame };
   }
   function resumeFromHalftime(state2, homeGPEdits = null, awayGPEdits = null) {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d;
     const pending2 = state2.pendingHalftime;
     if (!pending2) return [];
     if ((_a = pending2.token) == null ? void 0 : _a.pending) {
@@ -22714,22 +22718,21 @@ var _CFB = (() => {
       const mid = midGameReport(token);
       const oppStats = isHome ? mid.awayPlayerStats : mid.homePlayerStats;
       const myH1SacksAllowed = Object.values(oppStats || {}).reduce((s, p) => s + (p.sacks || 0), 0);
-      if (adj.kind === "counter") {
-        myGP._h2Counter = { formationId: adj.formationId, eff: Math.min(0.1, 0.04 * strength) };
-        adjEval = { kind: "counter", h1OppPts: isHome ? token.awayScore : token.homeScore };
-      } else if (adj.kind === "shadow") {
-        myGP._h2Shadow = { id: adj.receiverId, eff: Math.min(0.12, 0.06 * strength) };
-        const h1RecYds = ((_d = oppStats == null ? void 0 : oppStats[adj.receiverId]) == null ? void 0 : _d.recYds) || 0;
-        adjEval = { kind: "shadow", receiverId: adj.receiverId, name: adj.name, h1RecYds };
-      } else if (adj.kind === "protect") {
-        myGP._h2Protect = { eff: Math.min(0.28, 0.12 * strength) };
-        adjEval = { kind: "protect", h1SacksAllowed: myH1SacksAllowed };
+      if (adj.kind === "offlean") {
+        myGP._h2OffLean = { eff: Math.min(0.16, 0.08 * strength) };
+        adjEval = { kind: "offlean", h1Pts: isHome ? token.homeScore : token.awayScore };
+      } else if (adj.kind === "deflean") {
+        myGP._h2DefLean = { eff: Math.min(0.16, 0.08 * strength) };
+        adjEval = { kind: "deflean", h1OppPts: isHome ? token.awayScore : token.homeScore };
+      } else if (adj.kind === "fresh") {
+        myGP._h2Fresh = { eff: Math.min(0.5, 0.28 * strength) };
+        adjEval = { kind: "fresh", h1Pts: isHome ? token.homeScore : token.awayScore };
       }
     }
     {
       const isHome = home.id === state2.playerSchoolId;
       const aiGP = isHome ? token.awayGP : token.homeGP;
-      setAutoCounter(aiGP, token.drives, isHome ? "home" : "away", (_e = state2.settings) == null ? void 0 : _e.diffCoaching);
+      setAutoCounter(aiGP, token.drives, isHome ? "home" : "away", (_d = state2.settings) == null ? void 0 : _d.diffCoaching);
     }
     if (token.callMode && token.callMode !== "off") {
       pending2._h2 = { adjEval };
@@ -22766,28 +22769,26 @@ var _CFB = (() => {
     return continueSteppedGame(state2, pending2);
   }
   function finishPlayerGame(state2, pending2, result, adjEval) {
-    var _a, _b, _c, _d;
+    var _a, _b, _c;
     const { token, game, home, away, context } = pending2;
     state2._callModeToday = null;
     if (adjEval && state2._coachId) {
       const isHome = home.id === state2.playerSchoolId;
       const oppFinal = isHome ? result.awayScore : result.homeScore;
-      const oppStatsF = isHome ? result.awayPlayerStats : result.homePlayerStats;
+      const myFinal = isHome ? result.homeScore : result.awayScore;
       let worked = false, line = "";
-      if (adjEval.kind === "counter") {
+      if (adjEval.kind === "offlean") {
+        const h2Pts = myFinal - adjEval.h1Pts;
+        worked = h2Pts > adjEval.h1Pts;
+        line = `Offensive lean: ${adjEval.h1Pts} scored in H1 \u2192 ${h2Pts} in H2`;
+      } else if (adjEval.kind === "deflean") {
         const h2Opp = oppFinal - adjEval.h1OppPts;
         worked = h2Opp < adjEval.h1OppPts;
-        line = `Counter adjustment: ${adjEval.h1OppPts} allowed in H1 \u2192 ${h2Opp} in H2`;
-      } else if (adjEval.kind === "shadow") {
-        const finYds = ((_a = oppStatsF == null ? void 0 : oppStatsF[adjEval.receiverId]) == null ? void 0 : _a.recYds) || 0;
-        const h2Yds = finYds - adjEval.h1RecYds;
-        worked = h2Yds < adjEval.h1RecYds;
-        line = `Shadow on ${adjEval.name || "their target"}: ${adjEval.h1RecYds} H1 yds \u2192 ${h2Yds} in H2`;
-      } else if (adjEval.kind === "protect") {
-        const finSacks = Object.values(oppStatsF || {}).reduce((s, p) => s + (p.sacks || 0), 0);
-        const h2Sacks = finSacks - adjEval.h1SacksAllowed;
-        worked = h2Sacks < adjEval.h1SacksAllowed;
-        line = `Protection flip: sacked ${adjEval.h1SacksAllowed}\xD7 in H1 \u2192 ${h2Sacks}\xD7 in H2`;
+        line = `Defensive lean: ${adjEval.h1OppPts} allowed in H1 \u2192 ${h2Opp} in H2`;
+      } else if (adjEval.kind === "fresh") {
+        const h2Pts = myFinal - adjEval.h1Pts;
+        worked = h2Pts >= adjEval.h1Pts;
+        line = `Fresh legs: ${adjEval.h1Pts} scored in H1 \u2192 ${h2Pts} closing the game out`;
       }
       try {
         addDnaXP(state2._coachId, { adjustments: worked ? 6 : 1 });
@@ -22797,8 +22798,8 @@ var _CFB = (() => {
       } catch (e) {
       }
     }
-    if (((_b = state2.settings) == null ? void 0 : _b.injuries) !== false) for (const player of home.roster) checkGameInjury(player, state2.day, home);
-    if (((_c = state2.settings) == null ? void 0 : _c.injuries) !== false) for (const player of away.roster) checkGameInjury(player, state2.day, away);
+    if (((_a = state2.settings) == null ? void 0 : _a.injuries) !== false) for (const player of home.roster) checkGameInjury(player, state2.day, home);
+    if (((_b = state2.settings) == null ? void 0 : _b.injuries) !== false) for (const player of away.roster) checkGameInjury(player, state2.day, away);
     resetWeeklyPlan(state2);
     game.result = result;
     const kind = (context == null ? void 0 : context.kind) || "regular";
@@ -22839,7 +22840,7 @@ var _CFB = (() => {
         console.warn("DNA track:", e.message);
       }
       const winner = state2.world.schools.find((s) => s.id === result.winner);
-      if (winner) winner.prestige = Math.min(winner.prestige + C.PRESTIGE_W_BOWL, (_d = winner.prestigeMax) != null ? _d : 5);
+      if (winner) winner.prestige = Math.min(winner.prestige + C.PRESTIGE_W_BOWL, (_c = winner.prestigeMax) != null ? _c : 5);
       const { results: restBowls, halftimeGame: nextBowlHalftime } = runD1BowlsFrom(state2, context.pairIdx + 1);
       for (const r of restBowls) events2.push({ type: "game", result: r.result });
       if (nextBowlHalftime) {
@@ -24578,7 +24579,7 @@ var _CFB = (() => {
     getUpcomingGame: () => getUpcomingGame,
     getWeekLabel: () => getWeekLabel,
     getWeekShort: () => getWeekShort,
-    liveWatchOn: () => liveWatchOn,
+    liveWatchOn: () => liveWatchOn2,
     loadFromSlot: () => loadFromSlot,
     navigate: () => navigate,
     navigateBack: () => navigateBack,
@@ -24986,7 +24987,7 @@ var _CFB = (() => {
         }
       }
       const token = (_b = state.pendingHalftime) == null ? void 0 : _b.token;
-      if ((liveWatchOn() || state.ui.autoRun) && token && unwatchedPlayCount(token) > 0) {
+      if ((liveWatchOn2() || state.ui.autoRun) && token && unwatchedPlayCount(token) > 0) {
         state.ui.liveWatch = { stage: "call", boardDone: false };
       } else if (stop.type === "fourthdown") {
         state.ui.showFourthDown = true;
@@ -25002,7 +25003,7 @@ var _CFB = (() => {
       state.ui.showCallSheet = false;
       state.ui.halftimeTab = "offense";
       state.ui.halftimeOpenSitKey = null;
-      if (liveWatchOn()) {
+      if (liveWatchOn2()) {
         state.ui.showHalftime = false;
         state.ui.liveWatch = { stage: "halftime" };
       } else {
@@ -25023,7 +25024,7 @@ var _CFB = (() => {
   function unwatchedPlayCount(token) {
     return tokenAllPlays(token).length - ((token == null ? void 0 : token._watchedPlays) || 0);
   }
-  function liveWatchOn() {
+  function liveWatchOn2() {
     var _a;
     return ((_a = state.settings) == null ? void 0 : _a.liveWatch) !== false;
   }
@@ -25061,7 +25062,7 @@ var _CFB = (() => {
     state.ui.callDrill = null;
     state.ui.showCallSheet = false;
     if (handleGamePendingEvents(events)) return;
-    state.ui._finalWatched = liveWatchOn() && (token == null ? void 0 : token._watchedPlays) || null;
+    state.ui._finalWatched = liveWatchOn2() && (token == null ? void 0 : token._watchedPlays) || null;
     processEvents(events);
     await autosave();
     rerender();
@@ -25090,7 +25091,7 @@ var _CFB = (() => {
     const events = resumeFromFourthDown(state, decision);
     state.ui.showFourthDown = false;
     if (handleGamePendingEvents(events)) return;
-    state.ui._finalWatched = liveWatchOn() && (token == null ? void 0 : token._watchedPlays) || null;
+    state.ui._finalWatched = liveWatchOn2() && (token == null ? void 0 : token._watchedPlays) || null;
     processEvents(events);
     await autosave();
     rerender();
@@ -25138,7 +25139,7 @@ var _CFB = (() => {
           addInboxMessage(`Season ${state.season} Game Result`, `${won ? "W" : "L"} ${myScore}-${oppScore} vs ${opp == null ? void 0 : opp.name}`);
           if (!suppressModal && ((_d = state.settings) == null ? void 0 : _d.showGameResultModal) !== false) {
             state.ui.lastGameResult = r;
-            if (liveWatchOn()) {
+            if (liveWatchOn2()) {
               state.ui.liveWatch = { stage: "final" };
               state.ui.showGameResult = false;
               state.ui.autoRun = false;
@@ -28723,7 +28724,7 @@ var _CFB = (() => {
         </div>
       </div>
       <div class="ob-nav-row">
-        <button class="btn-ghost" id="ob-reroll">\u21BB SPIN A NEW PROGRAM</button>
+        ${!pending.result.takeover ? `<button class="btn-ghost" id="ob-reroll">\u21BB SPIN A NEW PROGRAM</button>` : ""}
         <button class="btn-primary ob-next" id="ob-start">TAKE THE JOB \u2192</button>
       </div>
       <div class="ob-alt"><a href="#" data-ob-back="3">\u2190 change the blueprint</a></div>
@@ -34282,7 +34283,7 @@ var _CFB = (() => {
   function sortVal(r, key) {
     var _a;
     if (key === "visionRating") return r.visionRating || 0;
-    if (key === "compositeRating") return r.compositeRating || 0;
+    if (key === "compositeRating") return isScouted(r.id) ? r.compositeRating || 0 : -1;
     if (key === "distance") return -recruitDistance(r, getPlayerSchool());
     if (key === "ras") return r.ras || 0;
     if (ATTRIBUTES.includes(key)) return ((_a = r.attributes) == null ? void 0 : _a[key]) || 0;
@@ -36824,28 +36825,31 @@ var _CFB = (() => {
       },
       {
         heading: "The break",
-        body: `At halftime you get one adjustment. There are three of them and each is a different
-      kind of answer.
+        body: `At halftime you get one adjustment. There are three, and each tips the whole team a
+      different way for the second half rather than targeting one formation or one man.
 
-      A <b>counter</b> targets a formation: every snap of that look plays downhill for you in
-      the second half. A <b>shadow</b> targets a receiver: he gets bracketed and his separation
-      drops. A <b>protection flip</b> is the offensive one: your pocket holds better.
+      An <b>offensive lean</b> tilts your team toward offense: you win more up front, run it better,
+      and buy the passer time. A <b>defensive lean</b> is the mirror \u2014 your front wins the line of
+      scrimmage when you're defending, so the run gets stuffed and the passer gets hit.
+      <b>Fresh legs</b> is the conditioning answer: your team wears down slower for the rest of the
+      game, which matters most late and against tempo.
 
       All three scale with your adjustments grade as a coach, and that grade grows fastest when an
-      adjustment works. Meanwhile the opposing staff makes its own counter \u2014 lean on one formation
-      in the first half and expect it waiting. A genuinely mixed offense earns no counter at all,
-      which is the cleanest argument for formation variety in the game.`
+      adjustment works. Meanwhile the opposing staff still makes its own counter \u2014 lean on one
+      formation in the first half and expect it waiting. A genuinely mixed offense earns no counter
+      at all, which is the cleanest argument for formation variety in the game.`
       },
       {
         heading: "How an adjustment is judged",
-        body: `Bluntly, and you should know how bluntly. A counter worked if the opponent scored
-      fewer points in the second half than the first. A shadow worked if the receiver gained
-      fewer yards in the second half than the first. A protection flip worked if you were sacked
-      fewer times.
+        body: `Bluntly, and you should know how bluntly. An offensive lean worked if you scored more
+      in the second half than the first. A defensive lean worked if the opponent scored fewer.
+      Fresh legs is judged like the offensive lean \u2014 did you close the game out stronger than you
+      started it.
 
       That is the whole test. Nothing is controlled for. A half where you had the ball for most
-      of the clock will flatter a counter that did nothing; a half where the opponent needed to
-      throw will flatter a shadow that failed. The verdict is a comparison, not an analysis.
+      of the clock will flatter an offensive lean that did nothing; a half where the opponent sat
+      on a lead will flatter a defensive lean that failed. The verdict is a comparison, not an
+      analysis.
 
       Take it as a rough signal and not as proof, and be aware that it is what feeds your
       growth as an adjuster. Making adjustments in games that were going to regress anyway is,
@@ -38098,6 +38102,7 @@ var _CFB = (() => {
   var leadersSubTab = "offense";
   var playerSubTab = "offense";
   var leagueConf = null;
+  var leagueDiv = null;
   var RATINGS_COLS2 = [
     { id: "SPD", header: "SPD", cell: (p) => `<td>${p.attributes.SPD}</td>`, sortVal: (p) => p.attributes.SPD },
     { id: "PWR", header: "PWR", cell: (p) => `<td>${p.attributes.PWR}</td>`, sortVal: (p) => p.attributes.PWR },
@@ -38556,14 +38561,21 @@ var _CFB = (() => {
     var _a;
     const mySchool = getPlayerSchool();
     const allSchools = ((_a = state.world) == null ? void 0 : _a.schools) || [];
-    const confs = [...new Set(allSchools.map((s) => s.conf))].sort();
+    const divisions = [...new Set(allSchools.map((s) => s.division))].sort();
+    if (leagueDiv === null) leagueDiv = (mySchool == null ? void 0 : mySchool.division) || divisions[0] || "D1";
     if (leagueConf === null) leagueConf = (mySchool == null ? void 0 : mySchool.conf) || "";
+    const divSchools = allSchools.filter((s) => s.division === leagueDiv);
+    const confs = [...new Set(divSchools.map((s) => s.conf))].sort();
+    if (leagueConf && !confs.includes(leagueConf)) leagueConf = "";
     const cols = getOrder("stats-league", LEAGUE_COLS);
-    const schools = applySort("stats-league", allSchools.filter((s) => !leagueConf || s.conf === leagueConf), cols);
+    const schools = applySort("stats-league", divSchools.filter((s) => !leagueConf || s.conf === leagueConf), cols);
     return `
     <div class="stats-league">
+      <div class="conf-picker-row" style="margin-bottom:8px">
+        ${divisions.map((d) => `<button class="conf-pick-btn${leagueDiv === d ? " active" : ""}${d === (mySchool == null ? void 0 : mySchool.division) ? " user-conf-btn" : ""}" data-league-div="${d}">${d}${d === (mySchool == null ? void 0 : mySchool.division) ? " \u25B6" : ""}</button>`).join("")}
+      </div>
       <div class="conf-picker-row" style="margin-bottom:12px">
-        <button class="conf-pick-btn${leagueConf === "" ? " active" : ""}" data-lconf="">All</button>
+        <button class="conf-pick-btn${leagueConf === "" ? " active" : ""}" data-lconf="">All ${escapeHtml(leagueDiv)}</button>
         ${confs.map((c) => {
       var _a2, _b;
       const info = ((_b = (_a2 = state.world) == null ? void 0 : _a2.conferences) == null ? void 0 : _b[c]) || {};
@@ -38624,6 +38636,13 @@ var _CFB = (() => {
     document.querySelectorAll("[data-lconf]").forEach((btn) => {
       btn.addEventListener("click", () => {
         leagueConf = btn.dataset.lconf;
+        rerender();
+      });
+    });
+    document.querySelectorAll("[data-league-div]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        leagueDiv = btn.dataset.leagueDiv;
+        leagueConf = "";
         rerender();
       });
     });
@@ -40656,9 +40675,9 @@ var _CFB = (() => {
     <div class="ht-adjustments">
       <div class="ht-adj-label">HALFTIME ADJUSTMENT \u2014 pick one (or none)</div>
       <div class="ht-adj-row">
-        ${adjCard("counter", "\u{1F6E1}", "Counter their look", `Sell out vs ${escapeHtml(topForm)} \u2014 their top formation plays downhill in H2`, `data-ht-form="${escapeHtml(topForm)}"`)}
-        ${hotId ? adjCard("shadow", "\u{1F3AF}", "Shadow the hot hand", `${escapeHtml(hotName)} (${hotYds} yds) draws a bracket all half`, `data-ht-recv="${hotId}" data-ht-name="${escapeHtml(hotName)}"`) : adjCard("shadow", "\u{1F3AF}", "Shadow the hot hand", `Nobody's hurt you through the air yet \u2014 nothing to bracket`, `disabled`)}
-        ${adjCard("protect", "\u{1F9F1}", "Flip the protection", "Max-protect concepts \u2014 keep your QB clean to close")}
+        ${adjCard("offlean", "\u2694\uFE0F", "Lean offensive", "Tip the team toward offense in H2 \u2014 win the line, run it better, buy the passer time")}
+        ${adjCard("deflean", "\u{1F6E1}", "Lean defensive", "Tip the team toward defense in H2 \u2014 win the front, get after the passer, stuff the run")}
+        ${adjCard("fresh", "\u{1F50B}", "Fresh legs", "A conditioning push \u2014 your team wears down slower the rest of the game")}
       </div>
     </div>`;
     const margin = myScore - oppScore;
@@ -41415,7 +41434,7 @@ var _CFB = (() => {
     return labels[d.result] || d.result;
   }
   function setupGlobalListeners() {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F;
     document.querySelectorAll("[data-nav]").forEach((el) => {
       el.addEventListener("click", () => {
         state.ui.sidebarOpen = false;
@@ -41445,9 +41464,7 @@ var _CFB = (() => {
           const cur = state.pendingHalftime.adjustment;
           if ((cur == null ? void 0 : cur.kind) === kind) {
             state.pendingHalftime.adjustment = null;
-          } else if (kind === "counter") state.pendingHalftime.adjustment = { kind, formationId: btn.dataset.htForm };
-          else if (kind === "shadow") state.pendingHalftime.adjustment = btn.dataset.htRecv ? { kind, receiverId: btn.dataset.htRecv, name: btn.dataset.htName } : null;
-          else state.pendingHalftime.adjustment = { kind };
+          } else state.pendingHalftime.adjustment = { kind };
           renderApp();
         });
       });
@@ -41701,13 +41718,28 @@ var _CFB = (() => {
     (_z = document.getElementById("cs-skip-quarter")) == null ? void 0 : _z.addEventListener("click", () => simToQuarterEnd());
     (_A = document.getElementById("cs-mode-keydowns")) == null ? void 0 : _A.addEventListener("click", () => setCallModeMidGame("keydowns"));
     (_B = document.getElementById("cs-mode-off")) == null ? void 0 : _B.addEventListener("click", () => setCallModeMidGame("off"));
-    (_C = document.getElementById("cs-autorun")) == null ? void 0 : _C.addEventListener("click", () => {
+    (_C = document.getElementById("cs-mode-everycall")) == null ? void 0 : _C.addEventListener("click", () => {
+      var _a2;
+      const t = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token;
+      if (t) {
+        t.callMode = "all";
+        renderApp();
+      }
+    });
+    (_D = document.getElementById("cs-replay")) == null ? void 0 : _D.addEventListener("click", () => {
+      if (state.ui.liveWatch) {
+        state.ui.liveWatch.replay = true;
+        state.ui.liveWatch.boardDone = false;
+        renderApp();
+      }
+    });
+    (_E = document.getElementById("cs-autorun")) == null ? void 0 : _E.addEventListener("click", () => {
       var _a2, _b2, _c2;
       state.ui.autoRun = true;
       if (((_c2 = (_b2 = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token) == null ? void 0 : _b2.pending) == null ? void 0 : _c2.kind) === "fourth") answerFourthDown("auto");
       else answerPlayCall({ concept: "sheet" });
     });
-    (_D = document.getElementById("cs-autorun-stop")) == null ? void 0 : _D.addEventListener("click", () => {
+    (_F = document.getElementById("cs-autorun-stop")) == null ? void 0 : _F.addEventListener("click", () => {
       state.ui.autoRun = false;
       watchStop();
       _watch = null;
@@ -41919,6 +41951,21 @@ var _CFB = (() => {
       <div class="modal callsheet-modal">${body}</div>
     </div>`;
   }
+  function hasReplayablePlay() {
+    var _a;
+    if (!liveWatchOn()) return false;
+    const t = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
+    return !!t && watchDrivesOf(t).some((d) => (d.plays || []).length > 0);
+  }
+  function watchControlsHtml(token, ctx2, fourth = false) {
+    const inKeyDowns = token.callMode === "keydowns";
+    const sheetBtn = fourth ? `<button class="btn-secondary" id="fourth-auto">\u{1F4CB} Let the sheet decide</button>` : `<button class="btn-secondary" id="cs-sheet-call">\u{1F4CB} Let the sheet call it</button>`;
+    const modeToggle = inKeyDowns ? `<button class="btn-secondary" id="cs-mode-everycall">\u{1F3A7} Coach every call</button>` : `<button class="btn-secondary" id="cs-mode-keydowns">\u23E9 Sim to next key down</button>`;
+    const headsetOff = `<button class="btn-secondary" id="cs-mode-off">\u{1F3C1} Headset off \u2014 sim to final</button>`;
+    const replay = hasReplayablePlay() ? `<button class="btn-secondary" id="cs-replay">\u21BB Replay last play</button>` : "";
+    const autorun = fourth ? "" : `<button class="btn-secondary cs-autorun-btn" id="cs-autorun">\u25B6\uFE0F Auto-run \u2014 watch to the end</button>`;
+    return `<div class="cs-footer">${sheetBtn}${modeToggle}${headsetOff}${replay}${autorun}</div>`;
+  }
   function callSheetPanelHtml() {
     var _a, _b, _c, _d, _e, _f;
     if (!((_b = (_a = state.pendingHalftime) == null ? void 0 : _a.token) == null ? void 0 : _b.pending)) return "";
@@ -42036,7 +42083,7 @@ var _CFB = (() => {
     })()}
         </div>` : "";
     const adj = (_f = state.pendingHalftime) == null ? void 0 : _f.adjustment;
-    const adjChip = adj ? `<span class="cs-adj">${adj.kind === "counter" ? `\u{1F6E1} Selling out vs ${escapeHtml(adj.formationId || "their top look")}` : adj.kind === "shadow" ? `\u{1F3AF} Bracketing ${escapeHtml(adj.name || "their hot hand")}` : adj.kind === "protect" ? "\u{1F9F1} Max protection on" : "Halftime adjustment live"}</span>` : "";
+    const adjChip = adj ? `<span class="cs-adj">${adj.kind === "offlean" ? "\u2694\uFE0F Leaning offensive" : adj.kind === "deflean" ? "\u{1F6E1} Leaning defensive" : adj.kind === "fresh" ? "\u{1F50B} Fresh legs" : "Halftime adjustment live"}</span>` : "";
     const fdLine = goal ? 100 : Math.max(0, Math.min(100, ctx2.fieldPos + ctx2.distance));
     const fieldBar = `
         <div class="cs-field" aria-hidden="true">
@@ -42074,13 +42121,7 @@ var _CFB = (() => {
           </div>` : ""}
         </div>`;
     })()}
-        <div class="cs-footer">
-          <button class="btn-secondary" id="cs-sheet-call">\u{1F4CB} Let the sheet call it</button>
-          ${ctx2.half !== 3 ? `<button class="btn-secondary" id="cs-skip-quarter">\u23ED\uFE0F ${ctx2.quarter === 2 ? "Sim to halftime" : ctx2.quarter === 4 ? "Sim to final" : `Sim to end of Q${ctx2.quarter}`}</button>` : ""}
-          ${token.callMode === "all" ? `<button class="btn-secondary" id="cs-mode-keydowns">\u23E9 Sim to next key down</button>` : ""}
-          ${ctx2.quarter !== 4 || ctx2.half === 3 ? `<button class="btn-secondary" id="cs-mode-off">\u{1F3C1} Headset off \u2014 sim to final</button>` : ""}
-          <button class="btn-secondary cs-autorun-btn" id="cs-autorun">\u25B6\uFE0F Auto-run \u2014 watch until I stop</button>
-        </div>`;
+        ${watchControlsHtml(token, ctx2, false)}`;
   }
   function renderFourthDownModal() {
     if (!state.ui.showFourthDown) return "";
@@ -42126,12 +42167,7 @@ var _CFB = (() => {
             <span class="fourth-opt-desc">Flip the field and trust the defense.</span>
           </button>
         </div>
-        <div class="cs-footer">
-          <button class="btn-secondary" id="fourth-auto">\u{1F4CB} Let the sheet decide</button>
-          ${ctx2.half !== 3 ? `<button class="btn-secondary" id="cs-skip-quarter">\u23ED\uFE0F ${ctx2.quarter === 2 ? "Sim to halftime" : ctx2.quarter === 4 ? "Sim to final" : `Sim to end of Q${ctx2.quarter}`}</button>` : ""}
-          ${token.callMode === "all" ? `<button class="btn-secondary" id="cs-mode-keydowns">\u23E9 Sim to next key down</button>` : ""}
-          ${ctx2.quarter !== 4 || ctx2.half === 3 ? `<button class="btn-secondary" id="cs-mode-off">\u{1F3C1} Headset off \u2014 sim to final</button>` : ""}
-        </div>`;
+        ${watchControlsHtml(token, ctx2, true)}`;
   }
   function renderLiveWatchOverlay() {
     var _a, _b, _c;
@@ -42140,7 +42176,7 @@ var _CFB = (() => {
     const isCall = lw.stage === "call";
     const auto = isCall && state.ui.autoRun;
     const boardDone = isCall && lw.boardDone && !auto;
-    const label = lw.stage === "halftime" ? "1ST HALF \u2014 LIVE" : isCall ? auto ? "AUTO-RUN \u2014 WATCHING" : boardDone ? "YOUR CALL" : "LIVE \u2014 HEADSET ON" : "2ND HALF \u2014 LIVE";
+    const label = lw.replay ? "REPLAY \u2014 LAST PLAY" : lw.stage === "halftime" ? "1ST HALF \u2014 LIVE" : isCall ? auto ? "AUTO-RUN \u2014 WATCHING" : boardDone ? "YOUR CALL" : "LIVE \u2014 HEADSET ON" : "2ND HALF \u2014 LIVE";
     const embed = isCall && !auto && boardDone ? ((_c = (_b = (_a = state.pendingHalftime) == null ? void 0 : _a.token) == null ? void 0 : _b.pending) == null ? void 0 : _c.kind) === "fourth" ? fourthDownPanelHtml() : callSheetPanelHtml() : "";
     const headerBtn = auto ? `<button class="bc-btn bc-text" id="cs-autorun-stop">\u23F8 Stop \u2014 take the headset back</button>` : !boardDone ? `<button class="bc-btn bc-text" id="watch-live-skip">Skip \u23E9</button>` : "";
     return `
@@ -42198,7 +42234,7 @@ var _CFB = (() => {
     return out;
   }
   function mountLiveWatch() {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
     const lw = state.ui.liveWatch;
     if (!lw || lw.boardDone) return;
     let gameLike = null, isHome = true, watchKey = `live-${lw.stage}-${state.day}-${state.season}`;
@@ -42210,7 +42246,48 @@ var _CFB = (() => {
       }
       return names;
     };
-    if (lw.stage === "call" && ((_b = (_a = state.pendingHalftime) == null ? void 0 : _a.token) == null ? void 0 : _b.pending)) {
+    if (lw.replay && ((_a = state.pendingHalftime) == null ? void 0 : _a.token)) {
+      const t = state.pendingHalftime.token;
+      const all = watchDrivesOf(t);
+      let lastDrive = null, lastPlay = null;
+      for (let di = all.length - 1; di >= 0 && !lastPlay; di--) {
+        const ps = all[di].plays || [];
+        if (ps.length) {
+          lastDrive = all[di];
+          lastPlay = ps[ps.length - 1];
+        }
+      }
+      if (!lastPlay) {
+        lw.replay = false;
+        lw.boardDone = true;
+        return;
+      }
+      const back = () => {
+        const l = state.ui.liveWatch;
+        if (l) {
+          l.replay = false;
+          l.boardDone = true;
+        }
+        watchStop();
+        _watch = null;
+        renderApp();
+      };
+      gameLike = {
+        drives: [__spreadProps(__spreadValues({}, lastDrive), { plays: [lastPlay], result: null })],
+        homeSchool: t.homeSchool,
+        awaySchool: t.awaySchool,
+        homeScore: t.homeScore,
+        awayScore: t.awayScore,
+        playerNames: rosterNames(t)
+      };
+      isHome = ((_b = t.homeSchool) == null ? void 0 : _b.id) === (school == null ? void 0 : school.id);
+      watchKey = `replay-${state.season}-${state.day}-${lw._replayN = (lw._replayN || 0) + 1}`;
+      initWatchMode(gameLike, isHome, { key: watchKey, onFinish: back });
+      if (_watch) _watch.liveLabel = "Rolling it back \u2014 the last snap.";
+      (_c = document.getElementById("watch-live-skip")) == null ? void 0 : _c.addEventListener("click", back);
+      return;
+    }
+    if (lw.stage === "call" && ((_e = (_d = state.pendingHalftime) == null ? void 0 : _d.token) == null ? void 0 : _e.pending)) {
       const t = state.pendingHalftime.token;
       const total = watchDrivesOf(t).reduce((n, d) => {
         var _a2;
@@ -42230,8 +42307,8 @@ var _CFB = (() => {
         awayScore: t.awayScore,
         playerNames: rosterNames(t)
       };
-      isHome = ((_c = t.homeSchool) == null ? void 0 : _c.id) === (school == null ? void 0 : school.id);
-    } else if (lw.stage === "halftime" && ((_d = state.pendingHalftime) == null ? void 0 : _d.token)) {
+      isHome = ((_f = t.homeSchool) == null ? void 0 : _f.id) === (school == null ? void 0 : school.id);
+    } else if (lw.stage === "halftime" && ((_g = state.pendingHalftime) == null ? void 0 : _g.token)) {
       const t = state.pendingHalftime.token;
       const from = t.callMode && t.callMode !== "off" ? t._watchedPlays || 0 : 0;
       t._watchedPlays = (t.drives || []).reduce((n, d) => {
@@ -42246,7 +42323,7 @@ var _CFB = (() => {
         awayScore: t.awayScore,
         playerNames: rosterNames(t)
       };
-      isHome = ((_e = t.homeSchool) == null ? void 0 : _e.id) === (school == null ? void 0 : school.id);
+      isHome = ((_h = t.homeSchool) == null ? void 0 : _h.id) === (school == null ? void 0 : school.id);
     } else if (lw.stage === "final" && state.ui.lastGameResult) {
       const r = state.ui.lastGameResult;
       const fw = state.ui._finalWatched;
@@ -42255,7 +42332,7 @@ var _CFB = (() => {
         return cut >= 0 ? r.drives.slice(cut) : r.drives;
       })();
       gameLike = __spreadProps(__spreadValues({}, r), { drives });
-      isHome = ((_f = r.homeSchool) == null ? void 0 : _f.id) === (school == null ? void 0 : school.id);
+      isHome = ((_i = r.homeSchool) == null ? void 0 : _i.id) === (school == null ? void 0 : school.id);
     }
     if (!gameLike) {
       liveWatchFinish();
@@ -42263,7 +42340,7 @@ var _CFB = (() => {
     }
     initWatchMode(gameLike, isHome, { key: watchKey, onFinish: liveWatchFinish });
     if (_watch) _watch.liveLabel = lw.stage === "halftime" ? "End of the first half \u2014 the locker room is waiting." : lw.stage === "call" ? "The headset crackles \u2014 your call." : "That\u2019s the ballgame.";
-    (_g = document.getElementById("watch-live-skip")) == null ? void 0 : _g.addEventListener("click", () => {
+    (_j = document.getElementById("watch-live-skip")) == null ? void 0 : _j.addEventListener("click", () => {
       var _a2;
       watchStop();
       _watch = null;
