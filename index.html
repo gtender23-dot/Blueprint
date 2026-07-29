@@ -5191,7 +5191,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "e4c92277c8";
+globalThis.__BUILD__ = "ff53759de2";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -33637,11 +33637,13 @@ var _CFB = (() => {
     const isPass = t.startsWith("pass") && !(p == null ? void 0 : p.isScramble);
     if (!p || !(offSlotsRaw == null ? void 0 : offSlotsRaw.length) || !isRun && !isPass) return null;
     const rnd = seeded(p);
-    const off = offSlotsRaw.map((s) => __spreadProps(__spreadValues({}, s), { bx: s.x * 100, by: s.y * 62 }));
+    const DEPTH_YDS_PER_Y = 18;
+    const yToBoard = (y) => LOS + Math.max(0, y - 0.5) * DEPTH_YDS_PER_Y * YPU;
+    const off = offSlotsRaw.map((s) => __spreadProps(__spreadValues({}, s), { bx: s.x * 100, by: yToBoard(s.y) }));
     const defRaw = defSlotsRaw || [];
     const defMaxY = defRaw.length ? Math.max(...defRaw.map((s) => s.y)) : 0;
     const def = defRaw.map((s) => __spreadProps(__spreadValues({}, s), { bx: s.x * 100, by: Math.max(3, 29 - (defMaxY - s.y) * 36) }));
-    const qbSlot = off.find((s) => s.id === "QB") || { bx: 50, by: 41, id: "QB", label: "QB", pos: "QB" };
+    const qbSlot = off.find((s) => s.id === "QB") || { bx: 50, by: LOS + 3 * YPU, id: "QB", label: "QB", pos: "QB" };
     const gain = clamp5(p.yards || 0, -15, 100);
     const endY = clamp5(LOS - (p.td ? Math.min(p.yards || 0, 100) : gain) * YPU, -60, 61);
     const spdFactor = (m) => m ? clamp5(1 + (m.s - 55) / 180, 0.82, 1.2) : 1;
