@@ -5191,7 +5191,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "088cc08ac1";
+globalThis.__BUILD__ = "f246f79de6";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -19331,12 +19331,14 @@ var _CFB = (() => {
         playResult.coachCall = true;
         forcedCall = null;
       }
+      const _carrierSlotId = playResult.rusherId && (offField == null ? void 0 : offField.bySlot) ? Object.keys(offField.bySlot).find((sid) => offField.bySlot[sid] === playResult.rusherId) || null : null;
       plays.push(__spreadProps(__spreadValues({}, playResult), {
         down,
         distance,
         fieldPos,
         offFormation: offFormationId,
         defFront: defFrontId,
+        carrierSlotId: _carrierSlotId,
         offSpd: slotSpeedMap(offField == null ? void 0 : offField.bySlot, offRoster),
         defSpd: slotSpeedMap(defBaseField == null ? void 0 : defBaseField.bySlot, defRoster),
         offSit,
@@ -33876,7 +33878,7 @@ var _CFB = (() => {
       const endPt = [clamp5(lane + (rnd() - 0.5) * 4, 3, 97), endY];
       const backs = off.filter((s) => s.pos === "RB" || s.pos === "FB" || s.pos === "WING" || s.pos === "ABACK" || s.pos === "WILDCAT");
       const deepBack = backs.length ? backs.reduce((a2, b2) => b2.by > a2.by ? b2 : a2) : null;
-      let carrierSlot = p.optionPhase === "wildcat" ? off.find((s) => s.pos === "WILDCAT") || deepBack || qbSlot : p.optionPhase === "jet" ? off.find((s) => s.pos === "JETMAN") || off.find((s) => s.id === "RB_2") || deepBack || qbSlot : p.optionPhase === "dive" ? off.find((s) => s.pos === "FB") || deepBack || qbSlot : p.optionPhase === "keep" ? qbSlot : p.optionPhase === "pitch" ? off.filter((s) => s.pos === "WING" || s.pos === "ABACK").sort((a2, b2) => a2.bx - b2.bx)[p.runDir === "left" ? 0 : 1] || deepBack || qbSlot : p.isQBDesignedRun || p.isScramble || !deepBack ? qbSlot : deepBack;
+      let carrierSlot = p.carrierSlotId && off.find((s) => s.id === p.carrierSlotId) || (p.optionPhase === "wildcat" ? off.find((s) => s.pos === "WILDCAT") || deepBack || qbSlot : p.optionPhase === "jet" ? off.find((s) => s.pos === "JETMAN") || off.find((s) => s.id === "RB_2") || deepBack || qbSlot : p.optionPhase === "dive" ? off.find((s) => s.pos === "FB") || deepBack || qbSlot : p.optionPhase === "keep" ? qbSlot : p.optionPhase === "pitch" ? off.filter((s) => s.pos === "WING" || s.pos === "ABACK").sort((a2, b2) => a2.bx - b2.bx)[p.runDir === "left" ? 0 : 1] || deepBack || qbSlot : p.isQBDesignedRun || p.isScramble || !deepBack ? qbSlot : deepBack);
       carrier = A[carrierSlot.id];
       const meshAt = PRESNAP + (p.optionPhase === "draw" ? 0.55 : p.isScramble ? 0.85 : p.optionPhase === "wildcat" ? 0.02 : 0.28);
       const pitchAt = p.optionPhase === "pitch" ? PRESNAP + 0.85 : null;
