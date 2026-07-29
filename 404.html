@@ -4826,14 +4826,26 @@ body.theme-school .data-table tr:hover td {
 
 /* ── Unified time-control bar: the same set on the broadcast strip AND above the
    formations on the call sheet. On the strip it flows inline next to the speed
-   control; on the sheet it's its own row. ── */
+   control; on the sheet it's its own row. Buttons share the width and wrap. ── */
 .tc-bar { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 10px; }
 .broadcast-bar .tc-bar { display: contents; }          /* merge into the strip's flex */
-.tc-bar .bc-btn { height: 34px; padding: 0 12px; font-size: 0.82em; }
+.tc-bar .bc-btn { flex: 1 1 auto; height: auto; min-height: 36px; padding: 7px 12px; font-size: 0.82em; text-align: center; }
 .tc-bar .tc-coach, .broadcast-bar .tc-coach {
   background: var(--team-1, #ffd54a); color: #12161c; border-color: transparent;
 }
 .tc-bar .tc-coach:hover, .broadcast-bar .tc-coach:hover { filter: brightness(1.08); }
+
+/* Mobile: bigger touch targets, two-up, labels wrap instead of overflowing. */
+@media (max-width: 560px) {
+  .tc-bar { gap: 8px; }
+  .tc-bar .bc-btn, .broadcast-bar .tc-bar .bc-btn {
+    flex: 1 1 calc(50% - 8px); min-height: 46px; font-size: 0.86em;
+    white-space: normal; line-height: 1.15; letter-spacing: 0.01em;
+  }
+  .broadcast-bar { gap: 8px; }
+  .broadcast-bar .bc-icon, .broadcast-bar .bc-play, .broadcast-bar .bc-speed { flex: 0 0 auto; }
+  .broadcast-bar .watch-progress { flex-basis: 100%; text-align: right; margin: 0; }
+}
 
 /* ── Live watch + animated board ── */
 .watch-live-overlay { z-index: 1200; }
@@ -5179,7 +5191,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "51dc6ba073";
+globalThis.__BUILD__ = "088cc08ac1";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -41533,7 +41545,7 @@ var _CFB = (() => {
     return labels[d.result] || d.result;
   }
   function setupGlobalListeners() {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J;
     document.querySelectorAll("[data-nav]").forEach((el) => {
       el.addEventListener("click", () => {
         state.ui.sidebarOpen = false;
@@ -41825,14 +41837,7 @@ var _CFB = (() => {
         renderApp();
       }
     });
-    (_D = document.getElementById("cs-replay")) == null ? void 0 : _D.addEventListener("click", () => {
-      if (state.ui.liveWatch) {
-        state.ui.liveWatch.replay = true;
-        state.ui.liveWatch.boardDone = false;
-        renderApp();
-      }
-    });
-    (_E = document.getElementById("cs-recover")) == null ? void 0 : _E.addEventListener("click", () => {
+    (_D = document.getElementById("cs-recover")) == null ? void 0 : _D.addEventListener("click", () => {
       var _a2, _b2;
       const t = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token;
       if (((_b2 = t == null ? void 0 : t.pending) == null ? void 0 : _b2.kind) === "fourth") {
@@ -41849,17 +41854,10 @@ var _CFB = (() => {
     document.querySelectorAll("[data-cs-quickcat]").forEach((btn) => btn.addEventListener("click", () => {
       if (callTapOk()) answerPlayCall({ category: btn.dataset.csQuickcat });
     }));
-    (_F = document.getElementById("tc-skipback")) == null ? void 0 : _F.addEventListener("click", () => {
-      if (state.ui.liveWatch) {
-        state.ui.liveWatch.replay = true;
-        state.ui.liveWatch.boardDone = false;
-        renderApp();
-      }
-    });
-    (_G = document.getElementById("tc-keydowns")) == null ? void 0 : _G.addEventListener("click", () => {
+    (_E = document.getElementById("tc-keydowns")) == null ? void 0 : _E.addEventListener("click", () => {
       if (callTapOk()) setCallModeMidGame("keydowns");
     });
-    (_H = document.getElementById("tc-headset")) == null ? void 0 : _H.addEventListener("click", () => {
+    (_F = document.getElementById("tc-headset")) == null ? void 0 : _F.addEventListener("click", () => {
       var _a2, _b2;
       state.ui.autoRun = true;
       const lw = state.ui.liveWatch;
@@ -41871,23 +41869,23 @@ var _CFB = (() => {
       if (((_b2 = t == null ? void 0 : t.pending) == null ? void 0 : _b2.kind) === "fourth") answerFourthDown("auto");
       else answerPlayCall({ concept: "sheet" });
     });
-    (_I = document.getElementById("tc-jumpin")) == null ? void 0 : _I.addEventListener("click", () => {
+    (_G = document.getElementById("tc-jumpin")) == null ? void 0 : _G.addEventListener("click", () => {
       state.ui.autoRun = false;
       watchStop();
       _watch = null;
       if (state.ui.liveWatch) state.ui.liveWatch.boardDone = true;
       renderApp();
     });
-    (_J = document.getElementById("tc-skipbreak")) == null ? void 0 : _J.addEventListener("click", () => {
+    (_H = document.getElementById("tc-skipbreak")) == null ? void 0 : _H.addEventListener("click", () => {
       if (callTapOk()) simToBreak();
     });
-    (_K = document.getElementById("cs-autorun")) == null ? void 0 : _K.addEventListener("click", () => {
+    (_I = document.getElementById("cs-autorun")) == null ? void 0 : _I.addEventListener("click", () => {
       var _a2, _b2, _c2;
       state.ui.autoRun = true;
       if (((_c2 = (_b2 = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token) == null ? void 0 : _b2.pending) == null ? void 0 : _c2.kind) === "fourth") answerFourthDown("auto");
       else answerPlayCall({ concept: "sheet" });
     });
-    (_L = document.getElementById("cs-autorun-stop")) == null ? void 0 : _L.addEventListener("click", () => {
+    (_J = document.getElementById("cs-autorun-stop")) == null ? void 0 : _J.addEventListener("click", () => {
       state.ui.autoRun = false;
       watchStop();
       _watch = null;
@@ -42108,12 +42106,6 @@ var _CFB = (() => {
       <div class="modal callsheet-modal">${body}</div>
     </div>`;
   }
-  function hasReplayablePlay() {
-    var _a;
-    if (!liveWatchOn()) return false;
-    const t = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
-    return !!t && watchDrivesOf(t).some((d) => (d.plays || []).length > 0);
-  }
   function timeControlBar() {
     var _a;
     const lw = state.ui.liveWatch;
@@ -42122,10 +42114,9 @@ var _CFB = (() => {
     const half = token.pending.half;
     const auto = !!state.ui.autoRun;
     const breakLabel = half === 1 ? "\u23ED Skip to halftime" : "\u23ED Skip to final";
-    const replay = hasReplayablePlay() ? `<button class="bc-btn bc-text" id="tc-skipback" title="Show the last play again">\u23EE Replay</button>` : "";
     const mid = auto ? `<button class="bc-btn bc-text tc-coach" id="tc-jumpin" title="Take the headset back and call the plays yourself">\u{1F3A7} Coach up</button>` : `<button class="bc-btn bc-text" id="tc-keydowns" title="Game plan runs the sim; stops at the next key down">\u23E9 Sim to next key down</button>
        <button class="bc-btn bc-text" id="tc-headset" title="Headset off \u2014 the game plan calls it and you watch">\u{1F3A7} Headset off</button>`;
-    return `<div class="tc-bar">${replay}${mid}<button class="bc-btn bc-text" id="tc-skipbreak" title="Sim straight to the ${half === 1 ? "locker room" : "final gun"}">${breakLabel}</button></div>`;
+    return `<div class="tc-bar">${mid}<button class="bc-btn bc-text" id="tc-skipbreak" title="Sim straight to the ${half === 1 ? "locker room" : "final gun"}">${breakLabel}</button></div>`;
   }
   function callSheetPanelHtml() {
     var _a, _b, _c, _d, _e, _f;
