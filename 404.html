@@ -5168,7 +5168,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "8929d5eae3";
+globalThis.__BUILD__ = "b43d3a2d72";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -33389,6 +33389,10 @@ var _CFB = (() => {
   };
   var ACCEL = 22;
   var LIN_ACCEL = 15;
+  var DECEL = 30;
+  var SEP_R = 1.5;
+  var SEP_PUSH = 0.06;
+  var SEP_VMAX = 6;
   var clamp5 = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   function seeded(p) {
     let s = (p.clock || 0) * 7919 + (p.fieldPos || 0) * 104729 + ((p.yards || 0) + 40) * 31 + (p.down || 1) * 7 + (p.half || 1) * 13 >>> 0;
@@ -33426,7 +33430,7 @@ var _CFB = (() => {
       const arrive = Math.min(1, d / 2);
       const spTarget = ((_a = tgt[2]) != null ? _a : a.speed) * arrive;
       const curSp = Math.hypot(a.vx, a.vy);
-      const sp = Math.min(spTarget, curSp + a.linAccel * dt);
+      const sp = clamp5(spTarget, curSp - DECEL * dt, curSp + a.linAccel * dt);
       let dvx = dx / d * sp - a.vx, dvy = dy / d * sp - a.vy;
       const dv = Math.hypot(dvx, dvy) || 1e-6;
       const k = Math.min(1, a.accel * dt / dv);
@@ -33453,6 +33457,22 @@ var _CFB = (() => {
       track[i][0] = end[0];
       track[i][1] = end[1];
     }
+  }
+  function capTrackSpeed(track, maxStep) {
+    for (let i = track.length - 1; i > 0; i--) {
+      const dx = track[i][0] - track[i - 1][0], dy = track[i][1] - track[i - 1][1];
+      const d = Math.hypot(dx, dy);
+      if (d > maxStep) {
+        const k = maxStep / d;
+        track[i - 1][0] = track[i][0] - dx * k;
+        track[i - 1][1] = track[i][1] - dy * k;
+      }
+    }
+  }
+  function pursuePt(carrier, d, spd2, leadCap = 0.24) {
+    const dist = Math.hypot(carrier.x - d.x, carrier.y - d.y);
+    const lead = clamp5(dist / (d.speed || 6), 0, leadCap);
+    return [carrier.x + (carrier.vx || 0) * lead, carrier.y + (carrier.vy || 0) * lead, spd2];
   }
   var SHAPES = {
     // Each entry is a stem (straight release upfield) then a crisp break. d = depth
@@ -33708,7 +33728,7 @@ var _CFB = (() => {
         const chasers = defs.filter((d) => d.grp !== "DL").slice(0, 4);
         for (const d of chasers) {
           const prev = d.behave;
-          d.behave = (t2, w2, a2) => t2 < tCatch ? prev ? prev(t2, w2, a2) : null : [carrier.x, carrier.y, d.speed];
+          d.behave = (t2, w2, a2) => t2 < tCatch ? prev ? prev(t2, w2, a2) : null : pursuePt(carrier, d, d.speed);
         }
       }
       const bl = { x: null, y: null };
@@ -33851,8 +33871,11 @@ var _CFB = (() => {
         const spCap = d.grp === "DL" ? 3.4 : d.speed;
         d.behave = (t2) => {
           if (t2 < delay) return d.home ? [d.home[0], d.home[1], d.speed * 0.7] : null;
-          if (d.grp === "LB" && carrier.y > LOS - 0.5) return [carrier.x, clamp5(carrier.y - 3.5, 26, 30), spCap];
-          return [carrier.x, carrier.y, spCap];
+          if (d.grp === "LB" && carrier.y > LOS - 0.5) {
+            const lp = pursuePt(carrier, d, spCap);
+            return [lp[0], clamp5(carrier.y - 3.5, 26, 30), spCap];
+          }
+          return pursuePt(carrier, d, spCap);
         };
       }
       ballPlan = pitchAt ? (t2) => t2 < PRESNAP ? [50, LOS + 0.6] : t2 < pitchAt ? [A.QB.x, A.QB.y - 0.8] : t2 < pitchAt + 0.18 ? [A.QB.x + (carrier.x - A.QB.x) * ((t2 - pitchAt) / 0.18), A.QB.y + (carrier.y - A.QB.y) * ((t2 - pitchAt) / 0.18)] : [carrier.x, carrier.y] : (t2) => t2 < PRESNAP ? [50, LOS + 0.6] : t2 < meshAt ? [A.QB.x, A.QB.y - 0.8] : [carrier.x, carrier.y];
@@ -33868,10 +33891,24 @@ var _CFB = (() => {
     for (let i = 0; i <= n; i++) {
       const t2 = i * STEP;
       const world = { t: t2 };
-      for (const a2 of everyone) {
-        stepAgent(a2, a2.behave ? a2.behave(t2, world, a2) : null, STEP);
-        a2.track.push([a2.x, a2.y]);
+      for (const a2 of everyone) stepAgent(a2, a2.behave ? a2.behave(t2, world, a2) : null, STEP);
+      for (let a = 0; a < everyone.length; a++) {
+        const A2 = everyone[a];
+        if (A2 === carrier) continue;
+        if (Math.hypot(A2.vx, A2.vy) > SEP_VMAX) continue;
+        for (let b = 0; b < everyone.length; b++) {
+          if (b === a) continue;
+          const B2 = everyone[b];
+          const dx = A2.x - B2.x, dy = A2.y - B2.y;
+          const dd = Math.hypot(dx, dy);
+          if (dd > 1e-4 && dd < SEP_R) {
+            const push = Math.min(SEP_PUSH, (SEP_R - dd) * 0.5);
+            A2.x = clamp5(A2.x + dx / dd * push, 1, 99);
+            A2.y = clamp5(A2.y + dy / dd * push, 2, 60);
+          }
+        }
       }
+      for (const a2 of everyone) a2.track.push([a2.x, a2.y]);
       const bp = ballPlan(t2);
       ball.track.push([clamp5(bp[0], 1, 99), clamp5(bp[1], 1.5, 60)]);
     }
@@ -33932,6 +33969,9 @@ var _CFB = (() => {
       const iEnd = Math.round(endInfo.at / STEP);
       for (let i = iEnd; i < ball.track.length; i++) ball.track[i] = [...carrier.track[Math.min(i, carrier.track.length - 1)]];
     }
+    const MAX_STEP = 15 * STEP;
+    for (const a2 of everyone) capTrackSpeed(a2.track, MAX_STEP);
+    capTrackSpeed(ball.track, MAX_STEP);
     return {
       dur: dur + 1e-9,
       step: STEP,
