@@ -5168,7 +5168,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "1b06c737c5";
+globalThis.__BUILD__ = "6d51ecc557";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -6854,10 +6854,11 @@ var _CFB = (() => {
         "Always Pass": 0.82,
         "Heavy Pass": 0.68,
         "Pass": 0.58,
-        "Balanced": 0.5,
-        "Run": 0.42,
+        "Balanced": 0.48,
+        "Run": 0.41,
         "Heavy Run": 0.32,
         "Always Run": 0.18
+        // Balanced nudged 0.50→0.48 (college skews run) to hold rush volume as YPC was recentered down
       };
       POSITIONS = ["QB", "RB", "WR", "TE", "OL", "DE", "DT", "OLB", "LB", "CB", "S", "K", "P"];
       ATTRIBUTES = ["SPD", "AGI", "PWR", "STR", "JMP", "HND", "SEC", "TEC", "AWR", "CON", "WE"];
@@ -16101,7 +16102,7 @@ var _CFB = (() => {
       MAX_Y2 = 100;
       MIN_Y = -6;
       RADIUS2 = 1.25;
-      LANE_RECENTER = 0.07;
+      LANE_RECENTER = 0.16;
       hyp = (x, y) => Math.sqrt(x * x + y * y);
       spdYps2 = (s) => 6.4 + (s != null ? s : 50) * 0.028;
       accel2 = (a) => 7 + (a != null ? a : 50) * 0.05;
@@ -21945,7 +21946,7 @@ var _CFB = (() => {
     return null;
   }
   function assistOfferBar(level, aggr) {
-    let bar = level === "full" ? 42 : 50;
+    let bar = level === "full" ? 35 : 50;
     if (aggr === "aggressive") bar -= 8;
     else if (aggr === "conservative") bar += 8;
     return bar;
@@ -21988,13 +21989,19 @@ var _CFB = (() => {
       const r = recById.get(e.recruitId);
       return r ? recruitDistance(r, school) : 9999;
     };
+    const isActiveEntry = (e) => {
+      const r = recById.get(e.recruitId);
+      return !!r && !r.committed && !e.eliminated;
+    };
     const logAdds = [];
     const logActs = [];
-    if (board.length < AUTO_BOARD_MAX) {
+    let activeBoardCount = board.filter(isActiveEntry).length;
+    if (activeBoardCount < AUTO_BOARD_MAX) {
       const boardIds = new Set(board.map((e) => e.recruitId));
       const addedByPos = {};
       for (const e of board) {
-        const r = recruits.find((x) => x.id === e.recruitId);
+        if (!isActiveEntry(e)) continue;
+        const r = recById.get(e.recruitId);
         if (r) addedByPos[r.position] = (addedByPos[r.position] || 0) + 1;
       }
       const perPosCap = (pos) => {
@@ -22008,10 +22015,11 @@ var _CFB = (() => {
         return { r, score };
       }).sort((a, b) => b.score - a.score);
       for (const { r } of cands) {
-        if (board.length >= AUTO_BOARD_MAX) break;
+        if (activeBoardCount >= AUTO_BOARD_MAX) break;
         const pos = r.position;
         if ((addedByPos[pos] || 0) >= perPosCap(pos)) continue;
         board.push(createBoardEntry(r, school.id));
+        activeBoardCount++;
         addedByPos[pos] = (addedByPos[pos] || 0) + 1;
         logAdds.push({ name: `${((_c = r.name) == null ? void 0 : _c.first) || ""} ${((_d = r.name) == null ? void 0 : _d.last) || ""}`.trim(), pos });
       }
@@ -22027,7 +22035,7 @@ var _CFB = (() => {
     });
     const MIN_RATE = 100;
     const MAX_RATE = aggr === "aggressive" ? 900 : aggr === "conservative" ? 500 : 700;
-    const focusCap = aggr === "aggressive" ? 22 : aggr === "conservative" ? 12 : 18;
+    const focusCap = (level === "full" ? 8 : 0) + (aggr === "aggressive" ? 22 : aggr === "conservative" ? 12 : 18);
     const sustainableContact = perDay * contactFrac;
     const activeCount = sorted.filter((e) => !e.eliminated).length;
     const focusCount = Math.max(1, Math.min(activeCount, focusCap, Math.floor(sustainableContact / MIN_RATE)));
