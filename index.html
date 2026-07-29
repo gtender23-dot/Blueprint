@@ -5168,7 +5168,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "d3207ebf33";
+globalThis.__BUILD__ = "1800c88b4b";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -5417,6 +5417,12 @@ var _CFB = (() => {
         // recenters the pass-set blend (PWR/STR added, PWR mean runs low) [parity-probed]
         RUNBLOCK_CENTER_ADJ: 10.7,
         // Phase 1a: run blend runs ~2.7 below the old BLK blend — recentered to hold [measured]
+        OL_MOBILITY_PIVOT: 20,
+        // OL AGI/SPD population mean (measured ~19.7/19.8) — the mobility term is neutral for an average-footed lineman.
+        OL_MOBILITY_SCALE: 0.7,
+        // MOBILITY for the athletic blocks: a lineman who can move seals the reach on an outside run and arrives square on a pull; a statue gets there late and off-balance. AGI/SPD above the OL mean add, below subtract. Applies ONLY to the reach POA reps on outside runs and the puller's kick-out — general drive/pass blocking has no AGI term (removed in Phase 1a by design).
+        OL_PASS_MIRROR_SCALE: 0.34,
+        // FEET in pass pro: a light-footed tackle mirrors the edge and stays in front; a statue gets beaten around it. AGI above the OL mean helps, below hurts — biggest vs a speed rush (kick-slide/redirect), 40% as much vs an interior bull. Centered at the OL AGI mean so the mean pass set is unchanged; only the spread by footwork moves.
         RUSH_SPEED_CENTER_ADJ: -5.5,
         // finesse-path recenter; tuned to land sacks ~2.1 in the BLK+TKL-retired trench [150g probed]
         RUSH_POWER_CENTER_ADJ: -3.5,
@@ -5433,6 +5439,8 @@ var _CFB = (() => {
         // ceiling: nobody breaks more than 40% of attempts.
         BROKEN_TKL_WEIGHT_SCALE: 15e-4,
         // heavier back is harder to bring down: each lb
+        BROKEN_TKL_AWR_SCALE: 18e-4,
+        // VISION setup: a back who read the field makes the defender arrive off-angle, so he slips more attempts. Centered at the ~41 natural carrier AWR mean (league-neutral); a 90-AWR back ≈ +0.09 break chance.
         // of carrier weight above 210 adds to break chance.
         WEIGHT_FF_SCALE: 3e-3,
         // ball-security weight term: a heavier back is harder
@@ -15493,7 +15501,7 @@ var _CFB = (() => {
     d.y += d.vy * dt;
   }
   function geoYAC(receiver, coveringDef, pursuitDefs, sep, _trace = null) {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
     const ra = receiver.attributes || {};
     const car = { x: 0, y: 0, top: spdYps(ra.SPD), acc: accel(ra.AGI), vx: 0, vy: 0 };
     const lean = (Math.random() - 0.5) * 0.6;
@@ -15619,7 +15627,8 @@ var _CFB = (() => {
       const norm = Math.hypot(leanNow, car.top) || 1e-6;
       car.vx = leanNow / norm * want;
       car.vy = car.top / norm * want;
-      let threat = null, td = 3.2;
+      const seeR = Math.max(2.4, Math.min(4.6, 3.2 + (((_c = ra.AWR) != null ? _c : 50) - 41) * 0.025));
+      let threat = null, td = seeR;
       for (const d of chasers) {
         if (d.burned > 0) continue;
         const dx = d.x - car.x, dy = d.y - car.y;
@@ -15631,7 +15640,11 @@ var _CFB = (() => {
         }
       }
       if (threat) {
-        car.vx += (car.x >= threat.x ? 1 : -1) * car.top * 0.35 * TICK * (3.2 - td);
+        const cut = Math.max(0.2, Math.min(
+          0.55,
+          0.35 + (((_d = ra.AWR) != null ? _d : 50) - 41) * 25e-4 + (((_e = ra.AGI) != null ? _e : 50) - 41) * 15e-4
+        ));
+        car.vx += (car.x >= threat.x ? 1 : -1) * car.top * cut * TICK * (seeR - td);
         car.vx *= 0.985;
         car.vy *= 0.94;
       }
@@ -15662,7 +15675,7 @@ var _CFB = (() => {
         const gap = Math.hypot(d.x - car.x, d.y - car.y);
         const reach = RADIUS + Math.min(0.9, closing * 0.05);
         if (gap < reach) {
-          const pMake = 0.74 + (d.tkl - wiggle) * 5e-3;
+          const pMake = 0.74 + (d.tkl - wiggle) * 5e-3 - (((_f = ra.AWR) != null ? _f : 50) - 41) * 16e-4;
           if (_trace) _trace.push({ finish: d.cover ? "C" : d.backstop ? "S" : "R", p: +pMake.toFixed(2), gap: +gap.toFixed(2), reach: +reach.toFixed(2) });
           if (Math.random() < Math.max(0.25, Math.min(0.95, pMake))) {
             tackler = d;
@@ -15687,8 +15700,8 @@ var _CFB = (() => {
     const yacYds = Math.max(0, Math.min(MAX_Y, Math.round(car.y)));
     return {
       yacYds,
-      tacklerId: (_e = (_d = (_c = tackler == null ? void 0 : tackler.ref) == null ? void 0 : _c.id) != null ? _d : coveringDef == null ? void 0 : coveringDef.id) != null ? _e : null,
-      assistId: (_g = (_f = assist == null ? void 0 : assist.ref) == null ? void 0 : _f.id) != null ? _g : null
+      tacklerId: (_i = (_h = (_g = tackler == null ? void 0 : tackler.ref) == null ? void 0 : _g.id) != null ? _h : coveringDef == null ? void 0 : coveringDef.id) != null ? _i : null,
+      assistId: (_k = (_j = assist == null ? void 0 : assist.ref) == null ? void 0 : _j.id) != null ? _k : null
     };
   }
   var finishOf, TICK, MAX_T, MAX_Y, RADIUS, spdYps, accel, reactS;
@@ -15741,7 +15754,7 @@ var _CFB = (() => {
     return { broke, style: broke ? truck > evade ? "truck" : "evade" : null };
   }
   function runFit(carrier, opts = {}) {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e, _f, _g;
     const { lane = 0.5, penetrator = null, vision = 0, trace = null } = opts;
     const secondLevel = (opts.secondLevel || []).filter(Boolean);
     const deepLevel = (opts.deepLevel || []).filter(Boolean);
@@ -15950,7 +15963,8 @@ var _CFB = (() => {
       const want = Math.min(cap, v + car.acc * TICK2);
       if (car.y < 0.5) {
         let tx = laneX;
-        let nearest = null, nd = 4.5;
+        const seeR = Math.max(3.6, Math.min(6.5, 4.5 + (((_a = ra.AWR) != null ? _a : 50) - 41) * 0.03));
+        let nearest = null, nd = seeR;
         for (const d of chasers) {
           if (d.burned > 0 || d.backstop || d.y < 0.3) continue;
           const dist = hyp(d.x - laneX, d.y - 1.5);
@@ -15960,7 +15974,10 @@ var _CFB = (() => {
           }
         }
         if (nearest) {
-          const bend = Math.max(0.5, Math.min(1.3, 0.7 + (((_a = ra.AGI) != null ? _a : 50) - 50) * 4e-3)) * (4.5 - nd) / 4.5;
+          const bend = Math.max(0.5, Math.min(
+            1.4,
+            0.7 + (((_b = ra.AWR) != null ? _b : 50) - 41) * 4e-3 + (((_c = ra.AGI) != null ? _c : 50) - 50) * 4e-3
+          )) * (seeR - nd) / seeR;
           tx += (laneX >= nearest.x ? 1 : -1) * bend * 1.4;
         }
         const ty = 2.5;
@@ -16079,8 +16096,8 @@ var _CFB = (() => {
     const isTFL = tackler != null && (yards < 0 || yards === 0 && (contactY != null ? contactY : 1) < 0.5 && Math.random() < 0.35);
     return {
       yards,
-      tacklerId: (_c = (_b = tackler == null ? void 0 : tackler.ref) == null ? void 0 : _b.id) != null ? _c : null,
-      assistId: (_e = (_d = assist == null ? void 0 : assist.ref) == null ? void 0 : _d.id) != null ? _e : null,
+      tacklerId: (_e = (_d = tackler == null ? void 0 : tackler.ref) == null ? void 0 : _d.id) != null ? _e : null,
+      assistId: (_g = (_f = assist == null ? void 0 : assist.ref) == null ? void 0 : _f.id) != null ? _g : null,
       tflId: isTFL ? tackler.ref.id : null,
       brokenById,
       btStyle,
@@ -16517,16 +16534,16 @@ var _CFB = (() => {
   function repWin(offVal, defVal, contextBoost = 0) {
     return logistic((offVal - defVal) / C.REP_SCALE + contextBoost);
   }
-  function blockRep(blocker, rusher, speedRush, contextBoost = 0, powerPass = false, isPass = false) {
-    var _a, _b;
-    const blkVal = (isPass ? blocker.attributes.STR * 0.3 + blocker.attributes.TEC * 0.28 + blocker.attributes.PWR * 0.22 + blocker.attributes.AWR * 0.2 + C.PASSPRO_CENTER_ADJ : blocker.attributes.PWR * 0.3 + blocker.attributes.AWR * 0.28 + blocker.attributes.STR * 0.22 + blocker.attributes.TEC * 0.2 + C.RUNBLOCK_CENTER_ADJ) + (blocker._olContBonus || 0);
+  function blockRep(blocker, rusher, speedRush, contextBoost = 0, powerPass = false, isPass = false, mobilityBonus = 0) {
+    var _a, _b, _c;
+    const blkVal = (isPass ? blocker.attributes.STR * 0.3 + blocker.attributes.TEC * 0.28 + blocker.attributes.PWR * 0.22 + blocker.attributes.AWR * 0.2 + C.PASSPRO_CENTER_ADJ + (((_a = blocker.attributes.AGI) != null ? _a : C.OL_MOBILITY_PIVOT) - C.OL_MOBILITY_PIVOT) * C.OL_PASS_MIRROR_SCALE * (speedRush ? 1 : 0.4) : blocker.attributes.PWR * 0.3 + blocker.attributes.AWR * 0.28 + blocker.attributes.STR * 0.22 + blocker.attributes.TEC * 0.2 + C.RUNBLOCK_CENTER_ADJ) + (blocker._olContBonus || 0) + mobilityBonus;
     const speedPath = rusher.attributes.SPD * 0.3 + rusher.attributes.AGI * 0.3 + rusher.attributes.TEC * 0.18 + rusher.attributes.STR * 0.14 + rusher.attributes.JMP * 0.08 + C.RUSH_SPEED_CENTER_ADJ;
     const powerPath = rusher.attributes.PWR * 0.34 + rusher.attributes.STR * 0.28 + rusher.attributes.TEC * 0.2 + rusher.attributes.SPD * 0.12 + rusher.attributes.JMP * 0.06 + C.RUSH_POWER_CENTER_ADJ;
     const shedVal = rusher.attributes.STR * 0.34 + rusher.attributes.AWR * 0.28 + rusher.attributes.PWR * 0.22 + rusher.attributes.TEC * 0.16 + C.SHED_CENTER_ADJ;
     const rushVal = !isPass ? shedVal : speedRush ? Math.max(speedPath, powerPath) - C.RUSH_S2P_CENTER_ADJ : powerPath;
     const dampedRushVal = powerPass ? rushVal * C.POWER_PASS_DAMP : rushVal;
     const sizeMute = speedRush ? C.BLOCK_SIZE_EDGE_MUTE : 1;
-    const sizeTerm = (((_a = blocker.weight) != null ? _a : 300) - ((_b = rusher.weight) != null ? _b : 300)) * C.BLOCK_SIZE_SCALE * sizeMute;
+    const sizeTerm = (((_b = blocker.weight) != null ? _b : 300) - ((_c = rusher.weight) != null ? _c : 300)) * C.BLOCK_SIZE_SCALE * sizeMute;
     const execTerm = isPass ? (blkVal - C.TRENCH_EXEC_CENTER) * C.TRENCH_EXEC_SCALE : 0;
     return Math.random() < repWin(blkVal + sizeTerm + Math.min(0, execTerm), dampedRushVal, contextBoost);
   }
@@ -16848,14 +16865,14 @@ var _CFB = (() => {
     return cands[cands.length - 1];
   }
   function breaksTackle(carrier, defender, styleOut = null) {
-    var _a;
+    var _a, _b;
     if (!carrier || !defender) return false;
     const evade = contestGap("tackleEvade", carrier, defender);
     const truck = contestGap("tackleTruck", carrier, defender);
     const gap = Math.max(evade, truck) - C.BROKEN_TKL_CENTER_ADJ;
     const weightOver = Math.max(0, ((_a = carrier.weight) != null ? _a : 210) - 210);
     const chance2 = clamp2(
-      C.BROKEN_TKL_BASE + gap * C.BROKEN_TKL_SCALE + weightOver * C.BROKEN_TKL_WEIGHT_SCALE * 0.5,
+      C.BROKEN_TKL_BASE + gap * C.BROKEN_TKL_SCALE + weightOver * C.BROKEN_TKL_WEIGHT_SCALE * 0.5 + (((_b = carrier.attributes.AWR) != null ? _b : 50) - 41) * C.BROKEN_TKL_AWR_SCALE,
       0,
       C.BROKEN_TKL_CAP
     );
@@ -17901,7 +17918,7 @@ var _CFB = (() => {
     );
   }
   function resolveRunPlay(playType, offPersonnel, defPersonnel, offRoster, defRoster, offUnit, defUnit, gameplan, frontId, formationId, qb, rbShares = null, rbPool = null, optionOverride = null) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s;
     const result = {
       type: playType,
       yards: 0,
@@ -17986,6 +18003,7 @@ var _CFB = (() => {
     let dirRoll = Math.random() * dirTot;
     const runDir = (dirRoll -= dirW.left || 0) < 0 ? "left" : (dirRoll -= dirW.middle || 0) < 0 ? "middle" : "right";
     const poaBlk = runDir === "left" ? [0, 1] : runDir === "right" ? [3, 4] : [1, 2, 3];
+    const isOutsideRun = /outside/.test(playType || "");
     const pulls = !!((_i = _conceptCtx == null ? void 0 : _conceptCtx.def) == null ? void 0 : _i.pulls) && !optionOverride && runDir !== "middle";
     const pullIdx = pulls ? runDir === "left" ? 3 : 1 : -1;
     let repWinsWeighted = 0, repTotWeighted = 0;
@@ -18006,7 +18024,8 @@ var _CFB = (() => {
         repTotWeighted += poaWeight;
         continue;
       }
-      const blockHolds = blockRep(blocker, def, speedRush, contextBoost);
+      const reachMob = isOutsideRun && poaBlk.includes(bIdx) ? ((((_l = blocker.attributes.AGI) != null ? _l : C.OL_MOBILITY_PIVOT) - C.OL_MOBILITY_PIVOT) * 0.6 + (((_m = blocker.attributes.SPD) != null ? _m : C.OL_MOBILITY_PIVOT) - C.OL_MOBILITY_PIVOT) * 0.4) * C.OL_MOBILITY_SCALE : 0;
+      const blockHolds = blockRep(blocker, def, speedRush, contextBoost, false, false, reachMob);
       if (!blockHolds) penetrators.push(def);
       else repWinsWeighted += poaWeight;
       repTotWeighted += poaWeight;
@@ -18014,10 +18033,11 @@ var _CFB = (() => {
     if (pulls) {
       const bTarget = poaBlk[0];
       const di = runDir === "right" ? clamp2(allBlockers.length - 1 - bTarget, 0, Math.max(0, dlPlayers.length - 1)) : Math.min(bTarget, Math.max(0, dlPlayers.length - 1));
-      const poaDef = (_l = dlPlayers[di]) == null ? void 0 : _l.player;
+      const poaDef = (_n = dlPlayers[di]) == null ? void 0 : _n.player;
       const puller = allBlockers[pullIdx];
       if (poaDef && puller) {
-        if (blockRep(puller, poaDef, false, contextBoost)) repWinsWeighted += 3;
+        const pMob = ((((_o = puller.attributes.AGI) != null ? _o : C.OL_MOBILITY_PIVOT) - C.OL_MOBILITY_PIVOT) * 0.6 + (((_p = puller.attributes.SPD) != null ? _p : C.OL_MOBILITY_PIVOT) - C.OL_MOBILITY_PIVOT) * 0.4) * C.OL_MOBILITY_SCALE;
+        if (blockRep(puller, poaDef, false, contextBoost, false, false, pMob)) repWinsWeighted += 3;
         repTotWeighted += 3;
       }
     }
@@ -18032,7 +18052,7 @@ var _CFB = (() => {
     result.runGap = isOutside ? runDir === "middle" ? "edge" : `${runDir} edge` : runDir === "middle" ? "A-gap" : `${runDir} B-gap`;
     if (pulls) result.pulled = true;
     const containPen = !optionOverride && _optKey === "qb" && useQBCarrier && Math.random() < 0.35 ? defRoster.find((pl) => pl.id === (defPersonnel.OLB || [])[0]) || defRoster.find((pl) => pl.id === (defPersonnel.DE || [])[0]) || null : null;
-    const bestPenetrator = ((_m = optionOverride == null ? void 0 : optionOverride.forcePenetrator) != null ? _m : containPen) ? (_n = optionOverride == null ? void 0 : optionOverride.forcePenetrator) != null ? _n : containPen : penetrators.length > 0 ? penetrators.reduce((best, d) => d.attributes.STR + d.attributes.SPD > best.attributes.STR + best.attributes.SPD ? d : best) : null;
+    const bestPenetrator = ((_q = optionOverride == null ? void 0 : optionOverride.forcePenetrator) != null ? _q : containPen) ? (_r = optionOverride == null ? void 0 : optionOverride.forcePenetrator) != null ? _r : containPen : penetrators.length > 0 ? penetrators.reduce((best, d) => d.attributes.STR + d.attributes.SPD > best.attributes.STR + best.attributes.SPD ? d : best) : null;
     const dbIds = defPersonnel.DB || [];
     const secondLevel = lbIds.map((id) => defRoster.find((p) => p.id === id)).filter(Boolean);
     const deepLevel = dbIds.map((id) => defRoster.find((p) => p.id === id)).filter(Boolean);
@@ -18048,7 +18068,7 @@ var _CFB = (() => {
       qbInjuryGames = contact.injuryGamesOut;
     }
     if (useQBCarrier) {
-      const design = (_o = gameplan == null ? void 0 : gameplan._ocQbRunDesign) != null ? _o : 50;
+      const design = (_s = gameplan == null ? void 0 : gameplan._ocQbRunDesign) != null ? _s : 50;
       finalYards = Math.round(finalYards * (0.9 + design / 500));
     }
     if (gameplan && gameplan._sneak) {
@@ -30027,8 +30047,8 @@ var _CFB = (() => {
       <div class="modal">
         <div class="modal-header"><span class="modal-title">Your recruiting board is empty</span></div>
         <div class="modal-body">
-          <p>Every rival coach started working the class this week \u2014 interest compounds, and the
-          best players commit to whoever shows up first. Leaving week 1 without a single
+          <p>Every rival coach is already working the class \u2014 interest compounds, and the
+          best players commit to whoever shows up first. Leaving the recruiting week without a single
           target on the board is a hole your class may never dig out of.</p>
         </div>
         <div class="modal-footer">
@@ -31370,7 +31390,7 @@ var _CFB = (() => {
       }
       state.ui.redshirtBurnAck = false;
       const board = ((_a2 = state.playerCoach) == null ? void 0 : _a2.recruitBoard) || [];
-      if (state.day <= 2 && board.length === 0 && !state.ui.recruitStartAck) {
+      if (state.day === 2 && board.length === 0 && !state.ui.recruitStartAck) {
         state.ui.showRecruitStartWarn = true;
         rerender();
         return;
