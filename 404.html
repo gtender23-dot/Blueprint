@@ -5168,7 +5168,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "b43d3a2d72";
+globalThis.__BUILD__ = "7f3783b3af";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -42231,7 +42231,15 @@ var _CFB = (() => {
     const auto = isCall && state.ui.autoRun;
     const boardDone = isCall && lw.boardDone && !auto;
     const label = lw.replay ? "REPLAY \u2014 LAST PLAY" : lw.stage === "halftime" ? "1ST HALF \u2014 LIVE" : isCall ? auto ? "AUTO-RUN \u2014 WATCHING" : boardDone ? "YOUR CALL" : "LIVE \u2014 HEADSET ON" : "2ND HALF \u2014 LIVE";
-    const embed = isCall && !auto && boardDone ? ((_c = (_b = (_a = state.pendingHalftime) == null ? void 0 : _a.token) == null ? void 0 : _b.pending) == null ? void 0 : _c.kind) === "fourth" ? fourthDownPanelHtml() : callSheetPanelHtml() : "";
+    let embed = "";
+    if (isCall && !auto && boardDone) {
+      try {
+        embed = ((_c = (_b = (_a = state.pendingHalftime) == null ? void 0 : _a.token) == null ? void 0 : _b.pending) == null ? void 0 : _c.kind) === "fourth" ? fourthDownPanelHtml() : callSheetPanelHtml();
+      } catch (err) {
+        console.error("[watch] call panel render failed \u2014 showing recovery:", err);
+        embed = "";
+      }
+    }
     const stranded = isCall && !auto && boardDone && !embed;
     const recover = stranded ? `<div class="cs-footer"><button class="btn-primary" id="cs-recover">\u25B6\uFE0F Continue \u2014 let the sheet make the call</button></div>` : "";
     const headerBtn = auto ? `<button class="bc-btn bc-text" id="cs-autorun-stop">\u23F8 Stop \u2014 take the headset back</button>` : !boardDone ? `<button class="bc-btn bc-text" id="watch-live-skip">Skip \u23E9</button>` : "";
