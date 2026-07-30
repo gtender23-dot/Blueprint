@@ -409,7 +409,14 @@ body::before {
     user-select: none;
   }
   .tabbar-icon { font-size: 19px; line-height: 1; }
-  .tabbar-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.05em; }
+  .tabbar-label {
+    font-size: 9.5px; font-weight: 700; letter-spacing: 0.03em;
+    /* Reserve a two-line box on every tab so a longer label ("Depth Chart")
+       wraps cleanly without knocking that tab's icon out of line with the rest.
+       Single-line labels center inside the same box, so all icons stay aligned. */
+    height: 2.1em; line-height: 1.05;
+    display: flex; align-items: center; text-align: center;
+  }
   .tabbar-item.active { color: var(--team-2, var(--gold)); }
   .tabbar-item.active::before {
     content: '';
@@ -4044,9 +4051,23 @@ th.conv-sort.active { color: var(--team-1); }
     min-height: 48px;
     flex: 1 1 auto;
   }
-  /* thumb-sized +/- steppers for share & blitz in portrait */
-  .fs-share-btn, .fs-blitz-btn { width: 26px; height: 26px; font-size: 14px; }
-  .fs-share, .fs-blitz { gap: 6px; padding-top: 4px; margin-top: 4px; }
+  /* Thumb-sized +/- steppers in portrait. The chip is narrow (3 across), so
+     rather than fight for width we make the buttons TALL and let them flex to
+     fill the chip — height is the dimension a thumb actually needs, and it's
+     unconstrained. A tall full-width split pair is far easier to hit than the
+     old 26px squares, and the in-place update (no per-tap rebuild) means they
+     no longer shift under your finger between taps. */
+  .fs-share, .fs-blitz {
+    gap: 8px; padding-top: 6px; margin-top: 6px;
+    align-items: stretch;
+  }
+  .fs-share-btn, .fs-blitz-btn {
+    flex: 1 1 0; min-width: 34px; height: 40px; width: auto;
+    font-size: 20px; border-radius: 8px;
+  }
+  .fs-share-pct { min-width: 34px; font-size: 13px; align-self: center; }
+  .fs-blitz-val { min-width: 30px; font-size: 13px; align-self: center; }
+  .fs-drop-ico  { align-self: center; }
   .fs-body { min-height: 34px; }
 }
 
@@ -4127,6 +4148,14 @@ th.conv-sort.active { color: var(--team-1); }
 .do-carry-btn:active { background: rgba(255,255,255,0.15); }
 .do-carry-pct { font-size: 11px; font-weight: 800; color: var(--gold); min-width: 44px; text-align: center;
                 font-variant-numeric: tabular-nums; }
+/* Portrait: enlarge the RB-carry steppers too (defined AFTER the base rule
+   above so it wins on source order — the base rule sits below the shared
+   portrait block, so putting the override there instead would lose). */
+@media (max-width: 700px) and (orientation: portrait) {
+  .do-carry { gap: 8px; }
+  .do-carry-btn { width: 40px; height: 40px; font-size: 20px; border-radius: 8px; }
+  .do-carry-pct { min-width: 56px; font-size: 13px; }
+}
 
 /* How to Play guide */
 .btn-mm-guide { margin-top: 14px; background: none; border: 1px solid rgba(255,255,255,0.15);
@@ -5290,7 +5319,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "6a2eee2ef3";
+globalThis.__BUILD__ = "d22bc55391";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -33324,6 +33353,23 @@ var _CFB = (() => {
       drift -= stepDir;
     }
   }
+  function repaintOffShares(gp, formationId) {
+    var _a, _b;
+    const entry = (_b = (_a = gp.fieldAssignments) == null ? void 0 : _a.offense) == null ? void 0 : _b[formationId];
+    const layout = OFF_FIELD_LAYOUTS[formationId];
+    if (!(entry == null ? void 0 : entry.shares) || !layout) return;
+    layout.slots.filter((s) => s.catch).forEach((s) => {
+      var _a2;
+      const val = entry.shares[s.id] || 0;
+      const barPct = document.querySelector(`[data-share-pct="${s.id}"]`);
+      if (barPct) barPct.textContent = `${val}%`;
+      const step = document.querySelector(`[data-share-step="1"][data-slot="${s.id}"]`);
+      const fieldPct = (_a2 = step == null ? void 0 : step.parentElement) == null ? void 0 : _a2.querySelector(".fs-share-pct");
+      if (fieldPct) fieldPct.textContent = `${val}%`;
+      const sld = document.querySelector(`[data-share-slider="${s.id}"]`);
+      if (sld && +sld.value !== val) sld.value = val;
+    });
+  }
   function renderShareControl(slot, entry) {
     var _a;
     const pct = ((_a = entry.shares) == null ? void 0 : _a[slot.id]) || 0;
@@ -33555,7 +33601,7 @@ var _CFB = (() => {
         if (!entry.shares) entry.shares = {};
         const catchSlots = OFF_FIELD_LAYOUTS[activeOffFormation].slots.filter((s) => s.catch);
         setShareRebalanced(entry.shares, catchSlots, slotId, (entry.shares[slotId] || 0) + step);
-        rerender();
+        repaintOffShares(gp, activeOffFormation);
       });
     });
     document.querySelectorAll("[data-rbshare-step]").forEach((btn) => {
@@ -33577,7 +33623,12 @@ var _CFB = (() => {
           });
         }
         setSplitRebalanced(gpn.rbCarryShares, rbIds, pid, (gpn.rbCarryShares[pid] || 0) + step);
-        rerender();
+        rbIds.forEach((id) => {
+          var _a3;
+          const b = document.querySelector(`[data-rbshare-step="1"][data-pid="${id}"]`);
+          const pctEl = (_a3 = b == null ? void 0 : b.parentElement) == null ? void 0 : _a3.querySelector(".do-carry-pct");
+          if (pctEl) pctEl.textContent = `\u{1F3C3}${gpn.rbCarryShares[id] || 0}%`;
+        });
       });
     });
     document.querySelectorAll("[data-depth-up]").forEach((btn) => {
@@ -33655,21 +33706,12 @@ var _CFB = (() => {
         const slotId = sl.dataset.shareSlider;
         setShareRebalanced(entry.shares, catchSlots, slotId, parseInt(sl.value, 10));
         if (parseInt(sl.value, 10) !== entry.shares[slotId]) sl.value = entry.shares[slotId];
-        catchSlots.forEach((s) => {
-          var _a2;
-          const val = entry.shares[s.id] || 0;
-          const bar = document.querySelector(`[data-share-pct="${s.id}"]`);
-          if (bar) bar.textContent = `${val}%`;
-          const step = document.querySelector(`[data-share-step="1"][data-slot="${s.id}"]`);
-          const pct = (_a2 = step == null ? void 0 : step.parentElement) == null ? void 0 : _a2.querySelector(".fs-share-pct");
-          if (pct) pct.textContent = `${val}%`;
-          const other = document.querySelector(`[data-share-slider="${s.id}"]`);
-          if (other && other !== sl && +other.value !== val) other.value = val;
-        });
+        repaintOffShares(gp, activeOffFormation);
       });
     });
     document.querySelectorAll("[data-blitz-step]").forEach((btn) => {
       btn.addEventListener("click", (e) => {
+        var _a2, _b2;
         e.stopPropagation();
         const front = gp.defBaseFront || "4-3";
         const entry = gp.fieldAssignments.defense[front];
@@ -33677,8 +33719,11 @@ var _CFB = (() => {
         const slotId = btn.dataset.blitzSlot;
         const step = parseInt(btn.dataset.blitzStep, 10);
         const cur = entry.blitzShares[slotId] || 0;
-        entry.blitzShares[slotId] = Math.max(0, Math.min(100, cur + step * 10));
-        rerender();
+        const next = Math.max(0, Math.min(100, cur + step * 10));
+        entry.blitzShares[slotId] = next;
+        const val = (_a2 = btn.parentElement) == null ? void 0 : _a2.querySelector(".fs-blitz-val");
+        if (val) val.textContent = `${next}`;
+        (_b2 = btn.closest(".field-slot")) == null ? void 0 : _b2.classList.toggle("blitzing", next > 0);
       });
     });
     document.querySelectorAll("[data-ret-up]").forEach((btn) => {
@@ -41151,8 +41196,8 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
   ];
   var TABBAR_ITEMS = [
     { id: "dashboard", icon: "\u25C9", label: "Home" },
-    { id: "team", icon: "\u25A4", label: "Team", navTo: "depthchart" },
-    // tabbar Team → Depth Chart tab
+    { id: "team", icon: "\u25A4", label: "Depth Chart", navTo: "depthchart" },
+    // opens straight to the Depth Chart tab
     { id: "gameplan", icon: "\u25C8", label: "Plan" },
     { id: "recruiting", icon: "\u25CE", label: "Recruits" }
   ];
