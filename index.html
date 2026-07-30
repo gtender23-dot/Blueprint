@@ -5219,6 +5219,68 @@ body.theme-school .data-table tr:hover td {
   .view-help-btn { width: 30px; height: 30px; font-size: 15px; }  /* a comfortable phone tap target */
 }
 
+/* ── Tooltips: the tap affordance + the popover ──────────────────────────────
+   A term wrapped by tipTerm() reads as ordinary text with a quiet dotted
+   underline — "there's more here if you tap." No hover state does anything;
+   this is a phone. */
+.tip-term {
+  display: inline;
+  background: none; border: none; padding: 0; margin: 0;
+  font: inherit; color: inherit; cursor: pointer;
+  text-decoration: underline dotted;
+  text-decoration-color: var(--team-1, #4c7dff);
+  text-underline-offset: 2px;
+  -webkit-text-decoration: underline dotted var(--team-1, #4c7dff);
+}
+.tip-term:focus-visible { outline: 2px solid var(--team-1, #4c7dff); outline-offset: 2px; border-radius: 3px; }
+
+/* The popover sits above every other layer. On a phone it's a bottom sheet
+   (thumb-reachable, no positioning math against the tapped word); on wider
+   screens it's a centered card. Both dismiss on tap-away. */
+.tip-overlay {
+  z-index: 1000;                       /* above player card / result modals */
+  align-items: flex-end;               /* bottom sheet by default (phone-first) */
+  justify-content: center;
+}
+.tip-popover {
+  width: 100%;
+  max-width: 520px;
+  background: var(--bg-raised, #141a28);
+  border: 1px solid var(--border, #263049);
+  border-bottom: none;
+  border-radius: 16px 16px 0 0;
+  padding: 18px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -8px 32px rgba(0,0,0,0.45);
+  animation: sheetUp .18s ease;
+}
+.tip-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.tip-term-title {
+  font-size: 16px; font-weight: 800; color: var(--text-0, #eef2fb);
+  letter-spacing: .01em;
+}
+.tip-close {
+  flex: 0 0 auto;
+  width: 30px; height: 30px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid var(--border, #263049);
+  color: var(--text-2, #8792ab); font-size: 14px; cursor: pointer;
+}
+.tip-close:hover { color: var(--text-0, #eef2fb); border-color: var(--text-2, #8792ab); }
+.tip-body { font-size: 14.5px; line-height: 1.55; color: var(--text-1, #c3cbdd); }
+.tip-chapter-link {
+  display: inline-block; margin-top: 12px;
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-size: 13px; font-weight: 600; color: var(--team-1, #4c7dff);
+}
+.tip-chapter-link em { font-style: italic; }
+.tip-chapter-link:hover { text-decoration: underline; }
+
+@media (min-width: 701px) {
+  /* Centered card on desktop rather than a bottom sheet. */
+  .tip-overlay  { align-items: center; }
+  .tip-popover  { border-radius: 16px; border-bottom: 1px solid var(--border, #263049); }
+}
+
   </style>
 </head>
 <body>
@@ -5228,7 +5290,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "221e4b922a";
+globalThis.__BUILD__ = "81d572d9a3";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -25529,6 +25591,182 @@ var _CFB = (() => {
     }
   });
 
+  // js/ui/manual/tips.js
+  function tipTerm(tipId, displayText) {
+    var _a;
+    const label = displayText != null ? displayText : ((_a = TIPS[tipId]) == null ? void 0 : _a.term) || tipId;
+    if (!TIPS[tipId]) return escapeHtml(String(label));
+    return `<button type="button" class="tip-term" data-tip="${tipId}" aria-label="What is ${escapeHtml(String(label))}?">${escapeHtml(String(label))}</button>`;
+  }
+  var TIPS, tipById;
+  var init_tips = __esm({
+    "js/ui/manual/tips.js"() {
+      init_utils();
+      TIPS = {
+        // ── Reading a player ──────────────────────────────────────────────────────
+        "overall": {
+          term: "Overall",
+          chapter: "reading-a-player",
+          body: `Not a measure of the athlete \u2014 a measure of how well he fits the job his position asks him to do. Stand the same body at a different spot and the number changes, because the job changed. Chase the fit, not the big number.`
+        },
+        "role-fit": {
+          term: "Role Fit",
+          chapter: "reading-a-player",
+          body: `The same position asks for different things depending on how you use him \u2014 a press corner and a zone corner aren't graded the same. Fit him to the role you actually play and his number climbs; force him into the wrong one and you're leaving grade on the table.`
+        },
+        "archetype": {
+          term: "Archetype",
+          chapter: "reading-a-player",
+          body: `The kind of player he is under the position \u2014 a burner, a possession guy, a bruiser. It's shorthand for where his gifts lean, so you know the role he'll shine in before you ever line him up.`
+        },
+        "potential": {
+          term: "Potential",
+          chapter: "building-a-player",
+          body: `How far he can still climb, not where he is today. A high ceiling on a raw kid is worth more than a polished one who's nearly done growing \u2014 but the ceiling only matters if you develop him toward it.`
+        },
+        "attributes": {
+          term: "Attributes",
+          chapter: "reading-a-player",
+          body: `The raw tools \u2014 speed, power, awareness, the rest. Overall reads these through the lens of the position; the attributes themselves are what the sim actually contests on every snap. Which ones matter most depends entirely on where he lines up.`
+        },
+        "awareness": {
+          term: "Awareness (AWR)",
+          chapter: "reading-a-player",
+          body: `The football mind \u2014 reading the play, being where he's supposed to be, not getting fooled. It carries more weight the more a spot asks a man to think: it's close to everything for a quarterback or a middle linebacker, and it's what turns raw tools into a player.`
+        },
+        // ── The depth chart ─────────────────────────────────────────────────────
+        "depth-chart": {
+          term: "Depth Chart",
+          chapter: "the-depth-chart",
+          body: `Your order of preference at every position \u2014 who plays when everyone's healthy, and who's next when they're not. The sim fields the top of each spot, so an honest chart matters most exactly when it hurts: after an injury.`
+        },
+        "field-view": {
+          term: "Field View",
+          chapter: "the-depth-chart",
+          body: `The depth chart laid out where men actually stand, not as a list. It's how you see who's really on the field in a given formation \u2014 and it's where your option pitch men and wing spots get set.`
+        },
+        "sub-package": {
+          term: "Sub Package",
+          chapter: "the-depth-chart",
+          body: `The bodies you swap in to answer what the offense shows \u2014 more defensive backs against spread looks, more beef against heavy ones. Answer personnel with personnel; get caught in the wrong package and you're a step behind before the snap.`
+        },
+        // ── Building a player ───────────────────────────────────────────────────
+        "development": {
+          term: "Development",
+          chapter: "building-a-player",
+          body: `How a player grows from where he is toward what he could be. It comes fastest early and eases as he matures, so the reps you spend on a young man go further than the same reps spent late.`
+        },
+        "practice": {
+          term: "Practice",
+          chapter: "building-a-player",
+          body: `Where you point development \u2014 you can't work on everything, so you choose. Aim it at what a player's role actually needs and you'll see it on Saturdays; spread it thin and you'll grow nobody in particular.`
+        },
+        "redshirt": {
+          term: "Redshirt",
+          chapter: "building-a-player",
+          body: `Sit a young player a season and you keep a year of his eligibility for later. It's a bet on tomorrow: you give up whatever he'd offer now to have him longer, and further along, down the road.`
+        },
+        // ── Recruiting ────────────────────────────────────────────────────────────
+        "prestige": {
+          term: "Prestige",
+          chapter: "recruiting",
+          body: `Your name on the marquee \u2014 how much recruiting the program does for you before you say a word. You earn it winning (bowls, titles) and you bleed it losing. It's the first thing to go.`
+        },
+        "recruit-interest": {
+          term: "Interest",
+          chapter: "recruiting",
+          body: `How warm a kid is on you right now. It doesn't climb because you spent enough \u2014 there's no meter to fill. It climbs because you're winning the room against the other schools chasing him that same week, and it cools the week you sit out.`
+        },
+        "recruit-stars": {
+          term: "Visibility",
+          chapter: "recruiting",
+          body: `The raw eyeball read of a kid \u2014 his tools averaged flat, "look at the athlete," with no credit for whether they're the tools his position actually needs. His True Rating weights them for the job; the gap between the two is the whole scouting game. A high-visibility, low-true kid is a workout warrior; a low-visibility, high-true kid is the gem nobody else clocked.`
+        },
+        "scholarship": {
+          term: "Scholarship",
+          chapter: "recruiting",
+          body: `The offer itself \u2014 a seat at your table, and you've got a limited number. Spend them on the kids who move your program, not the biggest names you can technically reach; a wasted ride is a hole in next year's roster.`
+        },
+        "commitment": {
+          term: "Commitment",
+          chapter: "recruiting",
+          body: `A kid saying yes \u2014 but not always the end of it. Stay in the room and it holds; go quiet thinking you've got him and you can still lose him late to a school that kept pushing.`
+        },
+        // ── The portal & the roster ─────────────────────────────────────────────
+        "transfer-portal": {
+          term: "The Portal",
+          chapter: "the-portal",
+          body: `The open market of players who've left their school and can join yours right now \u2014 no waiting for them to develop. It cuts both ways: it's how you patch a hole fast, and it's how you lose a man you were counting on.`
+        },
+        "roster-limit": {
+          term: "Roster Limit",
+          chapter: "the-portal",
+          body: `The cap on how many players you can carry. Every seat you fill is one you can't give someone else, so a roster is a series of choices about who's worth a spot \u2014 not a pile of the best names you can find.`
+        },
+        "attrition": {
+          term: "Attrition",
+          chapter: "the-portal",
+          body: `The men you lose each year \u2014 to graduation, to the pros, to the portal. It's not a surprise, it's the tide, so a program that recruits only for this year is always one offseason from thin.`
+        },
+        // ── The year / calendar ─────────────────────────────────────────────────
+        "phase": {
+          term: "Regular Season",
+          chapter: "the-year",
+          body: `The stretch of games that sets up everything after \u2014 the wins that earn a bowl, a conference title, a shot at the playoff. It's one leg of the football year (season, then recruiting, then the offseason, and around again), and it's the leg that decides how good the others get to be.`
+        },
+        "bowl-game": {
+          term: "Bowl Game",
+          chapter: "the-year",
+          body: `The postseason reward for a good enough season \u2014 a stage, a payday, and prestige if you win it. Reaching one is its own recruiting pitch: kids want to play where January still has football.`
+        },
+        // ── Game plan / calling a game ────────────────────────────────────────────
+        "formation": {
+          term: "Formation",
+          chapter: "calling-a-game",
+          body: `Who's on the field and where they stand \u2014 it decides your personnel before a play is even called. Pick one identity and you're strong but easy to scout; carry a few and you're harder to read but master none. That trade is yours to make.`
+        },
+        "tendency": {
+          term: "Tendency",
+          chapter: "calling-a-game",
+          body: `How run- or pass-heavy you lean by default. It shapes what the other side expects \u2014 and a believable run threat is what makes your play-action worth anything. Lean too far one way and a good coordinator sits on it.`
+        },
+        "play-action": {
+          term: "Play Action",
+          chapter: "calling-a-game",
+          body: `Faking the run to freeze the defense, then throwing behind it. It only works if they respect your run in the first place \u2014 sell nothing on the ground and nobody bites on the fake.`
+        },
+        "blitz": {
+          term: "Blitz",
+          chapter: "defending-a-game",
+          body: `Sending extra rushers to get home faster. It buys you a free man at the quarterback some of the time \u2014 but it's a trade, not a gift: the men you send are men not covering, and a ready offense throws into the space they left.`
+        },
+        "coverage": {
+          term: "Coverage",
+          chapter: "defending-a-game",
+          body: `How your back seven guards the pass \u2014 man-to-man on bodies, or zones guarding grass. Man travels with receivers but can be picked apart by design; zone keeps eyes on the ball but leaves seams. Neither is right everywhere; match it to what they do.`
+        },
+        // ── Special teams ─────────────────────────────────────────────────────────
+        "special-teams": {
+          term: "Special Teams",
+          chapter: "special-teams",
+          body: `Kicks, punts, and returns \u2014 the third of the game that decides field position and the odd game outright. Easy to ignore until a shanked punt or a missed kick costs you one; the coaches who sweat it steal points the box score never explains.`
+        },
+        // ── Your career ───────────────────────────────────────────────────────────
+        "job-security": {
+          term: "Job Security",
+          chapter: "your-career",
+          body: `How safe your seat is \u2014 the program's patience with you, earned by meeting what they expected when they hired you. Clear the bar and you're trusted with time; fall short of it long enough and the seat gets warm no matter your record's shape.`
+        },
+        "expectations": {
+          term: "Expectations",
+          chapter: "your-career",
+          body: `What the program is counting on from you this year \u2014 the bar you're judged against, not some national ranking. Beat what they expected and modest wins look great; miss it and a good-looking record still disappoints.`
+        }
+      };
+      tipById = (id) => TIPS[id] || null;
+    }
+  });
+
   // js/ui/views/gameplan.js
   function gameplanIsSimple() {
     var _a;
@@ -25654,7 +25892,7 @@ var _CFB = (() => {
       <div class="gameplan-group">
         <div class="gp-tip tip-info">\u25B8 Pick 1\u20135 formations \u2014 they decide who's on the field and your play-action, screen, RPO and motion rates. One = a strong identity; more = harder to scout.</div>
         <div class="gp-row">
-          <label class="gp-label">Formation Package <span class="gp-hint">(pick 1\u20135)</span></label>
+          <label class="gp-label">${tipTerm("formation", "Formation")} Package <span class="gp-hint">(pick 1\u20135)</span></label>
           <div class="formation-grid">
             ${ALL_FORMATIONS.map((fid) => {
       const f = FORMATIONS[fid];
@@ -25947,7 +26185,7 @@ var _CFB = (() => {
             <summary class="gp-section-hdr">THE BASICS <span class="gp-section-sub">formations &amp; run/pass balance</span></summary>
 
             <div class="gp-row">
-              <label class="gp-label">Formation Package <span class="gp-hint">(pick 1\u20135)</span></label>
+              <label class="gp-label">${tipTerm("formation", "Formation")} Package <span class="gp-hint">(pick 1\u20135)</span></label>
               <div class="formation-grid">
                 ${ALL_FORMATIONS.map((fid) => {
       const f = FORMATIONS[fid];
@@ -25992,7 +26230,7 @@ var _CFB = (() => {
             ` : ""}
 
             <div class="gp-row">
-              <label class="gp-label">Play Tendency</label>
+              <label class="gp-label">Play ${tipTerm("tendency", "Tendency")}</label>
               <div class="gp-options tendency-options">
                 ${Object.keys(PASS_TENDENCY).map((t) => `
                   <button class="gp-option gp-option-sm${gp.tendency === t ? " active" : ""}"
@@ -26179,7 +26417,7 @@ var _CFB = (() => {
             </div>
 
             <div class="gp-row">
-              <label class="gp-label">Play Action Usage <span class="gp-hint">(\xD7 your formations' natural rate)</span></label>
+              <label class="gp-label">${tipTerm("play-action", "Play Action")} Usage <span class="gp-hint">(\xD7 your formations' natural rate)</span></label>
               <div class="gp-slider-wrap">
                 <span class="gp-slider-lo">Never</span>
                 <input class="gp-slider" type="range" id="pa-rate" min="0" max="200" value="${(_i = gp.paRate) != null ? _i : 100}" />
@@ -26570,7 +26808,7 @@ var _CFB = (() => {
             </div>
 
             <div class="gp-row">
-              <label class="gp-label">Coverage Style <span class="gp-hint">(man vs zone)</span></label>
+              <label class="gp-label">${tipTerm("coverage", "Coverage")} Style <span class="gp-hint">(man vs zone)</span></label>
               <div class="gp-options">
                 ${[["man", "Man"], ["balanced", "Mixed"], ["zone", "Zone"]].map(([val, lbl]) => `
                   <button class="gp-option gp-option-sm${(gp.covStyle || "balanced") === val ? " active" : ""}"
@@ -26608,7 +26846,7 @@ var _CFB = (() => {
             <summary class="gp-section-hdr">PRESSURE <span class="gp-section-sub">bringing the heat</span></summary>
 
             <div class="gp-row">
-              <label class="gp-label">Blitz Frequency</label>
+              <label class="gp-label">${tipTerm("blitz", "Blitz")} Frequency</label>
               <div class="gp-slider-wrap">
                 <span class="gp-slider-lo">0%</span>
                 <input class="gp-slider" type="range" id="blitz-pct" min="0" max="60" value="${(_d = gp.blitzPct) != null ? _d : 20}" />
@@ -27619,6 +27857,7 @@ var _CFB = (() => {
       init_situations();
       init_concepts();
       init_utils();
+      init_tips();
       gameplanSection = "offense";
       offSubTab = "package";
       defSubTab = "front";
@@ -32394,6 +32633,7 @@ var _CFB = (() => {
   init_state();
   init_persistence();
   init_utils();
+  init_tips();
   init_constants();
   init_player();
   init_constants_field();
@@ -32460,7 +32700,7 @@ var _CFB = (() => {
         </div>
       </div>` : `<div class="view-header">
         <div>
-          <h1 class="view-title">Depth Chart</h1>
+          <h1 class="view-title">${tipTerm("depth-chart", "Depth Chart")}</h1>
           <div class="view-subtitle">Tap a slot to assign \xB7 shares &amp; blitzers on the field \xB7 full depth order and RB carry split below</div>
         </div>
         <div class="header-actions">
@@ -34248,6 +34488,7 @@ var _CFB = (() => {
   init_state();
   init_coach();
   init_utils();
+  init_tips();
   init_constants();
   init_recruiting();
   init_season();
@@ -34980,7 +35221,7 @@ var _CFB = (() => {
     <div class="signings-summary card">
       <div class="sign-summary-grid">
         <div class="sum-stat"><div class="sum-val">${n}</div><div class="sum-label">Signed</div></div>
-        <div class="sum-stat"><div class="sum-val">${avgStar || "\u2014"}</div><div class="sum-label">Avg Visibility</div></div>
+        <div class="sum-stat"><div class="sum-val">${avgStar || "\u2014"}</div><div class="sum-label">Avg ${tipTerm("recruit-stars", "Visibility")}</div></div>
         <div class="sum-stat"><div class="sum-val">${avgTrue || "\u2014"}</div><div class="sum-label">Avg True</div></div>
         <div class="sum-stat"><div class="sum-val">${fmtMoney(totalSpent)}</div><div class="sum-label">Total Spent</div></div>
       </div>
@@ -35140,7 +35381,7 @@ var _CFB = (() => {
         <div class="profile-right">
           ${entry ? `
             <div class="profile-interest">
-              <div class="profile-interest-label">YOUR INTEREST</div>
+              <div class="profile-interest-label">YOUR ${tipTerm("recruit-interest", "INTEREST")}</div>
               <div class="interest-meter-large">
                 <div class="interest-bar-track">
                   <div class="interest-bar-fill" style="width:${Math.min(100, entry.interest)}%"></div>
@@ -38129,6 +38370,9 @@ var _CFB = (() => {
     });
   }
 
+  // js/ui/app.js
+  init_tips();
+
   // js/ui/views/standings.js
   init_state();
   init_utils();
@@ -40019,6 +40263,7 @@ var _CFB = (() => {
   init_season();
   init_constants();
   init_utils();
+  init_tips();
   var AWARD_LABEL = {
     "weekly-off": "Offensive Player of the Week",
     "weekly-def": "Defensive Player of the Week",
@@ -40238,7 +40483,7 @@ var _CFB = (() => {
     <div class="career-mandate">
       <div class="career-row"><span class="muted">School</span><span>${escapeHtml((school == null ? void 0 : school.name) || "\u2014")} (${escapeHtml((school == null ? void 0 : school.division) || "?")})</span></div>
       <div class="career-row"><span class="muted">Tenure</span><span>${coach.tenureSeasons || 0} season${(coach.tenureSeasons || 0) === 1 ? "" : "s"}</span></div>
-      <div class="career-row"><span class="muted">Mandate</span><span>${escapeHtml(mandateText(school == null ? void 0 : school.prestige, games))}</span></div>
+      <div class="career-row"><span class="muted">${tipTerm("expectations", "Mandate")}</span><span>${escapeHtml(mandateText(school == null ? void 0 : school.prestige, games))}</span></div>
       ${(() => {
       var _a2, _b2;
       const p = (_a2 = school == null ? void 0 : school.prestige) != null ? _a2 : 0, b = (_b2 = school == null ? void 0 : school.baseline) != null ? _b2 : p;
@@ -40246,13 +40491,13 @@ var _CFB = (() => {
       if (Math.abs(gap) < 0.15) return "";
       const word = gap > 0.6 ? "rising fast" : gap > 0 ? "rising" : gap < -0.6 ? "fading fast" : "fading";
       const arrow = gap > 0 ? "\u2191" : "\u2193";
-      return `<div class="career-row"><span class="muted">Program pedigree</span><span>${b.toFixed(1)}\u2605 ${arrow} <span class="muted" style="font-size:11px">${word} \u2014 sustained ${gap > 0 ? "winning is raising" : "losing is sinking"} what this program IS</span></span></div>`;
+      return `<div class="career-row"><span class="muted">${tipTerm("prestige", "Program pedigree")}</span><span>${b.toFixed(1)}\u2605 ${arrow} <span class="muted" style="font-size:11px">${word} \u2014 sustained ${gap > 0 ? "winning is raising" : "losing is sinking"} what this program IS</span></span></div>`;
     })()}
       <div class="career-row"><span class="muted">This season</span><span>${wins} wins (expected ${exp})</span></div>
     </div>
     <div class="jobsec-meter">
       <div class="jobsec-head">
-        <span class="jobsec-label">JOB SECURITY</span>
+        <span class="jobsec-label">${tipTerm("job-security", "JOB SECURITY")}</span>
         <span class="jobsec-state seat-${seat}">${SEAT_LABEL[seat]}</span>
       </div>
       <div class="jobsec-bar-track"><div class="jobsec-bar-fill seat-${seat}" style="width:${Math.round(jobSecurity)}%"></div></div>
@@ -40617,7 +40862,8 @@ var _CFB = (() => {
   };
   var NAV_ITEMS = [
     { id: "dashboard", icon: "\u25C9", label: "Agenda" },
-    { id: "team", icon: "\u25A4", label: "Team" },
+    { id: "team", icon: "\u25A4", label: "Team", navTo: "roster" },
+    // sidebar Team → Roster tab
     { id: "gameplan", icon: "\u25C8", label: "Game Plan" },
     { id: "recruiting", icon: "\u25CE", label: "Recruiting" },
     { id: "program", icon: "\u2726", label: "Coach's Office" },
@@ -40627,7 +40873,8 @@ var _CFB = (() => {
   ];
   var TABBAR_ITEMS = [
     { id: "dashboard", icon: "\u25C9", label: "Home" },
-    { id: "team", icon: "\u25A4", label: "Team" },
+    { id: "team", icon: "\u25A4", label: "Team", navTo: "depthchart" },
+    // tabbar Team → Depth Chart tab
     { id: "gameplan", icon: "\u25C8", label: "Plan" },
     { id: "recruiting", icon: "\u25CE", label: "Recruits" }
   ];
@@ -40663,6 +40910,25 @@ var _CFB = (() => {
     const header = document.querySelector("#view-root .view-header");
     if (!header || header.querySelector(".view-help-btn")) return;
     header.insertAdjacentHTML("beforeend", helpButtonHtml(chapterId));
+  }
+  function renderTipPopover() {
+    const id = state.ui.activeTip;
+    if (!id) return "";
+    const tip = tipById(id);
+    if (!tip) return "";
+    const chap = tip.chapter ? chapterById(tip.chapter) : null;
+    const link = chap ? `<button class="tip-chapter-link" data-tip-chapter="${chap.id}">Read more in <em>${escapeHtml(chap.title)}</em> \u2192</button>` : "";
+    return `
+    <div class="modal-overlay tip-overlay" id="tip-overlay">
+      <div class="tip-popover" role="dialog" aria-label="${escapeHtml(tip.term)}">
+        <div class="tip-head">
+          <span class="tip-term-title">${escapeHtml(tip.term)}</span>
+          <button class="tip-close" id="tip-close" aria-label="Close">\u2715</button>
+        </div>
+        <div class="tip-body">${escapeHtml(tip.body)}</div>
+        ${link}
+      </div>
+    </div>`;
   }
   var SLOT_LABELS = { auto: "Auto", slot1: "Slot 1", slot2: "Slot 2", slot3: "Slot 3", slot4: "Slot 4" };
   var ALL_SLOTS = ["slot1", "slot2", "slot3", "slot4"];
@@ -40778,7 +41044,7 @@ var _CFB = (() => {
         </div>
         <ul class="nav-list">
           ${NAV_ITEMS.map((item) => `
-            <li class="nav-item${view === item.id ? " active" : ""}" data-nav="${item.id}">
+            <li class="nav-item${view === item.id ? " active" : ""}" data-nav="${item.navTo || item.id}">
               <span class="nav-icon">${item.icon}</span>
               <span class="nav-label">${item.label}</span>
               ${(() => {
@@ -40808,7 +41074,7 @@ var _CFB = (() => {
               <span class="budget-value">$${(((coach == null ? void 0 : coach.budget) || 0) / 1e3).toFixed(1)}k</span>
             </div>
             <div class="budget-row">
-              <span class="budget-label">Scholarships</span>
+              <span class="budget-label">${tipTerm("scholarship", "Scholarships")}</span>
               <span class="budget-value">${(coach == null ? void 0 : coach.scholarshipsAvailable) || 0}</span>
             </div>
           </div>
@@ -40829,7 +41095,7 @@ var _CFB = (() => {
       </main>
       <nav class="tabbar">
         ${TABBAR_ITEMS.map((t) => `
-          <button class="tabbar-item${view === t.id ? " active" : ""}" data-nav="${t.id}">
+          <button class="tabbar-item${view === t.id ? " active" : ""}" data-nav="${t.navTo || t.id}">
             <span class="tabbar-icon">${t.icon}</span>
             <span class="tabbar-label">${t.label}</span>
           </button>`).join("")}
@@ -40848,6 +41114,7 @@ var _CFB = (() => {
     ${renderKickoffModal()}
     ${renderCallSheetModal()}
     ${renderFourthDownModal()}
+    ${renderTipPopover()}
   `;
     setupGlobalListeners();
     if (!(state.ui.showHalftime && state.pendingHalftime)) setupViewListeners(view);
@@ -41656,7 +41923,7 @@ var _CFB = (() => {
         </div>
 
         <div class="profile-details pcard-details">
-          ${derivedArchetype(p) ? `<span class="arch-chip arch-chip-lg">${archetypeLabel(derivedArchetype(p))}</span>` : ""}
+          ${derivedArchetype(p) ? `<span class="arch-chip arch-chip-lg" data-tip="archetype" title="What is an archetype?">${archetypeLabel(derivedArchetype(p))}</span>` : ""}
           <span>${school ? `<span class="team-link" data-scout-team="${school.id}">${escapeHtml(school.name)} ${escapeHtml(school.nick || "")}</span>` : '<span class="muted">Transfer portal</span>'}</span>
           ${p.height || p.weight ? `<span>${p.height ? escapeHtml(String(p.height)) : ""}${p.height && p.weight ? " \xB7 " : ""}${p.weight ? `${p.weight} lbs` : ""}</span>` : ""}
           ${m ? `<span class="testing-sheet">RAS <b class="${((_a = p.ras) != null ? _a : 0) >= 8 ? "ras-elite" : ((_b = p.ras) != null ? _b : 0) >= 5 ? "ras-good" : ""}">${((_c = p.ras) != null ? _c : 0).toFixed(1)}</b> \xB7 40yd ${m.forty} \xB7 Vert ${m.vert}&quot; \xB7 Shuttle ${m.shuttle} \xB7 Bench ${m.bench}</span>` : ""}
@@ -41666,11 +41933,11 @@ var _CFB = (() => {
         <div class="profile-ratings pcard-ratings">
           <div class="profile-rating-block">
             <div class="pr-val rating-${ratingColor(Math.round(p.compositeRating))}">${Math.round(p.compositeRating)}</div>
-            <div class="pr-label">Overall</div>
+            <div class="pr-label">${tipTerm("overall", "Overall")}</div>
           </div>
           <div class="profile-rating-block">
             <div class="pr-val ${potKnown ? `pot-${p.potentialBand}` : "unknown"}">${potKnown ? potChar : "?"}</div>
-            <div class="pr-label">Potential</div>
+            <div class="pr-label">${tipTerm("potential", "Potential")}</div>
           </div>
           <div class="profile-rating-block">
             <div class="pr-val ${ratingColor(p.attributes.WE)}">${p.attributes.WE}</div>
@@ -41695,7 +41962,7 @@ var _CFB = (() => {
           </div>` : ""}
 
         <div class="card pcard-attr-card">
-          <div class="card-header"><span class="card-title">ATTRIBUTES</span></div>
+          <div class="card-header"><span class="card-title">${tipTerm("attributes", "ATTRIBUTES")}</span></div>
           <div class="attr-bars pcard-attrs">
             ${ATTRIBUTES.map((a) => `
               <div class="attr-bar-row">
@@ -41759,7 +42026,7 @@ var _CFB = (() => {
     return labels[d.result] || d.result;
   }
   function setupGlobalListeners() {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M;
     document.querySelectorAll("[data-nav]").forEach((el) => {
       el.addEventListener("click", () => {
         state.ui.sidebarOpen = false;
@@ -41772,15 +42039,38 @@ var _CFB = (() => {
         navigate("manual", { chapter: el.dataset.helpChapter });
       });
     });
-    (_a = document.getElementById("btn-back-top")) == null ? void 0 : _a.addEventListener("click", () => {
+    document.querySelectorAll("[data-tip]").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        state.ui.activeTip = el.dataset.tip;
+        renderApp();
+      });
+    });
+    (_a = document.getElementById("tip-overlay")) == null ? void 0 : _a.addEventListener("click", (e) => {
+      if (e.target.id === "tip-overlay") {
+        state.ui.activeTip = null;
+        renderApp();
+      }
+    });
+    (_b = document.getElementById("tip-close")) == null ? void 0 : _b.addEventListener("click", () => {
+      state.ui.activeTip = null;
+      renderApp();
+    });
+    (_c = document.querySelector("[data-tip-chapter]")) == null ? void 0 : _c.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const chapter16 = e.currentTarget.dataset.tipChapter;
+      state.ui.activeTip = null;
+      navigate("manual", { chapter: chapter16 });
+    });
+    (_d = document.getElementById("btn-back-top")) == null ? void 0 : _d.addEventListener("click", () => {
       if (!state.ui.pcardId && !state.ui.showInbox && state.ui.view === "recruiting" && recruitingGoBack()) return;
       navigateBack();
     });
-    (_b = document.getElementById("tab-more")) == null ? void 0 : _b.addEventListener("click", () => {
+    (_e = document.getElementById("tab-more")) == null ? void 0 : _e.addEventListener("click", () => {
       state.ui.sidebarOpen = !state.ui.sidebarOpen;
       renderApp();
     });
-    (_c = document.getElementById("sidebar-backdrop")) == null ? void 0 : _c.addEventListener("click", () => {
+    (_f = document.getElementById("sidebar-backdrop")) == null ? void 0 : _f.addEventListener("click", () => {
       state.ui.sidebarOpen = false;
       renderApp();
     });
@@ -41815,12 +42105,12 @@ var _CFB = (() => {
           root: htRoot
         });
       }
-      (_d = document.getElementById("ht-coachmode")) == null ? void 0 : _d.addEventListener("click", () => {
+      (_g = document.getElementById("ht-coachmode")) == null ? void 0 : _g.addEventListener("click", () => {
         if (!state.settings) state.settings = {};
         state.settings.liveWatch = state.settings.liveWatch === false;
         renderApp();
       });
-      (_e = document.getElementById("btn-resume-halftime")) == null ? void 0 : _e.addEventListener("click", async () => {
+      (_h = document.getElementById("btn-resume-halftime")) == null ? void 0 : _h.addEventListener("click", async () => {
         var _a2, _b2;
         const btn = document.getElementById("btn-resume-halftime");
         if (btn) {
@@ -41851,30 +42141,30 @@ var _CFB = (() => {
         renderApp();
       });
     });
-    (_f = document.getElementById("pcard-overlay")) == null ? void 0 : _f.addEventListener("click", (e) => {
+    (_i = document.getElementById("pcard-overlay")) == null ? void 0 : _i.addEventListener("click", (e) => {
       if (e.target.id === "pcard-overlay") {
         state.ui.pcardId = null;
         renderApp();
       }
     });
-    (_g = document.getElementById("close-pcard")) == null ? void 0 : _g.addEventListener("click", () => {
+    (_j = document.getElementById("close-pcard")) == null ? void 0 : _j.addEventListener("click", () => {
       state.ui.pcardId = null;
       renderApp();
     });
     for (const id of ["btn-inbox", "btn-inbox-top"]) {
-      (_h = document.getElementById(id)) == null ? void 0 : _h.addEventListener("click", () => {
+      (_k = document.getElementById(id)) == null ? void 0 : _k.addEventListener("click", () => {
         state.inbox.forEach((m) => m.read = true);
         state.ui.showInbox = !state.ui.showInbox;
         renderApp();
       });
     }
-    (_i = document.getElementById("inbox-overlay")) == null ? void 0 : _i.addEventListener("click", (e) => {
+    (_l = document.getElementById("inbox-overlay")) == null ? void 0 : _l.addEventListener("click", (e) => {
       if (e.target.id === "inbox-overlay" || e.target.id === "close-inbox") {
         state.ui.showInbox = false;
         renderApp();
       }
     });
-    (_j = document.getElementById("btn-save")) == null ? void 0 : _j.addEventListener("click", async () => {
+    (_m = document.getElementById("btn-save")) == null ? void 0 : _m.addEventListener("click", async () => {
       if (gamePauseIsLive(state)) {
         notify("Finish the current game before saving.", "warning");
         return;
@@ -41883,11 +42173,11 @@ var _CFB = (() => {
       state.ui.showSaveModal = true;
       renderApp();
     });
-    (_k = document.getElementById("close-save-modal")) == null ? void 0 : _k.addEventListener("click", () => {
+    (_n = document.getElementById("close-save-modal")) == null ? void 0 : _n.addEventListener("click", () => {
       state.ui.showSaveModal = false;
       renderApp();
     });
-    (_l = document.getElementById("save-modal-overlay")) == null ? void 0 : _l.addEventListener("click", (e) => {
+    (_o = document.getElementById("save-modal-overlay")) == null ? void 0 : _o.addEventListener("click", (e) => {
       if (e.target.id === "save-modal-overlay") {
         state.ui.showSaveModal = false;
         renderApp();
@@ -41901,7 +42191,7 @@ var _CFB = (() => {
         notify(`Saved to ${SLOT_LABELS[slot] || slot}`, "success");
       });
     });
-    (_m = document.getElementById("btn-main-menu")) == null ? void 0 : _m.addEventListener("click", async () => {
+    (_p = document.getElementById("btn-main-menu")) == null ? void 0 : _p.addEventListener("click", async () => {
       await refreshSaves();
       navigate("mainmenu");
     });
@@ -41911,44 +42201,44 @@ var _CFB = (() => {
         renderApp();
       });
     });
-    (_n = document.getElementById("close-game-result")) == null ? void 0 : _n.addEventListener("click", () => {
+    (_q = document.getElementById("close-game-result")) == null ? void 0 : _q.addEventListener("click", () => {
       state.ui.showGameResult = false;
       renderApp();
     });
-    (_o = document.getElementById("close-game-result-btn")) == null ? void 0 : _o.addEventListener("click", () => {
+    (_r = document.getElementById("close-game-result-btn")) == null ? void 0 : _r.addEventListener("click", () => {
       state.ui.showGameResult = false;
       state.ui.lastGameResult = null;
       renderApp();
     });
-    (_p = document.getElementById("game-result-overlay")) == null ? void 0 : _p.addEventListener("click", (e) => {
+    (_s = document.getElementById("game-result-overlay")) == null ? void 0 : _s.addEventListener("click", (e) => {
       if (e.target.id === "game-result-overlay") {
         state.ui.showGameResult = false;
         renderApp();
       }
     });
     if (state.ui.showGameResult && (state.ui.gameResultTab || "boxscore") === "watch" && state.ui.lastGameResult) {
-      initWatchMode(state.ui.lastGameResult, ((_q = state.ui.lastGameResult.homeSchool) == null ? void 0 : _q.id) === ((_r = getPlayerSchool()) == null ? void 0 : _r.id));
+      initWatchMode(state.ui.lastGameResult, ((_t = state.ui.lastGameResult.homeSchool) == null ? void 0 : _t.id) === ((_u = getPlayerSchool()) == null ? void 0 : _u.id));
     }
     if (state.ui.liveWatch) mountLiveWatch();
-    (_s = document.getElementById("watch-live-toggle")) == null ? void 0 : _s.addEventListener("change", (e) => {
+    (_v = document.getElementById("watch-live-toggle")) == null ? void 0 : _v.addEventListener("change", (e) => {
       state.settings = state.settings || {};
       state.settings.liveWatch = e.target.checked;
     });
     document.querySelectorAll("[data-kickoff]").forEach((b) => b.addEventListener("click", () => chooseKickoffMode(b.dataset.kickoff)));
-    (_t = document.getElementById("kickoff-coachmode")) == null ? void 0 : _t.addEventListener("click", () => {
+    (_w = document.getElementById("kickoff-coachmode")) == null ? void 0 : _w.addEventListener("click", () => {
       if (!state.settings) state.settings = {};
       state.settings.liveWatch = state.settings.liveWatch === false;
       renderApp();
     });
-    (_u = document.getElementById("kickoff-sim-half")) == null ? void 0 : _u.addEventListener("click", () => chooseKickoffMode("off"));
-    (_v = document.getElementById("kickoff-cancel")) == null ? void 0 : _v.addEventListener("click", () => {
+    (_x = document.getElementById("kickoff-sim-half")) == null ? void 0 : _x.addEventListener("click", () => chooseKickoffMode("off"));
+    (_y = document.getElementById("kickoff-cancel")) == null ? void 0 : _y.addEventListener("click", () => {
       state.ui.pendingKickoff = null;
       state._pregamePlan = null;
       renderApp();
     });
     {
       const root = document.getElementById("kickoff-adjust");
-      const gp = state._pregamePlan || ((_w = getPlayerSchool()) == null ? void 0 : _w.gameplan);
+      const gp = state._pregamePlan || ((_z = getPlayerSchool()) == null ? void 0 : _z.gameplan);
       if (root && gp) wireDefaultsListeners(gp, { root });
     }
     document.querySelectorAll("[data-cs-form]").forEach((b) => b.addEventListener("click", () => {
@@ -42037,19 +42327,19 @@ var _CFB = (() => {
       if (nm === "__surprise") answerPlayCall(_decorateCall({ category: b.dataset.csCat }));
       else answerPlayCall(_decorateCall({ concept: nm }));
     }));
-    (_x = document.getElementById("cs-sheet-call")) == null ? void 0 : _x.addEventListener("click", () => {
+    (_A = document.getElementById("cs-sheet-call")) == null ? void 0 : _A.addEventListener("click", () => {
       if (callTapOk()) answerPlayCall({ concept: "sheet" });
     });
     document.querySelectorAll("[data-fourth]").forEach((b) => b.addEventListener("click", () => {
       if (!b.disabled && callTapOk()) answerFourthDown(b.dataset.fourth);
     }));
-    (_y = document.getElementById("fourth-auto")) == null ? void 0 : _y.addEventListener("click", () => {
+    (_B = document.getElementById("fourth-auto")) == null ? void 0 : _B.addEventListener("click", () => {
       if (callTapOk()) answerFourthDown("auto");
     });
-    (_z = document.getElementById("cs-skip-quarter")) == null ? void 0 : _z.addEventListener("click", () => simToQuarterEnd());
-    (_A = document.getElementById("cs-mode-keydowns")) == null ? void 0 : _A.addEventListener("click", () => setCallModeMidGame("keydowns"));
-    (_B = document.getElementById("cs-mode-off")) == null ? void 0 : _B.addEventListener("click", () => setCallModeMidGame("off"));
-    (_C = document.getElementById("cs-mode-everycall")) == null ? void 0 : _C.addEventListener("click", () => {
+    (_C = document.getElementById("cs-skip-quarter")) == null ? void 0 : _C.addEventListener("click", () => simToQuarterEnd());
+    (_D = document.getElementById("cs-mode-keydowns")) == null ? void 0 : _D.addEventListener("click", () => setCallModeMidGame("keydowns"));
+    (_E = document.getElementById("cs-mode-off")) == null ? void 0 : _E.addEventListener("click", () => setCallModeMidGame("off"));
+    (_F = document.getElementById("cs-mode-everycall")) == null ? void 0 : _F.addEventListener("click", () => {
       var _a2;
       const t = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token;
       if (t) {
@@ -42057,7 +42347,7 @@ var _CFB = (() => {
         renderApp();
       }
     });
-    (_D = document.getElementById("cs-recover")) == null ? void 0 : _D.addEventListener("click", () => {
+    (_G = document.getElementById("cs-recover")) == null ? void 0 : _G.addEventListener("click", () => {
       var _a2, _b2;
       const t = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token;
       if (((_b2 = t == null ? void 0 : t.pending) == null ? void 0 : _b2.kind) === "fourth") {
@@ -42074,10 +42364,10 @@ var _CFB = (() => {
     document.querySelectorAll("[data-cs-quickcat]").forEach((btn) => btn.addEventListener("click", () => {
       if (callTapOk()) answerPlayCall({ category: btn.dataset.csQuickcat });
     }));
-    (_E = document.getElementById("tc-keydowns")) == null ? void 0 : _E.addEventListener("click", () => {
+    (_H = document.getElementById("tc-keydowns")) == null ? void 0 : _H.addEventListener("click", () => {
       if (callTapOk()) setCallModeMidGame("keydowns");
     });
-    (_F = document.getElementById("tc-headset")) == null ? void 0 : _F.addEventListener("click", () => {
+    (_I = document.getElementById("tc-headset")) == null ? void 0 : _I.addEventListener("click", () => {
       var _a2, _b2;
       state.ui.autoRun = true;
       const lw = state.ui.liveWatch;
@@ -42089,23 +42379,23 @@ var _CFB = (() => {
       if (((_b2 = t == null ? void 0 : t.pending) == null ? void 0 : _b2.kind) === "fourth") answerFourthDown("auto");
       else answerPlayCall({ concept: "sheet" });
     });
-    (_G = document.getElementById("tc-jumpin")) == null ? void 0 : _G.addEventListener("click", () => {
+    (_J = document.getElementById("tc-jumpin")) == null ? void 0 : _J.addEventListener("click", () => {
       state.ui.autoRun = false;
       watchStop();
       _watch = null;
       if (state.ui.liveWatch) state.ui.liveWatch.boardDone = true;
       renderApp();
     });
-    (_H = document.getElementById("tc-skipbreak")) == null ? void 0 : _H.addEventListener("click", () => {
+    (_K = document.getElementById("tc-skipbreak")) == null ? void 0 : _K.addEventListener("click", () => {
       if (callTapOk()) simToBreak();
     });
-    (_I = document.getElementById("cs-autorun")) == null ? void 0 : _I.addEventListener("click", () => {
+    (_L = document.getElementById("cs-autorun")) == null ? void 0 : _L.addEventListener("click", () => {
       var _a2, _b2, _c2;
       state.ui.autoRun = true;
       if (((_c2 = (_b2 = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token) == null ? void 0 : _b2.pending) == null ? void 0 : _c2.kind) === "fourth") answerFourthDown("auto");
       else answerPlayCall({ concept: "sheet" });
     });
-    (_J = document.getElementById("cs-autorun-stop")) == null ? void 0 : _J.addEventListener("click", () => {
+    (_M = document.getElementById("cs-autorun-stop")) == null ? void 0 : _M.addEventListener("click", () => {
       state.ui.autoRun = false;
       watchStop();
       _watch = null;
