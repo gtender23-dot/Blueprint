@@ -5618,6 +5618,77 @@ body *::before,
 body *::after {
   border-radius: 0 !important;
 }
+/* ── 8-BIT PLAYER PORTRAITS ───────────────────────────────────────────── */
+.player-portrait {
+  --portrait-skin:#d99468;
+  --portrait-skin-shadow:#9f5f43;
+  --portrait-hair:#201817;
+  --portrait-jersey:#315cc7;
+  --portrait-accent:#f4f0d8;
+  position:relative;
+  width:112px;
+  height:112px;
+  flex:0 0 112px;
+  overflow:hidden;
+  background:#0a101c;
+  border:4px solid var(--px-line);
+  border-bottom-color:var(--portrait-accent);
+  box-shadow:6px 6px 0 var(--px-shadow),inset 0 0 0 3px #05070c;
+  image-rendering:pixelated;
+  isolation:isolate;
+}
+.player-portrait>span { position:absolute; display:block; }
+.portrait-grid {
+  inset:0;
+  z-index:0;
+  background-color:color-mix(in srgb,var(--portrait-jersey) 18%,#0a101c);
+  background-image:linear-gradient(rgba(244,240,216,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(244,240,216,.08) 1px,transparent 1px);
+  background-size:14px 14px;
+}
+.portrait-shoulders { left:7%; top:74%; width:86%; height:30%; z-index:1; background:var(--portrait-jersey); border-top:7px solid var(--portrait-accent); box-shadow:inset 7px 0 0 rgba(0,0,0,.28),inset -7px 0 0 rgba(0,0,0,.28); }
+.portrait-jersey-panel { left:43%; top:79%; width:14%; height:25%; z-index:2; background:var(--portrait-accent); }
+.portrait-neck { left:40%; top:61%; width:20%; height:21%; z-index:2; background:var(--portrait-skin-shadow); box-shadow:inset 5px 0 0 rgba(0,0,0,.16),inset -5px 0 0 rgba(0,0,0,.16); }
+.portrait-head { left:29%; top:20%; width:42%; height:48%; z-index:4; background:var(--portrait-skin); box-shadow:inset 6px 0 0 var(--portrait-skin-shadow),inset -4px 0 0 rgba(255,255,255,.08),0 5px 0 var(--portrait-skin-shadow); }
+.portrait-ear { top:38%; width:6%; height:18%; z-index:3; background:var(--portrait-skin-shadow); }
+.portrait-ear-left { left:23%; }
+.portrait-ear-right { right:23%; }
+.portrait-hair { left:29%; top:14%; width:42%; height:17%; z-index:6; background:var(--portrait-hair); box-shadow:7px -4px 0 var(--portrait-hair),-5px 6px 0 var(--portrait-hair); }
+.portrait-hair-side { top:25%; width:7%; height:17%; z-index:6; background:var(--portrait-hair); }
+.portrait-hair-side-left { left:29%; }
+.portrait-hair-side-right { right:29%; }
+.portrait-brow { top:36%; width:13%; height:4%; z-index:7; background:var(--portrait-hair); }
+.portrait-brow-left { left:35%; }
+.portrait-brow-right { right:35%; }
+.portrait-eye { top:42%; width:6%; height:6%; z-index:8; background:#f4f0d8; box-shadow:inset 3px 0 0 #111827; }
+.portrait-eye-left { left:38%; }
+.portrait-eye-right { right:34%; transform:scaleX(-1); }
+.portrait-nose { left:47%; top:46%; width:7%; height:12%; z-index:7; background:var(--portrait-skin-shadow); }
+.portrait-mouth { left:42%; top:60%; width:22%; height:4%; z-index:8; background:#4b2022; box-shadow:5px 4px 0 var(--portrait-skin-shadow); }
+.portrait-beard-pixels { display:none !important; left:35%; top:54%; width:35%; height:16%; z-index:7; background:color-mix(in srgb,var(--portrait-hair) 78%,transparent); box-shadow:-5px -4px 0 color-mix(in srgb,var(--portrait-hair) 62%,transparent); }
+.portrait-beard .portrait-beard-pixels { display:block !important; }
+.portrait-scar { display:none !important; left:61%; top:39%; width:4%; height:16%; z-index:9; background:#8b3d3d; transform:skewX(-18deg); }
+.portrait-scarred .portrait-scar { display:block !important; }
+.portrait-position { right:5px; bottom:4px; z-index:10; min-width:24px; padding:2px 4px; color:#05070c; background:var(--portrait-accent); border:2px solid #05070c; box-shadow:2px 2px 0 #05070c; font-size:9px; font-weight:900; line-height:1.2; text-align:center; letter-spacing:.05em; }
+.portrait-hair-1 .portrait-hair { top:10%; height:21%; box-shadow:7px -7px 0 var(--portrait-hair),-6px 6px 0 var(--portrait-hair); }
+.portrait-hair-2 .portrait-hair { left:34%; top:8%; width:33%; height:22%; box-shadow:-7px 6px 0 var(--portrait-hair),7px 3px 0 var(--portrait-hair); }
+.portrait-hair-3 .portrait-hair { top:19%; height:8%; box-shadow:none; opacity:.75; }
+.portrait-hair-3 .portrait-hair-side { height:9%; opacity:.75; }
+.portrait-face-1 .portrait-head { left:31%; width:38%; }
+.portrait-face-2 .portrait-head { left:27%; width:46%; }
+.profile-identity,.pcard-portrait-row { display:flex; align-items:flex-start; gap:18px; }
+.profile-identity { margin-bottom:12px; }
+.profile-identity-copy,.pcard-portrait-info { flex:1; min-width:0; }
+.profile-identity .profile-details { margin-bottom:0; }
+.pcard-portrait-row { padding:10px 0 4px; }
+.pcard-portrait-info .pcard-details { margin-top:0; }
+
+@media (max-width:560px) {
+  .player-portrait { width:92px; height:92px; flex-basis:92px; border-width:3px; box-shadow:4px 4px 0 var(--px-shadow),inset 0 0 0 2px #05070c; }
+  .profile-identity,.pcard-portrait-row { gap:12px; }
+  .profile-name { font-size:18px; }
+  .pcard-portrait-row .profile-ratings { gap:10px; flex-wrap:wrap; }
+  .pcard-portrait-row .pr-val { font-size:23px; }
+}
   </style>
 </head>
 <body>
@@ -5627,7 +5698,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "e6f16e7884";
+globalThis.__BUILD__ = "2f3b8779f7";
 "use strict";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
@@ -8529,7 +8600,57 @@ var _CFB = (() => {
       `<rect width="16" height="16" fill="#05070c"/><rect x="1" y="1" width="14" height="14" fill="${c2}"/><rect x="2" y="2" width="12" height="12" fill="${c1}"/><g${flip ? ' transform="translate(16 0) scale(-1 1)"' : ""}>${sprite}</g><rect x="1" y="1" width="2" height="2" fill="${light}" opacity=".75"/><rect x="13" y="13" width="2" height="2" fill="#05070c" opacity=".8"/>`
     );
   }
-  var FIRST_NAMES, LAST_NAMES, LOCATIONS, LOCATIONS_TOTAL_W, PIXEL_MASCOTS, MASCOT_RULES;
+  function portraitHash(player) {
+    var _a, _b;
+    const key = String((player == null ? void 0 : player.id) || `${((_a = player == null ? void 0 : player.name) == null ? void 0 : _a.first) || ""}-${((_b = player == null ? void 0 : player.name) == null ? void 0 : _b.last) || ""}-${(player == null ? void 0 : player.position) || ""}`);
+    let h = 2166136261;
+    for (let i = 0; i < key.length; i++) {
+      h ^= key.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+  function portraitColor(value, fallback) {
+    const color = String(value || "");
+    return /^#[0-9a-f]{6}$/i.test(color) ? color : fallback;
+  }
+  function renderPlayerPortrait(player, school = null, size = "lg") {
+    var _a, _b;
+    const seed = portraitHash(player);
+    const [skin, skinShadow] = PORTRAIT_SKINS[seed % PORTRAIT_SKINS.length];
+    const hair = PORTRAIT_HAIR[(seed >>> 4) % PORTRAIT_HAIR.length];
+    const pos = String((player == null ? void 0 : player.position) || "ATH").toUpperCase();
+    const jerseyFallback = PORTRAIT_POSITION_COLORS[pos] || "#315cc7";
+    const jersey = portraitColor((_a = school == null ? void 0 : school.colors) == null ? void 0 : _a[0], jerseyFallback);
+    const accent = portraitColor((_b = school == null ? void 0 : school.colors) == null ? void 0 : _b[1], "#f4f0d8");
+    const hairStyle = (seed >>> 8) % 4;
+    const faceStyle = (seed >>> 11) % 3;
+    const beard = (seed >>> 14) % 5 >= 3 ? " portrait-beard" : "";
+    const scar = (seed >>> 17) % 11 === 0 ? " portrait-scarred" : "";
+    const label = crestXmlSafe(`8-bit portrait of ${fullName(player)}`);
+    return `<div class="player-portrait player-portrait-${size} portrait-hair-${hairStyle} portrait-face-${faceStyle}${beard}${scar}" role="img" aria-label="${label}" style="--portrait-skin:${skin};--portrait-skin-shadow:${skinShadow};--portrait-hair:${hair};--portrait-jersey:${jersey};--portrait-accent:${accent}">
+    <span class="portrait-grid"></span>
+    <span class="portrait-shoulders"></span>
+    <span class="portrait-jersey-panel"></span>
+    <span class="portrait-neck"></span>
+    <span class="portrait-ear portrait-ear-left"></span>
+    <span class="portrait-ear portrait-ear-right"></span>
+    <span class="portrait-head"></span>
+    <span class="portrait-hair"></span>
+    <span class="portrait-hair-side portrait-hair-side-left"></span>
+    <span class="portrait-hair-side portrait-hair-side-right"></span>
+    <span class="portrait-brow portrait-brow-left"></span>
+    <span class="portrait-brow portrait-brow-right"></span>
+    <span class="portrait-eye portrait-eye-left"></span>
+    <span class="portrait-eye portrait-eye-right"></span>
+    <span class="portrait-nose"></span>
+    <span class="portrait-mouth"></span>
+    <span class="portrait-beard-pixels"></span>
+    <span class="portrait-scar"></span>
+    <span class="portrait-position">${escapeHtml(pos)}</span>
+  </div>`;
+  }
+  var FIRST_NAMES, LAST_NAMES, LOCATIONS, LOCATIONS_TOTAL_W, PIXEL_MASCOTS, MASCOT_RULES, PORTRAIT_SKINS, PORTRAIT_HAIR, PORTRAIT_POSITION_COLORS;
   var init_utils = __esm({
     "js/utils.js"() {
       "use strict";
@@ -9200,6 +9321,38 @@ var _CFB = (() => {
         ["saint", /saint|crusader|friar|monk|bishop|deacon|gospel|abbot|quaker|shepherd|faith/],
         ["crown", /king|duke|president|statesmen|diplomat|colonial|explorer|pioneer|sojourner|monarch|royal|dutchmen|pilgrim|don/]
       ];
+      PORTRAIT_SKINS = [
+        ["#f4c7a1", "#c98d69"],
+        ["#e8ae82", "#b87552"],
+        ["#d99468", "#9f5f43"],
+        ["#bd744d", "#7d452f"],
+        ["#965739", "#5f3024"],
+        ["#75422f", "#45251e"],
+        ["#543127", "#2f1c19"],
+        ["#3b241f", "#211515"]
+      ];
+      PORTRAIT_HAIR = ["#151318", "#241a18", "#38251c", "#4b2d20", "#6b452b"];
+      PORTRAIT_POSITION_COLORS = {
+        QB: "#315cc7",
+        RB: "#a93645",
+        FB: "#a93645",
+        WR: "#137b61",
+        TE: "#137b61",
+        OT: "#a46d24",
+        OG: "#a46d24",
+        C: "#a46d24",
+        OL: "#a46d24",
+        DE: "#6b3f9a",
+        DT: "#6b3f9a",
+        DL: "#6b3f9a",
+        OLB: "#8b3c79",
+        LB: "#8b3c79",
+        CB: "#176f9c",
+        S: "#176f9c",
+        DB: "#176f9c",
+        K: "#52606f",
+        P: "#52606f"
+      };
     }
   });
 
@@ -36154,7 +36307,10 @@ var _CFB = (() => {
     <div class="recruit-profile">
       <div class="profile-hero">
         <div class="profile-left">
-          <div class="profile-pos-badge pos-${recruit.position}">${recruit.position}</div>
+          <div class="profile-identity">
+            ${renderPlayerPortrait(recruit, null, "lg")}
+            <div class="profile-identity-copy">
+              <div class="profile-pos-badge pos-${recruit.position}">${recruit.position}</div>
           <h2 class="profile-name">${escapeHtml(fullName(recruit))}${buildTag(recruit)}</h2>
           <div class="profile-details">
             ${derivedArchetype(recruit) ? `<span class="arch-chip arch-chip-lg">${archetypeLabel(derivedArchetype(recruit))}</span>` : ""}
@@ -36162,6 +36318,8 @@ var _CFB = (() => {
             ${recruit.measurables ? `<span class="testing-sheet">RAS <b class="${recruit.ras >= 8 ? "ras-elite" : recruit.ras >= 5 ? "ras-good" : ""}">${((_a = recruit.ras) != null ? _a : 0).toFixed(1)}</b> &middot; 40yd ${recruit.measurables.forty} &middot; Vert ${recruit.measurables.vert}&quot; &middot; Shuttle ${recruit.measurables.shuttle} &middot; Bench ${recruit.measurables.bench}</span>` : ""}
             ${((_b = recruit.hometown) == null ? void 0 : _b.city) ? `<span>${escapeHtml(recruit.hometown.city)}, ${escapeHtml(recruit.hometown.state || "")}</span>` : ""}
             ${Number.isFinite(dist) && dist < 9999 ? `<span>${dist} miles from ${escapeHtml((school == null ? void 0 : school.name) || "")}</span>` : ""}
+          </div>
+            </div>
           </div>
           <div class="profile-ratings">
             <div class="profile-rating-block">
@@ -43018,7 +43176,10 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
           <button class="btn-icon" id="close-pcard">\u2715</button>
         </div>
 
-        <div class="profile-details pcard-details">
+        <div class="pcard-portrait-row">
+          ${renderPlayerPortrait(p, school, "lg")}
+          <div class="pcard-portrait-info">
+            <div class="profile-details pcard-details">
           ${derivedArchetype(p) ? `<span class="arch-chip arch-chip-lg" data-tip="archetype" title="What is an archetype?">${archetypeLabel(derivedArchetype(p))}</span>` : ""}
           <span>${school ? `<span class="team-link" data-scout-team="${school.id}">${escapeHtml(school.name)} ${escapeHtml(school.nick || "")}</span>` : '<span class="muted">Transfer portal</span>'}</span>
           ${p.height || p.weight ? `<span>${p.height ? escapeHtml(String(p.height)) : ""}${p.height && p.weight ? " \xB7 " : ""}${p.weight ? `${p.weight} lbs` : ""}</span>` : ""}
@@ -43042,6 +43203,8 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
           <div class="profile-rating-block">
             <div class="pr-val ${ratingColor(p.attributes.CON)}">${p.attributes.CON}</div>
             <div class="pr-label">Conditioning</div>
+          </div>
+        </div>
           </div>
         </div>
 
