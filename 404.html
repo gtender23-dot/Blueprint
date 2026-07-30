@@ -5290,7 +5290,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "b27c80122e";
+globalThis.__BUILD__ = "6a2eee2ef3";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -41220,6 +41220,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     ".sched-picker-list"
   ];
   var lastRenderedView = null;
+  var _helpDelegationWired = false;
   function captureScroll() {
     const map = {};
     for (const sel of SCROLL_SELECTORS) {
@@ -42311,12 +42312,16 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         navigate(el.dataset.nav);
       });
     });
-    document.querySelectorAll("[data-help-chapter]").forEach((el) => {
-      el.addEventListener("click", (e) => {
+    if (!_helpDelegationWired) {
+      _helpDelegationWired = true;
+      document.addEventListener("click", (e) => {
+        var _a2, _b2;
+        const btn = (_b2 = (_a2 = e.target).closest) == null ? void 0 : _b2.call(_a2, "[data-help-chapter]");
+        if (!btn) return;
         e.stopPropagation();
-        navigate("manual", { chapter: el.dataset.helpChapter });
+        navigate("manual", { chapter: btn.dataset.helpChapter });
       });
-    });
+    }
     document.querySelectorAll("[data-tip]").forEach((el) => {
       el.addEventListener("click", (e) => {
         e.stopPropagation();
