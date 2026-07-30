@@ -5182,6 +5182,43 @@ body.theme-school .data-table tr:hover td {
   .manual-pager .btn-ghost { width: 100%; }
 }
 
+/* ── Context-help ? ─────────────────────────────────────────────────────────
+   The affordance app.js injects into each screen's .view-header (and into the
+   live-game overlay's .modal-header). A quiet circular ? that opens the manual
+   at the chapter for this screen. Muted until touched, so it reads as "help is
+   here if you want it" rather than competing with the page's real actions. */
+.view-help-btn {
+  flex: 0 0 auto;
+  align-self: center;
+  margin-left: auto;            /* ride to the far end even when the header has no other right-side element */
+  width: 26px; height: 26px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-raised, #141a28);
+  border: 1px solid var(--border, #263049);
+  color: var(--text-2, #8792ab);
+  font-size: 14px; font-weight: 700; line-height: 1;
+  cursor: pointer;
+  transition: color .12s ease, border-color .12s ease, background .12s ease;
+}
+.view-help-btn:hover,
+.view-help-btn:focus-visible {
+  color: var(--text-0, #eef2fb);
+  border-color: var(--team-1, #4c7dff);
+  background: color-mix(in srgb, var(--team-1, #4c7dff) 14%, var(--bg-raised, #141a28));
+  outline: none;
+}
+/* In the live-game overlay header the Skip button already sits at the right,
+   so the ? tucks in just before it rather than pushing to the far edge. */
+.modal-header .view-help-btn { margin-left: auto; margin-right: 8px; }
+/* A header that already ends in a right-side control (group tabs, dashboard's
+   advance button) shouldn't have the ? steal the whole right gap — let it sit
+   snug at the end of that row instead. */
+.group-header .view-help-btn { margin-left: 8px; }
+@media (max-width: 700px) {
+  .view-help-btn { width: 30px; height: 30px; font-size: 15px; }  /* a comfortable phone tap target */
+}
+
   </style>
 </head>
 <body>
@@ -5191,7 +5228,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "5340927bce";
+globalThis.__BUILD__ = "221e4b922a";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -24706,6 +24743,7 @@ var _CFB = (() => {
     const sameScreen = view === state.ui.view && JSON.stringify(params || {}) === JSON.stringify(state.ui.params || {});
     if (!sameScreen) pushNav();
     if (NO_HISTORY_VIEWS.has(view)) state.ui.navHistory = [];
+    if (view === "manual") state.ui.manualChapter = params.chapter || null;
     state.ui.view = view;
     state.ui.params = params;
     state.ui.sidebarOpen = false;
@@ -40593,6 +40631,39 @@ var _CFB = (() => {
     { id: "gameplan", icon: "\u25C8", label: "Plan" },
     { id: "recruiting", icon: "\u25CE", label: "Recruits" }
   ];
+  var HELP_CHAPTER_FLAT = {
+    dashboard: "the-year",
+    // the agenda IS the calendar/season loop
+    gameplan: "calling-a-game",
+    recruiting: "recruiting",
+    scout: "reading-a-player",
+    // scouting a school = reading its players
+    scheduling: "the-year"
+  };
+  var HELP_CHAPTER_GROUP = {
+    team: { roster: "reading-a-player", depthchart: "the-depth-chart", practice: "building-a-player" },
+    program: { coachoffice: "your-career", schedule: "the-year", standings: "the-year" },
+    statsgroup: { stats: "reading-a-player", awards: "your-career", history: "your-career" }
+  };
+  var HELP_CHAPTER_LIVEGAME = "anatomy-of-a-play";
+  function helpChapterFor(view) {
+    if (view === "team") return HELP_CHAPTER_GROUP.team[teamGroupTab] || "the-depth-chart";
+    if (view === "program") return HELP_CHAPTER_GROUP.program[programGroupTab] || "your-career";
+    if (view === "statsgroup") return HELP_CHAPTER_GROUP.statsgroup[statsGroupTab] || "reading-a-player";
+    return HELP_CHAPTER_FLAT[view] || null;
+  }
+  function helpButtonHtml(chapterId) {
+    if (!chapterId) return "";
+    return `<button class="view-help-btn" data-help-chapter="${chapterId}"
+                  title="Open the manual to this chapter" aria-label="Help for this screen">?</button>`;
+  }
+  function injectHelpButton(view) {
+    const chapterId = helpChapterFor(view);
+    if (!chapterId) return;
+    const header = document.querySelector("#view-root .view-header");
+    if (!header || header.querySelector(".view-help-btn")) return;
+    header.insertAdjacentHTML("beforeend", helpButtonHtml(chapterId));
+  }
   var SLOT_LABELS = { auto: "Auto", slot1: "Slot 1", slot2: "Slot 2", slot3: "Slot 3", slot4: "Slot 4" };
   var ALL_SLOTS = ["slot1", "slot2", "slot3", "slot4"];
   var SCROLL_SELECTORS = [
@@ -40780,6 +40851,7 @@ var _CFB = (() => {
   `;
     setupGlobalListeners();
     if (!(state.ui.showHalftime && state.pendingHalftime)) setupViewListeners(view);
+    if (!(state.ui.showHalftime && state.pendingHalftime)) injectHelpButton(view);
     restoreScroll(_scroll, _viewChanged);
     lastRenderedView = view;
   }
@@ -41694,6 +41766,12 @@ var _CFB = (() => {
         navigate(el.dataset.nav);
       });
     });
+    document.querySelectorAll("[data-help-chapter]").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        navigate("manual", { chapter: el.dataset.helpChapter });
+      });
+    });
     (_a = document.getElementById("btn-back-top")) == null ? void 0 : _a.addEventListener("click", () => {
       if (!state.ui.pcardId && !state.ui.showInbox && state.ui.view === "recruiting" && recruitingGoBack()) return;
       navigateBack();
@@ -42467,6 +42545,7 @@ var _CFB = (() => {
     var _a, _b, _c;
     const lw = state.ui.liveWatch;
     if (!lw) return "";
+    if (state.ui.view === "manual") return "";
     const isCall = lw.stage === "call";
     const auto = isCall && state.ui.autoRun;
     const boardDone = isCall && lw.boardDone && !auto;
@@ -42490,10 +42569,11 @@ var _CFB = (() => {
          <button class="btn-primary" id="cs-recover">\u{1F4CB} Let the sheet decide</button>
        </div>` : "";
     const headerBtn = !boardDone && !auto ? `<button class="bc-btn bc-text" id="watch-live-skip">Skip \u23E9</button>` : "";
+    const helpBtn = helpButtonHtml(HELP_CHAPTER_LIVEGAME);
     return `
     <div class="modal-overlay watch-live-overlay">
       <div class="modal game-result-modal${embed ? " watch-call-mode" : ""}${boardDone ? " watch-board-collapsed" : ""}">
-        <div class="modal-header"><h2>\u25B6 ${label}</h2>${headerBtn}</div>
+        <div class="modal-header"><h2>\u25B6 ${label}</h2>${helpBtn}${headerBtn}</div>
         <div class="result-tab-body">
         ${boardDone ? "" : `<div id="watch-root" class="watch-root"></div>`}
         ${embed ? `<div class="watch-call-embed">${embed}</div>` : ""}${recover}</div>
