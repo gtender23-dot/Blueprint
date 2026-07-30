@@ -5612,6 +5612,12 @@ body.theme-school .sidebar,body.theme-school .tabbar { background:color-mix(in s
 }
 @media (prefers-reduced-motion:reduce) { button,[role="button"],.modal,.notification { animation:none !important; transition:none !important; } }
 
+/* Pixel geometry audit: all UI surfaces and controls use hard 90-degree corners. */
+body *,
+body *::before,
+body *::after {
+  border-radius: 0 !important;
+}
   </style>
 </head>
 <body>
@@ -5621,7 +5627,7 @@ body.theme-school .sidebar,body.theme-school .tabbar { background:color-mix(in s
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "d719d6d4f7";
+globalThis.__BUILD__ = "e6f16e7884";
 "use strict";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
