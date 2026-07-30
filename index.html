@@ -3564,6 +3564,10 @@ input[type="range"] { accent-color: var(--team-1); }
 .ret-btn { font-size: 10px; line-height: 1; padding: 2px 4px; border: 1px solid var(--border);
   border-radius: 4px; background: transparent; color: var(--text-1); cursor: pointer; }
 .ret-btn:hover { border-color: var(--green); color: var(--green); }
+/* Portrait: comfortable thumb target for the returner promote arrow */
+@media (max-width: 700px) and (orientation: portrait) {
+  .ret-btn { min-width: 40px; min-height: 40px; font-size: 16px; border-radius: 8px; }
+}
 .ret-hint { font-size: 9px; color: var(--text-2); margin-top: 5px; padding: 0 2px; }
 
 /* ── Coach Office ────────────────────────────────────────────────────────── */
@@ -3597,6 +3601,10 @@ input[type="range"] { accent-color: var(--team-1); }
   background: rgba(255,255,255,0.07); color: var(--text-1); cursor: pointer; }
 .contact-step:hover:not(:disabled) { border-color: var(--green); color: var(--green); }
 .contact-step:disabled { opacity: 0.4; cursor: default; }
+/* Portrait: comfortable thumb targets for the weekly-contact stepper (was 24×24) */
+@media (max-width: 700px) and (orientation: portrait) {
+  .contact-step { width: 40px; height: 40px; font-size: 18px; border-radius: 8px; }
+}
 .contact-alloc-val { min-width: 64px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
 .contact-alloc-pts { font-size: 0.9em; }
 
@@ -4124,6 +4132,11 @@ th.conv-sort.active { color: var(--team-1); }
 .do-up:active { background: rgba(255,255,255,0.15); }
 .do-up-spacer { width: 34px; }
 @media (max-width: 700px) { .do-arch { display: none; } }
+/* Portrait: comfortable thumb target for the promote arrow (was 34×30) */
+@media (max-width: 700px) and (orientation: portrait) {
+  .do-up { width: 40px; height: 40px; font-size: 16px; }
+  .do-up-spacer { width: 40px; }
+}
 
 /* Halftime condensed adjustments */
 .ht-adjust { padding-bottom: 8px; }
@@ -4543,6 +4556,15 @@ th.conv-sort.active { color: var(--team-1); }
 .moment-text { color: var(--text-1); }
 .result-moment.ours .moment-when { color: var(--green, #3fa864); }
 .result-moment.theirs .moment-when { color: var(--red, #d9534f); }
+
+/* THE REEL — top of the box score: the game's biggest moments, best first */
+.box-reel { margin-bottom: 10px; }
+.box-reel-label { font-size: 10px; font-weight: 800; letter-spacing: 0.14em;
+  color: var(--text-2); padding: 0 2px 4px; }
+.box-reel .result-moment { border-top: none; border-radius: 8px;
+  background: rgba(255,255,255,0.03); margin-bottom: 4px; }
+.moment-score { margin-left: auto; font-weight: 800; font-size: 10.5px;
+  color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PHONE POLISH PASS (Jul 2026) — this is a phone game first.
@@ -5319,7 +5341,7 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "d22bc55391";
+globalThis.__BUILD__ = "f804355ddb";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -11114,8 +11136,9 @@ var _CFB = (() => {
       schools.push(...confSchools);
     }
     const procSchools = schools.filter((s) => s.division !== "D1");
-    guaranteeStateCoverage(procSchools, PROC_CONFS);
-    resolveCityCollisions(procSchools);
+    const staticD1Reserved = schools.filter((s) => s.division === "D1");
+    guaranteeStateCoverage(procSchools, PROC_CONFS, staticD1Reserved);
+    resolveCityCollisions(procSchools, staticD1Reserved);
     mixConferenceStates(procSchools, PROC_CONFS);
     return schools;
   }
@@ -11167,18 +11190,19 @@ var _CFB = (() => {
       }
     return n ? { lat: lat / n, lng: lng / n } : null;
   }
-  function guaranteeStateCoverage(schools, allConfs) {
+  function guaranteeStateCoverage(schools, allConfs, reserved = []) {
     const s2r = statesToRegions();
     const clsOf = {}, confAnchor = {};
     for (const c of allConfs) {
       clsOf[c.id] = c.division === "D1" ? c.conferenceClass : c.division;
       confAnchor[c.id] = { lat: c.lat, lng: c.lng };
     }
+    const guardPool = [...schools, ...reserved];
     const used = {
-      names: new Set(schools.map((s) => s.name)),
-      abbrs: new Set(schools.map((s) => s.abbr)),
-      cities: new Set(schools.map((s) => `${s.city}|${s.state}`)),
-      ids: new Set(schools.map((s) => s.id)),
+      names: new Set(guardPool.map((s) => s.name)),
+      abbrs: new Set(guardPool.map((s) => s.abbr)),
+      cities: new Set(guardPool.map((s) => `${s.city}|${s.state}`)),
+      ids: new Set(guardPool.map((s) => s.id)),
       tokenPat: /* @__PURE__ */ new Set(),
       persons: /* @__PURE__ */ new Set(),
       saints: /* @__PURE__ */ new Set(),
@@ -11220,10 +11244,10 @@ var _CFB = (() => {
     }
     return moved;
   }
-  function resolveCityCollisions(schools) {
+  function resolveCityCollisions(schools, reserved = []) {
     const key = (s) => `${s.city}|${s.state}`;
-    const taken = new Set(schools.map(key));
-    const used = { names: new Set(schools.map((s) => s.name)) };
+    const taken = new Set([...schools, ...reserved].map(key));
+    const used = { names: new Set([...schools, ...reserved].map((s) => s.name)) };
     const groups = {};
     for (const s of schools) (groups[key(s)] = groups[key(s)] || []).push(s);
     const byState = {};
@@ -14125,7 +14149,6 @@ var _CFB = (() => {
     DNA_AXES: () => DNA_AXES,
     MAX_COACHES: () => MAX_COACHES,
     MAX_GAMEPLANS: () => MAX_GAMEPLANS,
-    MAX_PRACTICE_PLANS: () => MAX_PRACTICE_PLANS,
     MAX_WORLDS: () => MAX_WORLDS,
     addDnaXP: () => addDnaXP,
     clearWorldSlot: () => clearWorldSlot,
@@ -14144,7 +14167,6 @@ var _CFB = (() => {
     noteCoachRecords: () => noteCoachRecords,
     noteWorldMeta: () => noteWorldMeta,
     saveGameplanToLibrary: () => saveGameplanToLibrary,
-    savePracticeToLibrary: () => savePracticeToLibrary,
     updateCoach: () => updateCoach,
     worldSlotKey: () => worldSlotKey
   });
@@ -14213,22 +14235,6 @@ var _CFB = (() => {
         lib[existing] = entry;
         saved = true;
       } else if (lib.length < MAX_GAMEPLANS) {
-        lib.push(entry);
-        saved = true;
-      }
-    });
-    return saved;
-  }
-  function savePracticeToLibrary(coachId, name, plan) {
-    let saved = false;
-    updateCoach(coachId, (c) => {
-      const lib = c.plans.practice;
-      const existing = lib.findIndex((p) => p.name === name);
-      const entry = { name: name.slice(0, 24), pp: JSON.parse(JSON.stringify(plan)), saved: Date.now() };
-      if (existing >= 0) {
-        lib[existing] = entry;
-        saved = true;
-      } else if (lib.length < MAX_PRACTICE_PLANS) {
         lib.push(entry);
         saved = true;
       }
@@ -14367,14 +14373,13 @@ var _CFB = (() => {
     const c = getCoach(coachId);
     return c && c.records || {};
   }
-  var KEY, MAX_COACHES, MAX_WORLDS, MAX_GAMEPLANS, MAX_PRACTICE_PLANS, DNA_AXES, DNA_BONUS;
+  var KEY, MAX_COACHES, MAX_WORLDS, MAX_GAMEPLANS, DNA_AXES, DNA_BONUS;
   var init_coachprofile = __esm({
     "js/engine/coachprofile.js"() {
       KEY = "cfb-coaches-v1";
       MAX_COACHES = 4;
       MAX_WORLDS = 4;
       MAX_GAMEPLANS = 10;
-      MAX_PRACTICE_PLANS = 3;
       DNA_AXES = {
         groundPound: { label: "Ground & Pound", icon: "\u{1F69C}" },
         airAttack: { label: "Air Attack", icon: "\u2708\uFE0F" },
@@ -24802,6 +24807,11 @@ var _CFB = (() => {
       view: state.ui.view,
       params: state.ui.params || {},
       scoutSchoolId: (_a = state.ui.scoutSchoolId) != null ? _a : null,
+      // Group pages are one view with several tabs — without the tab, Back can
+      // return to the right group on the WRONG tab (program/standings → team
+      // page → navigate('schedule') → Back → Back used to land on
+      // program/schedule, not the standings you left).
+      groupTab: state.ui.view === "team" ? teamGroupTab : state.ui.view === "program" ? programGroupTab : state.ui.view === "statsgroup" ? statsGroupTab : null,
       scroll: {
         main: mc ? mc.scrollTop : 0,
         win: typeof window !== "undefined" ? window.scrollY || 0 : 0
@@ -24813,7 +24823,7 @@ var _CFB = (() => {
     const h = state.ui.navHistory = state.ui.navHistory || [];
     const snap = navSnapshot();
     const top = h[h.length - 1];
-    if (top && typeof top === "object" && top.view === snap.view && top.scoutSchoolId === snap.scoutSchoolId && JSON.stringify(top.params) === JSON.stringify(snap.params)) return;
+    if (top && typeof top === "object" && top.view === snap.view && top.scoutSchoolId === snap.scoutSchoolId && top.groupTab === snap.groupTab && JSON.stringify(top.params) === JSON.stringify(snap.params)) return;
     h.push(snap);
     if (h.length > 30) h.shift();
   }
@@ -24824,15 +24834,10 @@ var _CFB = (() => {
   }
   function navigate(view, params = {}) {
     const map = LEGACY_VIEW_MAP[view];
-    if (map) {
-      const [groupId, tabId] = map;
-      if (groupId === "team") teamGroupTab = tabId;
-      else if (groupId === "program") programGroupTab = tabId;
-      else if (groupId === "statsgroup") statsGroupTab = tabId;
-      view = groupId;
-    }
+    if (map) view = map[0];
     const sameScreen = view === state.ui.view && JSON.stringify(params || {}) === JSON.stringify(state.ui.params || {});
     if (!sameScreen) pushNav();
+    if (map) setGroupTab(view, map[1]);
     if (NO_HISTORY_VIEWS.has(view)) state.ui.navHistory = [];
     if (view === "manual") state.ui.manualChapter = params.chapter || null;
     state.ui.view = view;
@@ -24867,6 +24872,7 @@ var _CFB = (() => {
     if (NO_HISTORY_VIEWS.has(snap.view)) return;
     state.ui.view = snap.view;
     state.ui.params = snap.params || {};
+    if (snap.groupTab) setGroupTab(snap.view, snap.groupTab);
     if (snap.scoutSchoolId != null) state.ui.scoutSchoolId = snap.scoutSchoolId;
     state.ui._navRestoreScroll = snap.scroll || null;
     state.ui.sidebarOpen = false;
@@ -28242,7 +28248,7 @@ var _CFB = (() => {
         ${(((_b = c.plans) == null ? void 0 : _b.gameplans) || []).length || (((_c = c.plans) == null ? void 0 : _c.practice) || []).length ? `
           ${(c.plans.gameplans || []).map((p) => `<div class="mm-lib-row"><span>\u{1F4CB} ${escapeHtml(p.name)}</span><button class="btn-mm-del" data-mm-lib-del="gp:${escapeHtml(p.name)}">\u2715</button></div>`).join("")}
           ${(c.plans.practice || []).map((p) => `<div class="mm-lib-row"><span>\u{1F3CB} ${escapeHtml(p.name)}</span><button class="btn-mm-del" data-mm-lib-del="pp:${escapeHtml(p.name)}">\u2715</button></div>`).join("")}
-        ` : '<div class="mm-lib-empty muted">Save game plans and practice plans in-game \u2014 they follow this coach into every new world.</div>'}
+        ` : '<div class="mm-lib-empty muted">Save game plans in-game \u2014 they follow this coach into every new world.</div>'}
       </div>
       <button class="btn-mm btn-mm-secondary" id="mm-back-coaches" style="margin-top:10px">\u2190 Coaches</button>
     </div>`;
@@ -29493,11 +29499,6 @@ var _CFB = (() => {
   init_player();
   init_gameplan();
   init_sim();
-  init_mainmenu();
-  init_newgame();
-
-  // js/ui/views/dashboard.js
-  init_state();
 
   // js/engine/highlights.js
   init_constants();
@@ -29631,6 +29632,42 @@ var _CFB = (() => {
       breakaway: !!best.breakaway
     };
   }
+  function gameHighlights(result, homeSchool, awaySchool, n = 3) {
+    var _a, _b, _c;
+    if (!((_a = result == null ? void 0 : result.drives) == null ? void 0 : _a.length)) return [];
+    const nameOf = nameLookup(result);
+    const rows = [];
+    for (const d of result.drives) {
+      for (const p of d.plays || []) {
+        const base = baseWeight(p);
+        if (base <= 0) continue;
+        const side = d.possession === "home" ? "home" : "away";
+        const offSchool = side === "home" ? homeSchool : awaySchool;
+        const text = describe(p, nameOf, (offSchool == null ? void 0 : offSchool.name) || "The offense");
+        if (!text) continue;
+        rows.push({
+          q: quarterOf(p),
+          clock: quarterClock(p),
+          side,
+          school: (offSchool == null ? void 0 : offSchool.name) || "",
+          text,
+          score: `${(_b = p.scoreOff) != null ? _b : 0}\u2013${(_c = p.scoreDef) != null ? _c : 0}`,
+          weight: base * leverage(p),
+          td: !!p.td,
+          turnover: !!p.turnover,
+          breakaway: !!p.breakaway
+        });
+      }
+    }
+    return rows.sort((a, b) => b.weight - a.weight).slice(0, n).map((r) => __spreadProps(__spreadValues({}, r), { weight: Math.round(r.weight) }));
+  }
+
+  // js/ui/app.js
+  init_mainmenu();
+  init_newgame();
+
+  // js/ui/views/dashboard.js
+  init_state();
 
   // js/ui/sound.js
   init_state();
@@ -34523,7 +34560,7 @@ var _CFB = (() => {
     }
     const MAX_STEP = 15 * STEP;
     for (const a2 of everyone) capTrackSpeed(a2.track, MAX_STEP);
-    capTrackSpeed(ball.track, MAX_STEP);
+    capTrackSpeed(ball.track, 50 * STEP);
     return {
       dur: dur + 1e-9,
       step: STEP,
@@ -35851,8 +35888,9 @@ var _CFB = (() => {
         rerender();
       });
     });
-    document.querySelectorAll(".contact-step:not([disabled])").forEach((btn) => {
+    document.querySelectorAll(".contact-step").forEach((btn) => {
       btn.addEventListener("click", () => {
+        if (btn.disabled) return;
         const delta = parseInt(btn.dataset.contactDelta, 10);
         const recruit = getRecruit(btn.dataset.recruitId);
         let entry = getBoardEntry(recruit.id);
@@ -35861,8 +35899,19 @@ var _CFB = (() => {
           coach.recruitBoard.push(entry);
         }
         setContactAlloc(entry, (entry.contactAlloc || 0) + delta);
+        const alloc = entry.contactAlloc || 0;
+        const box = btn.closest(".contact-alloc");
+        if (box) {
+          const val = box.querySelector(".contact-alloc-val");
+          if (val) val.textContent = `$${alloc}/wk`;
+          const pts = box.querySelector(".contact-alloc-pts");
+          if (pts) pts.textContent = alloc > 0 ? `~${(alloc / C.CONTACT_DOLLARS_PER_POINT).toFixed(0)} pts/wk` : "off";
+          box.querySelectorAll(".contact-step").forEach((b) => {
+            const d = parseInt(b.dataset.contactDelta, 10);
+            b.disabled = d < 0 ? alloc <= 0 : alloc >= C.CONTACT_WEEKLY_CAP;
+          });
+        }
         notify(`Weekly contact set to $${entry.contactAlloc}/wk`, "success");
-        rerender();
       });
     });
     document.querySelectorAll(".view-profile-btn").forEach((btn) => {
@@ -41660,7 +41709,23 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     const names = r.playerNames || {};
     const myTOs = (myStats.ints || 0) + (myStats.fumbles || 0);
     const oppTOs = (oppStats.ints || 0) + (oppStats.fumbles || 0);
+    let reel = [];
+    try {
+      reel = gameHighlights(r, r.homeSchool, r.awaySchool, 3);
+    } catch (e) {
+      reel = [];
+    }
     return `
+    ${reel.length ? `
+    <div class="box-reel">
+      <div class="box-reel-label">HIGHLIGHTS</div>
+      ${reel.map((h) => `
+        <div class="result-moment${h.side === "home" === isHome ? " ours" : " theirs"}">
+          <span class="moment-when">Q${h.q} ${h.clock}</span>
+          <span class="moment-text">${escapeHtml(h.text)}</span>
+          <span class="moment-score">${escapeHtml(h.score)}</span>
+        </div>`).join("")}
+    </div>` : ""}
     <div class="box-score">
       <div class="box-row header">
         <span></span>
