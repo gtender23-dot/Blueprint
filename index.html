@@ -5332,6 +5332,286 @@ body.theme-school .data-table tr:hover td {
   .tip-popover  { border-radius: 16px; border-bottom: 1px solid var(--border, #263049); }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   PIXEL GRIDIRON — CLEAN 8-BIT RETRO THEME
+   Visual-only override layer. The sim, markup and interactions stay intact.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --px-black:#05070c; --px-ink:#0a0e18; --px-panel:#101827;
+  --px-panel-2:#17243a; --px-panel-3:#20314d;
+  --px-line:#53617a; --px-line-dim:#2c3950;
+  --px-paper:#f4f0d8; --px-muted:#9aa8bd; --px-shadow:#020308;
+  --px-cyan:#55d6e8; --px-yellow:#ffd34d;
+  --bg-page:var(--px-ink); --bg-card:var(--px-panel);
+  --bg-raised:var(--px-panel-2); --bg-input:#080d17;
+  --bg-hover:var(--px-panel-3); --surface:var(--px-panel);
+  --surface-2:var(--px-panel-2); --border-sub:var(--px-line-dim);
+  --border:var(--px-line); --border-str:#78869d;
+  --text-0:var(--px-paper); --text-1:#c8d0dc; --text-2:var(--px-muted);
+  --green:#47df69; --green-d:#26af4b; --green-dk:#0f5d2c;
+  --gold:var(--px-yellow); --gold-d:#d9982d; --red:#ff635f;
+  --red-d:#b6333b; --blue:var(--px-cyan); --purple:#ce8bea;
+  --nav-w:224px;
+  font-family:"Courier New","Lucida Console",ui-monospace,monospace;
+  font-size:14px; font-weight:700; color:var(--text-0);
+  background:var(--bg-page); text-rendering:geometricPrecision;
+}
+html { background:var(--px-black); scrollbar-color:var(--team-1,var(--green)) var(--px-black); scrollbar-width:thin; }
+body {
+  color:var(--text-0); background-color:var(--bg-page);
+  background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:16px 16px; letter-spacing:.012em;
+}
+body::before { background:linear-gradient(180deg,color-mix(in srgb,var(--team-1) 46%,transparent) 0 4px,transparent 4px),linear-gradient(90deg,color-mix(in srgb,var(--team-1) 8%,transparent),transparent 58%) !important; }
+::selection { color:var(--px-black); background:var(--team-1,var(--green)); }
+::-webkit-scrollbar { width:10px; height:10px; }
+::-webkit-scrollbar-track { background:var(--px-black); }
+::-webkit-scrollbar-thumb { background:var(--px-line); border:2px solid var(--px-black); }
+
+button,input,select,textarea,.card,.modal,.notification,.tip-popover,
+.manual-chapter,.manual-toc-item,.save-slot,.school-card,.formation-card,
+.game-card,.field-card,.field-slot,.board-card,.scout-card,.ob-pick-card,
+.trophy-card,.coach-grade-card,.ht-adj-card,.ext-term-card,.kickoff-opt,
+.fourth-opt,.cs-cat,.cs-concept,.watch-bug,.broadcast-bar,.watch-ticker,
+.watch-pill,.pbp-drive,.inbox-msg,.event-item,.moment-item { border-radius:0 !important; }
+button,[role="button"],.nav-item,.card-action,.school-card,.formation-card,
+.game-card,.save-slot,.picker-item { transition:color 60ms steps(1),background-color 60ms steps(1),border-color 60ms steps(1),transform 60ms steps(1),filter 60ms steps(1) !important; }
+
+/* App shell and navigation. */
+.sidebar { background:#070b13; border-right:3px solid var(--px-line); box-shadow:6px 0 0 var(--px-shadow); }
+.sidebar-brand { min-height:68px; padding:15px 14px; background:var(--px-panel-2) !important; border-bottom:4px solid var(--team-1) !important; }
+.brand-icon,.topbar-crest,.dash-logo-badge { filter:drop-shadow(3px 3px 0 var(--px-shadow)); }
+.brand-text { font-size:14px; font-weight:900; letter-spacing:.16em; text-shadow:2px 2px 0 var(--px-shadow); }
+.team-stripe { height:5px; }
+.team-stripe span { border-radius:0 !important; }
+.season-badge { padding:11px 14px; background:var(--px-ink); border-bottom:2px solid var(--px-line-dim); }
+.season-label,.phase-label { letter-spacing:.08em; text-transform:uppercase; }
+.nav-list { padding:8px; }
+.nav-item { min-height:42px; margin-bottom:4px; padding:9px 10px; border:2px solid transparent; border-left-width:4px; background:transparent; color:var(--text-1); }
+.nav-item:hover { color:var(--px-paper); background:var(--px-panel-2); border-color:var(--px-line); }
+.nav-item.active { color:var(--px-black); background:var(--team-1) !important; border-color:var(--team-2,var(--px-yellow)) !important; box-shadow:3px 3px 0 var(--px-shadow); text-shadow:none; }
+.nav-icon { font-size:15px; filter:saturate(.75); }
+.nav-label { font-size:12px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; }
+.nav-badge,.inbox-dot,.rep-badge { border-radius:0 !important; box-shadow:2px 2px 0 var(--px-shadow); }
+.sidebar-footer { padding:12px; background:var(--px-ink); border-top:3px solid var(--px-line); }
+.coach-school { font-size:12px; letter-spacing:.05em; text-transform:uppercase; }
+.main-content { padding:24px 28px 34px; background-color:var(--bg-page); background-image:linear-gradient(color-mix(in srgb,var(--team-2,var(--px-yellow)) 10%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--team-2,var(--px-yellow)) 10%,transparent) 1px,transparent 1px); background-size:24px 24px; }
+.view-header { min-height:54px; margin-bottom:18px; padding:0 0 10px; border-bottom:4px solid var(--team-1) !important; }
+.view-title { gap:10px; font-size:24px; font-weight:900; letter-spacing:.035em; text-transform:uppercase; text-shadow:3px 3px 0 var(--px-shadow); }
+.view-title::before { width:8px; height:24px; border-radius:0; background:var(--team-2,var(--px-yellow)); box-shadow:3px 3px 0 var(--px-shadow); }
+.view-subtitle { color:var(--text-2); font-size:11px; line-height:1.5; letter-spacing:.06em; text-transform:uppercase; }
+
+/* Cards and section modules. */
+.card,.stat-block,.game-card,.formation-card,.school-card,.board-card,
+.scout-card,.ob-pick-card,.coach-grade-card,.trophy-card,.manual-chapter,
+.manual-toc-item,.event-item,.moment-item,.mm-dna-item,.mm-rec-row,
+.mm-lib-row,.kickoff-scout,.pbp-drive { background:var(--bg-card) !important; background-image:none !important; border:2px solid var(--px-line) !important; border-top:4px solid var(--team-1) !important; box-shadow:5px 5px 0 var(--px-shadow) !important; }
+.card::before { display:none !important; }
+.card-header { min-height:42px; padding:10px 13px; background:var(--px-panel-2); border-bottom:2px solid var(--px-line); }
+.card-title,.stat-block-title,.form-label,.field-section-label,
+.kickoff-section-label,.event-kicker,.cs-group-title,.cw-group-hdr,
+.mm-section-label,.ht-adj-label { color:var(--text-1); font-size:10px; font-weight:900; letter-spacing:.13em; text-transform:uppercase; }
+.card-title::before { width:8px; height:8px; margin-right:8px; background:var(--team-2,var(--px-yellow)); box-shadow:2px 2px 0 var(--px-shadow); }
+.card-sub { line-height:1.45; }
+.card-action { padding:5px 7px; color:var(--team-1); border:1px solid var(--team-1); background:var(--px-ink); font-size:10px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; box-shadow:2px 2px 0 var(--px-shadow); }
+.card-action:hover { text-decoration:none; background:var(--team-a15); }
+
+/* Primary and secondary controls. */
+.btn-primary,.btn-advance,.btn-mm-primary,.bc-play,.tc-coach,
+.cs-form-btn.active,.cs-tag-btn.active,.rec-tab.active,.result-tab.active,
+.div-tab.active { color:#05070c !important; background:var(--team-1) !important; background-image:none !important; border:2px solid var(--px-paper) !important; border-right-color:var(--team-1-d,var(--green-d)) !important; border-bottom:5px solid var(--team-2,var(--px-yellow)) !important; box-shadow:4px 4px 0 var(--px-shadow) !important; border-radius:0 !important; font-family:inherit; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+.btn-primary:hover,.btn-advance:hover,.btn-mm-primary:hover:not(:disabled),.bc-play:hover { filter:brightness(1.14) contrast(1.03); }
+.btn-primary:active,.btn-advance:active,.btn-mm-primary:active,.bc-play:active { transform:translate(3px,3px) !important; box-shadow:1px 1px 0 var(--px-shadow) !important; }
+.btn-ghost,.btn-icon,.btn-mm,.btn-mm-guide,.bc-btn,.result-tab,.div-tab,
+.rec-tab,.ob-chip,.ht-adj-card,.cs-form,.cs-form-btn,.cs-tag-btn,
+.cs-st-toggle,.cs-st-btn,.kickoff-cancel,.view-help-btn,.tip-close { color:var(--text-1); background:var(--px-panel-2) !important; background-image:none !important; border:2px solid var(--px-line) !important; border-bottom-width:4px !important; border-radius:0 !important; box-shadow:3px 3px 0 var(--px-shadow); font-family:inherit; font-weight:900; letter-spacing:.04em; }
+.btn-ghost:hover,.btn-icon:hover,.btn-mm:hover:not(:disabled),.btn-mm-guide:hover,
+.bc-btn:hover,.result-tab:hover,.div-tab:hover,.rec-tab:hover,.ob-chip:hover,
+.ht-adj-card:hover,.cs-form:hover,.cs-form-btn:hover,.cs-tag-btn:hover,
+.cs-st-btn:hover { color:var(--px-paper); background:var(--px-panel-3) !important; border-color:var(--team-1) !important; }
+.btn-ghost:active,.btn-icon:active,.btn-mm:active,.btn-mm-guide:active,.bc-btn:active { transform:translate(2px,2px) !important; box-shadow:1px 1px 0 var(--px-shadow); }
+.btn-link,.card-action,.team-link,.player-link,.tip-chapter-link,.cs-drill-back { color:var(--team-1); text-decoration-style:dashed; text-underline-offset:3px; }
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible { outline:3px solid var(--px-cyan) !important; outline-offset:3px; }
+button:disabled,.ineligible,.benched { filter:grayscale(.7); opacity:.42 !important; }
+
+/* Forms. */
+.form-input,.form-select,input[type="text"],input[type="number"],input[type="search"],textarea,select,.gp-num,.snap-pct-input { color:var(--px-paper); background:var(--bg-input) !important; border:2px solid var(--px-line) !important; border-bottom:4px solid var(--px-line) !important; border-radius:0 !important; box-shadow:inset 3px 3px 0 var(--px-shadow); font-family:inherit; font-weight:700; }
+.form-input:focus,.form-select:focus,input:focus,textarea:focus,select:focus { border-color:var(--team-1) !important; outline:none; }
+input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-rendering:pixelated; }
+.cm-track { height:24px; border:2px solid var(--px-line); border-radius:0; background:var(--px-ink); box-shadow:2px 2px 0 var(--px-shadow); }
+.cm-thumb { top:2px; width:16px; height:16px; border-radius:0; background:var(--px-paper); box-shadow:none; }
+
+/* Roster, recruiting and stats tables. */
+.table-scroll { border:2px solid var(--px-line); background:var(--px-panel); box-shadow:4px 4px 0 var(--px-shadow); }
+.data-table { color:var(--text-1); background:var(--px-panel) !important; border-collapse:separate; border-spacing:0; font-variant-numeric:tabular-nums; }
+.data-table th,body.theme-school .data-table th { padding:9px 10px; color:var(--px-paper); background:var(--px-panel-3) !important; border-right:1px solid var(--px-line-dim); border-bottom:3px solid var(--team-2,var(--px-yellow)); font-size:9px; font-weight:900; letter-spacing:.1em; text-transform:uppercase; }
+.data-table td { padding:9px 10px; border-right:1px solid rgba(83,97,122,.35); border-bottom:1px solid var(--px-line-dim); }
+.data-table tbody tr:nth-child(even) td,body.theme-school .data-table tbody tr:nth-child(even) td { background:color-mix(in srgb,var(--team-1) 5%,var(--px-panel)) !important; }
+.data-table tr:hover td,body.theme-school .data-table tr:hover td { color:var(--px-paper); background:color-mix(in srgb,var(--team-1) 14%,var(--px-panel-2)) !important; }
+.data-table tr:last-child td { border-bottom:0; }
+.player-row>td:first-child { border-left:4px solid var(--team-1); }
+.sorted { color:var(--px-yellow) !important; }
+
+/* Scoreboard chips and segmented meters. */
+.rating-chip,.pos-chip,.class-badge,.status-chip,.arch-chip,.result-badge,
+.pbp-chip,.dna-chip,.profile-pos-badge,.gp-tag,.cs-adj { border:1px solid currentColor; border-radius:0 !important; box-shadow:2px 2px 0 var(--px-shadow); font-family:inherit; font-weight:900; }
+.attr-bar-track,.progress-track,.dna-bar,.meter-track,.budget-bar,.scout-bar { height:9px; overflow:hidden; background:var(--px-black) !important; border:2px solid var(--px-line-dim); border-radius:0 !important; }
+.attr-bar-fill,.progress-fill,.dna-bar-fill,.meter-fill,.budget-fill,.scout-fill { border-radius:0 !important; background-image:repeating-linear-gradient(90deg,currentColor 0 7px,rgba(0,0,0,.28) 7px 9px) !important; }
+.stat-num,.score-num,.score-display,.wsb-score,.wsb-clock,.budget-value,.dna-grade-num { font-family:"Courier New",ui-monospace,monospace; font-weight:900; text-shadow:3px 3px 0 var(--px-shadow); }
+
+/* Main menu and new-dynasty flow. */
+.mainmenu-screen,.newgame {
+  --bp-blue-deep:#081326; --bp-navy-2:#050a14;
+  --bp-line:rgba(85,214,232,.10); --bp-ink:var(--px-cyan);
+  --bp-green:#47df69; --bp-green-d:#26af4b;
+  --bg-card:var(--px-panel); --bg-raised:var(--px-panel-2);
+  --bg-input:#080d17; --bg-hover:var(--px-panel-3);
+  --border-sub:var(--px-line-dim); --border:var(--px-line);
+  --text-0:var(--px-paper); --text-1:#c8d0dc; --text-2:var(--px-muted);
+  background:var(--bp-navy-2) !important;
+}
+.mainmenu-screen { overflow-y:auto; }
+.mm-bg-grid,.newgame::before { opacity:1; background-image:linear-gradient(rgba(85,214,232,.08) 2px,transparent 2px),linear-gradient(90deg,rgba(85,214,232,.08) 2px,transparent 2px),linear-gradient(rgba(85,214,232,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(85,214,232,.035) 1px,transparent 1px); background-size:64px 64px,64px 64px,16px 16px,16px 16px; }
+.mainmenu-screen::before { display:none; }
+.mainmenu-screen::after { inset:12px; background:linear-gradient(var(--px-cyan),var(--px-cyan)) top left/42px 4px no-repeat,linear-gradient(var(--px-cyan),var(--px-cyan)) top left/4px 42px no-repeat,linear-gradient(var(--px-cyan),var(--px-cyan)) top right/42px 4px no-repeat,linear-gradient(var(--px-cyan),var(--px-cyan)) top right/4px 42px no-repeat,linear-gradient(var(--px-cyan),var(--px-cyan)) bottom left/42px 4px no-repeat,linear-gradient(var(--px-cyan),var(--px-cyan)) bottom left/4px 42px no-repeat,linear-gradient(var(--px-cyan),var(--px-cyan)) bottom right/42px 4px no-repeat,linear-gradient(var(--px-cyan),var(--px-cyan)) bottom right/4px 42px no-repeat; opacity:.55; }
+.mm-content { max-width:500px; gap:28px; padding-block:48px; }
+.mm-logo-badge,.logo-hex-mark { border:4px solid var(--px-cyan); border-radius:0; box-shadow:7px 7px 0 var(--px-shadow); image-rendering:pixelated; }
+.mm-logo-badge { width:104px; height:104px; }
+.mm-title,.newgame-logo h1 { color:var(--px-paper); font-family:inherit; font-weight:900; letter-spacing:.08em; text-shadow:5px 5px 0 var(--px-shadow); }
+.mm-title { font-size:clamp(38px,9vw,56px); }
+.mm-title-cfb { color:var(--team-1); }
+.mm-subtitle,.newgame-sub,.mm-version,.mm-build { font-family:inherit; text-transform:uppercase; }
+.mm-actions { gap:12px; padding:16px; background:rgba(5,7,12,.72); border:2px solid var(--px-line); box-shadow:6px 6px 0 var(--px-shadow); }
+.btn-mm-primary,.btn-mm { min-height:54px; border-radius:0 !important; }
+.mm-coach-del,.btn-mm-del { border-radius:0 !important; border:2px solid var(--red) !important; background:var(--px-ink) !important; box-shadow:3px 3px 0 var(--px-shadow); }
+.newgame-header { padding:32px 48px 24px; background:var(--px-panel) !important; border-bottom:4px solid var(--team-1); box-shadow:0 5px 0 var(--px-shadow); }
+.newgame-card { border-top-color:var(--team-2,var(--px-cyan)) !important; }
+.school-card.selected,.formation-card.selected,.ob-pick-card.active,.ht-adj-card.active { color:var(--px-paper); background:color-mix(in srgb,var(--team-1) 15%,var(--px-panel)) !important; border-color:var(--team-1) !important; box-shadow:5px 5px 0 var(--team-1-dk,var(--px-shadow)) !important; }
+
+/* Modals, toasts, manual and grouped tabs. */
+.modal-overlay { background:rgba(2,3,8,.88); backdrop-filter:none; }
+.modal,.tip-popover { color:var(--text-0); background:var(--px-panel) !important; border:3px solid var(--px-line) !important; border-top:5px solid var(--team-1) !important; box-shadow:8px 8px 0 var(--px-shadow) !important; }
+.modal-header { min-height:52px; background:var(--px-panel-2) !important; border-bottom:3px solid var(--team-2,var(--px-yellow)); }
+.modal-header h2 { font-family:inherit; font-size:16px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+.modal-footer { border-top:2px solid var(--px-line); }
+.notification { background:var(--px-panel-3) !important; border:3px solid var(--px-paper) !important; border-left:7px solid var(--team-1) !important; box-shadow:6px 6px 0 var(--px-shadow) !important; font-weight:900; }
+.manual-chapter { max-width:72ch; line-height:1.68; }
+.manual-heading { padding-bottom:5px; color:var(--team-1); border-bottom:2px dashed var(--px-line); font-family:inherit; font-weight:900; letter-spacing:.04em; text-transform:uppercase; }
+.manual-body { color:var(--text-1); font-family:inherit; }
+.tip-term { text-decoration-style:dashed; text-decoration-thickness:2px; }
+.result-tabs,.rec-tabs,.div-tabs,.fielded-formation-picker,.gp-tabs,.sub-tabs { gap:4px; padding:4px; background:var(--px-black); border:2px solid var(--px-line); }
+.result-tab,.rec-tab,.div-tab { min-height:38px; border:2px solid transparent !important; border-bottom:4px solid transparent !important; box-shadow:none; text-transform:uppercase; }
+.result-tab.active,.rec-tab.active,.div-tab.active { border-color:var(--px-paper) !important; border-bottom-color:var(--team-2,var(--px-yellow)) !important; box-shadow:3px 3px 0 var(--px-shadow) !important; }
+
+/* Depth-chart football surface. */
+.field-card { background:var(--px-panel) !important; border:3px solid var(--px-line) !important; box-shadow:6px 6px 0 var(--px-shadow) !important; }
+.field-turf,.field-turf.def-turf { background-color:#155534 !important; background-image:linear-gradient(rgba(244,240,216,.12) 2px,transparent 2px),linear-gradient(90deg,rgba(244,240,216,.035) 1px,transparent 1px) !important; background-size:100% 10%,16px 16px !important; border:4px solid #082b1a !important; border-radius:0 !important; box-shadow:inset 0 0 0 3px rgba(244,240,216,.20),5px 5px 0 var(--px-shadow); }
+.field-turf::before { background:var(--px-paper) !important; opacity:.55; height:2px; }
+.field-slot { color:var(--px-paper); background:#0b1420 !important; border:2px solid var(--px-cyan) !important; border-bottom:4px solid var(--team-2,var(--px-yellow)) !important; box-shadow:3px 3px 0 rgba(0,0,0,.65) !important; }
+.field-slot.blitzing { border-color:var(--red) !important; }
+.field-slot.unassigned { border-style:dashed !important; }
+.game-card.result-win { border-left:7px solid var(--green) !important; }
+.game-card.result-loss { border-left:7px solid var(--red) !important; }
+.game-card.game-current { border-left:7px solid var(--px-yellow) !important; }
+.score-display { background:var(--px-black); border-block:3px solid var(--px-line); }
+.score-num { color:var(--px-yellow); letter-spacing:.05em; }
+.pbp-drive { overflow:hidden; border-top-color:var(--team-2,var(--px-yellow)) !important; }
+.pbp-drive-header { background:var(--px-panel-2) !important; border-bottom:2px solid var(--px-line); }
+.pbp-play { border-bottom-style:dashed; border-bottom-color:var(--px-line-dim); }
+
+/* Live game: pixel broadcast and crisp code-drawn field. */
+.modal-overlay.watch-live-overlay,.modal-overlay.callsheet-overlay,.kickoff-overlay.kickoff-prep { background:var(--px-black) !important; }
+.watch-live-overlay>.modal,.callsheet-overlay>.modal,.kickoff-prep>.kickoff-modal { background:var(--px-panel) !important; border-inline:3px solid var(--px-line) !important; box-shadow:8px 0 0 var(--px-shadow),-8px 0 0 var(--px-shadow) !important; }
+.watch-root { gap:9px; }
+.watch-bug { gap:10px; padding:9px 11px; background:var(--px-black) !important; border:3px solid var(--px-line) !important; border-top:5px solid var(--team-1) !important; box-shadow:5px 5px 0 var(--px-shadow) !important; }
+.wsb-row { min-height:22px; }
+.wsb-team { font-size:12px; font-weight:900; letter-spacing:.05em; text-transform:uppercase; }
+.wsb-poss { color:var(--team-1); }
+.wsb-score { min-width:36px; color:var(--px-yellow); font-size:22px; letter-spacing:.06em; }
+.wsb-clockbox { min-width:86px; padding-left:10px; border-left:3px solid var(--px-line); }
+.wsb-clock { color:#ff6862; font-size:22px; letter-spacing:.08em; }
+.wsb-half,.wsb-dd { font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+.watch-board-wrap { padding:4px; background:var(--px-black); border:3px solid var(--px-line); box-shadow:5px 5px 0 var(--px-shadow); }
+#watch-board { border-radius:0; image-rendering:pixelated; shape-rendering:crispEdges; }
+#watch-board text { font-family:"Courier New",ui-monospace,monospace; font-weight:900; }
+.wf-turf { fill:#175b35; }
+.wf-yard { stroke:rgba(244,240,216,.24); stroke-width:.38; }
+.wf-los { stroke:var(--px-cyan); stroke-width:.58; stroke-dasharray:1.2 .7; }
+.wf-first { stroke:var(--px-yellow); stroke-width:.65; opacity:1; }
+.wf-goal { stroke:#ff635f; stroke-width:.9; }
+.wf-goal-lbl { fill:#ff8c79; font-family:inherit; }
+.wf-num { fill:var(--px-paper); stroke:rgba(0,0,0,.72); stroke-width:.55px; }
+.wo-c { fill:var(--team-1); stroke:var(--px-paper); stroke-width:.55; }
+.wo-c.wo-qb { fill:var(--px-yellow); stroke:var(--px-black); }
+.wd-x { fill:#ff716d; font-weight:900; }
+.wo-lbl,.wd-lbl { fill:var(--px-paper); font-weight:900; }
+.wa-run,.wa-pass { stroke:var(--px-yellow); stroke-linecap:square; }
+.wa-ball { fill:#a35325; stroke:var(--px-paper); stroke-width:.45; }
+.wp-trail { stroke:var(--px-yellow); stroke-linecap:square; }
+.wp-spot { fill:rgba(255,211,77,.20); stroke:var(--px-yellow); }
+.watch-flash { color:var(--px-yellow); background:rgba(5,7,12,.72); border-block:5px solid var(--px-yellow); text-shadow:4px 4px 0 var(--px-shadow); transition:opacity 80ms steps(2) !important; }
+.watch-ticker,.cs-feed,.cs-strip { color:var(--text-1); background:var(--px-black) !important; border:2px solid var(--px-line); border-radius:0 !important; box-shadow:inset 3px 3px 0 #000; }
+.watch-pill { background:var(--px-panel-2) !important; border:1px solid var(--px-line); box-shadow:2px 2px 0 var(--px-shadow); }
+.watch-pill.wp-live { color:var(--px-black); background:var(--px-yellow) !important; opacity:1; }
+.broadcast-bar { gap:7px; padding:8px; background:var(--px-panel-2) !important; border:3px solid var(--px-line); border-top:5px solid var(--team-1); box-shadow:5px 5px 0 var(--px-shadow); }
+.bc-btn { min-height:38px; }
+.cs-field { height:18px; border:3px solid var(--px-line); border-radius:0; background:linear-gradient(90deg,#713637 0 8%,#175b35 8% 92%,#304b81 92%); }
+.cs-field-fd { width:3px; background:var(--px-yellow); box-shadow:none; }
+.cs-field-ball { border-radius:0; border:2px solid var(--px-paper); }
+.cs-cat,.cs-concept,.kickoff-opt,.fourth-opt { background:var(--px-panel-2) !important; border:2px solid var(--px-line) !important; border-bottom:4px solid var(--px-line) !important; box-shadow:3px 3px 0 var(--px-shadow); }
+.cs-cat:hover,.cs-concept:hover:not(:disabled),.kickoff-opt:hover,.fourth-opt:hover:not(:disabled) { background:var(--px-panel-3) !important; border-color:var(--px-yellow) !important; }
+.cs-cat:active,.cs-concept:active,.kickoff-opt:active,.fourth-opt:active { transform:translate(2px,2px) !important; box-shadow:1px 1px 0 var(--px-shadow); }
+
+/* School-color mode keeps the same neutral game cabinet and changes trim. */
+body.theme-school { --bg-page:color-mix(in srgb,var(--team-1) 9%,var(--px-ink)); --bg-card:color-mix(in srgb,var(--team-1) 7%,var(--px-panel)); --bg-raised:color-mix(in srgb,var(--team-2,var(--px-yellow)) 6%,var(--px-panel-2)); --bg-input:color-mix(in srgb,var(--team-1) 5%,#080d17); --bg-hover:color-mix(in srgb,var(--team-1) 10%,var(--px-panel-3)); --surface:color-mix(in srgb,var(--team-1) 7%,var(--px-panel)); --surface-2:color-mix(in srgb,var(--team-2,var(--px-yellow)) 6%,var(--px-panel-2)); --border-sub:color-mix(in srgb,var(--team-1) 14%,var(--px-line-dim)); --border:color-mix(in srgb,var(--team-2,var(--px-yellow)) 12%,var(--px-line)); --border-str:color-mix(in srgb,var(--team-2,var(--px-yellow)) 25%,#78869d); }
+body.theme-school::before { background:linear-gradient(180deg,var(--team-1) 0 4px,transparent 4px),linear-gradient(90deg,color-mix(in srgb,var(--team-1) 10%,transparent),transparent 60%) !important; }
+body.theme-school .sidebar,body.theme-school .tabbar { background:color-mix(in srgb,var(--team-1) 8%,#070b13); }
+
+/* Handheld layout. */
+@media (max-width:860px) {
+  :root { --nav-w:236px; }
+  .mobile-topbar { height:calc(60px + env(safe-area-inset-top,0px)); padding-inline:10px; background:var(--px-panel-2) !important; border-bottom:4px solid var(--team-1); box-shadow:0 4px 0 var(--px-shadow); }
+  .mobile-topbar::after { display:none; }
+  .topbar-nick { font-size:13px; font-weight:900; letter-spacing:.1em; text-shadow:2px 2px 0 var(--px-shadow); }
+  .topbar-meta { font-size:9px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+  .main-content { padding:calc(74px + env(safe-area-inset-top,0px)) 12px calc(84px + env(safe-area-inset-bottom,0px)); background-size:16px 16px; }
+  .view-header { border-bottom-width:3px !important; }
+  .view-title { font-size:19px; text-shadow:2px 2px 0 var(--px-shadow); }
+  .tabbar { min-height:calc(64px + env(safe-area-inset-bottom,0px)); padding:5px 5px env(safe-area-inset-bottom,0px); background:#070b13 !important; border-top:4px solid var(--px-line); box-shadow:0 -4px 0 var(--px-shadow); }
+  .tabbar-item { min-height:50px; margin:2px; border:2px solid transparent; border-radius:0 !important; font-family:inherit; }
+  .tabbar-item.active { color:var(--px-black); background:var(--team-1); border-color:var(--team-2,var(--px-yellow)); box-shadow:3px 3px 0 var(--px-shadow); }
+  .tabbar-item.active::before { display:none; }
+  .tabbar-label { font-size:8px; font-weight:900; letter-spacing:.04em; text-transform:uppercase; }
+  .sidebar { box-shadow:6px 0 0 var(--px-shadow); }
+  .modal { border-radius:0 !important; border:3px solid var(--px-line) !important; border-bottom:0 !important; box-shadow:0 -7px 0 var(--px-shadow) !important; animation:pxSheetUp 140ms steps(5,end); }
+  .modal::before { width:52px; height:5px; border-radius:0; background:var(--team-1); }
+  .card,.game-card,.school-card,.formation-card,.board-card,.scout-card,.manual-chapter,.manual-toc-item { box-shadow:3px 3px 0 var(--px-shadow) !important; }
+  .data-table th { font-size:8px; }
+  .data-table td { font-size:11px; }
+  .mm-content { gap:20px; padding:34px 14px; }
+  .mm-actions { padding:12px; }
+  .mm-logo-badge { width:82px; height:82px; }
+  .newgame-header { padding:26px 20px 20px; }
+  .newgame-form-wrapper { padding:20px 14px 28px; }
+  .newgame-back { padding-inline:14px; }
+  .watch-live-overlay>.modal,.callsheet-overlay>.modal,.kickoff-prep>.kickoff-modal { border:0 !important; box-shadow:none !important; }
+  .watch-live-overlay .result-tab-body { padding-inline:10px; }
+  .watch-bug,.watch-board-wrap,.broadcast-bar { box-shadow:3px 3px 0 var(--px-shadow) !important; }
+}
+@keyframes pxSheetUp { from { transform:translateY(48px); opacity:.25; } to { transform:translateY(0); opacity:1; } }
+@media (max-width:430px) {
+  .main-content { padding-inline:9px; }
+  .view-title { font-size:17px; }
+  .view-title::before { width:6px; height:20px; }
+  .card-header { padding-inline:10px; }
+  .btn-primary,.btn-advance { letter-spacing:.045em; }
+  .wsb-team { font-size:10px; }
+  .wsb-score,.wsb-clock { font-size:18px; }
+  .wsb-clockbox { min-width:72px; }
+  .watch-bug { gap:7px; padding:7px; }
+}
+@media (prefers-reduced-motion:reduce) { button,[role="button"],.modal,.notification { animation:none !important; transition:none !important; } }
+
   </style>
 </head>
 <body>
@@ -5341,7 +5621,8 @@ body.theme-school .data-table tr:hover td {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "f804355ddb";
+globalThis.__BUILD__ = "141c2530bd";
+"use strict";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -5390,6 +5671,7 @@ var _CFB = (() => {
   var SAVE_VERSION, C, OVR_POS_ADJ, POS_WEIGHTS, ROLE_WEIGHTS, FRONT_ROLES, OUT_OF_POS, SUB_ADJACENT, SLOT_ELIGIBILITY, ARCHETYPE_DISTANCE, OFF_ROLE_BY_PLAY, FORMATION_ROLE_OVERRIDE, OFF_WEIGHTS, DEF_WEIGHTS, FORMATION_PACKAGES, FORMATION_WEIGHTS, DEF_FRONTS, DEF_FRONT_WEIGHTS, MATCHUP_MATRIX, FORMATION_SITUATIONAL, PRACTICE_SECONDARY, PRACTICE_TOOLS, DEFAULT_PRACTICE, PASS_TENDENCY, POSITIONS, ATTRIBUTES, MEASURED_ATTRS, ATTR_LABELS, attrLabel, PENALTY_CATALOG, CLASS_YEARS, ROSTER_TARGETS, STARTER_COUNTS, ROSTER_POS_MIN, ROSTER_POS_MAX, FORMATIONS, FORMATION_ALIAS, aliasFormation, ATTR_FLOORS, RECRUIT_CORE, SIZE_BANDS, FORMATION_PLAYBOOK;
   var init_constants = __esm({
     "js/constants.js"() {
+      "use strict";
       SAVE_VERSION = 16;
       C = {
         // ── Division / world structure ────────────────────────────────────────────
@@ -7416,6 +7698,7 @@ var _CFB = (() => {
   var COACH_FIRST, COACH_LAST, TROPHY_OBJECTS, TROPHY_ADJ, REAL_TROPHY_NAMES, TRADITIONS, ERA_FLAVOR;
   var init_lore = __esm({
     "js/engine/lore.js"() {
+      "use strict";
       init_constants();
       COACH_FIRST = [
         "Bear",
@@ -7834,6 +8117,7 @@ var _CFB = (() => {
   var FIRST, LAST, OC_RATINGS, DC_RATINGS;
   var init_staff = __esm({
     "js/engine/staff.js"() {
+      "use strict";
       init_constants();
       FIRST = [
         "Jim",
@@ -8004,6 +8288,7 @@ var _CFB = (() => {
   var COMBINE_DIST;
   var init_data_combine = __esm({
     "js/data_combine.js"() {
+      "use strict";
       COMBINE_DIST = { "OLB": { "Forty": { "p10": 4.53, "p25": 4.6, "p50": 4.67, "p75": 4.75, "p90": 4.82, "n": 422 }, "Vertical": { "p10": 30.5, "p25": 32, "p50": 34.5, "p75": 37, "p90": 39, "n": 339 }, "BenchReps": { "p10": 17, "p25": 20, "p50": 22, "p75": 25, "p90": 29, "n": 333 }, "BroadJump": { "p10": 110, "p25": 113, "p50": 117, "p75": 122, "p90": 126, "n": 349 }, "Cone": { "p10": 6.86, "p25": 6.99, "p50": 7.11, "p75": 7.27, "p90": 7.41, "n": 289 }, "Shuttle": { "p10": 4.09, "p25": 4.18, "p50": 4.29, "p75": 4.38, "p90": 4.5, "n": 295 }, "Ht": { "p10": 72, "p25": 73, "p50": 74, "p75": 75, "p90": 76, "n": 424 }, "Wt": { "p10": 228, "p25": 233, "p50": 240, "p75": 246, "p90": 253.7, "n": 424 } }, "RB": { "Forty": { "p10": 4.41, "p25": 4.48, "p50": 4.56, "p75": 4.63, "p90": 4.69, "n": 531 }, "Vertical": { "p10": 30.5, "p25": 32.5, "p50": 34, "p75": 36, "p90": 38.5, "n": 440 }, "BenchReps": { "p10": 14, "p25": 16, "p50": 19, "p75": 22, "p90": 25.6, "n": 415 }, "BroadJump": { "p10": 111, "p25": 114, "p50": 118, "p75": 121, "p90": 125, "n": 434 }, "Cone": { "p10": 6.82, "p25": 6.91, "p50": 7.06, "p75": 7.18, "p90": 7.34, "n": 312 }, "Shuttle": { "p10": 4.08, "p25": 4.15, "p50": 4.24, "p75": 4.38, "p90": 4.47, "n": 313 }, "Ht": { "p10": 68, "p25": 69, "p50": 71, "p75": 72, "p90": 73, "n": 540 }, "Wt": { "p10": 195.9, "p25": 206, "p50": 214.5, "p75": 224, "p90": 232, "n": 540 } }, "OL": { "Forty": { "p10": 5.05, "p25": 5.16, "p50": 5.27, "p75": 5.38, "p90": 5.5, "n": 981 }, "Vertical": { "p10": 24, "p25": 25.5, "p50": 28, "p75": 30, "p90": 32, "n": 790 }, "BenchReps": { "p10": 19, "p25": 22, "p50": 25, "p75": 28, "p90": 32, "n": 808 }, "BroadJump": { "p10": 93, "p25": 97, "p50": 101, "p75": 106, "p90": 110, "n": 773 }, "Cone": { "p10": 7.47, "p25": 7.62, "p50": 7.85, "p75": 8.07, "p90": 8.29, "n": 733 }, "Shuttle": { "p10": 4.5, "p25": 4.6, "p50": 4.73, "p75": 4.88, "p90": 5, "n": 747 }, "Ht": { "p10": 75, "p25": 76, "p50": 77, "p75": 78, "p90": 79, "n": 998 }, "Wt": { "p10": 299, "p25": 304, "p50": 311, "p75": 320, "p90": 330, "n": 998 } }, "TE": { "Forty": { "p10": 4.59, "p25": 4.68, "p50": 4.78, "p75": 4.87, "p90": 4.96, "n": 326 }, "Vertical": { "p10": 28.55, "p25": 30.5, "p50": 33, "p75": 35, "p90": 37.5, "n": 262 }, "BenchReps": { "p10": 16, "p25": 18, "p50": 20, "p75": 23, "p90": 26, "n": 269 }, "BroadJump": { "p10": 107, "p25": 111, "p50": 114.5, "p75": 118, "p90": 123, "n": 258 }, "Cone": { "p10": 6.9, "p25": 7.03, "p50": 7.15, "p75": 7.37, "p90": 7.5, "n": 226 }, "Shuttle": { "p10": 4.17, "p25": 4.26, "p50": 4.36, "p75": 4.47, "p90": 4.56, "n": 226 }, "Ht": { "p10": 75, "p25": 75, "p50": 76, "p75": 77, "p90": 78, "n": 337 }, "Wt": { "p10": 243, "p25": 248, "p50": 254, "p75": 260, "p90": 267, "n": 337 } }, "CB": { "Forty": { "p10": 4.37, "p25": 4.43, "p50": 4.49, "p75": 4.55, "p90": 4.62, "n": 623 }, "Vertical": { "p10": 32.5, "p25": 34, "p50": 35.5, "p75": 38, "p90": 39.5, "n": 517 }, "BenchReps": { "p10": 10, "p25": 12, "p50": 15, "p75": 17, "p90": 19, "n": 489 }, "BroadJump": { "p10": 115, "p25": 118, "p50": 121, "p75": 125, "p90": 128.3, "n": 518 }, "Cone": { "p10": 6.68, "p25": 6.8, "p50": 6.94, "p75": 7.08, "p90": 7.21, "n": 392 }, "Shuttle": { "p10": 3.96, "p25": 4.06, "p50": 4.16, "p75": 4.26, "p90": 4.35, "n": 407 }, "Ht": { "p10": 69, "p25": 70, "p50": 71, "p75": 72, "p90": 73, "n": 630 }, "Wt": { "p10": 182, "p25": 187, "p50": 193, "p75": 198.75, "p90": 204, "n": 630 } }, "K": { "Forty": { "p10": 4.74, "p25": 4.79, "p50": 4.92, "p75": 5, "p90": 5.1, "n": 61 }, "Ht": { "p10": 69, "p25": 71, "p50": 72, "p75": 73, "p90": 74, "n": 85 }, "Wt": { "p10": 177.4, "p25": 186, "p50": 197, "p75": 210, "p90": 218, "n": 85 } }, "P": { "Forty": { "p10": 4.74, "p25": 4.83, "p50": 4.9, "p75": 5.05, "p90": 5.14, "n": 95 }, "Ht": { "p10": 71, "p25": 73, "p50": 74, "p75": 76, "p90": 77, "n": 120 }, "Wt": { "p10": 194, "p25": 203.75, "p50": 212.5, "p75": 225.25, "p90": 234, "n": 120 } }, "S": { "Forty": { "p10": 4.45, "p25": 4.5, "p50": 4.56, "p75": 4.62, "p90": 4.68, "n": 452 }, "Vertical": { "p10": 31.5, "p25": 33.5, "p50": 35.5, "p75": 37.5, "p90": 39.5, "n": 375 }, "BenchReps": { "p10": 12, "p25": 14, "p50": 17, "p75": 19, "p90": 23, "n": 380 }, "BroadJump": { "p10": 113, "p25": 116.5, "p50": 120, "p75": 124, "p90": 127.6, "n": 375 }, "Cone": { "p10": 6.72, "p25": 6.87, "p50": 7.01, "p75": 7.13, "p90": 7.28, "n": 289 }, "Shuttle": { "p10": 4.03, "p25": 4.11, "p50": 4.2, "p75": 4.29, "p90": 4.39, "n": 288 }, "Ht": { "p10": 70, "p25": 71, "p50": 72, "p75": 73, "p90": 74, "n": 469 }, "Wt": { "p10": 195, "p25": 201, "p50": 208, "p75": 213, "p90": 219.2, "n": 469 } }, "LB": { "Forty": { "p10": 4.6, "p25": 4.66, "p50": 4.75, "p75": 4.83, "p90": 4.9, "n": 267 }, "Vertical": { "p10": 29.5, "p25": 31.5, "p50": 33, "p75": 35, "p90": 37, "n": 215 }, "BenchReps": { "p10": 18, "p25": 19, "p50": 22, "p75": 25, "p90": 27, "n": 218 }, "BroadJump": { "p10": 109, "p25": 111, "p50": 115, "p75": 118, "p90": 121, "n": 215 }, "Cone": { "p10": 6.89, "p25": 7, "p50": 7.19, "p75": 7.3, "p90": 7.47, "n": 167 }, "Shuttle": { "p10": 4.09, "p25": 4.2, "p50": 4.3, "p75": 4.4, "p90": 4.5, "n": 174 }, "Ht": { "p10": 72, "p25": 72, "p50": 73, "p75": 74, "p90": 75, "n": 279 }, "Wt": { "p10": 231, "p25": 236, "p50": 242, "p75": 246, "p90": 250.2, "n": 279 } }, "DE": { "Forty": { "p10": 4.65, "p25": 4.74, "p50": 4.83, "p75": 4.91, "p90": 5, "n": 498 }, "Vertical": { "p10": 29, "p25": 31, "p50": 33, "p75": 35, "p90": 37.25, "n": 396 }, "BenchReps": { "p10": 18, "p25": 21, "p50": 24, "p75": 26, "p90": 30, "n": 393 }, "BroadJump": { "p10": 107, "p25": 110, "p50": 114, "p75": 119, "p90": 123, "n": 393 }, "Cone": { "p10": 6.99, "p25": 7.13, "p50": 7.28, "p75": 7.5, "p90": 7.67, "n": 343 }, "Shuttle": { "p10": 4.21, "p25": 4.31, "p50": 4.41, "p75": 4.51, "p90": 4.66, "n": 348 }, "Ht": { "p10": 74, "p25": 75, "p50": 76, "p75": 77, "p90": 78, "n": 510 }, "Wt": { "p10": 251, "p25": 259, "p50": 268, "p75": 277, "p90": 285, "n": 510 } }, "DT": { "Forty": { "p10": 4.91, "p25": 4.99, "p50": 5.08, "p75": 5.2, "p90": 5.31, "n": 456 }, "Vertical": { "p10": 25.5, "p25": 27.5, "p50": 29.5, "p75": 31, "p90": 33, "n": 354 }, "BenchReps": { "p10": 21, "p25": 24, "p50": 27, "p75": 31, "p90": 34, "n": 361 }, "BroadJump": { "p10": 97, "p25": 101, "p50": 105, "p75": 109, "p90": 112, "n": 345 }, "Cone": { "p10": 7.37, "p25": 7.5, "p50": 7.7, "p75": 7.89, "p90": 8.06, "n": 312 }, "Shuttle": { "p10": 4.41, "p25": 4.53, "p50": 4.64, "p75": 4.75, "p90": 4.86, "n": 317 }, "Ht": { "p10": 73, "p25": 74, "p50": 75, "p75": 76, "p90": 77, "n": 466 }, "Wt": { "p10": 290, "p25": 297, "p50": 306, "p75": 314, "p90": 324.5, "n": 466 } }, "QB": { "Forty": { "p10": 4.59, "p25": 4.71, "p50": 4.83, "p75": 4.93, "p90": 5.06, "n": 343 }, "Vertical": { "p10": 26.9, "p25": 29, "p50": 31, "p75": 33, "p90": 35.5, "n": 289 }, "BroadJump": { "p10": 101, "p25": 106, "p50": 110, "p75": 114, "p90": 119, "n": 293 }, "Cone": { "p10": 6.84, "p25": 6.96, "p50": 7.13, "p75": 7.33, "p90": 7.47, "n": 273 }, "Shuttle": { "p10": 4.1, "p25": 4.2, "p50": 4.33, "p75": 4.44, "p90": 4.53, "n": 277 }, "Ht": { "p10": 72, "p25": 74, "p50": 75, "p75": 76, "p90": 77, "n": 350 }, "Wt": { "p10": 208, "p25": 215, "p50": 223, "p75": 229, "p90": 236, "n": 350 } }, "WR": { "Forty": { "p10": 4.38, "p25": 4.44, "p50": 4.51, "p75": 4.58, "p90": 4.64, "n": 842 }, "Vertical": { "p10": 31.5, "p25": 33, "p50": 35, "p75": 37, "p90": 39.5, "n": 691 }, "BenchReps": { "p10": 9.2, "p25": 12, "p50": 14, "p75": 17, "p90": 20, "n": 393 }, "BroadJump": { "p10": 113, "p25": 116, "p50": 120, "p75": 124, "p90": 128, "n": 673 }, "Cone": { "p10": 6.69, "p25": 6.81, "p50": 6.95, "p75": 7.1, "p90": 7.24, "n": 553 }, "Shuttle": { "p10": 4.04, "p25": 4.11, "p50": 4.21, "p75": 4.32, "p90": 4.41, "n": 566 }, "Ht": { "p10": 70, "p25": 71, "p50": 73, "p75": 74, "p90": 76, "n": 857 }, "Wt": { "p10": 183, "p25": 191, "p50": 202, "p75": 212, "p90": 221, "n": 857 } }, "FB": { "Forty": { "p10": 4.6, "p25": 4.66, "p50": 4.74, "p75": 4.85, "p90": 4.97, "n": 116 }, "Vertical": { "p10": 28.9, "p25": 30.5, "p50": 32.5, "p75": 34.75, "p90": 37.5, "n": 99 }, "BenchReps": { "p10": 17, "p25": 20, "p50": 23, "p75": 26, "p90": 30, "n": 97 }, "BroadJump": { "p10": 106, "p25": 109, "p50": 113, "p75": 117, "p90": 120, "n": 99 }, "Cone": { "p10": 7, "p25": 7.12, "p50": 7.27, "p75": 7.45, "p90": 7.66, "n": 88 }, "Shuttle": { "p10": 4.16, "p25": 4.27, "p50": 4.37, "p75": 4.49, "p90": 4.58, "n": 88 }, "Ht": { "p10": 71, "p25": 71, "p50": 72, "p75": 74, "p90": 75, "n": 117 }, "Wt": { "p10": 230, "p25": 239, "p50": 245, "p75": 251, "p90": 256.4, "n": 117 } } };
     }
   });
@@ -8206,6 +8491,7 @@ var _CFB = (() => {
   var FIRST_NAMES, LAST_NAMES, LOCATIONS, LOCATIONS_TOTAL_W, CREST_SHAPES, CREST_FIELDS, WI, CREST_CHARGES;
   var init_utils = __esm({
     "js/utils.js"() {
+      "use strict";
       FIRST_NAMES = [
         "James",
         "John",
@@ -8980,6 +9266,7 @@ var _CFB = (() => {
   var INJURY_CATALOG, ROLES_BY_POS, ARCHETYPE_DERIVE, POS_TABLE, jit;
   var init_player = __esm({
     "js/engine/player.js"() {
+      "use strict";
       init_constants();
       init_data_combine();
       init_utils();
@@ -9245,6 +9532,7 @@ var _CFB = (() => {
   }
   var init_starts = __esm({
     "js/engine/starts.js"() {
+      "use strict";
       init_constants();
     }
   });
@@ -9312,6 +9600,7 @@ var _CFB = (() => {
   var SKILL_GRADES, SKILL_GRADE_XP, SKILL_KEYS;
   var init_coach = __esm({
     "js/engine/coach.js"() {
+      "use strict";
       init_utils();
       SKILL_GRADES = ["F", "D-", "D", "D+", "C-", "C", "C+", "B-", "B", "B+", "A-", "A", "A+"];
       SKILL_GRADE_XP = [0, 20, 45, 75, 115, 165, 225, 300, 390, 495, 620, 770, 950];
@@ -9704,6 +9993,7 @@ var _CFB = (() => {
   var STARTERS, TIER_OF_DIV, CALIBER_LABEL;
   var init_portal = __esm({
     "js/engine/portal.js"() {
+      "use strict";
       init_constants();
       init_utils();
       STARTERS = { QB: 1, RB: 2, WR: 3, TE: 1, OL: 5, DE: 2, DT: 2, OLB: 2, LB: 2, CB: 2, S: 2, K: 1, P: 1 };
@@ -10508,6 +10798,7 @@ var _CFB = (() => {
   var _recDiffMult, DIV_DOMINANCE_RANK;
   var init_recruiting = __esm({
     "js/engine/recruiting.js"() {
+      "use strict";
       init_constants();
       init_starts();
       init_staff();
@@ -10605,6 +10896,7 @@ var _CFB = (() => {
   var SITUATION_KEYS, SITUATION_LABELS, WEEKLY_DEPTH_PRESETS, SMART_AUTO_TEMPO;
   var init_situations = __esm({
     "js/engine/situations.js"() {
+      "use strict";
       init_utils();
       SITUATION_KEYS = [
         "goal_line",
@@ -12125,6 +12417,7 @@ var _CFB = (() => {
   var D1_CONFS, STATIC_D1_SCHOOLS, D2_CONFS, D3_CONFS, PRESTIGE_WEIGHTS, D1_POWER_CLAMP, D1_MIDMAJOR_CLAMP, NICK_GLOBAL_CAP, LOC_JITTER_DEG, REGION_CITIES, STATE_TOKENS, DIRS, DENOMS_DEFAULT, DENOMS_BY_REGION, GAZ_CITY_NAMES, PERSON_NAMES, SAINT_NAMES, NICKS_CLASSIC, NICKS_REGIONAL, NICKS_TECH, NICKS_RELIGIOUS, NICKS_QUIRKY, NICK_AGGIES, COLOR_PAIRS, NAME_PATTERNS, CITY_SIZE_PREF, CAMPUS_SIZE_PREF, PATTERN_TYPE, PRIVATE_TYPES, REGION_CENTROIDS, cityKey, REAL_SCHOOL_STEMS, ANCHOR_RANK, REGION_NEIGHBORS, REGION_SPREAD, CONTINENTAL_STATES, TOKEN_STATES, WORLDGEN_INFO, SCHOOL_DATA, ALL_CONF_LIST, CONFERENCES, NONCONF_GAME_DAYS, CONF_GAME_DAYS;
   var init_world = __esm({
     "js/engine/world.js"() {
+      "use strict";
       init_constants();
       init_lore();
       init_staff();
@@ -13690,6 +13983,7 @@ var _CFB = (() => {
   var OL_SLOTS, OFF_FIELD_LAYOUTS, DEF_FIELD_LAYOUTS, DEF_BLITZ_ELIGIBLE, DEF_DROP_ELIGIBLE;
   var init_constants_field = __esm({
     "js/constants_field.js"() {
+      "use strict";
       OL_SLOTS = [
         { id: "OL_LT", pos: "OL", label: "LT", x: 0.3, y: 0.5, role: "OL-T" },
         { id: "OL_LG", pos: "OL", label: "LG", x: 0.4, y: 0.5, role: "OL-IOL" },
@@ -14106,6 +14400,7 @@ var _CFB = (() => {
   var SLOT_ELIGIBLE_POS, MESH_AUTO_POOL;
   var init_fieldassign = __esm({
     "js/engine/fieldassign.js"() {
+      "use strict";
       init_constants_field();
       init_constants();
       SLOT_ELIGIBLE_POS = {
@@ -14376,6 +14671,7 @@ var _CFB = (() => {
   var KEY, MAX_COACHES, MAX_WORLDS, MAX_GAMEPLANS, DNA_AXES, DNA_BONUS;
   var init_coachprofile = __esm({
     "js/engine/coachprofile.js"() {
+      "use strict";
       KEY = "cfb-coaches-v1";
       MAX_COACHES = 4;
       MAX_WORLDS = 4;
@@ -14643,6 +14939,7 @@ var _CFB = (() => {
   }
   var init_development = __esm({
     "js/engine/development.js"() {
+      "use strict";
       init_constants();
       init_utils();
       init_player();
@@ -14689,6 +14986,7 @@ var _CFB = (() => {
   var DIV_RANK;
   var init_career = __esm({
     "js/engine/career.js"() {
+      "use strict";
       init_constants();
       init_coach();
       DIV_RANK = { D1: 3, D2: 2, D3: 1 };
@@ -15075,6 +15373,7 @@ var _CFB = (() => {
   var MILESTONES, AWARD_POSITIONS, PROGRAM_MILESTONES, WIN_MILESTONES;
   var init_awards = __esm({
     "js/engine/awards.js"() {
+      "use strict";
       init_constants();
       init_coach();
       MILESTONES = [
@@ -15124,6 +15423,7 @@ var _CFB = (() => {
   var CONTESTS;
   var init_contests = __esm({
     "js/engine/contests.js"() {
+      "use strict";
       CONTESTS = {
         // Tackle chain — the carrier's two ways out (Round-2 table, audit Part 4).
         tackleEvade: {
@@ -15157,6 +15457,7 @@ var _CFB = (() => {
   var PASS_CONCEPTS, RUN_CONCEPTS;
   var init_concepts = __esm({
     "js/concepts.js"() {
+      "use strict";
       PASS_CONCEPTS = {
         // ── Quick game (short) ──
         "Mesh": {
@@ -15625,6 +15926,7 @@ var _CFB = (() => {
   var SUB_CHAIN;
   var init_formations = __esm({
     "js/engine/formations.js"() {
+      "use strict";
       init_constants();
       init_player();
       SUB_CHAIN = {
@@ -15869,6 +16171,7 @@ var _CFB = (() => {
   var finishOf, TICK, MAX_T, MAX_Y, RADIUS, spdYps, accel, reactS;
   var init_yacgeo = __esm({
     "js/engine/yacgeo.js"() {
+      "use strict";
       finishOf = (a) => {
         var _a, _b, _c, _d;
         return ((_a = a.STR) != null ? _a : 50) * 0.34 + ((_b = a.PWR) != null ? _b : 50) * 0.28 + ((_c = a.TEC) != null ? _c : 50) * 0.2 + ((_d = a.AWR) != null ? _d : 50) * 0.18;
@@ -16269,6 +16572,7 @@ var _CFB = (() => {
   var finishOf2, TICK2, MAX_T2, MAX_Y2, MIN_Y, RADIUS2, LANE_RECENTER, hyp, spdYps2, accel2, dSpd, dAcc, reactS2;
   var init_run2geo = __esm({
     "js/engine/run2geo.js"() {
+      "use strict";
       finishOf2 = (a) => {
         var _a, _b, _c, _d;
         return ((_a = a.STR) != null ? _a : 50) * 0.34 + ((_b = a.PWR) != null ? _b : 50) * 0.28 + ((_c = a.TEC) != null ? _c : 50) * 0.2 + ((_d = a.AWR) != null ? _d : 50) * 0.18;
@@ -16429,6 +16733,7 @@ var _CFB = (() => {
   var TICK3, spd, acc, rctMan, rctZone, ROUTES, QMAP, SEP_RECENTER, qsep;
   var init_sepgeo = __esm({
     "js/engine/sepgeo.js"() {
+      "use strict";
       TICK3 = 0.1;
       spd = (s) => 6.4 + (s != null ? s : 50) * 0.028;
       acc = (a) => 7 + (a != null ? a : 50) * 0.05;
@@ -16503,6 +16808,7 @@ var _CFB = (() => {
   var DIALS, clamp3, rPow, bPow;
   var init_rushgeo = __esm({
     "js/engine/rushgeo.js"() {
+      "use strict";
       DIALS = {
         CLOCK: 2.2,
         // nominal time-to-throw (s) — the master exposure dial
@@ -20550,6 +20856,7 @@ var _CFB = (() => {
   var QB_RUN_BASE, OPTION_CAPABLE, CALL_CATEGORIES, SPEED_OPTION, JET_CAPABLE, DRAW_DEFAULT, JET_SLOTS, _passCtx, _tkStyle, _optKey, _conceptCtx, FATIGUE_PHYSICAL, REAL_SLOTS, _rosterByIdCache, TYPE_BASELINE, DIFFICULTY_EDGE;
   var init_sim = __esm({
     "js/engine/sim.js"() {
+      "use strict";
       init_constants();
       init_contests();
       init_concepts();
@@ -21412,6 +21719,7 @@ var _CFB = (() => {
   var OFFSEASON_STAGES, PRESEASON_WEEKS, FOCUS_GROUPS, SPRING_OFF_POS, SPRING_DEF_POS, TROPHY_ITEMS, NC_WINDOW, CLINIC_OPTIONS;
   var init_offseason = __esm({
     "js/engine/offseason.js"() {
+      "use strict";
       init_development();
       init_portal();
       init_career();
@@ -21851,6 +22159,7 @@ var _CFB = (() => {
   var FORMATION_TEMPLATES, COACH_IQ;
   var init_ai = __esm({
     "js/engine/ai.js"() {
+      "use strict";
       init_constants();
       init_situations();
       init_recruiting();
@@ -22030,6 +22339,7 @@ var _CFB = (() => {
   var MARGIN_CAP, PRIOR_DECAY_GAMES, PRESTIGE_CEIL;
   var init_rankings = __esm({
     "js/engine/rankings.js"() {
+      "use strict";
       MARGIN_CAP = 21;
       PRIOR_DECAY_GAMES = 8;
       PRESTIGE_CEIL = { D1: 6, D2: 4, D3: 3 };
@@ -24382,6 +24692,7 @@ var _CFB = (() => {
   var PHASES, RECRUITING_OPEN, REG_WEEK_1_DAY, REG_WEEK_COUNT, weekLabel, weekShort, AUTO_BOARD_MAX, PLAYOFF_DIVS, RECORD_CATS, GRADE_LETTERS;
   var init_season = __esm({
     "js/engine/season.js"() {
+      "use strict";
       init_constants();
       init_coachprofile();
       init_rankings();
@@ -24714,6 +25025,7 @@ var _CFB = (() => {
   var _warnedSaveKeys, DB_NAME, DB_VERSION, STORE_NAME;
   var init_persistence = __esm({
     "js/engine/persistence.js"() {
+      "use strict";
       init_constants();
       init_player();
       _warnedSaveKeys = /* @__PURE__ */ new Set();
@@ -25510,6 +25822,7 @@ var _CFB = (() => {
   var state, _renderFn, _notifyFn, NO_HISTORY_VIEWS, teamGroupTab, programGroupTab, statsGroupTab, LEGACY_VIEW_MAP;
   var init_state = __esm({
     "js/state.js"() {
+      "use strict";
       init_world();
       init_fieldassign();
       init_starts();
@@ -25636,6 +25949,7 @@ var _CFB = (() => {
   var TIPS, tipById;
   var init_tips = __esm({
     "js/ui/manual/tips.js"() {
+      "use strict";
       init_utils();
       TIPS = {
         // ── Reading a player ──────────────────────────────────────────────────────
@@ -27885,6 +28199,7 @@ var _CFB = (() => {
   var gameplanSection, offSubTab, defSubTab, sitSide, openSitKey, SIT_DESCS, SIT_NUDGE, SIT_TIPS, PIN_FRONTS, COV_OPTIONS, ALL_FORMATIONS, DEF_FRONTS2, DEF_FRONT_DESCS, DEF_FRONT_NEEDS, SIMPLE_DIALS, SIMPLE_SITS;
   var init_gameplan = __esm({
     "js/ui/views/gameplan.js"() {
+      "use strict";
       init_state();
       init_coachprofile();
       init_persistence();
@@ -27989,6 +28304,7 @@ var _CFB = (() => {
   var BLUEPRINT_MARK;
   var init_logo = __esm({
     "js/ui/logo.js"() {
+      "use strict";
       BLUEPRINT_MARK = `
 <svg class="bp-mark" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Blueprint">
   <rect x="0" y="0" width="512" height="512" fill="#0c2340"/>
@@ -28418,6 +28734,7 @@ var _CFB = (() => {
   var mmCoachId, mmNewCoach, mmView, mmDeleteArmed;
   var init_mainmenu = __esm({
     "js/ui/views/mainmenu.js"() {
+      "use strict";
       init_state();
       init_utils();
       init_coach();
@@ -29281,6 +29598,7 @@ var _CFB = (() => {
   var obStep, _obWorld, ob, pending, generating, legacyMode, activeDivision, selectedSchoolId, REGION_LABELS, STATE_NAMES, QB_CARDS, FRONT_CARDS, DIV_CARDS, obCand, CHALLENGE_CARDS, _previewCache;
   var init_newgame = __esm({
     "js/ui/views/newgame.js"() {
+      "use strict";
       init_world();
       init_constants();
       init_staff();
