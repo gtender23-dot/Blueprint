@@ -5700,16 +5700,21 @@ body *::after {
 /* ── Play-caller diagrams + compact contextual coaching (Jul 2026) ── */
 .cs-diagram-hint { margin: -2px 0 8px; color: var(--text-2); font-size: 11px; }
 .cs-concepts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
-.cs-concepts .cs-concept-card { display: grid; grid-template-columns: minmax(92px, 1.25fr) minmax(80px, .75fr); grid-template-rows: 1fr auto; align-items: center; gap: 2px 9px; min-height: 94px; padding: 7px; text-align: left; border-radius: 0; }
+.cs-concept-tile { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 5px; min-width: 0; }
+.cs-concepts .cs-concept-card { display: grid; grid-template-columns: minmax(92px, 1.25fr) minmax(70px, .75fr); grid-template-rows: 1fr auto; align-items: center; gap: 2px 9px; width: 100%; min-width: 0; min-height: 94px; padding: 7px; text-align: left; border-radius: 0; }
 .cs-concept-card .cs-play-art { grid-row: 1 / 3; }
 .cs-concept-card .cs-c-name { align-self: end; font-size: 12px; line-height: 1.15; color: var(--text-0); }
 .cs-c-learn { align-self: start; color: var(--px-yellow, #ffd54a); font-size: 9px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.cs-info-btn { align-self: stretch; min-width: 0; padding: 4px 2px; color: var(--px-yellow, #ffd54a); background: var(--px-panel-2, #111827); border: 2px solid var(--px-line, #43536b); border-bottom-width: 4px; border-radius: 0; font-size: 9px; font-weight: 900; letter-spacing: .06em; cursor: pointer; writing-mode: vertical-rl; text-orientation: mixed; }
+.cs-info-btn:hover, .cs-info-btn:focus-visible { color: #07110b; background: var(--px-yellow, #ffd54a); border-color: var(--px-paper, #f4edda); outline: none; }
 .cs-play-art { display: block; width: 100%; height: auto; min-height: 70px; shape-rendering: geometricPrecision; }
 .cs-art-field { fill: #123d27; stroke: var(--px-paper, #f4edda); stroke-width: 1.4; }
-.cs-art-yard { fill: none; stroke: rgba(244,237,218,.16); stroke-width: .8; stroke-dasharray: 2 2; }
-.cs-art-los { fill: none; stroke: #63b9ff; stroke-width: 1; stroke-dasharray: 3 2; }
-.cs-route { fill: none; stroke: var(--px-yellow, #ffd54a); stroke-width: 2.25; stroke-linecap: square; stroke-linejoin: miter; }
-.cs-route-run { stroke: #ff8a55; stroke-width: 3.2; }
+.cs-art-yard { fill: none; stroke: rgba(244,237,218,.18); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.cs-art-los { fill: none; stroke: #63b9ff; stroke-width: 1.25; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+.cs-route { fill: none; stroke: var(--px-yellow, #ffd54a); stroke-width: 2; stroke-linecap: square; stroke-linejoin: miter; stroke-miterlimit: 10; vector-effect: non-scaling-stroke; }
+.cs-route-run { stroke: #ff8a55; stroke-width: 2.7; }
+.cs-route-arrow { fill: var(--px-yellow, #ffd54a); stroke: #07110b; stroke-width: .45; stroke-linejoin: miter; vector-effect: non-scaling-stroke; }
+.cs-route-arrow-run { fill: #ff8a55; }
 .cs-art-offense circle { fill: var(--px-paper, #f4edda); stroke: #05070c; stroke-width: .7; }
 .cs-art-offense .cs-art-qb { fill: var(--px-yellow, #ffd54a); }
 .cs-surprise { justify-content: center; align-items: center !important; min-height: 94px; text-align: center !important; gap: 7px !important; }
@@ -5763,7 +5768,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "cd63e301d2";
+globalThis.__BUILD__ = "a6056524c6";
 "use strict";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
@@ -43473,7 +43478,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     return labels[d.result] || d.result;
   }
   function setupGlobalListeners() {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R;
     document.querySelectorAll("[data-nav]").forEach((el) => {
       const activateNav = () => {
         state.ui.sidebarOpen = false;
@@ -43810,26 +43815,26 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       state.ui.callConceptPreview = null;
       rerender();
     });
-    (_F = document.querySelector("[data-cs-callconcept]")) == null ? void 0 : _F.addEventListener("click", (b) => {
+    document.querySelectorAll("[data-cs-callconcept]").forEach((b) => b.addEventListener("click", () => {
       if (!callTapOk()) return;
-      const nm = b.currentTarget.dataset.csCallconcept;
+      const nm = b.dataset.csCallconcept;
       state.ui.callDrill = null;
       state.ui.callConceptPreview = null;
       answerPlayCall(_decorateCall({ concept: nm }));
-    });
-    (_G = document.getElementById("cs-sheet-call")) == null ? void 0 : _G.addEventListener("click", () => {
+    }));
+    (_F = document.getElementById("cs-sheet-call")) == null ? void 0 : _F.addEventListener("click", () => {
       if (callTapOk()) answerPlayCall({ concept: "sheet" });
     });
     document.querySelectorAll("[data-fourth]").forEach((b) => b.addEventListener("click", () => {
       if (!b.disabled && callTapOk()) answerFourthDown(b.dataset.fourth);
     }));
-    (_H = document.getElementById("fourth-auto")) == null ? void 0 : _H.addEventListener("click", () => {
+    (_G = document.getElementById("fourth-auto")) == null ? void 0 : _G.addEventListener("click", () => {
       if (callTapOk()) answerFourthDown("auto");
     });
-    (_I = document.getElementById("cs-skip-quarter")) == null ? void 0 : _I.addEventListener("click", () => simToQuarterEnd());
-    (_J = document.getElementById("cs-mode-keydowns")) == null ? void 0 : _J.addEventListener("click", () => setCallModeMidGame("keydowns"));
-    (_K = document.getElementById("cs-mode-off")) == null ? void 0 : _K.addEventListener("click", () => setCallModeMidGame("off"));
-    (_L = document.getElementById("cs-mode-everycall")) == null ? void 0 : _L.addEventListener("click", () => {
+    (_H = document.getElementById("cs-skip-quarter")) == null ? void 0 : _H.addEventListener("click", () => simToQuarterEnd());
+    (_I = document.getElementById("cs-mode-keydowns")) == null ? void 0 : _I.addEventListener("click", () => setCallModeMidGame("keydowns"));
+    (_J = document.getElementById("cs-mode-off")) == null ? void 0 : _J.addEventListener("click", () => setCallModeMidGame("off"));
+    (_K = document.getElementById("cs-mode-everycall")) == null ? void 0 : _K.addEventListener("click", () => {
       var _a2;
       const t = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token;
       if (t) {
@@ -43837,7 +43842,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         renderApp();
       }
     });
-    (_M = document.getElementById("cs-recover")) == null ? void 0 : _M.addEventListener("click", () => {
+    (_L = document.getElementById("cs-recover")) == null ? void 0 : _L.addEventListener("click", () => {
       var _a2, _b2;
       const t = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token;
       if (((_b2 = t == null ? void 0 : t.pending) == null ? void 0 : _b2.kind) === "fourth") {
@@ -43854,10 +43859,10 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     document.querySelectorAll("[data-cs-quickcat]").forEach((btn) => btn.addEventListener("click", () => {
       if (callTapOk()) answerPlayCall({ category: btn.dataset.csQuickcat });
     }));
-    (_N = document.getElementById("tc-keydowns")) == null ? void 0 : _N.addEventListener("click", () => {
+    (_M = document.getElementById("tc-keydowns")) == null ? void 0 : _M.addEventListener("click", () => {
       if (callTapOk()) setCallModeMidGame("keydowns");
     });
-    (_O = document.getElementById("tc-headset")) == null ? void 0 : _O.addEventListener("click", () => {
+    (_N = document.getElementById("tc-headset")) == null ? void 0 : _N.addEventListener("click", () => {
       var _a2, _b2;
       state.ui.autoRun = true;
       const lw = state.ui.liveWatch;
@@ -43869,23 +43874,23 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       if (((_b2 = t == null ? void 0 : t.pending) == null ? void 0 : _b2.kind) === "fourth") answerFourthDown("auto");
       else answerPlayCall({ concept: "sheet" });
     });
-    (_P = document.getElementById("tc-jumpin")) == null ? void 0 : _P.addEventListener("click", () => {
+    (_O = document.getElementById("tc-jumpin")) == null ? void 0 : _O.addEventListener("click", () => {
       state.ui.autoRun = false;
       watchStop();
       _watch = null;
       if (state.ui.liveWatch) state.ui.liveWatch.boardDone = true;
       renderApp();
     });
-    (_Q = document.getElementById("tc-skipbreak")) == null ? void 0 : _Q.addEventListener("click", () => {
+    (_P = document.getElementById("tc-skipbreak")) == null ? void 0 : _P.addEventListener("click", () => {
       if (callTapOk()) simToBreak();
     });
-    (_R = document.getElementById("cs-autorun")) == null ? void 0 : _R.addEventListener("click", () => {
+    (_Q = document.getElementById("cs-autorun")) == null ? void 0 : _Q.addEventListener("click", () => {
       var _a2, _b2, _c2;
       state.ui.autoRun = true;
       if (((_c2 = (_b2 = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token) == null ? void 0 : _b2.pending) == null ? void 0 : _c2.kind) === "fourth") answerFourthDown("auto");
       else answerPlayCall({ concept: "sheet" });
     });
-    (_S = document.getElementById("cs-autorun-stop")) == null ? void 0 : _S.addEventListener("click", () => {
+    (_R = document.getElementById("cs-autorun-stop")) == null ? void 0 : _R.addEventListener("click", () => {
       state.ui.autoRun = false;
       watchStop();
       _watch = null;
@@ -44119,37 +44124,50 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     return `<div class="tc-bar">${mid}<button class="bc-btn bc-text" id="tc-skipbreak" title="Sim straight to the ${half === 1 ? "locker room" : "final gun"}">${breakLabel}</button></div>`;
   }
   var CONCEPT_ROUTE_ART = {
-    "Mesh": ["M18 46 L18 30 Q30 22 48 26 L76 26", "M82 46 L82 32 Q68 22 52 28 L28 28"],
-    "Slant-Flat": ["M18 46 L27 35 L48 22", "M82 46 L82 38 L94 35"],
+    "Mesh": ["M18 46 L18 31 L44 26 L76 26", "M82 46 L82 31 L56 28 L28 28"],
+    "Slant-Flat": ["M18 46 L28 35 L48 22", "M82 46 L82 38 L94 35"],
     "Stick": ["M68 46 L68 27 L58 27", "M86 46 L86 38 L96 35"],
-    "Shallow Cross": ["M20 46 L20 33 Q38 25 76 27", "M82 46 L82 18"],
-    "Bubble Screen": ["M82 46 Q90 43 94 36", "M66 46 L76 38"],
-    "Tunnel Screen": ["M84 46 L94 38 Q76 34 62 28", "M68 46 L78 35"],
-    "RB Screen": ["M50 49 Q62 45 74 33", "M68 46 L76 36"],
-    "Smash": ["M18 46 L18 31 L30 31", "M82 46 L82 30 Q78 18 64 14"],
-    "Curl-Flat": ["M22 46 L22 23 Q22 28 14 31", "M78 46 L78 38 L94 34"],
-    "Flood": ["M18 46 L18 12", "M50 46 Q62 25 84 22", "M82 46 L94 36"],
-    "Y-Cross": ["M48 46 L48 33 Q58 22 86 18", "M20 46 L20 10"],
+    "Shallow Cross": ["M20 46 L20 33 L42 27 L76 27", "M82 46 L82 18"],
+    "Bubble Screen": ["M82 46 L89 42 L94 36", "M66 46 L76 38"],
+    "Tunnel Screen": ["M84 46 L94 38 L78 34 L62 28", "M68 46 L78 35"],
+    "RB Screen": ["M50 49 L61 44 L74 33", "M68 46 L76 36"],
+    "Smash": ["M18 46 L18 31 L30 31", "M82 46 L82 30 L76 20 L64 14"],
+    "Curl-Flat": ["M22 46 L22 23 L17 27 L14 31", "M78 46 L78 38 L94 34"],
+    "Flood": ["M18 46 L18 12", "M50 46 L62 27 L84 22", "M82 46 L94 36"],
+    "Y-Cross": ["M48 46 L48 33 L60 24 L86 18", "M20 46 L20 10"],
     "Dagger": ["M34 46 L34 9", "M68 46 L68 22 L42 22"],
     "Four Verts": ["M14 46 L14 8", "M38 46 L38 8", "M62 46 L62 8", "M86 46 L86 8"],
-    "Post-Wheel": ["M22 46 L22 27 L50 10", "M72 46 Q91 36 86 9"],
-    "PA Deep Cross": ["M24 46 L24 18 Q46 10 82 17", "M78 46 L78 9"],
+    "Post-Wheel": ["M22 46 L22 27 L50 10", "M72 46 L84 38 L88 25 L86 9"],
+    "PA Deep Cross": ["M24 46 L24 20 L46 12 L82 17", "M78 46 L78 9"],
     "Mills (Post-Dig)": ["M30 46 L30 22 L50 9", "M72 46 L72 22 L45 22"],
-    "Red-Zone Fade": ["M82 46 Q92 28 88 12"],
+    "Red-Zone Fade": ["M82 46 L90 30 L88 12"],
     "Inside Zone": ["M50 49 L50 17"],
-    "Power": ["M48 49 Q36 38 55 17"],
+    "Power": ["M48 49 L37 38 L55 17"],
     "Iso": ["M50 49 L50 17"],
-    "Trap": ["M50 49 Q61 35 48 17"],
-    "Outside Zone": ["M50 49 Q67 35 88 20"],
-    "Counter": ["M50 49 Q35 40 63 18"],
-    "Toss": ["M50 49 Q71 46 92 23"],
+    "Trap": ["M50 49 L61 35 L48 17"],
+    "Outside Zone": ["M50 49 L67 35 L88 20"],
+    "Counter": ["M50 49 L35 40 L63 18"],
+    "Toss": ["M50 49 L71 45 L92 23"],
     "QB Sneak": ["M50 49 L50 29"],
-    "Triple Option": ["M50 49 L50 34 Q70 34 89 18", "M50 49 Q38 34 28 18"],
-    "Speed Option": ["M50 49 Q69 39 90 19"],
-    "Jet Sweep": ["M18 43 Q50 47 91 20"],
-    "Draw": ["M50 49 L50 38 Q55 28 50 17"],
-    "Wildcat Power": ["M50 49 Q39 35 62 17"]
+    "Triple Option": ["M50 49 L50 34 L70 34 L89 18", "M50 49 L39 34 L28 18"],
+    "Speed Option": ["M50 49 L69 39 L90 19"],
+    "Jet Sweep": ["M18 43 L50 43 L72 34 L91 20"],
+    "Draw": ["M50 49 L50 38 L55 28 L50 17"],
+    "Wildcat Power": ["M50 49 L39 35 L62 17"]
   };
+  function conceptRouteArrow(d, run) {
+    const nums = [...d.matchAll(/-?\d+(?:\.\d+)?/g)].map((m) => Number(m[0]));
+    if (nums.length < 4) return "";
+    const x2 = nums[nums.length - 2], y2 = nums[nums.length - 1];
+    const x1 = nums[nums.length - 4], y1 = nums[nums.length - 3];
+    const len = Math.hypot(x2 - x1, y2 - y1) || 1;
+    const ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+    const size = run ? 4.8 : 4.1, wing = run ? 2.7 : 2.25;
+    const bx = x2 - ux * size, by = y2 - uy * size;
+    const px = -uy * wing, py = ux * wing;
+    const points = `${x2.toFixed(2)},${y2.toFixed(2)} ${(bx + px).toFixed(2)},${(by + py).toFixed(2)} ${(bx - px).toFixed(2)},${(by - py).toFixed(2)}`;
+    return `<polygon class="cs-route-arrow${run ? " cs-route-arrow-run" : ""}" points="${points}"/>`;
+  }
   function conceptPlayGraphic(name, large = false) {
     const paths = CONCEPT_ROUTE_ART[name] || ["M20 46 L20 20", "M50 46 L50 16", "M80 46 L80 20"];
     const run = !!RUN_CONCEPTS[name];
@@ -44159,7 +44177,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     <rect class="cs-art-field" x="1" y="1" width="98" height="54"/>
     <path class="cs-art-yard" d="M1 14 H99 M1 28 H99 M1 42 H99"/>
     <path class="cs-art-los" d="M4 46 H96"/>
-    ${paths.map((d) => `<path class="${cls}" d="${d}"/>`).join("")}
+    ${paths.map((d) => `<path class="${cls}" d="${d}"/>${conceptRouteArrow(d, run)}`).join("")}
     <g class="cs-art-offense"><circle cx="34" cy="46" r="1.8"/><circle cx="42" cy="46" r="1.8"/><circle cx="50" cy="46" r="1.8"/><circle cx="58" cy="46" r="1.8"/><circle cx="66" cy="46" r="1.8"/><circle class="cs-art-qb" cx="50" cy="51" r="2.2"/></g>
   </svg>`;
   }
@@ -44302,10 +44320,10 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
             <button class="cs-drill-back" data-cs-drillback="1">\u2190 Plays</button>
             <span class="cs-drill-title">${meta ? escapeHtml(meta[1]) : "Plays"} \xB7 <span class="muted">${state.ui.callFormation ? escapeHtml(state.ui.callFormation) : "Auto"}</span></span>
           </div>
-          <p class="cs-diagram-hint">Tap a diagram to learn the play before calling it.</p>
+          <p class="cs-diagram-hint">Tap the play to call it now. INFO opens the optional coaching notes.</p>
           <div class="cs-concepts">
             <button class="cs-concept cs-surprise" data-cs-concept="__surprise" data-cs-cat="${_drillCat.cat}"><span class="cs-surprise-die">\u{1F3B2}</span><span>Surprise me</span></button>
-            ${list.map((nm) => `<button class="cs-concept cs-concept-card" data-cs-preview="${escapeHtml(nm)}" aria-label="Preview ${escapeHtml(nm)}">${conceptPlayGraphic(nm)}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-learn">View play \u2192</span></button>`).join("") || `<div class="muted" style="padding:6px">No plays fit ${state.ui.callFormation ? "this formation" : "your carried formations"} \u2014 try Surprise me.</div>`}
+            ${list.map((nm) => `<div class="cs-concept-tile"><button class="cs-concept cs-concept-card" data-cs-callconcept="${escapeHtml(nm)}" aria-label="Call ${escapeHtml(nm)}">${conceptPlayGraphic(nm)}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-learn">Call play \u2192</span></button><button class="cs-info-btn" data-cs-preview="${escapeHtml(nm)}" aria-label="Learn about ${escapeHtml(nm)}">INFO</button></div>`).join("") || `<div class="muted" style="padding:6px">No plays fit ${state.ui.callFormation ? "this formation" : "your carried formations"} \u2014 try Surprise me.</div>`}
           </div>
         </div>`;
     }
