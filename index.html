@@ -5697,6 +5697,63 @@ body *::after {
   box-shadow:4px 4px 0 var(--px-shadow) !important;
 }
 .nav-item[role="button"] { width:100%; }
+/* ── Play-caller diagrams + compact contextual coaching (Jul 2026) ── */
+.cs-diagram-hint { margin: -2px 0 8px; color: var(--text-2); font-size: 11px; }
+.cs-concepts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.cs-concepts .cs-concept-card { display: grid; grid-template-columns: minmax(92px, 1.25fr) minmax(80px, .75fr); grid-template-rows: 1fr auto; align-items: center; gap: 2px 9px; min-height: 94px; padding: 7px; text-align: left; border-radius: 0; }
+.cs-concept-card .cs-play-art { grid-row: 1 / 3; }
+.cs-concept-card .cs-c-name { align-self: end; font-size: 12px; line-height: 1.15; color: var(--text-0); }
+.cs-c-learn { align-self: start; color: var(--px-yellow, #ffd54a); font-size: 9px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.cs-play-art { display: block; width: 100%; height: auto; min-height: 70px; shape-rendering: geometricPrecision; }
+.cs-art-field { fill: #123d27; stroke: var(--px-paper, #f4edda); stroke-width: 1.4; }
+.cs-art-yard { fill: none; stroke: rgba(244,237,218,.16); stroke-width: .8; stroke-dasharray: 2 2; }
+.cs-art-los { fill: none; stroke: #63b9ff; stroke-width: 1; stroke-dasharray: 3 2; }
+.cs-route { fill: none; stroke: var(--px-yellow, #ffd54a); stroke-width: 2.25; stroke-linecap: square; stroke-linejoin: miter; }
+.cs-route-run { stroke: #ff8a55; stroke-width: 3.2; }
+.cs-art-offense circle { fill: var(--px-paper, #f4edda); stroke: #05070c; stroke-width: .7; }
+.cs-art-offense .cs-art-qb { fill: var(--px-yellow, #ffd54a); }
+.cs-surprise { justify-content: center; align-items: center !important; min-height: 94px; text-align: center !important; gap: 7px !important; }
+.cs-surprise-die { font-size: 30px; line-height: 1; }
+.cs-concept-preview { display: flex; flex-direction: column; gap: 10px; padding: 2px 0 4px; }
+.cs-preview-main { display: grid; grid-template-columns: minmax(220px, .95fr) minmax(250px, 1.05fr); gap: 14px; align-items: stretch; }
+.cs-play-art.is-large { min-height: 205px; background: #0a2116; border: 3px solid var(--px-line, #43536b); box-shadow: 5px 5px 0 var(--px-shadow, #020307); }
+.cs-preview-copy { display: flex; flex-direction: column; gap: 7px; }
+.cs-preview-copy h3 { margin: 0 0 1px; color: var(--px-yellow, #ffd54a); font-size: 18px; letter-spacing: .04em; }
+.cs-teach-row { display: grid; grid-template-columns: 76px 1fr; gap: 8px; padding: 8px; background: var(--px-panel-2, #111827); border: 2px solid var(--px-line, #43536b); }
+.cs-teach-row b { color: var(--px-yellow, #ffd54a); font-size: 9px; letter-spacing: .08em; }
+.cs-teach-row span { color: var(--text-1); font-size: 11px; line-height: 1.35; }
+.cs-call-play { align-self: flex-end; min-width: 190px; border-radius: 0 !important; }
+
+.context-help-overlay { z-index: 1450; padding: 18px; align-items: center; }
+.context-help { width: min(520px, 100%); max-height: calc(100dvh - 36px); overflow-y: auto; padding: 17px; color: var(--text-0); background: var(--px-panel, #111827); border: 3px solid var(--px-line, #43536b); border-top: 5px solid var(--team-1, #ffd54a); box-shadow: 8px 8px 0 var(--px-shadow, #020307); }
+.context-help-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.context-help-head h2 { margin: 2px 0 0; font-size: 19px; }
+.context-help-kicker { color: var(--px-yellow, #ffd54a); font-size: 9px; font-weight: 900; letter-spacing: .13em; }
+.context-help > p { margin: 12px 0 9px; color: var(--text-1); line-height: 1.45; }
+.context-help ul { display: grid; gap: 7px; margin: 0; padding-left: 20px; color: var(--text-1); line-height: 1.4; }
+.context-help li::marker { color: var(--px-yellow, #ffd54a); }
+.context-help-actions { display: flex; justify-content: space-between; gap: 9px; margin-top: 16px; }
+.context-help-actions .btn { border-radius: 0; }
+
+/* Keep labels useful before the snap, then let the football action own the frame. */
+.wo-lbl, .wd-lbl { paint-order: stroke fill; stroke: #07110b; stroke-width: .9px; stroke-linejoin: miter; transition: opacity .12s linear; }
+#watch-board.watch-in-play .wo-lbl,
+#watch-board.watch-in-play .wd-lbl { opacity: .44; }
+#watch-board.watch-in-play .wp-actor[data-wpg="OL"] .wo-lbl,
+#watch-board.watch-in-play .wp-actor[data-wpg="DL"] .wd-lbl { opacity: .06; }
+#watch-board.watch-in-play .wp-near-ball .wo-lbl,
+#watch-board.watch-in-play .wp-near-ball .wd-lbl { opacity: 0; }
+.wp-trail { opacity: .68; }
+
+@media (max-width: 640px) {
+  .cs-concepts { grid-template-columns: 1fr; }
+  .cs-concepts .cs-concept-card { grid-template-columns: minmax(105px, 1fr) minmax(90px, .85fr); }
+  .cs-preview-main { grid-template-columns: 1fr; }
+  .cs-play-art.is-large { min-height: 170px; }
+  .cs-call-play { width: 100%; }
+  .context-help-actions { flex-direction: column; }
+  .context-help-actions .btn { width: 100%; }
+}
   </style>
 </head>
 <body>
@@ -5706,7 +5763,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "396bb57285";
+globalThis.__BUILD__ = "cd63e301d2";
 "use strict";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
@@ -26522,8 +26579,10 @@ var _CFB = (() => {
           darkMode: false,
           // default OFF (Jul 2026): new dynasties open in
           // school-color mode; dark is opt-in via Settings.
-          // Recruiting assist (Jul 2026): 'off' | 'assist' | 'full'. Off = manual.
-          recruitAssist: "off",
+          // Beginner-first defaults for a brand-new coach. Existing saves keep their choices.
+          gameplanMode: "simple",
+          // Recruiting assist (Jul 2026): 'off' | 'assist' | 'full'. Full = staff-run class.
+          recruitAssist: "full",
           recruitStrategy: { priorities: [], aggression: "balanced", qualityFloor: 0 },
           // Dev tools
           autoRecruit: false,
@@ -29469,6 +29528,8 @@ var _CFB = (() => {
   }
   function stepSignature() {
     const s = state.settings || (state.settings = {});
+    if (s.gameplanMode == null) s.gameplanMode = "simple";
+    if (s.recruitAssist == null) s.recruitAssist = "full";
     const diffRow = (key, label, desc) => `
       <div class="ob-setting-row">
         <div class="ob-setting-label">${label}</div>
@@ -29478,7 +29539,7 @@ var _CFB = (() => {
             <button class="gp-option gp-option-sm${(s[key] || "varsity") === v ? " active" : ""}" data-ob-diff-key="${key}" data-ob-diff-val="${v}">${l}</button>`).join("")}
         </div>
       </div>`;
-    const gpMode = s.gameplanMode === "simple" ? "simple" : "advanced";
+    const gpMode = s.gameplanMode === "advanced" ? "advanced" : "simple";
     return `
     <div class="ob-step">
       <div class="ob-kicker">STEP 1 \u2014 THE GROUND RULES</div>
@@ -42228,7 +42289,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
   function helpButtonHtml(chapterId) {
     if (!chapterId) return "";
     return `<button class="view-help-btn" data-help-chapter="${chapterId}"
-                  title="Open the manual to this chapter" aria-label="Help for this screen">?</button>`;
+                  title="Quick help for this screen" aria-label="Help for this screen">?</button>`;
   }
   function injectHelpButton(view) {
     const chapterId = helpChapterFor(view);
@@ -42254,6 +42315,42 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         <div class="tip-body">${escapeHtml(tip.body)}</div>
         ${link}
       </div>
+    </div>`;
+  }
+  var CONTEXT_HELP_SUMMARIES = {
+    "anatomy-of-a-play": { title: "Calling the next play", intro: "Use the situation first, then pick a play that gives your players a favorable job.", bullets: ["Check down, distance, clock, and field position.", "Open a play family, then tap a play diagram to see what it attacks.", "The result stays on screen after the animation so you can read what happened."] },
+    "calling-a-game": { title: "Calling a game", intro: "Build calls around the situation, not a perfect-play hunt.", bullets: ["Stay balanced enough that the defense cannot sit on one answer.", "Use the matchup notes and concept preview before committing.", "On key downs, favor what your best players execute well."] },
+    "the-year": { title: "Managing the season", intro: "Each week is a small set of decisions that shape the whole program.", bullets: ["Handle the current agenda item before advancing.", "Watch fatigue, development, and upcoming opponents.", "The phase banner tells you what matters right now."] },
+    recruiting: { title: "Recruiting this week", intro: "Spend attention where interest and roster need overlap.", bullets: ["Use Assist if you want the staff to protect your board.", "Scout before overcommitting resources.", "A balanced class prevents future depth-chart holes."] },
+    "reading-a-player": { title: "Reading a player", intro: "Overall is a shortcut; role fit and key attributes explain the player.", bullets: ["Start with position and archetype.", "Look at the attributes the role uses most.", "Development and class year tell you how much growth is left."] },
+    "the-depth-chart": { title: "Setting the depth chart", intro: "Put players in roles they can actually execute.", bullets: ["The starter is not always the best fit for every package.", "Check fatigue and specialist roles.", "Formation personnel changes which plays are available."] },
+    "building-a-player": { title: "Developing players", intro: "Practice trades short-term focus for long-term growth.", bullets: ["Prioritize young players with a real path to snaps.", "Train attributes that matter to their role.", "Avoid spreading development so thin that nobody improves."] },
+    "your-career": { title: "Your coaching career", intro: "Program results, expectations, and job choices build your reputation.", bullets: ["Know the board's current expectations.", "Sustainable roster health matters beyond one season.", "Your decisions shape future job opportunities."] }
+  };
+  function renderContextHelp() {
+    const id = state.ui.contextHelpChapter;
+    if (!id) return "";
+    const chapter17 = chapterById(id);
+    const help = CONTEXT_HELP_SUMMARIES[id] || {
+      title: (chapter17 == null ? void 0 : chapter17.title) || "Quick help",
+      intro: "Here are the essentials for the screen you are using.",
+      bullets: ["Read the situation first.", "Make one decision at a time.", "Open the full chapter when you want the deeper explanation."]
+    };
+    const returnLabel = state.ui.liveWatch ? "Return to game" : "Return to screen";
+    return `
+    <div class="modal-overlay context-help-overlay" id="context-help-overlay">
+      <section class="context-help" role="dialog" aria-modal="true" aria-labelledby="context-help-title">
+        <div class="context-help-head">
+          <div><span class="context-help-kicker">QUICK HELP</span><h2 id="context-help-title">${escapeHtml(help.title)}</h2></div>
+          <button class="tip-close" id="context-help-close" aria-label="Close">\u2715</button>
+        </div>
+        <p>${escapeHtml(help.intro)}</p>
+        <ul>${help.bullets.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>
+        <div class="context-help-actions">
+          <button class="btn primary" id="context-help-return">\u2190 ${returnLabel}</button>
+          <button class="btn secondary" data-context-help-full="${escapeHtml(id)}">Read full chapter \u2192</button>
+        </div>
+      </section>
     </div>`;
   }
   var SLOT_LABELS = { auto: "Auto", slot1: "Slot 1", slot2: "Slot 2", slot3: "Slot 3", slot4: "Slot 4" };
@@ -42441,6 +42538,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     ${renderKickoffModal()}
     ${renderCallSheetModal()}
     ${renderFourthDownModal()}
+    ${renderContextHelp()}
     ${renderTipPopover()}
   `;
     setupGlobalListeners();
@@ -43375,7 +43473,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     return labels[d.result] || d.result;
   }
   function setupGlobalListeners() {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S;
     document.querySelectorAll("[data-nav]").forEach((el) => {
       const activateNav = () => {
         state.ui.sidebarOpen = false;
@@ -43397,9 +43495,24 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         const btn = (_b2 = (_a2 = e.target).closest) == null ? void 0 : _b2.call(_a2, "[data-help-chapter]");
         if (!btn) return;
         e.stopPropagation();
-        navigate("manual", { chapter: btn.dataset.helpChapter });
+        state.ui.contextHelpChapter = btn.dataset.helpChapter;
+        renderApp();
       });
     }
+    const closeContextHelp = () => {
+      state.ui.contextHelpChapter = null;
+      renderApp();
+    };
+    (_a = document.getElementById("context-help-overlay")) == null ? void 0 : _a.addEventListener("click", (e) => {
+      if (e.target.id === "context-help-overlay") closeContextHelp();
+    });
+    (_b = document.getElementById("context-help-close")) == null ? void 0 : _b.addEventListener("click", closeContextHelp);
+    (_c = document.getElementById("context-help-return")) == null ? void 0 : _c.addEventListener("click", closeContextHelp);
+    (_d = document.querySelector("[data-context-help-full]")) == null ? void 0 : _d.addEventListener("click", (e) => {
+      const chapter17 = e.currentTarget.dataset.contextHelpFull;
+      state.ui.contextHelpChapter = null;
+      navigate("manual", { chapter: chapter17 });
+    });
     document.querySelectorAll("[data-tip]").forEach((el) => {
       el.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -43407,31 +43520,31 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         renderApp();
       });
     });
-    (_a = document.getElementById("tip-overlay")) == null ? void 0 : _a.addEventListener("click", (e) => {
+    (_e = document.getElementById("tip-overlay")) == null ? void 0 : _e.addEventListener("click", (e) => {
       if (e.target.id === "tip-overlay") {
         state.ui.activeTip = null;
         renderApp();
       }
     });
-    (_b = document.getElementById("tip-close")) == null ? void 0 : _b.addEventListener("click", () => {
+    (_f = document.getElementById("tip-close")) == null ? void 0 : _f.addEventListener("click", () => {
       state.ui.activeTip = null;
       renderApp();
     });
-    (_c = document.querySelector("[data-tip-chapter]")) == null ? void 0 : _c.addEventListener("click", (e) => {
+    (_g = document.querySelector("[data-tip-chapter]")) == null ? void 0 : _g.addEventListener("click", (e) => {
       e.stopPropagation();
       const chapter17 = e.currentTarget.dataset.tipChapter;
       state.ui.activeTip = null;
       navigate("manual", { chapter: chapter17 });
     });
-    (_d = document.getElementById("btn-back-top")) == null ? void 0 : _d.addEventListener("click", () => {
+    (_h = document.getElementById("btn-back-top")) == null ? void 0 : _h.addEventListener("click", () => {
       if (!state.ui.pcardId && !state.ui.showInbox && state.ui.view === "recruiting" && recruitingGoBack()) return;
       navigateBack();
     });
-    (_e = document.getElementById("tab-more")) == null ? void 0 : _e.addEventListener("click", () => {
+    (_i = document.getElementById("tab-more")) == null ? void 0 : _i.addEventListener("click", () => {
       state.ui.sidebarOpen = !state.ui.sidebarOpen;
       renderApp();
     });
-    (_f = document.getElementById("sidebar-backdrop")) == null ? void 0 : _f.addEventListener("click", () => {
+    (_j = document.getElementById("sidebar-backdrop")) == null ? void 0 : _j.addEventListener("click", () => {
       state.ui.sidebarOpen = false;
       renderApp();
     });
@@ -43466,12 +43579,12 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
           root: htRoot
         });
       }
-      (_g = document.getElementById("ht-coachmode")) == null ? void 0 : _g.addEventListener("click", () => {
+      (_k = document.getElementById("ht-coachmode")) == null ? void 0 : _k.addEventListener("click", () => {
         if (!state.settings) state.settings = {};
         state.settings.liveWatch = state.settings.liveWatch === false;
         renderApp();
       });
-      (_h = document.getElementById("btn-resume-halftime")) == null ? void 0 : _h.addEventListener("click", async () => {
+      (_l = document.getElementById("btn-resume-halftime")) == null ? void 0 : _l.addEventListener("click", async () => {
         var _a2, _b2;
         const btn = document.getElementById("btn-resume-halftime");
         if (btn) {
@@ -43502,30 +43615,30 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         renderApp();
       });
     });
-    (_i = document.getElementById("pcard-overlay")) == null ? void 0 : _i.addEventListener("click", (e) => {
+    (_m = document.getElementById("pcard-overlay")) == null ? void 0 : _m.addEventListener("click", (e) => {
       if (e.target.id === "pcard-overlay") {
         state.ui.pcardId = null;
         renderApp();
       }
     });
-    (_j = document.getElementById("close-pcard")) == null ? void 0 : _j.addEventListener("click", () => {
+    (_n = document.getElementById("close-pcard")) == null ? void 0 : _n.addEventListener("click", () => {
       state.ui.pcardId = null;
       renderApp();
     });
     for (const id of ["btn-inbox", "btn-inbox-top"]) {
-      (_k = document.getElementById(id)) == null ? void 0 : _k.addEventListener("click", () => {
+      (_o = document.getElementById(id)) == null ? void 0 : _o.addEventListener("click", () => {
         state.inbox.forEach((m) => m.read = true);
         state.ui.showInbox = !state.ui.showInbox;
         renderApp();
       });
     }
-    (_l = document.getElementById("inbox-overlay")) == null ? void 0 : _l.addEventListener("click", (e) => {
+    (_p = document.getElementById("inbox-overlay")) == null ? void 0 : _p.addEventListener("click", (e) => {
       if (e.target.id === "inbox-overlay" || e.target.id === "close-inbox") {
         state.ui.showInbox = false;
         renderApp();
       }
     });
-    (_m = document.getElementById("btn-save")) == null ? void 0 : _m.addEventListener("click", async () => {
+    (_q = document.getElementById("btn-save")) == null ? void 0 : _q.addEventListener("click", async () => {
       if (gamePauseIsLive(state)) {
         notify("Finish the current game before saving.", "warning");
         return;
@@ -43534,11 +43647,11 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       state.ui.showSaveModal = true;
       renderApp();
     });
-    (_n = document.getElementById("close-save-modal")) == null ? void 0 : _n.addEventListener("click", () => {
+    (_r = document.getElementById("close-save-modal")) == null ? void 0 : _r.addEventListener("click", () => {
       state.ui.showSaveModal = false;
       renderApp();
     });
-    (_o = document.getElementById("save-modal-overlay")) == null ? void 0 : _o.addEventListener("click", (e) => {
+    (_s = document.getElementById("save-modal-overlay")) == null ? void 0 : _s.addEventListener("click", (e) => {
       if (e.target.id === "save-modal-overlay") {
         state.ui.showSaveModal = false;
         renderApp();
@@ -43552,7 +43665,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         notify(`Saved to ${SLOT_LABELS[slot] || slot}`, "success");
       });
     });
-    (_p = document.getElementById("btn-main-menu")) == null ? void 0 : _p.addEventListener("click", async () => {
+    (_t = document.getElementById("btn-main-menu")) == null ? void 0 : _t.addEventListener("click", async () => {
       await refreshSaves();
       navigate("mainmenu");
     });
@@ -43562,44 +43675,44 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         renderApp();
       });
     });
-    (_q = document.getElementById("close-game-result")) == null ? void 0 : _q.addEventListener("click", () => {
+    (_u = document.getElementById("close-game-result")) == null ? void 0 : _u.addEventListener("click", () => {
       state.ui.showGameResult = false;
       renderApp();
     });
-    (_r = document.getElementById("close-game-result-btn")) == null ? void 0 : _r.addEventListener("click", () => {
+    (_v = document.getElementById("close-game-result-btn")) == null ? void 0 : _v.addEventListener("click", () => {
       state.ui.showGameResult = false;
       state.ui.lastGameResult = null;
       renderApp();
     });
-    (_s = document.getElementById("game-result-overlay")) == null ? void 0 : _s.addEventListener("click", (e) => {
+    (_w = document.getElementById("game-result-overlay")) == null ? void 0 : _w.addEventListener("click", (e) => {
       if (e.target.id === "game-result-overlay") {
         state.ui.showGameResult = false;
         renderApp();
       }
     });
     if (state.ui.showGameResult && (state.ui.gameResultTab || "boxscore") === "watch" && state.ui.lastGameResult) {
-      initWatchMode(state.ui.lastGameResult, ((_t = state.ui.lastGameResult.homeSchool) == null ? void 0 : _t.id) === ((_u = getPlayerSchool()) == null ? void 0 : _u.id));
+      initWatchMode(state.ui.lastGameResult, ((_x = state.ui.lastGameResult.homeSchool) == null ? void 0 : _x.id) === ((_y = getPlayerSchool()) == null ? void 0 : _y.id));
     }
     if (state.ui.liveWatch) mountLiveWatch();
-    (_v = document.getElementById("watch-live-toggle")) == null ? void 0 : _v.addEventListener("change", (e) => {
+    (_z = document.getElementById("watch-live-toggle")) == null ? void 0 : _z.addEventListener("change", (e) => {
       state.settings = state.settings || {};
       state.settings.liveWatch = e.target.checked;
     });
     document.querySelectorAll("[data-kickoff]").forEach((b) => b.addEventListener("click", () => chooseKickoffMode(b.dataset.kickoff)));
-    (_w = document.getElementById("kickoff-coachmode")) == null ? void 0 : _w.addEventListener("click", () => {
+    (_A = document.getElementById("kickoff-coachmode")) == null ? void 0 : _A.addEventListener("click", () => {
       if (!state.settings) state.settings = {};
       state.settings.liveWatch = state.settings.liveWatch === false;
       renderApp();
     });
-    (_x = document.getElementById("kickoff-sim-half")) == null ? void 0 : _x.addEventListener("click", () => chooseKickoffMode("off"));
-    (_y = document.getElementById("kickoff-cancel")) == null ? void 0 : _y.addEventListener("click", () => {
+    (_B = document.getElementById("kickoff-sim-half")) == null ? void 0 : _B.addEventListener("click", () => chooseKickoffMode("off"));
+    (_C = document.getElementById("kickoff-cancel")) == null ? void 0 : _C.addEventListener("click", () => {
       state.ui.pendingKickoff = null;
       state._pregamePlan = null;
       renderApp();
     });
     {
       const root = document.getElementById("kickoff-adjust");
-      const gp = state._pregamePlan || ((_z = getPlayerSchool()) == null ? void 0 : _z.gameplan);
+      const gp = state._pregamePlan || ((_D = getPlayerSchool()) == null ? void 0 : _D.gameplan);
       if (root && gp) wireDefaultsListeners(gp, { root });
     }
     document.querySelectorAll("[data-cs-form]").forEach((b) => b.addEventListener("click", () => {
@@ -43669,6 +43782,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       if (b.disabled) return;
       const grp = b.dataset.csDrill;
       state.ui.callDrill = { grp, cat: b.dataset.csCat };
+      state.ui.callConceptPreview = null;
       if (_RUN_DRILLS.includes(grp)) state.ui.callPA = false;
       if (_PASS_DRILLS.includes(grp)) {
         state.ui.callRPO = false;
@@ -43679,28 +43793,43 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     const _drillBackBtn = document.querySelector("[data-cs-drillback]");
     if (_drillBackBtn) _drillBackBtn.addEventListener("click", () => {
       state.ui.callDrill = null;
+      state.ui.callConceptPreview = null;
       rerender();
     });
     document.querySelectorAll("[data-cs-concept]").forEach((b) => b.addEventListener("click", () => {
       if (!callTapOk()) return;
-      const nm = b.dataset.csConcept;
       state.ui.callDrill = null;
-      if (nm === "__surprise") answerPlayCall(_decorateCall({ category: b.dataset.csCat }));
-      else answerPlayCall(_decorateCall({ concept: nm }));
+      state.ui.callConceptPreview = null;
+      answerPlayCall(_decorateCall({ category: b.dataset.csCat }));
     }));
-    (_A = document.getElementById("cs-sheet-call")) == null ? void 0 : _A.addEventListener("click", () => {
+    document.querySelectorAll("[data-cs-preview]").forEach((b) => b.addEventListener("click", () => {
+      state.ui.callConceptPreview = b.dataset.csPreview;
+      rerender();
+    }));
+    (_E = document.querySelector("[data-cs-previewback]")) == null ? void 0 : _E.addEventListener("click", () => {
+      state.ui.callConceptPreview = null;
+      rerender();
+    });
+    (_F = document.querySelector("[data-cs-callconcept]")) == null ? void 0 : _F.addEventListener("click", (b) => {
+      if (!callTapOk()) return;
+      const nm = b.currentTarget.dataset.csCallconcept;
+      state.ui.callDrill = null;
+      state.ui.callConceptPreview = null;
+      answerPlayCall(_decorateCall({ concept: nm }));
+    });
+    (_G = document.getElementById("cs-sheet-call")) == null ? void 0 : _G.addEventListener("click", () => {
       if (callTapOk()) answerPlayCall({ concept: "sheet" });
     });
     document.querySelectorAll("[data-fourth]").forEach((b) => b.addEventListener("click", () => {
       if (!b.disabled && callTapOk()) answerFourthDown(b.dataset.fourth);
     }));
-    (_B = document.getElementById("fourth-auto")) == null ? void 0 : _B.addEventListener("click", () => {
+    (_H = document.getElementById("fourth-auto")) == null ? void 0 : _H.addEventListener("click", () => {
       if (callTapOk()) answerFourthDown("auto");
     });
-    (_C = document.getElementById("cs-skip-quarter")) == null ? void 0 : _C.addEventListener("click", () => simToQuarterEnd());
-    (_D = document.getElementById("cs-mode-keydowns")) == null ? void 0 : _D.addEventListener("click", () => setCallModeMidGame("keydowns"));
-    (_E = document.getElementById("cs-mode-off")) == null ? void 0 : _E.addEventListener("click", () => setCallModeMidGame("off"));
-    (_F = document.getElementById("cs-mode-everycall")) == null ? void 0 : _F.addEventListener("click", () => {
+    (_I = document.getElementById("cs-skip-quarter")) == null ? void 0 : _I.addEventListener("click", () => simToQuarterEnd());
+    (_J = document.getElementById("cs-mode-keydowns")) == null ? void 0 : _J.addEventListener("click", () => setCallModeMidGame("keydowns"));
+    (_K = document.getElementById("cs-mode-off")) == null ? void 0 : _K.addEventListener("click", () => setCallModeMidGame("off"));
+    (_L = document.getElementById("cs-mode-everycall")) == null ? void 0 : _L.addEventListener("click", () => {
       var _a2;
       const t = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token;
       if (t) {
@@ -43708,7 +43837,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         renderApp();
       }
     });
-    (_G = document.getElementById("cs-recover")) == null ? void 0 : _G.addEventListener("click", () => {
+    (_M = document.getElementById("cs-recover")) == null ? void 0 : _M.addEventListener("click", () => {
       var _a2, _b2;
       const t = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token;
       if (((_b2 = t == null ? void 0 : t.pending) == null ? void 0 : _b2.kind) === "fourth") {
@@ -43725,10 +43854,10 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     document.querySelectorAll("[data-cs-quickcat]").forEach((btn) => btn.addEventListener("click", () => {
       if (callTapOk()) answerPlayCall({ category: btn.dataset.csQuickcat });
     }));
-    (_H = document.getElementById("tc-keydowns")) == null ? void 0 : _H.addEventListener("click", () => {
+    (_N = document.getElementById("tc-keydowns")) == null ? void 0 : _N.addEventListener("click", () => {
       if (callTapOk()) setCallModeMidGame("keydowns");
     });
-    (_I = document.getElementById("tc-headset")) == null ? void 0 : _I.addEventListener("click", () => {
+    (_O = document.getElementById("tc-headset")) == null ? void 0 : _O.addEventListener("click", () => {
       var _a2, _b2;
       state.ui.autoRun = true;
       const lw = state.ui.liveWatch;
@@ -43740,23 +43869,23 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       if (((_b2 = t == null ? void 0 : t.pending) == null ? void 0 : _b2.kind) === "fourth") answerFourthDown("auto");
       else answerPlayCall({ concept: "sheet" });
     });
-    (_J = document.getElementById("tc-jumpin")) == null ? void 0 : _J.addEventListener("click", () => {
+    (_P = document.getElementById("tc-jumpin")) == null ? void 0 : _P.addEventListener("click", () => {
       state.ui.autoRun = false;
       watchStop();
       _watch = null;
       if (state.ui.liveWatch) state.ui.liveWatch.boardDone = true;
       renderApp();
     });
-    (_K = document.getElementById("tc-skipbreak")) == null ? void 0 : _K.addEventListener("click", () => {
+    (_Q = document.getElementById("tc-skipbreak")) == null ? void 0 : _Q.addEventListener("click", () => {
       if (callTapOk()) simToBreak();
     });
-    (_L = document.getElementById("cs-autorun")) == null ? void 0 : _L.addEventListener("click", () => {
+    (_R = document.getElementById("cs-autorun")) == null ? void 0 : _R.addEventListener("click", () => {
       var _a2, _b2, _c2;
       state.ui.autoRun = true;
       if (((_c2 = (_b2 = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token) == null ? void 0 : _b2.pending) == null ? void 0 : _c2.kind) === "fourth") answerFourthDown("auto");
       else answerPlayCall({ concept: "sheet" });
     });
-    (_M = document.getElementById("cs-autorun-stop")) == null ? void 0 : _M.addEventListener("click", () => {
+    (_S = document.getElementById("cs-autorun-stop")) == null ? void 0 : _S.addEventListener("click", () => {
       state.ui.autoRun = false;
       watchStop();
       _watch = null;
@@ -43989,6 +44118,103 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
        <button class="bc-btn bc-text" id="tc-headset" title="Headset off \u2014 the game plan calls it and you watch">\u{1F3A7} Headset off</button>`;
     return `<div class="tc-bar">${mid}<button class="bc-btn bc-text" id="tc-skipbreak" title="Sim straight to the ${half === 1 ? "locker room" : "final gun"}">${breakLabel}</button></div>`;
   }
+  var CONCEPT_ROUTE_ART = {
+    "Mesh": ["M18 46 L18 30 Q30 22 48 26 L76 26", "M82 46 L82 32 Q68 22 52 28 L28 28"],
+    "Slant-Flat": ["M18 46 L27 35 L48 22", "M82 46 L82 38 L94 35"],
+    "Stick": ["M68 46 L68 27 L58 27", "M86 46 L86 38 L96 35"],
+    "Shallow Cross": ["M20 46 L20 33 Q38 25 76 27", "M82 46 L82 18"],
+    "Bubble Screen": ["M82 46 Q90 43 94 36", "M66 46 L76 38"],
+    "Tunnel Screen": ["M84 46 L94 38 Q76 34 62 28", "M68 46 L78 35"],
+    "RB Screen": ["M50 49 Q62 45 74 33", "M68 46 L76 36"],
+    "Smash": ["M18 46 L18 31 L30 31", "M82 46 L82 30 Q78 18 64 14"],
+    "Curl-Flat": ["M22 46 L22 23 Q22 28 14 31", "M78 46 L78 38 L94 34"],
+    "Flood": ["M18 46 L18 12", "M50 46 Q62 25 84 22", "M82 46 L94 36"],
+    "Y-Cross": ["M48 46 L48 33 Q58 22 86 18", "M20 46 L20 10"],
+    "Dagger": ["M34 46 L34 9", "M68 46 L68 22 L42 22"],
+    "Four Verts": ["M14 46 L14 8", "M38 46 L38 8", "M62 46 L62 8", "M86 46 L86 8"],
+    "Post-Wheel": ["M22 46 L22 27 L50 10", "M72 46 Q91 36 86 9"],
+    "PA Deep Cross": ["M24 46 L24 18 Q46 10 82 17", "M78 46 L78 9"],
+    "Mills (Post-Dig)": ["M30 46 L30 22 L50 9", "M72 46 L72 22 L45 22"],
+    "Red-Zone Fade": ["M82 46 Q92 28 88 12"],
+    "Inside Zone": ["M50 49 L50 17"],
+    "Power": ["M48 49 Q36 38 55 17"],
+    "Iso": ["M50 49 L50 17"],
+    "Trap": ["M50 49 Q61 35 48 17"],
+    "Outside Zone": ["M50 49 Q67 35 88 20"],
+    "Counter": ["M50 49 Q35 40 63 18"],
+    "Toss": ["M50 49 Q71 46 92 23"],
+    "QB Sneak": ["M50 49 L50 29"],
+    "Triple Option": ["M50 49 L50 34 Q70 34 89 18", "M50 49 Q38 34 28 18"],
+    "Speed Option": ["M50 49 Q69 39 90 19"],
+    "Jet Sweep": ["M18 43 Q50 47 91 20"],
+    "Draw": ["M50 49 L50 38 Q55 28 50 17"],
+    "Wildcat Power": ["M50 49 Q39 35 62 17"]
+  };
+  function conceptPlayGraphic(name, large = false) {
+    const paths = CONCEPT_ROUTE_ART[name] || ["M20 46 L20 20", "M50 46 L50 16", "M80 46 L80 20"];
+    const run = !!RUN_CONCEPTS[name];
+    const cls = run ? "cs-route cs-route-run" : "cs-route";
+    const label = large ? ` role="img" aria-label="${escapeHtml(name)} play diagram"` : ' aria-hidden="true"';
+    return `<svg class="cs-play-art${large ? " is-large" : ""}" viewBox="0 0 100 56"${label}>
+    <rect class="cs-art-field" x="1" y="1" width="98" height="54"/>
+    <path class="cs-art-yard" d="M1 14 H99 M1 28 H99 M1 42 H99"/>
+    <path class="cs-art-los" d="M4 46 H96"/>
+    ${paths.map((d) => `<path class="${cls}" d="${d}"/>`).join("")}
+    <g class="cs-art-offense"><circle cx="34" cy="46" r="1.8"/><circle cx="42" cy="46" r="1.8"/><circle cx="50" cy="46" r="1.8"/><circle cx="58" cy="46" r="1.8"/><circle cx="66" cy="46" r="1.8"/><circle class="cs-art-qb" cx="50" cy="51" r="2.2"/></g>
+  </svg>`;
+  }
+  var CONCEPT_COACH = {
+    "Smash": { attacks: "Two-high and Cover 2: the corner route climbs behind the flat defender.", risk: "Needs time, and quarters can squeeze the corner window.", best: "An aware QB plus a precise, strong-at-the-catch receiver." },
+    "Curl-Flat": { attacks: "Cover 3: it makes the flat defender choose between two routes.", risk: "A late throw toward the sideline can become an interception.", best: "An accurate QB and a sharp route-running receiver." },
+    "Flood": { attacks: "Zone coverage by stretching one sideline at three depths.", risk: "It develops slowly and man coverage can carry the routes.", best: "An aware QB and a mobile, technical tight end." },
+    "Y-Cross": { attacks: "Man and single-high looks with a fast route across the field.", risk: "It asks protection to hold while the crosser clears traffic.", best: "An accurate QB and a fast tight end." },
+    "Dagger": { attacks: "Middle-field zones: a vertical clears space for the deep dig.", risk: "The dig can be jumped if the QB is late or pressured.", best: "Solid protection and a fast, precise receiver." },
+    "Mesh": { attacks: "Man coverage with two shallow crossers that create traffic.", risk: "Zone defenders can sit underneath and erase the easy yards.", best: "Quick decisions and agile, technical receivers." },
+    "Four Verts": { attacks: "Single-high and Cover 3 by stressing every deep seam.", risk: "A long-developing call against pressure or deep quarters.", best: "Receiver speed and a QB who can place the deep ball." },
+    "Inside Zone": { attacks: "Light boxes and over-pursuing fronts with a one-cut run.", risk: "A loaded box can close the interior before the cut appears.", best: "Technical linemen and a patient, agile back." },
+    "Outside Zone": { attacks: "Light boxes by stretching the front horizontally.", risk: "Fast edge defenders can force the run backward.", best: "Agile linemen and a back with vision and speed." },
+    "Power": { attacks: "A firm interior edge with a pulling blocker at the point of attack.", risk: "Penetration can disrupt the pull and clog the designed lane.", best: "Strong linemen and a physical runner." }
+  };
+  function conceptTeaching(name) {
+    var _a;
+    if (CONCEPT_COACH[name]) return CONCEPT_COACH[name];
+    const c = PASS_CONCEPTS[name] || RUN_CONCEPTS[name] || {};
+    let attacks = "A balanced defensive look with spacing and assignment conflict.";
+    let risk = "Execution breaks down if the defense wins quickly at the point of attack.";
+    if (c.vs) {
+      const ranked = Object.entries(c.vs).sort((a, b) => b[1] - a[1]);
+      const good = ranked.filter(([, v]) => v > 0).slice(0, 2).map(([k]) => k);
+      const bad = (_a = ranked.slice().reverse().find(([, v]) => v < 0)) == null ? void 0 : _a[0];
+      if (good.length) attacks = `${good.join(" and ")} by creating the concept's preferred coverage conflict.`;
+      if (bad) risk = `${bad} is the toughest answer; ${c.depth === "deep" ? "the routes also need protection and time." : "late decisions can close the throwing window."}`;
+    } else if (c.vsBox) {
+      attacks = (c.vsBox.light || 0) >= (c.vsBox.loaded || 0) ? "A light box, where blockers can create a clean lane." : "An aggressive front by changing the blocking angle.";
+      risk = (c.vsBox.loaded || 0) < 0 ? "A loaded box can outnumber the blockers." : "Backfield penetration can spoil the designed path.";
+    }
+    const attrNames = { AWR: "awareness", TEC: "technique", SPD: "speed", AGI: "agility", STR: "strength", JMP: "jumping", HND: "hands" };
+    const pieces = Object.entries(c.exec || {}).slice(0, 2).map(([pos, attrs]) => {
+      var _a2;
+      const top = (_a2 = Object.entries(attrs).sort((a, b) => b[1] - a[1])[0]) == null ? void 0 : _a2[0];
+      return `${pos} ${attrNames[top] || "execution"}`;
+    });
+    return { attacks, risk, best: pieces.length ? pieces.join(" plus ") : "Players whose strengths match the assignment." };
+  }
+  function conceptPreviewHtml(name) {
+    const note = conceptTeaching(name);
+    return `<div class="cs-concept-preview">
+    <button class="cs-drill-back" data-cs-previewback="1">\u2190 Back to plays</button>
+    <div class="cs-preview-main">
+      ${conceptPlayGraphic(name, true)}
+      <div class="cs-preview-copy">
+        <h3>${escapeHtml(name)}</h3>
+        <div class="cs-teach-row"><b>ATTACKS</b><span>${escapeHtml(note.attacks)}</span></div>
+        <div class="cs-teach-row"><b>RISK</b><span>${escapeHtml(note.risk)}</span></div>
+        <div class="cs-teach-row"><b>BEST WITH</b><span>${escapeHtml(note.best)}</span></div>
+      </div>
+    </div>
+    <button class="btn primary cs-call-play" data-cs-callconcept="${escapeHtml(name)}">CALL THIS PLAY \u2192</button>
+  </div>`;
+  }
   function callSheetPanelHtml() {
     var _a, _b, _c, _d, _e, _f;
     if (!((_b = (_a = state.pendingHalftime) == null ? void 0 : _a.token) == null ? void 0 : _b.pending)) return "";
@@ -44069,15 +44295,17 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     if (_drillCat) {
       const meta = CATS.find(([, , g]) => g === _drillCat.grp);
       const list = conceptsFor(_drillCat.grp);
-      drillBlock = `
+      const previewName = list.includes(state.ui.callConceptPreview) ? state.ui.callConceptPreview : null;
+      drillBlock = previewName ? conceptPreviewHtml(previewName) : `
         <div class="cs-drill">
           <div class="cs-drill-head">
             <button class="cs-drill-back" data-cs-drillback="1">\u2190 Plays</button>
             <span class="cs-drill-title">${meta ? escapeHtml(meta[1]) : "Plays"} \xB7 <span class="muted">${state.ui.callFormation ? escapeHtml(state.ui.callFormation) : "Auto"}</span></span>
           </div>
+          <p class="cs-diagram-hint">Tap a diagram to learn the play before calling it.</p>
           <div class="cs-concepts">
-            <button class="cs-concept" data-cs-concept="__surprise" data-cs-cat="${_drillCat.cat}">\u{1F3B2} Surprise me</button>
-            ${list.map((nm) => `<button class="cs-concept" data-cs-concept="${escapeHtml(nm)}">${escapeHtml(nm)}</button>`).join("") || `<div class="muted" style="padding:6px">No plays fit ${state.ui.callFormation ? "this formation" : "your carried formations"} \u2014 try Surprise me.</div>`}
+            <button class="cs-concept cs-surprise" data-cs-concept="__surprise" data-cs-cat="${_drillCat.cat}"><span class="cs-surprise-die">\u{1F3B2}</span><span>Surprise me</span></button>
+            ${list.map((nm) => `<button class="cs-concept cs-concept-card" data-cs-preview="${escapeHtml(nm)}" aria-label="Preview ${escapeHtml(nm)}">${conceptPlayGraphic(nm)}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-learn">View play \u2192</span></button>`).join("") || `<div class="muted" style="padding:6px">No plays fit ${state.ui.callFormation ? "this formation" : "your carried formations"} \u2014 try Surprise me.</div>`}
           </div>
         </div>`;
     }
@@ -44535,7 +44763,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       svg.innerHTML = watchFieldBase(p);
       return null;
     }
-    svg.innerHTML = watchFieldBase(p) + `<circle id="wp-spot" class="wp-spot" r="3.4" transform="translate(0,0)"/>` + script.actors.map((a) => `<g class="wp-actor" data-wpa="${a.id}" transform="translate(${a.track[0][0].toFixed(2)},${a.track[0][1].toFixed(2)})">` + (a.team === "def" ? `<text class="wd-x" x="0" y="0">\u2715</text><text class="wd-lbl" x="0" y="-2.6">${a.label}</text>` : `<circle r="1.9" class="wo-c${a.qb ? " wo-qb" : ""}" cx="0" cy="0"/><text class="wo-lbl" x="0" y="4.4">${a.label}</text>`) + `</g>`).join("") + `<polyline id="wp-trail" class="wp-trail" points=""/><g id="wp-fx"></g><circle id="wp-ball" r="1.6" class="wa-ball" transform="translate(${script.ball.track[0][0]},${script.ball.track[0][1]})"/>`;
+    svg.innerHTML = watchFieldBase(p) + `<polyline id="wp-trail" class="wp-trail" points=""/><circle id="wp-spot" class="wp-spot" r="3.4" transform="translate(0,0)"/>` + script.actors.map((a) => `<g class="wp-actor wp-team-${a.team}" data-wpa="${a.id}" data-wpg="${a.grp || ""}" transform="translate(${a.track[0][0].toFixed(2)},${a.track[0][1].toFixed(2)})">` + (a.team === "def" ? `<text class="wd-x" x="0" y="0">\u2715</text><text class="wd-lbl" x="0" y="-2.6">${a.label}</text>` : `<circle r="1.9" class="wo-c${a.qb ? " wo-qb" : ""}" cx="0" cy="0"/><text class="wo-lbl" x="0" y="4.4">${a.label}</text>`) + `</g>`).join("") + `<g id="wp-fx"></g><circle id="wp-ball" r="1.6" class="wa-ball" transform="translate(${script.ball.track[0][0]},${script.ball.track[0][1]})"/>`;
     let yLo = Infinity, yHi = -Infinity;
     for (const a of script.actors) for (const pt of a.track) {
       if (pt[1] < yLo) yLo = pt[1];
@@ -44566,7 +44794,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     const trail = [];
     let lastTrail = null;
     const tick = () => {
-      var _a2, _b2, _c;
+      var _a2, _b2;
       if (!svg.isConnected) {
         watchStopAnim();
         return;
@@ -44575,9 +44803,12 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       const [bx, by] = sampleTrack(script.ball.track, script.step, t);
       ballN == null ? void 0 : ballN.setAttribute("transform", `translate(${bx.toFixed(2)},${by.toFixed(2)})`);
       let cx = null, cy = null, cd = 1e9;
+      svg.classList.toggle("watch-in-play", t > script.presnap + 0.15);
       for (const a of script.actors) {
         const [x, y] = sampleTrack(a.track, script.step, t);
-        (_a2 = nodes[a.id]) == null ? void 0 : _a2.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)})`);
+        const node = nodes[a.id];
+        node == null ? void 0 : node.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)})`);
+        node == null ? void 0 : node.classList.toggle("wp-near-ball", t > script.presnap && Math.hypot(x - bx, y - by) < 4.4);
         if (a.team === "off") {
           const dd = Math.hypot(x - bx, y - by);
           if (dd < cd) {
@@ -44609,7 +44840,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       for (const f of script.fx) {
         if (t >= f.t && !shown.has(f)) {
           shown.add(f);
-          if (f.kind === "beaten") (_c = (_b2 = nodes[f.actorId]) == null ? void 0 : _b2.querySelector(".wd-x")) == null ? void 0 : _c.classList.add("wd-beaten");
+          if (f.kind === "beaten") (_b2 = (_a2 = nodes[f.actorId]) == null ? void 0 : _a2.querySelector(".wd-x")) == null ? void 0 : _b2.classList.add("wd-beaten");
           else fxN == null ? void 0 : fxN.insertAdjacentHTML("beforeend", watchFxMarkup(f));
         }
       }
@@ -44777,7 +45008,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       else if (!p.complete && String(p.type || "").startsWith("pass")) tempo = 0.58;
       else if (yds <= 3) tempo = 0.7;
       holdMs = baseMs * tempo;
-      if (scriptDur) holdMs = Math.max(holdMs, (scriptDur * 1e3 + 300) / w.speed);
+      if (scriptDur) holdMs = Math.max(holdMs, scriptDur * 1e3 / w.speed + 1200);
       const reveal = () => {
         ticker.innerHTML = `${desc.text} ${extra}`;
         if (p.td) {
