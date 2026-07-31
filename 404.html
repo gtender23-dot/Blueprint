@@ -5630,7 +5630,7 @@ body *::after {
   height:112px;
   flex:0 0 112px;
   overflow:hidden;
-  background:#0a101c;
+  background:#354b70;
   border:4px solid var(--px-line);
   border-bottom-color:var(--portrait-accent);
   box-shadow:6px 6px 0 var(--px-shadow),inset 0 0 0 3px #05070c;
@@ -5641,8 +5641,8 @@ body *::after {
 .portrait-grid {
   inset:0;
   z-index:0;
-  background-color:color-mix(in srgb,var(--portrait-jersey) 18%,#0a101c);
-  background-image:linear-gradient(rgba(244,240,216,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(244,240,216,.08) 1px,transparent 1px);
+  background-color:color-mix(in srgb,var(--portrait-jersey) 44%,#49658d);
+  background-image:linear-gradient(rgba(255,255,255,.22) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.22) 1px,transparent 1px),linear-gradient(135deg,rgba(255,255,255,.12),transparent 58%);
   background-size:14px 14px;
 }
 .portrait-shoulders { left:7%; top:74%; width:86%; height:30%; z-index:1; background:var(--portrait-jersey); border-top:7px solid var(--portrait-accent); box-shadow:inset 7px 0 0 rgba(0,0,0,.28),inset -7px 0 0 rgba(0,0,0,.28); }
@@ -5689,6 +5689,14 @@ body *::after {
   .pcard-portrait-row .profile-ratings { gap:10px; flex-wrap:wrap; }
   .pcard-portrait-row .pr-val { font-size:23px; }
 }
+/* ACCESSIBLE INTERACTION FOCUS */
+.nav-item:focus-visible,
+.school-card:focus-visible {
+  outline:3px solid var(--px-yellow);
+  outline-offset:2px;
+  box-shadow:4px 4px 0 var(--px-shadow) !important;
+}
+.nav-item[role="button"] { width:100%; }
   </style>
 </head>
 <body>
@@ -5698,7 +5706,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "2f3b8779f7";
+globalThis.__BUILD__ = "396bb57285";
 "use strict";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
@@ -8582,22 +8590,45 @@ var _CFB = (() => {
   function crestXmlSafe(value) {
     return String(value || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   }
+  function pixelMonogram(abbr, color) {
+    const chars = String(abbr || "CFB").toUpperCase().replace(/[^A-Z0-9]/g, "").padEnd(3, "X").slice(0, 3);
+    let out = "";
+    for (let i = 0; i < chars.length; i++) {
+      const glyph = PIXEL_FONT_3X5[chars[i]] || PIXEL_FONT_3X5.X;
+      for (let y = 0; y < 5; y++) {
+        for (let x = 0; x < 3; x++) {
+          if (glyph[y][x] === "1") out += `<rect x="${2 + i * 4 + x}" y="${10 + y}" width="1" height="1" fill="${color}"/>`;
+        }
+      }
+    }
+    return out;
+  }
+  function crestBackdrop(variant, c1, c2) {
+    const base = `<rect x="1" y="1" width="14" height="14" fill="${c2}"/><rect x="2" y="2" width="12" height="12" fill="${c1}"/>`;
+    if (variant === 1) return base + `<rect x="2" y="2" width="3" height="8" fill="${c2}"/><rect x="11" y="2" width="3" height="8" fill="${c2}"/>`;
+    if (variant === 2) return base + `<path d="M2 2h12v3L5 10H2z" fill="${c2}" opacity=".72"/>`;
+    if (variant === 3) return base + `<rect x="2" y="2" width="12" height="2" fill="${c2}"/><rect x="2" y="7" width="12" height="2" fill="${c2}" opacity=".72"/>`;
+    if (variant === 4) return base + `<path d="M2 2h4L2 6zm12 0v4l-4-4zM2 14v-4l4 4zm12 0h-4l4-4z" fill="${c2}"/>`;
+    return base;
+  }
   function renderCrest(school, size = 40) {
     var _a, _b;
     const c1 = ((_a = school == null ? void 0 : school.colors) == null ? void 0 : _a[0]) || "#00d95f";
     const c2 = ((_b = school == null ? void 0 : school.colors) == null ? void 0 : _b[1]) || "#f4f0d8";
     const h = crestHash(school);
     const kind = mascotKind(school);
+    const variant = h % 5;
     const label = crestXmlSafe(`${(school == null ? void 0 : school.name) || "School"} ${(school == null ? void 0 : school.nick) || ""} pixel logo`);
-    const shell = (inner) => `<svg class="crest crest-pixel crest-${kind}" width="${size}" height="${size}" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${label}" shape-rendering="crispEdges">${inner}</svg>`;
+    const shell = (inner) => `<svg class="crest crest-pixel crest-${kind} crest-frame-${variant}" width="${size}" height="${size}" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${label}" shape-rendering="crispEdges">${inner}</svg>`;
     if (school == null ? void 0 : school.crestImg) {
       return shell(`<rect width="16" height="16" fill="${c2}"/><rect x="1" y="1" width="14" height="14" fill="${c1}"/><image href="${school.crestImg}" x="2" y="2" width="12" height="12" preserveAspectRatio="xMidYMid meet" style="image-rendering:pixelated"/>`);
     }
     const light = pixelLuma(c1) > 0.58 ? "#05070c" : "#f4f0d8";
     const sprite = pixelRects(PIXEL_MASCOTS[kind] || PIXEL_MASCOTS.gridiron, { x: "#05070c", 1: c2, 2: c1, w: light });
     const flip = h >>> 7 & 1;
+    const monogramColor = pixelLuma(c2) > 0.48 ? c2 : "#f4f0d8";
     return shell(
-      `<rect width="16" height="16" fill="#05070c"/><rect x="1" y="1" width="14" height="14" fill="${c2}"/><rect x="2" y="2" width="12" height="12" fill="${c1}"/><g${flip ? ' transform="translate(16 0) scale(-1 1)"' : ""}>${sprite}</g><rect x="1" y="1" width="2" height="2" fill="${light}" opacity=".75"/><rect x="13" y="13" width="2" height="2" fill="#05070c" opacity=".8"/>`
+      `<rect width="16" height="16" fill="#05070c"/>` + crestBackdrop(variant, c1, c2) + `<g${flip ? ' transform="translate(16 0) scale(-1 1)"' : ""}>${sprite}</g><rect x="1" y="10" width="14" height="5" fill="#05070c" opacity=".94"/>` + pixelMonogram(school == null ? void 0 : school.abbr, monogramColor) + `<rect x="1" y="1" width="2" height="2" fill="${light}" opacity=".75"/><rect x="13" y="8" width="2" height="2" fill="#05070c" opacity=".8"/>`
     );
   }
   function portraitHash(player) {
@@ -8650,7 +8681,7 @@ var _CFB = (() => {
     <span class="portrait-position">${escapeHtml(pos)}</span>
   </div>`;
   }
-  var FIRST_NAMES, LAST_NAMES, LOCATIONS, LOCATIONS_TOTAL_W, PIXEL_MASCOTS, MASCOT_RULES, PORTRAIT_SKINS, PORTRAIT_HAIR, PORTRAIT_POSITION_COLORS;
+  var FIRST_NAMES, LAST_NAMES, LOCATIONS, LOCATIONS_TOTAL_W, PIXEL_MASCOTS, MASCOT_RULES, PIXEL_FONT_3X5, PORTRAIT_SKINS, PORTRAIT_HAIR, PORTRAIT_POSITION_COLORS;
   var init_utils = __esm({
     "js/utils.js"() {
       "use strict";
@@ -9321,6 +9352,44 @@ var _CFB = (() => {
         ["saint", /saint|crusader|friar|monk|bishop|deacon|gospel|abbot|quaker|shepherd|faith/],
         ["crown", /king|duke|president|statesmen|diplomat|colonial|explorer|pioneer|sojourner|monarch|royal|dutchmen|pilgrim|don/]
       ];
+      PIXEL_FONT_3X5 = {
+        A: ["010", "101", "111", "101", "101"],
+        B: ["110", "101", "110", "101", "110"],
+        C: ["011", "100", "100", "100", "011"],
+        D: ["110", "101", "101", "101", "110"],
+        E: ["111", "100", "110", "100", "111"],
+        F: ["111", "100", "110", "100", "100"],
+        G: ["011", "100", "101", "101", "011"],
+        H: ["101", "101", "111", "101", "101"],
+        I: ["111", "010", "010", "010", "111"],
+        J: ["001", "001", "001", "101", "010"],
+        K: ["101", "101", "110", "101", "101"],
+        L: ["100", "100", "100", "100", "111"],
+        M: ["101", "111", "111", "101", "101"],
+        N: ["101", "111", "111", "111", "101"],
+        O: ["010", "101", "101", "101", "010"],
+        P: ["110", "101", "110", "100", "100"],
+        Q: ["010", "101", "101", "111", "011"],
+        R: ["110", "101", "110", "101", "101"],
+        S: ["011", "100", "010", "001", "110"],
+        T: ["111", "010", "010", "010", "010"],
+        U: ["101", "101", "101", "101", "111"],
+        V: ["101", "101", "101", "101", "010"],
+        W: ["101", "101", "111", "111", "101"],
+        X: ["101", "101", "010", "101", "101"],
+        Y: ["101", "101", "010", "010", "010"],
+        Z: ["111", "001", "010", "100", "111"],
+        "0": ["111", "101", "101", "101", "111"],
+        "1": ["010", "110", "010", "010", "111"],
+        "2": ["110", "001", "010", "100", "111"],
+        "3": ["110", "001", "010", "001", "110"],
+        "4": ["101", "101", "111", "001", "001"],
+        "5": ["111", "100", "110", "001", "110"],
+        "6": ["011", "100", "111", "101", "111"],
+        "7": ["111", "001", "010", "010", "010"],
+        "8": ["111", "101", "111", "101", "111"],
+        "9": ["111", "101", "111", "001", "110"]
+      };
       PORTRAIT_SKINS = [
         ["#f4c7a1", "#c98d69"],
         ["#e8ae82", "#b87552"],
@@ -30052,7 +30121,7 @@ var _CFB = (() => {
         </div>
         <div class="conf-school-row">
           ${confSchools.map((s) => `
-            <div class="school-card${selectedSchoolId === s.id ? " selected" : ""}" data-school-id="${s.id}">
+            <div class="school-card${selectedSchoolId === s.id ? " selected" : ""}" data-school-id="${s.id}" role="button" tabindex="0" aria-pressed="${selectedSchoolId === s.id ? "true" : "false"}" aria-label="Select ${escapeHtml(s.name)} ${escapeHtml(s.nick)}, ${escapeHtml(s.division)} program">
               <div class="school-card-header">
                 <span class="school-crest">${renderCrest(s, 30)}</span>
                 ${renderPrestigePips(s.prestige, maxPips)}
@@ -30102,9 +30171,13 @@ var _CFB = (() => {
       });
     });
     document.querySelectorAll(".school-card").forEach((card) => {
-      card.addEventListener("click", () => {
-        document.querySelectorAll(".school-card").forEach((c) => c.classList.remove("selected"));
+      const selectCard = () => {
+        document.querySelectorAll(".school-card").forEach((c) => {
+          c.classList.remove("selected");
+          c.setAttribute("aria-pressed", "false");
+        });
         card.classList.add("selected");
+        card.setAttribute("aria-pressed", "true");
         selectedSchoolId = card.dataset.schoolId;
         const school = SCHOOL_DATA.find((s) => s.id === selectedSchoolId);
         if (school) {
@@ -30117,6 +30190,12 @@ var _CFB = (() => {
           const enroll = school.enrollment ? ` \xB7 ${school.enrollment.toLocaleString()} students` : "";
           document.getElementById("info-school-detail").textContent = `${loc}${(conf == null ? void 0 : conf.name) || school.conf} \xB7 ${school.division} \xB7 Prestige ${school.prestige}/${maxPrestige}${venue}${enroll}`;
         }
+      };
+      card.addEventListener("click", selectCard);
+      card.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault();
+        selectCard();
       });
     });
     (_b = document.getElementById("btn-start")) == null ? void 0 : _b.addEventListener("click", () => {
@@ -30453,7 +30532,10 @@ var _CFB = (() => {
     if (p.sack && n(p.sackerId) && n(p.throwerId)) return `${n(p.sackerId)} gets home \u2014 ${n(p.throwerId)} down for ${Math.abs(yds)}.`;
     if (p.rpo && n(p.throwerId) && n(p.receiverId)) return `${n(p.throwerId)} pulls it at the mesh and hits ${n(p.receiverId)} for ${yds}${scored}.`;
     if ((p.isQBDesignedRun || p.isScramble) && n(p.rusherId)) return `${n(p.rusherId)} escapes the pocket for ${yds}${scored}.`;
-    if (((_a = p.type) == null ? void 0 : _a.startsWith("run")) && n(p.rusherId)) return `${n(p.rusherId)} for ${yds}${scored}.`;
+    if (((_a = p.type) == null ? void 0 : _a.startsWith("run")) && n(p.rusherId)) {
+      const action = yds >= 15 ? "bursts into the second level" : yds >= 7 ? "slashes through traffic" : yds >= 3 ? "powers ahead" : "fights for every inch";
+      return `${n(p.rusherId)} ${action} for ${yds} yard${Math.abs(yds) === 1 ? "" : "s"}${scored}.`;
+    }
     if (p.complete && n(p.throwerId) && n(p.receiverId)) return `${n(p.throwerId)} finds ${n(p.receiverId)} for ${yds}${scored}.`;
     return null;
   }
@@ -31362,12 +31444,19 @@ var _CFB = (() => {
     } else if (mode === "preseason") {
       const week = state.day;
       const focusMeta = PRESEASON_WEEKS[week] || { id: "camp", label: "Camp" };
+      const preseasonIntro = {
+        expectations: "Meet the program standard, review the season goals, and set the tone for the year.",
+        recruiting: "Build the next class: scout prospects, shape your board, and start the relationships that win signing day.",
+        spring: "Choose a training focus, test the roster in the spring game, and settle any position changes.",
+        redshirts: "Make the final eligibility decisions and preserve the right development years before kickoff.",
+        camp: "Finish camp, check the depth chart, and get the roster ready for kickoff."
+      }[focusMeta.id];
       railHtml = [1, 2, 3, 4].map(
         (w) => `<span class="event-rail-step${w < week ? " done" : w === week ? " current" : ""}">W${w} ${escapeHtml((PRESEASON_WEEKS[w] || {}).label || "")}</span>`
       ).join('<span class="event-rail-sep">\u2192</span>') + '<span class="event-rail-sep">\u2192</span><span class="event-rail-step">Season Opener</span>';
       kicker = `Preseason \xB7 Week ${week} of ${PHASES.PRESEASON.days[1]}`;
       title = focusMeta.label;
-      sub = "Freshmen have arrived. Get the roster ready for kickoff.";
+      sub = preseasonIntro;
       body = preseasonStageBody(school, focusMeta);
     } else if (mode === "playoffs") {
       ({ railHtml, kicker, title, sub, body } = playoffContent(school));
@@ -31533,7 +31622,7 @@ var _CFB = (() => {
     if (!items.length) return "";
     return `
     <div class="card league-headlines">
-      <div class="card-title">AROUND THE LEAGUE <span class="muted" style="font-weight:400">\xB7 week ${lastDay}</span></div>
+      <div class="card-title">AROUND THE LEAGUE <span class="muted" style="font-weight:400">\xB7 ${escapeHtml(calendarWeek(lastDay).label)}</span></div>
       ${items.map((t) => `<div class="headline-item">${t}</div>`).join("")}
     </div>`;
   }
@@ -40615,10 +40704,10 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
           </div>
           <div class="setting-row">
             <div class="setting-info">
-              <div class="setting-label">Watch Games Live</div>
-              <div class="setting-desc">ON: replay each play on the chalkboard between calls (first half \u2192 locker room \u2192 second half). OFF: your games sim straight to the result \u2014 no live viewer</div>
+              <div class="setting-label">Default Live Game Experience</div>
+              <div class="setting-desc">Default for future games. ON: open each game in live Coach Mode. OFF: sim straight to the result. A one-game Coach Mode override does not change this default.</div>
             </div>
-            ${toggle("liveWatch", s.liveWatch !== false, "Watch games live")}
+            ${toggle("liveWatch", s.liveWatch !== false, "Default to live Coach Mode for future games")}
           </div>
           <div class="offseason-item">
             <span class="offseason-label">Sound &amp; vibration</span>
@@ -42282,7 +42371,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         </div>
         <ul class="nav-list">
           ${NAV_ITEMS.map((item) => `
-            <li class="nav-item${view === item.id ? " active" : ""}" data-nav="${item.navTo || item.id}">
+            <li class="nav-item${view === item.id ? " active" : ""}" data-nav="${item.navTo || item.id}" role="button" tabindex="0" aria-label="${escapeHtml(item.label)}"${view === item.id ? ' aria-current="page"' : ""}>
               <span class="nav-icon">${item.icon}</span>
               <span class="nav-label">${item.label}</span>
               ${(() => {
@@ -42620,7 +42709,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     const contesteds = psRows(pStats, names, (s) => (s.contestedRec || 0) >= 2, (a, b) => (b.contestedRec || 0) - (a.contestedRec || 0));
     const inters = psRows(pStats, names, (s) => s.ints > 0, (a, b) => b.ints - a.ints);
     const hasOff = passers.length || rushers.length || receivers.length;
-    const hasDef = sackers.length || inters.length;
+    const hasDef = sackers.length || pressurers.length || breakers.length || contesteds.length || inters.length;
     return `
     <div class="ps-team-block ${isMyTeam ? "ps-my-team" : ""}">
       <div class="ps-team-name">${escapeHtml(teamName || "")}</div>
@@ -42697,9 +42786,10 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
   }
   function psRows(pStats, names, filterFn, sortFn) {
     return Object.entries(pStats).filter(([, s]) => filterFn(s)).sort(([, a], [, b]) => sortFn(a, b)).map(([id, s]) => {
-      var _a;
-      return { id, name: ((_a = names[id]) == null ? void 0 : _a.name) || "?", s };
-    });
+      const entry = names[id];
+      const name = typeof entry === "string" ? entry : entry == null ? void 0 : entry.name;
+      return { id, name, s };
+    }).filter((row) => !!row.name);
   }
   function ordinal3(n) {
     return { 1: "1st", 2: "2nd", 3: "3rd", 4: "4th" }[n] || `${n}th`;
@@ -43044,7 +43134,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         <div class="pr-stats">
           <span class="pr-chip">${tempoLine}</span>
           ${myYpc ? `<span class="pr-chip">your ground game ${myYpc} ypc</span>` : ""}
-          ${oppYpc ? `<span class="pr-chip">theirs ${oppYpc} ypc allowed</span>` : ""}
+          ${oppYpc ? `<span class="pr-chip">opponent ground game ${oppYpc} ypc</span>` : ""}
         </div>
       </div>
     </div>`;
@@ -43173,7 +43263,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
             <span class="class-badge class-${(p.classYear || "fr").toLowerCase()}">${p.classYear || ""}</span>
             ${p.redshirted ? '<span class="rs-badge">RS</span>' : ""}
           </div>
-          <button class="btn-icon" id="close-pcard">\u2715</button>
+          <button class="btn-icon" id="close-pcard" type="button" aria-label="Close player profile" title="Close">\u2715</button>
         </div>
 
         <div class="pcard-portrait-row">
@@ -43287,10 +43377,18 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
   function setupGlobalListeners() {
     var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M;
     document.querySelectorAll("[data-nav]").forEach((el) => {
-      el.addEventListener("click", () => {
+      const activateNav = () => {
         state.ui.sidebarOpen = false;
         navigate(el.dataset.nav);
-      });
+      };
+      el.addEventListener("click", activateNav);
+      if (el.matches('.nav-item[role="button"]')) {
+        el.addEventListener("keydown", (e) => {
+          if (e.key !== "Enter" && e.key !== " ") return;
+          e.preventDefault();
+          activateNav();
+        });
+      }
     });
     if (!_helpDelegationWired) {
       _helpDelegationWired = true;
