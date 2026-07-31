@@ -4800,12 +4800,17 @@ body.theme-school .data-table tr:hover td {
 .watch-board-wrap { position: relative; }
 #watch-board { width: 100%; height: auto; border-radius: 8px; display: block; }
 .wf-turf { fill: #14421f; }
-.wf-yard { stroke: rgba(255,255,255,0.10); stroke-width: 0.3; }
+.wf-mow { fill: rgba(255,255,255,0.045); }
+.wf-yard { stroke: rgba(255,255,255,0.18); stroke-width: 0.35; }
+.wf-hash { stroke: rgba(255,255,255,0.20); stroke-width: 0.3; }
+.wf-side, .wf-endline { stroke: rgba(255,255,255,0.7); stroke-width: 0.8; }
+.wf-pylon { fill: #ff9b2f; }
 .wf-los { stroke: rgba(255,255,255,0.55); stroke-width: 0.5; stroke-dasharray: 2 1.2; }
-.wf-first { stroke: #ffd54a; stroke-width: 0.5; opacity: 0.85; }
-.wf-goal { stroke: #e5533d; stroke-width: 0.7; }
-.wf-goal-lbl { font-size: 3px; fill: rgba(229,83,61,0.8); text-anchor: middle; font-weight: 800; letter-spacing: 0.3em; }
-.wf-num { font-size: 3.3px; fill: rgba(255,255,255,0.82); font-weight: 800; paint-order: stroke; stroke: rgba(0,0,0,0.5); stroke-width: 0.4px; }
+.wf-first { stroke: #ffd54a; stroke-width: 0.7; opacity: 0.95; }
+.wf-goal { stroke: rgba(255,255,255,0.85); stroke-width: 0.8; }
+.wf-ez-lbl { font-size: 4.6px; fill: rgba(255,255,255,0.92); text-anchor: middle; font-weight: 900;
+  letter-spacing: 0.3em; paint-order: stroke; stroke: rgba(0,0,0,0.55); stroke-width: 0.5px; }
+.wf-num { font-size: 4px; fill: rgba(255,255,255,0.82); font-weight: 800; paint-order: stroke; stroke: rgba(0,0,0,0.5); stroke-width: 0.4px; }
 .wf-num-r { text-anchor: end; }
 .wo-c { fill: #eaeaea; stroke: #222; stroke-width: 0.3; }
 .wo-c.wo-qb { fill: #ffd54a; }
@@ -4818,11 +4823,14 @@ body.theme-school .data-table tr:hover td {
 .wa-int { fill: none; stroke: #e5533d; stroke-width: 0.8; stroke-dasharray: 2 1; }
 .wa-sack { fill: none; stroke: #e5533d; stroke-width: 0.9; }
 .wa-ball { fill: #8b5a2b; stroke: #fff; stroke-width: 0.25; }
+/* The pixel football (group #wp-ball): brown body, pale tips and lace */
+.wab-core { fill: #a35325; stroke: rgba(6,9,14,0.9); stroke-width: 0.22; paint-order: stroke; }
+.wab-end, .wab-lace { fill: #f4f0d8; }
 /* Ball-carrier spotlight (Jul 2026): a soft glow ring on whoever has the ball */
 .wp-spot { fill: rgba(255,213,74,0.16); stroke: rgba(255,213,74,0.85); stroke-width: 0.4;
   opacity: 0; transition: opacity 0.12s; pointer-events: none; }
-.wa-x { font-size: 5px; fill: rgba(255,255,255,0.8); text-anchor: middle; }
-.wa-pick { font-size: 3.6px; fill: #e5533d; font-weight: 800; text-anchor: middle; }
+.wa-x { font-size: 5px; fill: rgba(255,255,255,0.8); text-anchor: middle; paint-order: stroke; stroke: rgba(5,7,12,0.8); stroke-width: 0.55px; }
+.wa-pick { font-size: 4.2px; fill: #e5533d; font-weight: 800; text-anchor: middle; paint-order: stroke; stroke: rgba(5,7,12,0.85); stroke-width: 0.6px; }
 .watch-flash { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   font-size: 2em; font-weight: 900; letter-spacing: 0.12em; color: #ffd54a;
   text-shadow: 0 2px 12px rgba(0,0,0,0.8); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
@@ -5063,9 +5071,16 @@ body.theme-school .data-table tr:hover td {
 .wp-contact-rays { animation: wp-contact-rays 0.55s ease-out forwards; }
 @keyframes wp-contact-burst { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes wp-contact-rays { 0% { transform: scale(0.4); } 100% { transform: scale(1.15); } }
-.wa-td { font-size: 4.4px; fill: #3fe04b; font-weight: 900; text-anchor: middle; letter-spacing: 0.04em;
+.wa-td { font-size: 5.4px; fill: #3fe04b; font-weight: 900; text-anchor: middle; letter-spacing: 0.04em;
+  paint-order: stroke; stroke: rgba(5,7,12,0.85); stroke-width: 0.7px;
   animation: wp-td-pop 0.8s ease-out forwards; }
 @keyframes wp-td-pop { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 1; } }
+/* TD confetti — ten pixel squares fanning out from the spot (per-rect --cx/--cy) */
+.wp-conf rect { animation: wp-conf-burst 0.9s steps(7) forwards; }
+@keyframes wp-conf-burst {
+  0% { transform: translate(0, 0); opacity: 1; }
+  100% { transform: translate(var(--cx, 0px), var(--cy, -6px)); opacity: 0; }
+}
 .wp-actor .wo-lbl, .wp-actor .wd-lbl { pointer-events: none; }
 
 /* ── 4th-down decision panel (live-watch integration) ── */
@@ -5532,14 +5547,22 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 .wsb-clock { color:#ff6862; font-size:22px; letter-spacing:.08em; }
 .wsb-half,.wsb-dd { font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
 .watch-board-wrap { padding:4px; background:var(--px-black); border:3px solid var(--px-line); box-shadow:5px 5px 0 var(--px-shadow); }
+/* CRT glass over the cabinet: faint scanlines + a corner vignette. Subtle on
+   purpose — it has to read as texture on a phone, never dim the play. */
+.watch-board-wrap::after { content:""; position:absolute; inset:4px; pointer-events:none;
+  background:repeating-linear-gradient(0deg, rgba(4,6,10,.13) 0 1px, transparent 1px 3px),
+             radial-gradient(130% 95% at 50% 42%, transparent 58%, rgba(2,4,8,.30) 100%); }
 #watch-board { border-radius:0; image-rendering:pixelated; shape-rendering:crispEdges; }
 #watch-board text { font-family:"Courier New",ui-monospace,monospace; font-weight:900; }
 .wf-turf { fill:#175b35; }
-.wf-yard { stroke:rgba(244,240,216,.24); stroke-width:.38; }
+.wf-mow { fill:rgba(244,240,216,.055); }
+.wf-yard { stroke:rgba(244,240,216,.34); stroke-width:.42; }
+.wf-hash { stroke:rgba(244,240,216,.30); stroke-width:.3; }
+.wf-side,.wf-endline { stroke:rgba(244,240,216,.8); stroke-width:.85; }
 .wf-los { stroke:var(--px-cyan); stroke-width:.58; stroke-dasharray:1.2 .7; }
-.wf-first { stroke:var(--px-yellow); stroke-width:.65; opacity:1; }
-.wf-goal { stroke:#ff635f; stroke-width:.9; }
-.wf-goal-lbl { fill:#ff8c79; font-family:inherit; }
+.wf-first { stroke:var(--px-yellow); stroke-width:.8; opacity:1; }
+.wf-goal { stroke:rgba(244,240,216,.9); stroke-width:.85; }
+.wf-ez-lbl { fill:var(--px-paper); font-family:inherit; stroke:rgba(0,0,0,.7); }
 .wf-num { fill:var(--px-paper); stroke:rgba(0,0,0,.72); stroke-width:.55px; }
 .wo-c { fill:var(--team-1); stroke:var(--px-paper); stroke-width:.55; }
 .wo-c.wo-qb { fill:var(--px-yellow); stroke:var(--px-black); }
@@ -5547,8 +5570,9 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 .wo-lbl,.wd-lbl { fill:var(--px-paper); font-weight:900; }
 .wa-run,.wa-pass { stroke:var(--px-yellow); stroke-linecap:square; }
 .wa-ball { fill:#a35325; stroke:var(--px-paper); stroke-width:.45; }
-.wp-trail { stroke:var(--px-yellow); stroke-linecap:square; }
-.wp-spot { fill:rgba(255,211,77,.20); stroke:var(--px-yellow); }
+.wab-core { stroke:rgba(6,9,14,.95); }
+.wp-trail { stroke:var(--px-yellow); stroke-linecap:square; stroke-dasharray:.5 1.2; stroke-width:.6; }
+.wp-spot { fill:rgba(255,211,77,.20); stroke:var(--px-yellow); stroke-dasharray:1 .8; stroke-width:.5; }
 
 /* ── Tecmo sprite players (Settings › 8-bit players) ──────────────────────
    Code-drawn pixel bodies; colors come from board-scoped vars set per snap
@@ -5570,14 +5594,25 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 .wsp-mask { fill:#0a0e16; }
 .wsp-leg { fill:#0d1420; }
 .wsp-stripe { fill:rgba(6,9,14,.7); }
+.wsp-shadow { fill:rgba(0,0,0,.28); }
+.wsp-pants { fill:#c9cfdb; stroke:rgba(6,9,14,.7); stroke-width:.2; paint-order:stroke; }
+.wsp-skin { fill:#d9a066; }
+.wsp-shine { fill:rgba(255,255,255,.4); }
+/* Two-frame run cycle: fA = planted, fB = mid-stride. While the play is live
+   the frames alternate on a hard steps() clock — the arcade gallop — with a
+   per-sprite phase offset (--gait, stamped inline) so the squad doesn't march
+   in lockstep. Frozen any time the board isn't in-play (pre-snap, linger). */
+.wsp-fB { visibility:hidden; }
+#watch-board.watch-in-play .wsp-fA { animation:wsp-gait-a .34s steps(1,end) infinite; animation-delay:var(--gait,0s); }
+#watch-board.watch-in-play .wsp-fB { animation:wsp-gait-b .34s steps(1,end) infinite; animation-delay:var(--gait,0s); }
+@keyframes wsp-gait-a { 0%,49.9% { visibility:visible; } 50%,100% { visibility:hidden; } }
+@keyframes wsp-gait-b { 0%,49.9% { visibility:hidden; } 50%,100% { visibility:visible; } }
 /* the QB wears a brighter crown so you can find him pre-snap */
 .wsp-qb .wsp-helmet { fill:var(--px-yellow); stroke:var(--px-black); }
 .wsp-qb .wsp-stripe { fill:var(--px-black); }
-/* the ball-carrier's sprite lifts a touch (the spotlight ring already tracks him) */
-#watch-board .wp-near-ball .wsp { filter:drop-shadow(0 0 .8px var(--px-yellow)); }
 .wsp-tag { font-size:2.4px; }
-/* Tecmo end zones — solid team-color bands beyond each goal line */
-.wf-endzone { opacity:.34; }
+/* Tecmo end zones — team-color paint under a checker dither, school lettered across */
+.wf-endzone { opacity:.8; }
 .watch-flash { color:var(--px-yellow); background:rgba(5,7,12,.72); border-block:5px solid var(--px-yellow); text-shadow:4px 4px 0 var(--px-shadow); transition:opacity 80ms steps(2) !important; }
 .watch-ticker,.cs-feed,.cs-strip { color:var(--text-1); background:var(--px-black) !important; border:2px solid var(--px-line); border-radius:0 !important; box-shadow:inset 3px 3px 0 #000; }
 .watch-pill { background:var(--px-panel-2) !important; border:1px solid var(--px-line); box-shadow:2px 2px 0 var(--px-shadow); }
@@ -5590,6 +5625,45 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 .cs-cat,.cs-concept,.kickoff-opt,.fourth-opt { background:var(--px-panel-2) !important; border:2px solid var(--px-line) !important; border-bottom:4px solid var(--px-line) !important; box-shadow:3px 3px 0 var(--px-shadow); }
 .cs-cat:hover,.cs-concept:hover:not(:disabled),.kickoff-opt:hover,.fourth-opt:hover:not(:disabled) { background:var(--px-panel-3) !important; border-color:var(--px-yellow) !important; }
 .cs-cat:active,.cs-concept:active,.kickoff-opt:active,.fourth-opt:active { transform:translate(2px,2px) !important; box-shadow:1px 1px 0 var(--px-shadow); }
+
+/* ── Play Now (exhibition) setup ─────────────────────────────────────────── */
+.playnow-screen { max-width:920px; margin:0 auto; padding-bottom:44px; }
+.pn-header h1 { margin:0; font-size:26px; letter-spacing:.06em; text-shadow:3px 3px 0 var(--px-shadow,#020308); }
+.pn-sub { margin:8px 0 0; opacity:.78; font-weight:600; }
+.pn-body { padding:20px 16px 0; }
+.pn-matchup { display:flex; gap:14px; align-items:stretch; }
+.pn-vs { align-self:center; font-weight:900; font-size:22px; color:var(--px-yellow,#ffd34d); text-shadow:2px 2px 0 var(--px-shadow,#020308); }
+.pn-panel { flex:1; min-width:0; display:flex; flex-direction:column; gap:9px; padding:12px;
+  background:var(--px-panel,#101827); border:3px solid var(--px-line,#53617a); box-shadow:5px 5px 0 var(--px-shadow,#020308); }
+.pn-side-label { font-size:11px; font-weight:900; letter-spacing:.14em; opacity:.7; }
+.pn-seg { display:flex; gap:4px; }
+.pn-seg-btn { flex:1; min-height:36px; font-weight:900; font-family:inherit; color:inherit; cursor:pointer;
+  background:var(--px-panel-2,#141d2e); border:2px solid var(--px-line,#53617a); }
+.pn-seg-btn.active { background:var(--team-1,#2f6db8); color:var(--px-paper,#f4f0d8); border-color:var(--px-paper,#f4f0d8); box-shadow:2px 2px 0 var(--px-shadow,#020308); }
+.pn-stars { display:flex; align-items:center; gap:1px; }
+.pn-star { background:none; border:none; font-size:24px; line-height:1; padding:2px 3px; cursor:pointer; color:#5a6478; }
+.pn-star.on { color:var(--px-yellow,#ffd34d); text-shadow:2px 2px 0 rgba(0,0,0,.55); }
+.pn-star-hint { margin-left:8px; font-size:9px; opacity:.55; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.pn-card { border:2px solid var(--px-line,#53617a); background:var(--px-panel-2,#0d1420); padding:10px 12px; }
+.pn-card-head { display:flex; align-items:center; gap:10px; }
+.pn-id { flex:1; display:flex; flex-direction:column; min-width:0; }
+.pn-name { font-weight:900; font-size:15px; line-height:1.25; }
+.pn-nick { font-size:11px; opacity:.72; font-weight:700; }
+.pn-ovr { display:flex; flex-direction:column; align-items:center; line-height:1; font-size:24px; font-weight:900; color:var(--px-yellow,#ffd34d); }
+.pn-ovr small { font-size:8px; letter-spacing:.16em; opacity:.7; }
+.pn-stripe { display:flex; height:6px; margin:9px 0 8px; border:1px solid rgba(0,0,0,.4); }
+.pn-stripe span { flex:1; }
+.pn-stripe span:first-child { background:var(--pn-c1,#888); }
+.pn-stripe span:last-child { background:var(--pn-c2,#ccc); }
+.pn-key-row { display:flex; gap:14px; flex-wrap:wrap; font-size:11px; opacity:.9; }
+.pn-key b { font-weight:900; }
+.pn-reroll { min-height:40px; font-weight:900; letter-spacing:.04em; }
+.pn-actions { display:flex; gap:10px; margin-top:18px; align-items:center; }
+.pn-start { flex:1; min-height:50px; font-size:16px; font-weight:900; letter-spacing:.08em; }
+@media (max-width:700px) {
+  .pn-matchup { flex-direction:column; }
+  .pn-vs { padding:2px 0; }
+}
 
 /* School-color mode keeps the same neutral game cabinet and changes trim. */
 body.theme-school { --bg-page:color-mix(in srgb,var(--team-1) 9%,var(--px-ink)); --bg-card:color-mix(in srgb,var(--team-1) 7%,var(--px-panel)); --bg-raised:color-mix(in srgb,var(--team-2,var(--px-yellow)) 6%,var(--px-panel-2)); --bg-input:color-mix(in srgb,var(--team-1) 5%,#080d17); --bg-hover:color-mix(in srgb,var(--team-1) 10%,var(--px-panel-3)); --surface:color-mix(in srgb,var(--team-1) 7%,var(--px-panel)); --surface-2:color-mix(in srgb,var(--team-2,var(--px-yellow)) 6%,var(--px-panel-2)); --border-sub:color-mix(in srgb,var(--team-1) 14%,var(--px-line-dim)); --border:color-mix(in srgb,var(--team-2,var(--px-yellow)) 12%,var(--px-line)); --border-str:color-mix(in srgb,var(--team-2,var(--px-yellow)) 25%,#78869d); }
@@ -5797,7 +5871,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "de59a4cc0a";
+globalThis.__BUILD__ = "4a8b6e142b";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -12613,6 +12687,70 @@ var _CFB = (() => {
       if (school.rival.holderId === replaced.id) school.rival.holderId = school.id;
     }
     return { school, replaced, conference: { id: conf.id, name: conf.name, short: conf.short, division: conf.division } };
+  }
+  function generateExhibitionTeam(division, prestige) {
+    var _a;
+    const divCap = ((_a = C.PRESTIGE_MAX) == null ? void 0 : _a[division]) || 5;
+    const p = Math.max(1, Math.min(divCap, Math.round(prestige || 1)));
+    const cls = division === "D1" ? p >= 4 ? "power" : "midMajor" : division;
+    const used = {
+      names: /* @__PURE__ */ new Set(),
+      abbrs: /* @__PURE__ */ new Set(),
+      cities: /* @__PURE__ */ new Set(),
+      tokenPat: /* @__PURE__ */ new Set(),
+      persons: /* @__PURE__ */ new Set(),
+      saints: /* @__PURE__ */ new Set(),
+      nickGlobal: {}
+    };
+    const regions = Object.keys(REGION_CITIES);
+    const region = regions[randInt3(0, regions.length - 1)];
+    const ident = makeIdentity(region, cls, used);
+    const nickPick = pickNickname({ cls, type: ident.type, region }, /* @__PURE__ */ new Set(), used);
+    const abbr = makeAbbr(ident.name, used.abbrs);
+    const [c1, c2] = COLOR_PAIRS[randInt3(0, COLOR_PAIRS.length - 1)];
+    const flavor = makeFlavor(cls, ident.type, p, nickPick.n);
+    const cities = REGION_CITIES[region];
+    const cityObj = ident.city || cities[randInt3(0, cities.length - 1)];
+    const school = {
+      id: `EXH-${abbr}-${randInt3(1e3, 9999)}`,
+      name: ident.name,
+      nick: nickPick.n,
+      abbr,
+      logo: nickPick.e || "\u{1F3C8}",
+      facilities: facilitiesFor(p),
+      staff: staffFor(p, division),
+      conf: null,
+      division,
+      lat: cityObj.lat,
+      lng: cityObj.lng,
+      city: cityObj.c,
+      state: cityObj.s,
+      type: ident.type,
+      control: flavor.control,
+      enrollment: flavor.enrollment,
+      founded: flavor.founded,
+      stadium: flavor.stadium,
+      prestige: p,
+      baseline: p,
+      prestigeMin: 1,
+      prestigeMax: divCap,
+      colors: [c1, c2],
+      roster: [],
+      record: { wins: 0, losses: 0, confWins: 0, confLosses: 0 },
+      recentWins: [0, 0, 0],
+      coach: null,
+      gameplan: defaultGameplan(),
+      weeklyPlan: defaultWeeklyPlan(),
+      practiceMinutes: __spreadValues({}, DEFAULT_PRACTICE),
+      depthChart: {},
+      depthOrder: {},
+      stats: emptyTeamStats()
+    };
+    school.roster = generateRoster(school);
+    school.coach = generateAICoach(school);
+    school.depthOrder = buildRoleSortedDepthOrder(school.roster);
+    school.depthChart = buildDepthChart(school.roster, school.gameplan, school.depthOrder);
+    return school;
   }
   function generateWorld() {
     const schools = SCHOOL_DATA.map((s) => __spreadProps(__spreadValues({}, s), {
@@ -25716,6 +25854,7 @@ var _CFB = (() => {
     devForceSign: () => devForceSign,
     devSimToPlayoffs: () => devSimToPlayoffs,
     devSkipToNextGame: () => devSkipToNextGame,
+    endExhibition: () => endExhibition,
     getAllBoardEntries: () => getAllBoardEntries,
     getBoardEntry: () => getBoardEntry,
     getConferenceStandings: () => getConferenceStandings,
@@ -25747,6 +25886,7 @@ var _CFB = (() => {
     simToBreak: () => simToBreak,
     simToQuarterEnd: () => simToQuarterEnd,
     skipToOffseason: () => skipToOffseason,
+    startExhibition: () => startExhibition,
     startNewGame: () => startNewGame,
     startNewGamePrepared: () => startNewGamePrepared,
     state: () => state,
@@ -25942,6 +26082,8 @@ var _CFB = (() => {
       }
     }
     const schedule = generateSchedule(world, 1, []);
+    state._exhibition = false;
+    state._exhStash = null;
     Object.assign(state, {
       initialized: true,
       season: 1,
@@ -25992,6 +26134,7 @@ var _CFB = (() => {
   }
   async function autosave() {
     var _a, _b, _c;
+    if (state._exhibition) return true;
     const slot = state._saveSlot || "auto";
     const ok = await saveGame(state, slot);
     if (ok && state._coachId && state._saveSlot) {
@@ -26177,7 +26320,7 @@ var _CFB = (() => {
   }
   function liveWatchOn() {
     var _a;
-    return ((_a = state.settings) == null ? void 0 : _a.liveWatch) !== false;
+    return state._exhibition ? true : ((_a = state.settings) == null ? void 0 : _a.liveWatch) !== false;
   }
   function ensurePregamePlan(state2) {
     var _a, _b;
@@ -26201,8 +26344,11 @@ var _CFB = (() => {
     await advanceDay2();
   }
   async function answerPlayCall(call) {
-    var _a;
-    const token = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
+    var _a, _b;
+    if ((_a = state.pendingHalftime) == null ? void 0 : _a.exhibition) {
+      return exhibitionResume((t) => resumeFromCall(t, call || { concept: "sheet" }));
+    }
+    const token = (_b = state.pendingHalftime) == null ? void 0 : _b.token;
     const events = resumeFromPlayCall(state, call);
     state.ui.callFormation = null;
     state.ui.callPA = false;
@@ -26246,14 +26392,116 @@ var _CFB = (() => {
     else await answerPlayCall({ concept: "sheet" });
   }
   async function answerFourthDown(decision) {
-    var _a;
-    const token = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
+    var _a, _b;
+    if ((_a = state.pendingHalftime) == null ? void 0 : _a.exhibition) {
+      return exhibitionResume((t) => resumeFromDecision(t, decision || "auto"));
+    }
+    const token = (_b = state.pendingHalftime) == null ? void 0 : _b.token;
     const events = resumeFromFourthDown(state, decision);
     state.ui.showFourthDown = false;
     if (handleGamePendingEvents(events)) return;
     state.ui._finalWatched = liveWatchOn() && (token == null ? void 0 : token._watchedPlays) || null;
     processEvents(events);
     await autosave();
+    rerender();
+  }
+  function startExhibition(home, away) {
+    if (!state._exhStash) {
+      state._exhStash = {
+        world: state.world,
+        playerSchoolId: state.playerSchoolId,
+        pendingHalftime: state.pendingHalftime
+      };
+    }
+    state._exhibition = true;
+    state._exhNonce = (state._exhNonce || 0) + 1;
+    state.world = { schools: [home, away], conferences: {}, season: state.season || 1, recruits: [] };
+    state.playerSchoolId = home.id;
+    state.ui.autoRun = false;
+    state.ui.callSheetFormation = null;
+    state.ui.showGameResult = false;
+    state.ui.lastGameResult = null;
+    const token = simulateFirstHalf(
+      home,
+      away,
+      home.roster,
+      away.roster,
+      home.depthChart,
+      away.depthChart,
+      home.gameplan,
+      away.gameplan,
+      { playerSide: "home", callMode: "all" }
+    );
+    state.pendingHalftime = { token, game: null, home, away, exhibition: true };
+    const events = exhibitionEvents();
+    if (events) {
+      handleGamePendingEvents(events);
+      return;
+    }
+    exhibitionFinal(token);
+  }
+  function endExhibition() {
+    if (state._exhStash) {
+      state.world = state._exhStash.world;
+      state.playerSchoolId = state._exhStash.playerSchoolId;
+      state.pendingHalftime = state._exhStash.pendingHalftime;
+      state._exhStash = null;
+    } else if (state._exhibition) {
+      state.pendingHalftime = null;
+    }
+    state._exhibition = false;
+    state.ui.liveWatch = null;
+    state.ui.showCallSheet = false;
+    state.ui.showFourthDown = false;
+    state.ui.showHalftime = false;
+    state.ui.showGameResult = false;
+    state.ui.lastGameResult = null;
+    state.ui.autoRun = false;
+  }
+  function exhibitionEvents() {
+    var _a;
+    const hg = state.pendingHalftime;
+    const t = hg == null ? void 0 : hg.token;
+    if (!t) return null;
+    const k = (_a = t.pending) == null ? void 0 : _a.kind;
+    if (k) return [{ type: k === "fourth" ? "fourthdown" : "playcall", game: hg.game, token: t }];
+    if (t.stage !== "done") return [{ type: "halftime", game: hg.game, token: t }];
+    return null;
+  }
+  async function exhibitionResume(fn) {
+    const hg = state.pendingHalftime;
+    const token = hg == null ? void 0 : hg.token;
+    if (!token) return;
+    fn(token);
+    state.ui.callFormation = null;
+    state.ui.callPA = false;
+    state.ui.callRPO = false;
+    state.ui.callQBRun = false;
+    state.ui.callTimeout = false;
+    state.ui.callSTOpen = false;
+    state.ui.callDrill = null;
+    state.ui.showCallSheet = false;
+    state.ui.showFourthDown = false;
+    const events = exhibitionEvents();
+    if (events) {
+      handleGamePendingEvents(events);
+      return;
+    }
+    state.ui._finalWatched = liveWatchOn() && token._watchedPlays || null;
+    exhibitionFinal(token);
+  }
+  function exhibitionFinal(token) {
+    const result = finishInteractiveGame(token);
+    state.pendingHalftime = null;
+    state.ui.lastGameResult = result;
+    state.ui.gameResultTab = "boxscore";
+    if (liveWatchOn()) {
+      state.ui.liveWatch = { stage: "final" };
+      state.ui.showGameResult = false;
+      state.ui.autoRun = false;
+    } else {
+      state.ui.showGameResult = true;
+    }
     rerender();
   }
   async function skipToOffseason() {
@@ -26276,6 +26524,22 @@ var _CFB = (() => {
     rerender();
   }
   async function resumeHalftime(homeGPEdits = null, awayGPEdits = null) {
+    var _a;
+    if ((_a = state.pendingHalftime) == null ? void 0 : _a.exhibition) {
+      return exhibitionResume((t) => {
+        const adj = state.pendingHalftime.adjustment;
+        if (adj) {
+          const myGP = t.playerSide === "away" ? t.awayGP : t.homeGP;
+          if (adj.kind === "offlean") myGP._h2OffLean = { eff: 0.08 };
+          else if (adj.kind === "deflean") myGP._h2DefLean = { eff: 0.08 };
+          else if (adj.kind === "fresh") myGP._h2Fresh = { eff: 0.28 };
+        }
+        const aiGP = t.playerSide === "away" ? t.homeGP : t.awayGP;
+        setAutoCounter(aiGP, t.drives, t.playerSide === "away" ? "away" : "home");
+        state.ui.showHalftime = false;
+        stepSecondHalf(t, homeGPEdits, awayGPEdits);
+      });
+    }
     const events = resumeFromHalftime(state, homeGPEdits, awayGPEdits);
     if (handleGamePendingEvents(events)) return;
     state.ui.showHalftime = false;
@@ -26434,6 +26698,8 @@ var _CFB = (() => {
     }
     const uiBackup = __spreadProps(__spreadValues({}, state.ui), { saves: state.ui.saves });
     Object.assign(state, saved);
+    state._exhibition = false;
+    state._exhStash = null;
     state.ui.saves = uiBackup.saves;
     state.ui.showSaveModal = false;
     state.ui.showLoadModal = false;
@@ -26504,6 +26770,7 @@ var _CFB = (() => {
       init_coach();
       init_career();
       init_season();
+      init_sim();
       init_persistence();
       init_constants();
       init_utils();
@@ -29073,6 +29340,8 @@ var _CFB = (() => {
         </div>` : `
         <button class="btn-mm btn-mm-new" id="btn-mm-newcoach">+ NEW COACH</button>` : ""}
       ${autoSave ? `<button class="btn-mm btn-mm-secondary" id="btn-mm-continue" style="margin-top:8px">\u25B6 Legacy save \xB7 ${escapeHtml(autoSave.school || "?")} S${autoSave.season}</button>` : ""}
+      <div class="mm-section-label" style="margin-top:14px">EXHIBITION</div>
+      <button class="btn-mm btn-mm-secondary" id="btn-mm-playnow">\u{1F3C8} PLAY NOW \u2014 one game, call every snap</button>
       <button class="btn-mm-guide" id="btn-mm-guide">\u{1F4D6} The Manual</button>
     </div>`;
   }
@@ -29278,12 +29547,15 @@ var _CFB = (() => {
     return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
   }
   async function setupListeners2() {
-    var _a, _b, _c, _d, _e, _f, _g, _h;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i;
     (_a = document.getElementById("btn-mm-guide")) == null ? void 0 : _a.addEventListener("click", () => {
       navigate("manual");
     });
+    (_b = document.getElementById("btn-mm-playnow")) == null ? void 0 : _b.addEventListener("click", () => {
+      navigate("playnow");
+    });
     await refreshSaves();
-    (_b = document.getElementById("btn-mm-continue")) == null ? void 0 : _b.addEventListener("click", async () => {
+    (_c = document.getElementById("btn-mm-continue")) == null ? void 0 : _c.addEventListener("click", async () => {
       await loadFromSlot("auto");
     });
     document.querySelectorAll("[data-mm-coach]").forEach((b) => b.addEventListener("click", () => {
@@ -29318,7 +29590,7 @@ var _CFB = (() => {
       }
       rerender();
     }));
-    (_c = document.getElementById("btn-mm-newcoach")) == null ? void 0 : _c.addEventListener("click", () => {
+    (_d = document.getElementById("btn-mm-newcoach")) == null ? void 0 : _d.addEventListener("click", () => {
       mmDeleteArmed = null;
       mmNewCoach = true;
       rerender();
@@ -29327,7 +29599,7 @@ var _CFB = (() => {
         return (_a2 = document.getElementById("mm-nc-first")) == null ? void 0 : _a2.focus();
       }, 30);
     });
-    (_d = document.getElementById("mm-nc-create")) == null ? void 0 : _d.addEventListener("click", () => {
+    (_e = document.getElementById("mm-nc-create")) == null ? void 0 : _e.addEventListener("click", () => {
       var _a2, _b2, _c2, _d2;
       const f = (_b2 = (_a2 = document.getElementById("mm-nc-first")) == null ? void 0 : _a2.value) == null ? void 0 : _b2.trim();
       const l = (_d2 = (_c2 = document.getElementById("mm-nc-last")) == null ? void 0 : _c2.value) == null ? void 0 : _d2.trim();
@@ -29339,7 +29611,7 @@ var _CFB = (() => {
       }
       rerender();
     });
-    (_e = document.getElementById("mm-back-coaches")) == null ? void 0 : _e.addEventListener("click", () => {
+    (_f = document.getElementById("mm-back-coaches")) == null ? void 0 : _f.addEventListener("click", () => {
       mmCoachId = null;
       mmView = null;
       rerender();
@@ -29378,15 +29650,15 @@ var _CFB = (() => {
       deleteLibraryPlan(mmCoachId, kind === "pp" ? "practice" : "gameplan", rest.join(":"));
       rerender();
     }));
-    (_f = document.getElementById("btn-mm-load")) == null ? void 0 : _f.addEventListener("click", () => {
+    (_g = document.getElementById("btn-mm-load")) == null ? void 0 : _g.addEventListener("click", () => {
       state.ui.showLoadModal = true;
       rerender();
     });
-    (_g = document.getElementById("close-load-modal")) == null ? void 0 : _g.addEventListener("click", () => {
+    (_h = document.getElementById("close-load-modal")) == null ? void 0 : _h.addEventListener("click", () => {
       state.ui.showLoadModal = false;
       Promise.resolve().then(() => (init_state(), state_exports)).then((m) => m.rerender());
     });
-    (_h = document.getElementById("load-modal-overlay")) == null ? void 0 : _h.addEventListener("click", (e) => {
+    (_i = document.getElementById("load-modal-overlay")) == null ? void 0 : _i.addEventListener("click", (e) => {
       if (e.target.id === "load-modal-overlay") {
         state.ui.showLoadModal = false;
         Promise.resolve().then(() => (init_state(), state_exports)).then((m) => m.rerender());
@@ -30664,6 +30936,141 @@ var _CFB = (() => {
   // js/ui/app.js
   init_mainmenu();
   init_newgame();
+
+  // js/ui/views/playnow.js
+  init_state();
+  init_world();
+  init_ai();
+  init_fieldassign();
+  init_utils();
+  init_constants();
+  var DIVS = ["D1", "D2", "D3"];
+  var capOf = (div) => {
+    var _a;
+    return ((_a = C.PRESTIGE_MAX) == null ? void 0 : _a[div]) || 5;
+  };
+  var pn = {
+    cfg: { home: { div: "D1", prestige: 4 }, away: { div: "D1", prestige: 4 } },
+    home: null,
+    away: null
+  };
+  function makeTeam(side) {
+    const { div, prestige } = pn.cfg[side];
+    const school = generateExhibitionTeam(div, prestige);
+    try {
+      setAIGameplan(school);
+    } catch (e) {
+    }
+    try {
+      ensureFieldAssignments(school.gameplan);
+    } catch (e) {
+    }
+    return school;
+  }
+  function ensureTeams() {
+    if (!pn.home) pn.home = makeTeam("home");
+    if (!pn.away) pn.away = makeTeam("away");
+  }
+  function teamOvr(school) {
+    const top = (school.roster || []).map((p) => p.compositeRating).sort((a, b) => b - a).slice(0, 22);
+    return top.length ? Math.round(top.reduce((s, v) => s + v, 0) / top.length) : 0;
+  }
+  function bestAt(school, positions) {
+    return (school.roster || []).filter((p) => positions.includes(p.position)).sort((a, b) => b.compositeRating - a.compositeRating)[0] || null;
+  }
+  function starRow(side) {
+    const { div, prestige } = pn.cfg[side];
+    const cap = capOf(div);
+    let s = "";
+    for (let i = 1; i <= cap; i++) {
+      s += `<button class="pn-star${i <= prestige ? " on" : ""}" data-pn-star="${side}:${i}" aria-label="${i} star">${i <= prestige ? "\u2605" : "\u2606"}</button>`;
+    }
+    return s;
+  }
+  function teamPanel(side, school) {
+    var _a, _b;
+    const label = side === "home" ? "YOUR TEAM" : "OPPONENT";
+    const { div } = pn.cfg[side];
+    const qb = bestAt(school, ["QB"]);
+    const star = (school.roster || []).slice().sort((a, b) => b.compositeRating - a.compositeRating)[0];
+    const pname = (p) => p ? `${p.name.first[0]}. ${p.name.last}` : "\u2014";
+    return `
+    <div class="pn-panel">
+      <div class="pn-side-label">${label}</div>
+      <div class="pn-seg">
+        ${DIVS.map((d) => `<button class="pn-seg-btn${div === d ? " active" : ""}" data-pn-div="${side}:${d}">${d}</button>`).join("")}
+      </div>
+      <div class="pn-stars">${starRow(side)}<span class="pn-star-hint">prestige \u2014 roster strength</span></div>
+      <div class="pn-card" style="--pn-c1:${((_a = school.colors) == null ? void 0 : _a[0]) || "#888"};--pn-c2:${((_b = school.colors) == null ? void 0 : _b[1]) || "#ccc"}">
+        <div class="pn-card-head">
+          <span class="pn-crest">${renderCrest(school, 40)}</span>
+          <span class="pn-id">
+            <span class="pn-name">${escapeHtml(school.name)}</span>
+            <span class="pn-nick">${escapeHtml(school.nick)} \xB7 ${escapeHtml(school.city || "")}${school.state ? `, ${escapeHtml(school.state)}` : ""}</span>
+          </span>
+          <span class="pn-ovr" title="Average of the 22 best players">${teamOvr(school)}<small>TEAM</small></span>
+        </div>
+        <div class="pn-stripe"><span></span><span></span></div>
+        <div class="pn-key-row">
+          <span class="pn-key">QB1 <b>${escapeHtml(pname(qb))}</b> ${qb ? Math.round(qb.compositeRating) : ""}</span>
+          <span class="pn-key">BEST <b>${escapeHtml(pname(star))}</b> ${star ? `${star.position} ${Math.round(star.compositeRating)}` : ""}</span>
+        </div>
+      </div>
+      <button class="btn-secondary pn-reroll" data-pn-reroll="${side}">\u21BB REROLL ${side === "home" ? "TEAM" : "OPPONENT"}</button>
+    </div>`;
+  }
+  function renderPlayNow() {
+    ensureTeams();
+    return `
+    <div class="playnow-screen">
+      <div class="newgame-header pn-header">
+        <h1>\u{1F3C8} PLAY NOW</h1>
+        <p class="pn-sub">One game, tonight. Every snap is your call \u2014 the whole thing plays out on the board.</p>
+      </div>
+      <div class="pn-body">
+        <div class="pn-matchup">
+          ${teamPanel("home", pn.home)}
+          <div class="pn-vs">VS</div>
+          ${teamPanel("away", pn.away)}
+        </div>
+        <div class="pn-actions">
+          <button class="btn-primary pn-start" id="pn-start">KICK OFF \u2192</button>
+          <button class="btn-ghost" id="pn-back">\u2190 Main Menu</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  function playnowListeners() {
+    var _a, _b;
+    document.querySelectorAll("[data-pn-div]").forEach((b) => b.addEventListener("click", () => {
+      const [side, div] = b.dataset.pnDiv.split(":");
+      if (pn.cfg[side].div === div) return;
+      pn.cfg[side].div = div;
+      pn.cfg[side].prestige = Math.min(pn.cfg[side].prestige, capOf(div));
+      pn[side] = makeTeam(side);
+      rerender();
+    }));
+    document.querySelectorAll("[data-pn-star]").forEach((b) => b.addEventListener("click", () => {
+      const [side, n] = b.dataset.pnStar.split(":");
+      if (pn.cfg[side].prestige === +n) return;
+      pn.cfg[side].prestige = +n;
+      pn[side] = makeTeam(side);
+      rerender();
+    }));
+    document.querySelectorAll("[data-pn-reroll]").forEach((b) => b.addEventListener("click", () => {
+      const side = b.dataset.pnReroll;
+      pn[side] = makeTeam(side);
+      rerender();
+    }));
+    (_a = document.getElementById("pn-start")) == null ? void 0 : _a.addEventListener("click", () => {
+      ensureTeams();
+      startExhibition(pn.home, pn.away);
+    });
+    (_b = document.getElementById("pn-back")) == null ? void 0 : _b.addEventListener("click", () => {
+      endExhibition();
+      navigate("mainmenu");
+    });
+  }
 
   // js/ui/views/dashboard.js
   init_state();
@@ -35567,6 +35974,14 @@ var _CFB = (() => {
     const MAX_STEP = 15 * STEP;
     for (const a2 of everyone) capTrackSpeed(a2.track, MAX_STEP);
     capTrackSpeed(ball.track, 50 * STEP);
+    if (p.fieldPos != null) {
+      let lo = LOS - (100 - p.fieldPos) * YPU - 10 * YPU + 1.2;
+      let hi = LOS + p.fieldPos * YPU + 10 * YPU - 1.2;
+      lo = Math.min(lo, ballEnd.pt[1] - 0.5, endInfo ? endInfo.pt[1] - 0.5 : lo);
+      hi = Math.max(hi, ballEnd.pt[1] + 0.5, endInfo ? endInfo.pt[1] + 0.5 : hi);
+      for (const a2 of everyone) for (const pt of a2.track) pt[1] = clamp5(pt[1], lo, hi);
+      for (const pt of ball.track) pt[1] = clamp5(pt[1], lo, hi);
+    }
     return {
       dur: dur + 1e-9,
       step: STEP,
@@ -42433,6 +42848,13 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       lastRenderedView = view;
       return;
     }
+    if (view === "playnow") {
+      root.innerHTML = `<div class="newgame-wrapper playnow-wrapper">${state.ui.showHalftime && state.pendingHalftime ? renderHalftimeTakeover() : renderPlayNow()}</div>` + renderNotification() + renderLiveWatchOverlay() + renderGameResultModal() + renderCallSheetModal() + renderFourthDownModal() + renderPlayerCardModal() + renderContextHelp() + renderTipPopover();
+      playnowListeners();
+      setupGlobalListeners();
+      lastRenderedView = view;
+      return;
+    }
     if (view === "newgame" || !state.initialized) {
       root.innerHTML = `<div class="newgame-wrapper">${renderNewGame()}</div>`;
       setupListeners3();
@@ -43978,7 +44400,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
   function installSaveGuards() {
     const flushNow = () => {
       try {
-        if (state && state.world && state.playerSchoolId) {
+        if (state && state.world && state.playerSchoolId && !state._exhibition) {
           flushSaveSync(state, state._saveSlot || "auto");
         }
       } catch (e) {
@@ -43990,7 +44412,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       if (document.visibilityState === "hidden") flushNow();
     });
     setInterval(() => {
-      if (state && state.world && state.playerSchoolId && state._saveSlot) {
+      if (state && state.world && state.playerSchoolId && state._saveSlot && !state._exhibition) {
         saveGame(state, state._saveSlot).catch(() => {
         });
       }
@@ -44523,7 +44945,8 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     var _a, _b, _c, _d, _e, _f, _g;
     const lw = state.ui.liveWatch;
     if (!lw || lw.boardDone) return;
-    let gameLike = null, isHome = true, watchKey = `live-${lw.stage}-${state.day}-${state.season}`;
+    const exhTag = state._exhibition ? `-x${state._exhNonce || 0}` : "";
+    let gameLike = null, isHome = true, watchKey = `live-${lw.stage}-${state.day}-${state.season}${exhTag}`;
     const school = getPlayerSchool();
     const rosterNames = (t) => {
       const names = {};
@@ -44538,7 +44961,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         var _a2;
         return n + (((_a2 = d.plays) == null ? void 0 : _a2.length) || 0);
       }, 0);
-      watchKey = `call-${state.season}-${state.day}-${total}`;
+      watchKey = `call-${state.season}-${state.day}-${total}${exhTag}`;
       if (t._watchKey !== watchKey) {
         t._watchBase = t._watchedPlays || 0;
         t._watchedPlays = total;
@@ -44762,11 +45185,12 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     _watchAnim = null;
   }
   function watchBoardColors(w, d) {
+    var _a, _b;
     const r = w == null ? void 0 : w.r;
     if (!r) return null;
     const pick2 = (school, i, fb) => {
-      var _a, _b;
-      const c = ((_a = school == null ? void 0 : school.colors) == null ? void 0 : _a[i]) || ((_b = school == null ? void 0 : school.colors) == null ? void 0 : _b[0]);
+      var _a2, _b2;
+      const c = ((_a2 = school == null ? void 0 : school.colors) == null ? void 0 : _a2[i]) || ((_b2 = school == null ? void 0 : school.colors) == null ? void 0 : _b2[0]);
       return c ? teamAccentColor(c) : fb;
     };
     return {
@@ -44774,19 +45198,32 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       homeFill: pick2(r.homeSchool, 0, "var(--team-1,#eaeaea)"),
       homeHi: pick2(r.homeSchool, 1, "var(--team-2,#ffd34d)"),
       awayFill: pick2(r.awaySchool, 0, "#c23a35"),
-      awayHi: pick2(r.awaySchool, 1, "#f4f0d8")
+      awayHi: pick2(r.awaySchool, 1, "#f4f0d8"),
+      homeName: ((_a = r.homeSchool) == null ? void 0 : _a.name) || "",
+      awayName: ((_b = r.awaySchool) == null ? void 0 : _b.name) || ""
     };
   }
   function spriteMarkup(a) {
     const off = a.team === "off";
     const c = off ? "wsp-off" : "wsp-def";
     const hl = off ? "wsp-off-hl" : "wsp-def-hl";
+    let gh = 0;
+    for (let i = 0; i < String(a.id).length; i++) gh = (gh + String(a.id).charCodeAt(i)) % 97;
+    const gait = (-(gh % 8 * 0.045)).toFixed(3);
+    const legsA = `<rect class="wsp-leg" x="-1.05" y="-1.5" width="0.85" height="1.5"/><rect class="wsp-leg" x="0.2"  y="-1.5" width="0.85" height="1.5"/>`;
+    const legsB = (
+      // scissored: lead leg lifted, trail leg planted wide
+      `<rect class="wsp-leg" x="-1.3" y="-1.5" width="0.85" height="1.05"/><rect class="wsp-leg" x="0.45" y="-1.5" width="0.85" height="1.5"/>`
+    );
     const body = (
-      // legs — two blocks planted at the origin (the ground point)
-      `<rect class="wsp-leg" x="-1.05" y="-1.5" width="0.85" height="1.5"/><rect class="wsp-leg" x="0.2"  y="-1.5" width="0.85" height="1.5"/><rect class="wsp-jersey ${c}" x="-1.35" y="-3.2" width="2.7" height="1.8"/><rect class="wsp-band ${hl}" x="-1.35" y="-2.65" width="2.7" height="0.55"/><rect class="wsp-arm ${c}" x="-1.85" y="-3.05" width="0.55" height="1.3"/><rect class="wsp-arm ${c}" x="1.3"   y="-3.05" width="0.55" height="1.3"/><rect class="wsp-helmet ${hl}" x="-1.0" y="-4.55" width="2.0" height="1.4"/>` + (off ? `<rect class="wsp-stripe" x="-0.25" y="-4.55" width="0.5" height="1.4"/>` : `<rect class="wsp-mask" x="-0.85" y="-3.75" width="1.7" height="0.45"/><rect class="wsp-stripe" x="-0.25" y="-4.55" width="0.5" height="0.75"/>`)
+      // ground shadow first — it sits under everything and plants the sprite
+      `<rect class="wsp-shadow" x="-1.9" y="-0.45" width="3.8" height="0.8"/><g class="wsp-fA">${legsA}</g><g class="wsp-fB">${legsB}</g><rect class="wsp-pants" x="-1.3" y="-1.95" width="2.6" height="0.5"/><rect class="wsp-jersey ${c}" x="-1.35" y="-3.1" width="2.7" height="1.2"/><rect class="wsp-jersey ${c}" x="-1.75" y="-3.35" width="3.5" height="0.6"/><rect class="wsp-band ${hl}" x="-1.35" y="-2.6" width="2.7" height="0.5"/><rect class="wsp-arm ${c}" x="-1.85" y="-2.95" width="0.55" height="1.15"/><rect class="wsp-arm ${c}" x="1.3"   y="-2.95" width="0.55" height="1.15"/><rect class="wsp-skin" x="-1.85" y="-1.8" width="0.55" height="0.45"/><rect class="wsp-skin" x="1.3"   y="-1.8" width="0.55" height="0.45"/><rect class="wsp-helmet ${hl}" x="-1.0" y="-4.6" width="2.0" height="1.45"/><rect class="wsp-shine" x="-0.75" y="-4.4" width="0.45" height="0.45"/>` + (off ? `<rect class="wsp-stripe" x="-0.25" y="-4.6" width="0.5" height="1.45"/>` : `<rect class="wsp-mask" x="-0.85" y="-3.75" width="1.7" height="0.5"/><rect class="wsp-stripe" x="-0.25" y="-4.6" width="0.5" height="0.8"/>`)
     );
     const tag = `<text class="${off ? "wo-lbl" : "wd-lbl"} wsp-tag" x="0" y="${off ? "1.8" : "-5.4"}">${a.label}</text>`;
-    return `<g class="wsp${a.qb ? " wsp-qb" : ""}">${body}</g>${tag}`;
+    return `<g class="wsp${a.qb ? " wsp-qb" : ""}" style="--gait:${gait}s">${body}</g>${tag}`;
+  }
+  function ballMarkup(x, y) {
+    return `<g id="wp-ball" class="wa-ballg" transform="translate(${x},${y})"><rect class="wab-core" x="-0.7" y="-1.15" width="1.4" height="2.3"/><rect class="wab-end" x="-0.45" y="-1.6" width="0.9" height="0.5"/><rect class="wab-end" x="-0.45" y="1.1"  width="0.9" height="0.5"/><rect class="wab-lace" x="-0.25" y="-0.5" width="0.5" height="1.0"/></g>`;
   }
   function watchBoard(p, durMs, board = null) {
     var _a, _b, _c;
@@ -44810,7 +45247,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     if (sprites) svg.classList.add("watch-sprites");
     else svg.classList.remove("watch-sprites");
     const glyph = (a) => sprites ? spriteMarkup(a) : a.team === "def" ? `<text class="wd-x" x="0" y="0">\u2715</text><text class="wd-lbl" x="0" y="-2.6">${a.label}</text>` : `<circle r="1.9" class="wo-c${a.qb ? " wo-qb" : ""}" cx="0" cy="0"/><text class="wo-lbl" x="0" y="4.4">${a.label}</text>`;
-    svg.innerHTML = watchFieldBase(p, board) + `<polyline id="wp-trail" class="wp-trail" points=""/><circle id="wp-spot" class="wp-spot" r="3.4" transform="translate(0,0)"/>` + script.actors.map((a) => `<g class="wp-actor wp-team-${a.team}${a.qb ? " wp-qb" : ""}" data-wpa="${a.id}" data-wpg="${a.grp || ""}" transform="translate(${a.track[0][0].toFixed(2)},${a.track[0][1].toFixed(2)})">` + glyph(a) + `</g>`).join("") + `<g id="wp-fx"></g><circle id="wp-ball" r="1.6" class="wa-ball" transform="translate(${script.ball.track[0][0]},${script.ball.track[0][1]})"/>`;
+    svg.innerHTML = watchFieldBase(p, board) + `<polyline id="wp-trail" class="wp-trail" points=""/><circle id="wp-spot" class="wp-spot" r="3.4" transform="translate(0,0)"/>` + script.actors.map((a) => `<g class="wp-actor wp-team-${a.team}${a.qb ? " wp-qb" : ""}" data-wpa="${a.id}" data-wpg="${a.grp || ""}" transform="translate(${a.track[0][0].toFixed(2)},${a.track[0][1].toFixed(2)})">` + glyph(a) + `</g>`).join("") + `<g id="wp-fx"></g>` + ballMarkup(script.ball.track[0][0], script.ball.track[0][1]);
     if (sprites && board) {
       const offHome = board.possession !== "away";
       const oF = offHome ? board.homeFill : board.awayFill;
@@ -44908,7 +45345,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     return script.dur;
   }
   function watchBoardKick(svg, p) {
-    svg.innerHTML = watchFieldBase(p) + `<circle id="wp-ball" r="1.6" class="wa-ball" transform="translate(50,31)"/><g id="wp-fx"></g>`;
+    svg.innerHTML = watchFieldBase(p) + ballMarkup(50, 31) + `<g id="wp-fx"></g>`;
     const ballN = svg.querySelector("#wp-ball"), fxN = svg.querySelector("#wp-fx");
     const isFG = p.type === "fg";
     const dist = isFG ? p.fgDist || 30 : p.blocked ? 4 : p.puntYds || 40;
@@ -44957,52 +45394,104 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         return `<g class="wp-contact" transform="translate(${f.x},${f.y})"><circle r="0.6" class="wp-contact-core"/><g class="wp-contact-rays"><line x1="0" y1="-3.4" x2="0" y2="-1.6"/><line x1="0" y1="3.4" x2="0" y2="1.6"/><line x1="-3.4" y1="0" x2="-1.6" y2="0"/><line x1="3.4" y1="0" x2="1.6" y2="0"/><line x1="-2.4" y1="-2.4" x2="-1.2" y2="-1.2"/><line x1="2.4" y1="2.4" x2="1.2" y2="1.2"/><line x1="-2.4" y1="2.4" x2="-1.2" y2="1.2"/><line x1="2.4" y1="-2.4" x2="1.2" y2="-1.2"/></g></g>`;
       case "catch":
         return `<circle cx="${f.x}" cy="${f.y}" r="2.7" class="wp-catch"/>`;
-      case "td":
-        return `<text x="${f.x}" y="${f.y}" class="wa-td">TD</text>`;
+      case "td": {
+        const cols = ["#ffd34d", "#f4f0d8", "#59d8ff", "#ff8c79", "#3fe04b"];
+        let conf = "";
+        for (let i = 0; i < 10; i++) {
+          const ang = i / 10 * Math.PI * 2;
+          const r = 4 + i % 3 * 1.7;
+          conf += `<rect x="-0.45" y="-0.45" width="0.9" height="0.9" fill="${cols[i % cols.length]}" style="--cx:${(Math.cos(ang) * r).toFixed(1)}px;--cy:${(Math.sin(ang) * r - 2.5).toFixed(1)}px"/>`;
+        }
+        return `<g class="wp-conf" transform="translate(${f.x},${f.y})">${conf}</g><text x="${f.x}" y="${f.y}" class="wa-td">TD!</text>`;
+      }
       default:
         return "";
     }
   }
   function watchFieldBase(p, board = null) {
-    var _a;
     const YPU2 = 0.85;
     const fp = p == null ? void 0 : p.fieldPos;
-    const sprites = ((_a = state.settings) == null ? void 0 : _a.spriteWatch) !== false;
-    let lines = "", zones = "";
+    const EZ = 10 * YPU2;
+    const Y_TOP = -68, Y_BOT = 72;
+    const defs = `<defs>
+      <marker id="wa-arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#ffd54a"/></marker>
+      <marker id="wa-arr-r" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#e5533d"/></marker>
+      <pattern id="wf-grain" width="9" height="9" patternUnits="userSpaceOnUse">
+        <rect x="1.2" y="2.6" width="0.7" height="0.7" fill="rgba(0,0,0,0.11)"/>
+        <rect x="5.6" y="6.8" width="0.7" height="0.7" fill="rgba(255,255,255,0.05)"/>
+        <rect x="7.2" y="0.9" width="0.7" height="0.7" fill="rgba(0,0,0,0.09)"/>
+        <rect x="3.1" y="7.4" width="0.7" height="0.7" fill="rgba(0,0,0,0.07)"/>
+        <rect x="0.4" y="5.2" width="0.7" height="0.7" fill="rgba(255,255,255,0.035)"/>
+      </pattern>
+      <pattern id="wf-ezchk" width="2.4" height="2.4" patternUnits="userSpaceOnUse">
+        <rect width="1.2" height="1.2" fill="rgba(0,0,0,0.2)"/>
+        <rect x="1.2" y="1.2" width="1.2" height="1.2" fill="rgba(0,0,0,0.2)"/>
+      </pattern>
+      <pattern id="wf-crowd" width="7" height="5" patternUnits="userSpaceOnUse">
+        <rect width="7" height="5" fill="#0a1220"/>
+        <rect x="0.7" y="0.8" width="0.9" height="0.9" fill="#3c4a66"/>
+        <rect x="2.6" y="2.9" width="0.9" height="0.9" fill="#5a6884"/>
+        <rect x="4.8" y="1.1" width="0.9" height="0.9" fill="#2e3950"/>
+        <rect x="5.6" y="3.6" width="0.9" height="0.9" fill="#6e7a94"/>
+        <rect x="1.4" y="4.0" width="0.9" height="0.9" fill="#49536e"/>
+        <rect x="3.9" y="0.2" width="0.9" height="0.9" fill="#8a8ca3"/>
+      </pattern>
+    </defs>`;
+    let under = "", lines = "";
     if (fp != null) {
-      for (let abs = 0; abs <= 100; abs += 5) {
-        const y = 31 - (abs - fp) * YPU2;
-        if (y < -4 || y > 66) continue;
-        const isGoal = abs === 0 || abs === 100;
-        if (isGoal && sprites) {
-          const offHome = (board == null ? void 0 : board.possession) !== "away";
-          const offC = offHome ? board == null ? void 0 : board.homeFill : board == null ? void 0 : board.awayFill;
-          const defC = offHome ? board == null ? void 0 : board.awayFill : board == null ? void 0 : board.homeFill;
-          const ezFill = abs === 100 ? defC || "#c23a35" : offC || "var(--team-1,#175b35)";
-          const ezY = abs === 100 ? y - 8 : y;
-          zones += `<rect x="0" y="${ezY.toFixed(1)}" width="100" height="8" class="wf-endzone" fill="${ezFill}"/>`;
+      const yOf = (abs) => 31 - (abs - fp) * YPU2;
+      const gFar = yOf(100), gNear = yOf(0);
+      under += `<rect x="0" y="${Y_TOP}" width="100" height="${Y_BOT - Y_TOP}" fill="url(#wf-crowd)"/>`;
+      under += `<rect x="0" y="${(gFar - EZ).toFixed(1)}" width="100" height="${(gNear - gFar + 2 * EZ).toFixed(1)}" class="wf-turf"/>`;
+      for (let abs = 0; abs < 100; abs += 10) {
+        const y1 = yOf(abs + 5), y0 = yOf(abs);
+        under += `<rect x="0" y="${y1.toFixed(1)}" width="100" height="${(y0 - y1).toFixed(1)}" class="wf-mow"/>`;
+      }
+      const offHome = (board == null ? void 0 : board.possession) !== "away";
+      const offC = offHome ? board == null ? void 0 : board.homeFill : board == null ? void 0 : board.awayFill;
+      const defC = offHome ? board == null ? void 0 : board.awayFill : board == null ? void 0 : board.homeFill;
+      const offN = offHome ? board == null ? void 0 : board.homeName : board == null ? void 0 : board.awayName;
+      const defN = offHome ? board == null ? void 0 : board.awayName : board == null ? void 0 : board.homeName;
+      const ez = (yTop, fill, name) => {
+        let s = `<rect x="0" y="${yTop.toFixed(1)}" width="100" height="${EZ.toFixed(1)}" class="wf-endzone" fill="${fill}"/><rect x="0" y="${yTop.toFixed(1)}" width="100" height="${EZ.toFixed(1)}" fill="url(#wf-ezchk)"/>`;
+        if (name) {
+          const txt = escapeHtml(String(name).toUpperCase());
+          s += `<text x="50" y="${(yTop + EZ / 2 + 1.7).toFixed(1)}" class="wf-ez-lbl"${txt.length > 9 ? ' textLength="82" lengthAdjust="spacingAndGlyphs"' : ""}>${txt}</text>`;
         }
-        lines += `<line x1="0" y1="${y.toFixed(1)}" x2="100" y2="${y.toFixed(1)}" class="${isGoal ? "wf-goal" : "wf-yard"}"/>`;
-        if (isGoal) {
-          lines += `<text x="50" y="${(y + (abs === 100 ? -1.6 : 3.8)).toFixed(1)}" class="wf-goal-lbl">GOAL</text>`;
-        } else if (abs % 10 === 0) {
-          const num = abs <= 50 ? abs : 100 - abs;
-          lines += `<text x="16" y="${(y - 1).toFixed(1)}" class="wf-num">${num}</text><text x="84" y="${(y - 1).toFixed(1)}" class="wf-num wf-num-r">${num}</text>`;
+        return s;
+      };
+      under += ez(gFar - EZ, defC || "#c23a35", defN);
+      under += ez(gNear, offC || "var(--team-1,#175b35)", offN);
+      under += `<rect x="0" y="${(gFar - EZ).toFixed(1)}" width="100" height="${(gNear - gFar + 2 * EZ).toFixed(1)}" fill="url(#wf-grain)"/>`;
+      lines += `<line x1="0" y1="${(gFar - EZ).toFixed(1)}" x2="100" y2="${(gFar - EZ).toFixed(1)}" class="wf-endline"/><line x1="0" y1="${(gNear + EZ).toFixed(1)}" x2="100" y2="${(gNear + EZ).toFixed(1)}" class="wf-endline"/><line x1="0.5" y1="${(gFar - EZ).toFixed(1)}" x2="0.5" y2="${(gNear + EZ).toFixed(1)}" class="wf-side"/><line x1="99.5" y1="${(gFar - EZ).toFixed(1)}" x2="99.5" y2="${(gNear + EZ).toFixed(1)}" class="wf-side"/>`;
+      for (let abs = 0; abs <= 100; abs++) {
+        const y = yOf(abs);
+        if (y < Y_TOP || y > Y_BOT) continue;
+        if (abs % 5 === 0) {
+          const isGoal = abs === 0 || abs === 100;
+          lines += `<line x1="0" y1="${y.toFixed(1)}" x2="100" y2="${y.toFixed(1)}" class="${isGoal ? "wf-goal" : "wf-yard"}"/>`;
+          if (isGoal) {
+            lines += `<rect x="0.4" y="${(y - 0.5).toFixed(1)}" width="1" height="1" class="wf-pylon"/><rect x="98.6" y="${(y - 0.5).toFixed(1)}" width="1" height="1" class="wf-pylon"/>`;
+          } else if (abs % 10 === 0) {
+            const num = abs <= 50 ? abs : 100 - abs;
+            lines += `<text x="15" y="${(y - 1).toFixed(1)}" class="wf-num">${num}</text><text x="85" y="${(y - 1).toFixed(1)}" class="wf-num wf-num-r">${num}</text>`;
+          }
+        } else {
+          lines += `<line x1="31.4" y1="${y.toFixed(1)}" x2="33.4" y2="${y.toFixed(1)}" class="wf-hash"/><line x1="66.6" y1="${y.toFixed(1)}" x2="68.6" y2="${y.toFixed(1)}" class="wf-hash"/>`;
         }
       }
       if (p.down && p.distance != null && fp + p.distance <= 100) {
         const fy = 31 - p.distance * YPU2;
-        if (fy > 1) lines += `<line x1="0" y1="${fy.toFixed(1)}" x2="100" y2="${fy.toFixed(1)}" class="wf-first"/>`;
+        if (fy > gFar) lines += `<line x1="0" y1="${fy.toFixed(1)}" x2="100" y2="${fy.toFixed(1)}" class="wf-first"/>`;
       }
     } else {
+      under += `<rect x="0" y="-6" width="100" height="74" class="wf-turf"/>`;
+      for (let i = 1; i < 8; i += 2) under += `<rect x="0" y="${(-6 + i * 9.25).toFixed(2)}" width="100" height="9.25" class="wf-mow"/>`;
+      under += `<rect x="0" y="-6" width="100" height="74" fill="url(#wf-grain)"/>`;
       for (let y = 7; y < 62; y += 8.5) lines += `<line x1="0" y1="${y}" x2="100" y2="${y}" class="wf-yard"/>`;
+      lines += `<line x1="0.5" y1="-6" x2="0.5" y2="68" class="wf-side"/><line x1="99.5" y1="-6" x2="99.5" y2="68" class="wf-side"/>`;
     }
-    return `<defs>
-      <marker id="wa-arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#ffd54a"/></marker>
-      <marker id="wa-arr-r" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#e5533d"/></marker>
-    </defs>
-    <rect x="0" y="-6" width="100" height="74" class="wf-turf"/>${zones}${lines}
-    <line x1="0" y1="31" x2="100" y2="31" class="wf-los"/>`;
+    return defs + under + lines + `<line x1="0" y1="31" x2="100" y2="31" class="wf-los"/>`;
   }
   function watchTick(immediate = false) {
     const w = _watch;
