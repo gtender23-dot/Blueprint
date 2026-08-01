@@ -5599,22 +5599,41 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 .wsp-stripe-line { fill:none; stroke:rgba(6,9,14,.72); stroke-width:.28; }
 .wsp-facemask { fill:none; stroke:#111722; stroke-width:.22; stroke-linecap:round; stroke-linejoin:round; }
 .wsp-number { fill:#fff; stroke:rgba(0,0,0,.7); stroke-width:.12; paint-order:stroke; text-anchor:middle; font-size:.68px; font-weight:900; font-family:var(--font-pixel,monospace); }
-.wsp-pose-carry,.wsp-pose-block { display:none; }
+.wsp-pose-carry,.wsp-pose-block,.wsp-pose-throw { display:none; }
 .wp-team-off.wp-near-ball .wsp-pose-run { display:none; }
 .wp-team-off.wp-near-ball .wsp-pose-carry { display:block; }
 .wp-blocking .wsp-pose-run,.wp-blocking .wsp-pose-carry,.wp-blocked .wsp-pose-run,.wp-blocked .wsp-pose-carry { display:none; }
 .wp-blocking .wsp-pose-block,.wp-blocked .wsp-pose-block { display:block; }
+.wp-throwing .wsp-pose-run,.wp-throwing .wsp-pose-carry,.wp-throwing .wsp-pose-block { display:none; }
+.wp-throwing .wsp-pose-throw { display:block; }
+.wsp-limb { transform-box:fill-box; transform-origin:50% 12%; }
 .wsp-fB { visibility:hidden; }
 #watch-board.watch-in-play .wsp-fA { animation:wsp-gait-a .34s steps(1,end) infinite; animation-delay:var(--gait,0s); }
 #watch-board.watch-in-play .wsp-fB { animation:wsp-gait-b .34s steps(1,end) infinite; animation-delay:var(--gait,0s); }
 #watch-board.watch-in-play .wp-actor:not(.wp-blocking):not(.wp-blocked) .wsp-shell { animation:wsp-body-bob .34s steps(2,end) infinite; animation-delay:var(--gait,0s); }
+#watch-board.watch-in-play .wsp-run-arm-l { animation:wsp-arm-pump-l .34s ease-in-out infinite; animation-delay:var(--gait,0s); }
+#watch-board.watch-in-play .wsp-run-arm-r { animation:wsp-arm-pump-r .34s ease-in-out infinite; animation-delay:var(--gait,0s); }
+#watch-board.watch-in-play .wsp-carry-arm-l { animation:wsp-cradle-l .38s ease-in-out infinite; animation-delay:var(--gait,0s); }
+#watch-board.watch-in-play .wsp-carry-arm-r { animation:wsp-cradle-r .38s ease-in-out infinite; animation-delay:var(--gait,0s); }
+.wp-throwing .wsp-throw-guide { animation:wsp-throw-guide .62s cubic-bezier(.22,.72,.32,1) both; }
+.wp-throwing .wsp-throw-arm { animation:wsp-throw-arm .62s cubic-bezier(.22,.72,.32,1) both; }
 .wp-blocking .wsp-shell,.wp-blocked .wsp-shell { animation:wsp-pad-drive .22s steps(2,end) infinite; }
+.wp-blocking .wsp-block-arm-l,.wp-blocked .wsp-block-arm-l { animation:wsp-punch-l .22s ease-in-out infinite; }
+.wp-blocking .wsp-block-arm-r,.wp-blocked .wsp-block-arm-r { animation:wsp-punch-r .22s ease-in-out infinite; }
 .wp-blocking .wsp-fA,.wp-blocked .wsp-fA { visibility:visible !important; animation:none !important; }
 .wp-blocking .wsp-fB,.wp-blocked .wsp-fB { visibility:hidden !important; animation:none !important; }
 @keyframes wsp-gait-a { 0%,49.9% { visibility:visible; } 50%,100% { visibility:hidden; } }
 @keyframes wsp-gait-b { 0%,49.9% { visibility:hidden; } 50%,100% { visibility:visible; } }
 @keyframes wsp-body-bob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(.12px); } }
 @keyframes wsp-pad-drive { 0%,100% { transform:translateY(0) scaleX(1); } 50% { transform:translateY(.06px) scaleX(1.04); } }
+@keyframes wsp-arm-pump-l { 0%,100% { transform:rotate(-17deg); } 50% { transform:rotate(16deg); } }
+@keyframes wsp-arm-pump-r { 0%,100% { transform:rotate(16deg); } 50% { transform:rotate(-17deg); } }
+@keyframes wsp-cradle-l { 0%,100% { transform:rotate(-2deg) translateY(0); } 50% { transform:rotate(3deg) translateY(-.08px); } }
+@keyframes wsp-cradle-r { 0%,100% { transform:rotate(2deg) translateY(0); } 50% { transform:rotate(-3deg) translateY(-.08px); } }
+@keyframes wsp-punch-l { 0%,100% { transform:translate(-.04px,.04px) rotate(2deg); } 50% { transform:translate(.12px,-.1px) rotate(-4deg); } }
+@keyframes wsp-punch-r { 0%,100% { transform:translate(.04px,.04px) rotate(-2deg); } 50% { transform:translate(-.12px,-.1px) rotate(4deg); } }
+@keyframes wsp-throw-guide { 0%,28% { transform:rotate(7deg) translateY(0); } 62% { transform:rotate(-8deg) translate(.08px,-.08px); } 100% { transform:rotate(13deg) translate(.03px,.08px); } }
+@keyframes wsp-throw-arm { 0% { transform:rotate(-12deg) translate(0,0); } 30% { transform:rotate(-32deg) translate(-.08px,-.08px); } 62% { transform:rotate(42deg) translate(.12px,.04px); } 100% { transform:rotate(66deg) translate(-.05px,.2px); } }
 /* the QB wears a brighter crown so you can find him pre-snap */
 .wsp-qb .wsp-helmet { fill:var(--px-yellow); stroke:var(--px-black); }
 .wsp-qb .wsp-stripe-line { stroke:var(--px-black); }
@@ -6117,7 +6136,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "5614d44f86";
+globalThis.__BUILD__ = "5effc1e317";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -35746,7 +35765,7 @@ var _CFB = (() => {
         s.home = to;
       });
     }
-    let carrier = null, dur, ballPlan;
+    let carrier = null, dur, ballPlan, throwCue = null;
     const schedSp = (a, pt, tNow, tDue, base) => clamp5(
       Math.hypot(pt[0] - a.x, pt[1] - a.y) / Math.max(0.15, tDue - tNow),
       base * 0.55,
@@ -35847,6 +35866,7 @@ var _CFB = (() => {
       const throwAt = screen ? SNAP_END + _screenDelay : Math.max(SNAP_END + 0.45, Math.min(_routeBreak, _pocketBreakdown));
       const flight = clamp5(Math.hypot(catchPt[0] - qbSlot.bx, catchPt[1] - qbSlot.by) / 28, 0.24, 1.05);
       const tCatch = throwAt + flight;
+      throwCue = { start: Math.max(SNAP_END, throwAt - 0.34), release: throwAt, end: throwAt + 0.28 };
       const yac = p.complete && !p.turnover ? clamp5(Math.abs(endY - catchPt[1]) / (SPD.WR * 0.92) + 0.2, 0.25, 3.2) : 0;
       const tEnd = p.turnover ? tCatch + 0.55 : tCatch + (p.complete ? yac : 0.12);
       dur = tEnd + LINGER;
@@ -36289,6 +36309,7 @@ var _CFB = (() => {
       }),
       ball,
       blocks,
+      throwCue,
       fx: fx.filter((f) => f.kind !== "pitch")
     };
   }
@@ -45547,11 +45568,12 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     const gait = (-(gh % 8 * 0.045)).toFixed(3);
     const legsA = `<path class="wsp-leg" d="M-1.08-1.72h.82l-.04.76-.28.96h-.66l.18-1.02z"/><path class="wsp-leg" d="M.26-1.72h.82l-.02.7.18 1.02H.58L.3-.96z"/><path class="wsp-shoe" d="M-1.28-.22h.76l.24.22h-1.08zM.54-.22h.7l.28.22H.46z"/>`;
     const legsB = `<path class="wsp-leg" d="M-1.06-1.72h.82l-.3.7-.52.68-.62-.2.54-.84z"/><path class="wsp-leg" d="M.24-1.72h.82l.18.7.12 1.02H.7L.5-.94z"/><path class="wsp-shoe" d="M-1.72-.72l.74.24.14.3-1.08-.32zM.72-.22h.7l.28.22H.64z"/>`;
-    const runPose = `<g class="wsp-pose-run"><path class="wsp-arm ${c}" d="M-1.45-3.2l-.62.42.34.86.5.68.53-.3-.36-.77.18-.65z"/><circle class="wsp-skin" cx="-1.16" cy="-1.44" r=".31"/><path class="wsp-arm ${c}" d="M1.45-3.2l.58.48-.38.72-.56.52-.49-.34.44-.66-.2-.54z"/><circle class="wsp-skin" cx="1.02" cy="-1.45" r=".31"/></g>`;
-    const carryPose = `<g class="wsp-pose-carry"><path class="wsp-arm ${c}" d="M-1.42-3.15l-.44.54.64.66.94.39.24-.48-.78-.5-.12-.5z"/><path class="wsp-arm ${c}" d="M1.42-3.12l.38.6-.64.66-.98.36-.2-.5.8-.48.1-.5z"/><circle class="wsp-skin" cx="-.17" cy="-1.65" r=".3"/><circle class="wsp-skin" cx=".2" cy="-1.62" r=".28"/></g>`;
-    const blockPose = `<g class="wsp-pose-block"><path class="wsp-arm ${c}" d="M-1.42-3.16l-.5.34.56.76.86.37.24-.47-.7-.48-.1-.4z"/><path class="wsp-arm ${c}" d="M1.42-3.16l.5.34-.56.76-.86.37-.24-.47.7-.48.1-.4z"/><circle class="wsp-skin" cx="-.38" cy="-1.79" r=".32"/><circle class="wsp-skin" cx=".38" cy="-1.79" r=".32"/></g>`;
+    const runPose = `<g class="wsp-pose-run"><g class="wsp-limb wsp-run-arm-l"><path class="wsp-arm ${c}" d="M-1.45-3.2l-.62.42.34.86.5.68.53-.3-.36-.77.18-.65z"/><circle class="wsp-skin" cx="-1.16" cy="-1.44" r=".31"/></g><g class="wsp-limb wsp-run-arm-r"><path class="wsp-arm ${c}" d="M1.45-3.2l.58.48-.38.72-.56.52-.49-.34.44-.66-.2-.54z"/><circle class="wsp-skin" cx="1.02" cy="-1.45" r=".31"/></g></g>`;
+    const carryPose = `<g class="wsp-pose-carry"><g class="wsp-limb wsp-carry-arm-l"><path class="wsp-arm ${c}" d="M-1.42-3.15l-.44.54.64.66.94.39.24-.48-.78-.5-.12-.5z"/><circle class="wsp-skin" cx="-.17" cy="-1.65" r=".3"/></g><g class="wsp-limb wsp-carry-arm-r"><path class="wsp-arm ${c}" d="M1.42-3.12l.38.6-.64.66-.98.36-.2-.5.8-.48.1-.5z"/><circle class="wsp-skin" cx=".2" cy="-1.62" r=".28"/></g></g>`;
+    const blockPose = `<g class="wsp-pose-block"><g class="wsp-limb wsp-block-arm-l"><path class="wsp-arm ${c}" d="M-1.42-3.16l-.5.34.56.76.86.37.24-.47-.7-.48-.1-.4z"/><circle class="wsp-skin" cx="-.38" cy="-1.79" r=".32"/></g><g class="wsp-limb wsp-block-arm-r"><path class="wsp-arm ${c}" d="M1.42-3.16l.5.34-.56.76-.86.37-.24-.47.7-.48.1-.4z"/><circle class="wsp-skin" cx=".38" cy="-1.79" r=".32"/></g></g>`;
+    const throwPose = `<g class="wsp-pose-throw"><g class="wsp-limb wsp-throw-guide"><path class="wsp-arm ${c}" d="M-1.4-3.16l-.48.39.55.7.9.27.2-.47-.72-.4-.08-.38z"/><circle class="wsp-skin" cx="-.34" cy="-1.83" r=".3"/></g><g class="wsp-limb wsp-throw-arm"><path class="wsp-arm ${c}" d="M1.4-3.18l.43-.15.25-.72-.35-.55-.43.18.12.58-.36.54z"/><circle class="wsp-skin" cx="1.82" cy="-4.1" r=".3"/></g></g>`;
     const helmet = `<path class="wsp-helmet ${hl}" d="M-1.04-3.67l-.08-.46q.08-.73.55-1.05Q0-5.52.57-5.18q.47.32.55 1.05l-.08.46-.45.35H-.6z"/><path class="wsp-helmet-hi" d="M-.68-4.8q.32-.35.75-.34l-.2.28q-.33.05-.55.3z"/><circle class="wsp-earhole" cx=".73" cy="-3.94" r=".16"/>` + (off ? `<path class="wsp-stripe-line" d="M0-5.3v1.9"/>` : `<path class="wsp-facemask" d="M.56-4.05h.7v.5H.42M.9-4.05v-.34"/>`);
-    const body = `<ellipse class="wsp-shadow" cx="0" cy="-.12" rx="1.72" ry=".38"/><g class="wsp-shell"><g class="wsp-fA">${legsA}</g><g class="wsp-fB">${legsB}</g><path class="wsp-pants" d="M-1.34-2.13h2.68l-.25.72-.92-.05L0-1.7l-.17.24-.92.05z"/><path class="wsp-jersey ${c}" d="M-1.26-3.55h2.52l.25.68-.45.83H-1.06l-.45-.83z"/><path class="wsp-shoulder ${c}" d="M-1.82-3.18q.12-.48.62-.64H1.2q.5.16.62.64l-.28.52-1.08-.22h-.92l-1.08.22z"/><path class="wsp-band ${hl}" d="M-1.22-2.81h2.44l-.16.48H-1.06z"/><rect class="wsp-neck" x="-.42" y="-3.78" width=".84" height=".42" rx=".18"/>` + runPose + carryPose + blockPose + `<text class="wsp-number" x="0" y="-2.43">${escapeHtml(String(a.label || "").slice(0, 2))}</text>` + helmet + `</g>`;
+    const body = `<ellipse class="wsp-shadow" cx="0" cy="-.12" rx="1.72" ry=".38"/><g class="wsp-shell"><g class="wsp-fA">${legsA}</g><g class="wsp-fB">${legsB}</g><path class="wsp-pants" d="M-1.34-2.13h2.68l-.25.72-.92-.05L0-1.7l-.17.24-.92.05z"/><path class="wsp-jersey ${c}" d="M-1.26-3.55h2.52l.25.68-.45.83H-1.06l-.45-.83z"/><path class="wsp-shoulder ${c}" d="M-1.82-3.18q.12-.48.62-.64H1.2q.5.16.62.64l-.28.52-1.08-.22h-.92l-1.08.22z"/><path class="wsp-band ${hl}" d="M-1.22-2.81h2.44l-.16.48H-1.06z"/><rect class="wsp-neck" x="-.42" y="-3.78" width=".84" height=".42" rx=".18"/>` + runPose + carryPose + blockPose + (a.qb ? throwPose : "") + `<text class="wsp-number" x="0" y="-2.43">${escapeHtml(String(a.label || "").slice(0, 2))}</text>` + helmet + `</g>`;
     const tag = `<text class="${off ? "wo-lbl" : "wd-lbl"} wsp-tag" x="0" y="${off ? "1.9" : "-5.8"}">${a.label}</text>`;
     return `<g class="wsp${a.qb ? " wsp-qb" : ""}" style="--gait:${gait}s;--wsp-lean:0deg">${body}</g>${tag}`;
   }
@@ -45649,7 +45671,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     const trail = [];
     let lastTrail = null;
     const tick = () => {
-      var _a2, _b2, _c2;
+      var _a2, _b2, _c2, _d;
       if (!svg.isConnected) {
         watchStopAnim();
         return;
@@ -45682,6 +45704,8 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       }
       Object.values(nodes).forEach((node) => node.classList.remove("wp-near-ball", "wp-blocking", "wp-blocked"));
       if (t > script.presnap && cd < 4.4 && carrierId) (_a2 = nodes[carrierId]) == null ? void 0 : _a2.classList.add("wp-near-ball");
+      const throwCue = script.throwCue;
+      (_b2 = nodes.QB) == null ? void 0 : _b2.classList.toggle("wp-throwing", !!throwCue && t >= throwCue.start && t <= throwCue.end);
       (script.blocks || []).forEach((b, i) => {
         var _a3, _b3;
         const line = blockNodes[i], op = actorPts[b.offId], dp = actorPts[b.defId];
@@ -45718,7 +45742,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       for (const f of script.fx) {
         if (t >= f.t && !shown.has(f)) {
           shown.add(f);
-          if (f.kind === "beaten") (_c2 = (_b2 = nodes[f.actorId]) == null ? void 0 : _b2.querySelector(".wd-x")) == null ? void 0 : _c2.classList.add("wd-beaten");
+          if (f.kind === "beaten") (_d = (_c2 = nodes[f.actorId]) == null ? void 0 : _c2.querySelector(".wd-x")) == null ? void 0 : _d.classList.add("wd-beaten");
           else fxN == null ? void 0 : fxN.insertAdjacentHTML("beforeend", watchFxMarkup(f));
         }
       }
