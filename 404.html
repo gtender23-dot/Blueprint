@@ -6060,6 +6060,47 @@ body *::after {
 }
 
 
+/* Phone schedule: give completed-game results their own row so the score and
+   Box Score action can never cover a long opponent name or scouting link. */
+@media (max-width: 640px) {
+  .game-card {
+    grid-template-columns: 58px minmax(0, 1fr);
+    grid-template-areas:
+      "day matchup"
+      "result result";
+    align-items: start;
+    gap: 10px 12px;
+    padding: 12px;
+  }
+
+  .game-card-day { grid-area: day; }
+  .game-card-matchup { grid-area: matchup; min-width: 0; }
+  .game-teams { flex-wrap: wrap; gap: 3px 6px; }
+  .game-team { min-width: 0; overflow-wrap: anywhere; }
+  .game-opp-record { overflow-wrap: anywhere; }
+
+  .game-card-result {
+    grid-area: result;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "badge score action"
+      "stats stats stats";
+    align-items: center;
+    gap: 4px 10px;
+    min-width: 0;
+    padding-top: 10px;
+    border-top: 2px solid var(--px-line-dim, var(--border-sub));
+    text-align: left;
+  }
+
+  .game-card-result .result-badge-large { grid-area: badge; font-size: 18px; }
+  .game-card-result .result-score-large { grid-area: score; margin: 0; font-size: 16px; }
+  .game-card-result .result-stats-mini { grid-area: stats; margin: 2px 0 0; }
+  .game-card-result .view-boxscore-btn { grid-area: action; }
+  .game-card-result .upcoming-badge { grid-column: 1 / -1; }
+}
+
   </style>
 </head>
 <body>
@@ -6069,7 +6110,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "3328a2916f";
+globalThis.__BUILD__ = "db4a525aa5";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -33966,10 +34007,6 @@ var _CFB = (() => {
   var scoutFilterPos = "";
   var POS_ORDER2 = { QB: 0, WR: 1, TE: 2, RB: 3, OL: 4, DE: 5, DT: 6, OLB: 7, LB: 8, CB: 9, S: 10, K: 11, P: 12 };
   var RATINGS_COLS = [
-    { key: "RAS", hdr: "RAS", cell: (p) => {
-      var _a;
-      return `<td class="attr-cell ${(p.ras || 0) >= 8 ? "ras-elite" : (p.ras || 0) >= 5 ? "ras-good" : ""}">${((_a = p.ras) != null ? _a : 0).toFixed(1)}</td>`;
-    } },
     { key: "F40", hdr: "40", cell: (p) => {
       var _a, _b;
       return `<td class="attr-cell">${(_b = (_a = p.measurables) == null ? void 0 : _a.forty) != null ? _b : "\u2014"}</td>`;
@@ -36695,7 +36732,7 @@ var _CFB = (() => {
               ${opt("visionRating", searchFilters.sort, "Visibility")}
               ${opt("compositeRating", searchFilters.sort, "True Rating (scouted)")}
               ${opt("distance", searchFilters.sort, "Distance")}
-              ${opt("ras", searchFilters.sort, "RAS (athleticism)")}
+              ${opt("ras", searchFilters.sort, "Athletics")}
               ${ATTRIBUTES.map((a) => opt(a, searchFilters.sort, attrLabel(a))).join("")}
             </select>
           </div>
@@ -36705,7 +36742,7 @@ var _CFB = (() => {
               ${opt("", searchFilters.thenBy, "\u2014")}
               ${opt("visionRating", searchFilters.thenBy, "Visibility")}
               ${opt("compositeRating", searchFilters.thenBy, "True Rating")}
-              ${opt("ras", searchFilters.thenBy, "RAS")}
+              ${opt("ras", searchFilters.thenBy, "Athletics")}
               ${ATTRIBUTES.map((a) => opt(a, searchFilters.thenBy, attrLabel(a))).join("")}
             </select>
           </div>
@@ -37116,7 +37153,7 @@ var _CFB = (() => {
   `;
   }
   function renderProfile(recruitId, school, isOpen) {
-    var _a, _b, _c;
+    var _a, _b;
     const recruit = state.world.recruits.find((r) => r.id === recruitId);
     if (!recruit) return '<div class="empty-state">Recruit not found</div>';
     const entry = getBoardEntry(recruitId);
@@ -37133,8 +37170,8 @@ var _CFB = (() => {
           <div class="profile-details">
             ${derivedArchetype(recruit) ? `<span class="arch-chip arch-chip-lg">${archetypeLabel(derivedArchetype(recruit))}</span>` : ""}
             <span>${recruit.height} &middot; ${recruit.weight} lbs &middot; GPA ${recruit.gpa}</span>
-            ${recruit.measurables ? `<span class="testing-sheet">RAS <b class="${recruit.ras >= 8 ? "ras-elite" : recruit.ras >= 5 ? "ras-good" : ""}">${((_a = recruit.ras) != null ? _a : 0).toFixed(1)}</b> &middot; 40yd ${recruit.measurables.forty} &middot; Vert ${recruit.measurables.vert}&quot; &middot; Shuttle ${recruit.measurables.shuttle} &middot; Bench ${recruit.measurables.bench}</span>` : ""}
-            ${((_b = recruit.hometown) == null ? void 0 : _b.city) ? `<span>${escapeHtml(recruit.hometown.city)}, ${escapeHtml(recruit.hometown.state || "")}</span>` : ""}
+            ${recruit.measurables ? `<span class="testing-sheet">40yd ${recruit.measurables.forty} &middot; Vert ${recruit.measurables.vert}&quot; &middot; Shuttle ${recruit.measurables.shuttle} &middot; Bench ${recruit.measurables.bench}</span>` : ""}
+            ${((_a = recruit.hometown) == null ? void 0 : _a.city) ? `<span>${escapeHtml(recruit.hometown.city)}, ${escapeHtml(recruit.hometown.state || "")}</span>` : ""}
             ${Number.isFinite(dist) && dist < 9999 ? `<span>${dist} miles from ${escapeHtml((school == null ? void 0 : school.name) || "")}</span>` : ""}
           </div>
             </div>
@@ -37225,7 +37262,7 @@ var _CFB = (() => {
 
       <div class="profile-log card">
         <div class="card-header"><span class="card-title">ACTION HISTORY</span></div>
-        ${((_c = entry == null ? void 0 : entry.actions) == null ? void 0 : _c.length) ? `
+        ${((_b = entry == null ? void 0 : entry.actions) == null ? void 0 : _b.length) ? `
           <table class="data-table compact">
             <thead><tr><th>Day</th><th>Action</th><th>Cost</th><th>Interest Gained</th></tr></thead>
             <tbody>
@@ -44016,7 +44053,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     return null;
   }
   function renderPlayerCardModal() {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c;
     const id = state.ui.pcardId;
     if (!id) return "";
     const hit = findPlayerAnywhere(id);
@@ -44053,8 +44090,8 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
           ${derivedArchetype(p) ? `<span class="arch-chip arch-chip-lg" data-tip="archetype" title="What is an archetype?">${archetypeLabel(derivedArchetype(p))}</span>` : ""}
           <span>${school ? `<span class="team-link" data-scout-team="${school.id}">${escapeHtml(school.name)} ${escapeHtml(school.nick || "")}</span>` : '<span class="muted">Transfer portal</span>'}</span>
           ${p.height || p.weight ? `<span>${p.height ? escapeHtml(String(p.height)) : ""}${p.height && p.weight ? " \xB7 " : ""}${p.weight ? `${p.weight} lbs` : ""}</span>` : ""}
-          ${m ? `<span class="testing-sheet">RAS <b class="${((_a = p.ras) != null ? _a : 0) >= 8 ? "ras-elite" : ((_b = p.ras) != null ? _b : 0) >= 5 ? "ras-good" : ""}">${((_c = p.ras) != null ? _c : 0).toFixed(1)}</b> \xB7 40yd ${m.forty} \xB7 Vert ${m.vert}&quot; \xB7 Shuttle ${m.shuttle} \xB7 Bench ${m.bench}</span>` : ""}
-          ${((_d = p.hometown) == null ? void 0 : _d.city) ? `<span>${escapeHtml(p.hometown.city)}, ${escapeHtml(p.hometown.state || "")}</span>` : ""}
+          ${m ? `<span class="testing-sheet">40yd ${m.forty} \xB7 Vert ${m.vert}&quot; \xB7 Shuttle ${m.shuttle} \xB7 Bench ${m.bench}</span>` : ""}
+          ${((_a = p.hometown) == null ? void 0 : _a.city) ? `<span>${escapeHtml(p.hometown.city)}, ${escapeHtml(p.hometown.state || "")}</span>` : ""}
         </div>
 
         <div class="profile-ratings pcard-ratings">
@@ -44079,9 +44116,9 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         </div>
 
         ${p.injuryGamesOut > 0 ? `
-          <div class="pcard-injury injury-detail inj-${((_e = p.injury) == null ? void 0 : _e.severity) || "moderate"}">
+          <div class="pcard-injury injury-detail inj-${((_b = p.injury) == null ? void 0 : _b.severity) || "moderate"}">
             <span class="injury-detail-type">${p.injury ? escapeHtml(p.injury.type) : "Injured"}</span>
-            <span class="injury-detail-meta">${p.injury ? `${p.injury.severityLabel} \xB7 ` : ""}${p.injuryGamesOut} week${p.injuryGamesOut === 1 ? "" : "s"} out${((_f = p.injury) == null ? void 0 : _f.totalGames) && p.injury.totalGames !== p.injuryGamesOut ? ` (of ${p.injury.totalGames})` : ""}</span>
+            <span class="injury-detail-meta">${p.injury ? `${p.injury.severityLabel} \xB7 ` : ""}${p.injuryGamesOut} week${p.injuryGamesOut === 1 ? "" : "s"} out${((_c = p.injury) == null ? void 0 : _c.totalGames) && p.injury.totalGames !== p.injuryGamesOut ? ` (of ${p.injury.totalGames})` : ""}</span>
           </div>` : ""}
 
         ${statBits.length ? `
