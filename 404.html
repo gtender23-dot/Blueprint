@@ -4450,7 +4450,7 @@ th.conv-sort.active { color: var(--team-1); }
 .ob-staff-card .ob-pick-desc b { font-variant-numeric: tabular-nums; }
 
 /* Plan quick slots */
-.plan-slots-row { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
+.plan-slots-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 12px; }
 .plan-slots-label { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; color: var(--text-2); }
 .plan-slot { width: 34px; height: 30px; border-radius: 8px; font-weight: 800; font-size: 13px;
   background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14); color: var(--text-2); }
@@ -5818,6 +5818,9 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 .pn-panel { flex:1; min-width:0; display:flex; flex-direction:column; gap:9px; padding:12px;
   background:var(--px-panel,#101827); border:3px solid var(--px-line,#53617a); box-shadow:5px 5px 0 var(--px-shadow,#020308); }
 .pn-side-label { font-size:11px; font-weight:900; letter-spacing:.14em; opacity:.7; }
+.pn-source-label { font-size:9px; font-weight:900; letter-spacing:.12em; opacity:.58; }
+.pn-source { width:100%; min-height:38px; font-size:11px; font-weight:800; }
+.pn-saved-meta { min-height:36px; display:flex; align-items:center; padding:7px 9px; color:var(--px-yellow,#ffd34d); background:var(--px-panel-2,#141d2e); border:2px solid var(--px-line,#53617a); font-size:9px; font-weight:900; letter-spacing:.08em; }
 .pn-seg { display:flex; gap:4px; }
 .pn-seg-btn { flex:1; min-height:36px; font-weight:900; font-family:inherit; color:inherit; cursor:pointer;
   background:var(--px-panel-2,#141d2e); border:2px solid var(--px-line,#53617a); }
@@ -5851,6 +5854,9 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 @media (max-width:700px) {
   .pn-matchup { flex-direction:column; }
   .pn-vs { padding:2px 0; }
+  .pn-mode { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .pn-actions { align-items:stretch; flex-direction:column; }
+  .plan-slots-row #btn-gp-save-team { order:10; flex:1 1 100%; margin-left:0 !important; }
 }
 
 /* School-color mode keeps the same neutral game cabinet and changes trim. */
@@ -6353,7 +6359,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "a094299048";
+globalThis.__BUILD__ = "3ee0c50b6c";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -15751,6 +15757,7 @@ var _CFB = (() => {
     DNA_AXES: () => DNA_AXES,
     MAX_COACHES: () => MAX_COACHES,
     MAX_GAMEPLANS: () => MAX_GAMEPLANS,
+    MAX_SAVED_TEAMS: () => MAX_SAVED_TEAMS,
     MAX_WORLDS: () => MAX_WORLDS,
     addDnaXP: () => addDnaXP,
     clearWorldSlot: () => clearWorldSlot,
@@ -15759,16 +15766,20 @@ var _CFB = (() => {
     createCoach: () => createCoach,
     deleteCoach: () => deleteCoach,
     deleteLibraryPlan: () => deleteLibraryPlan,
+    deleteSavedTeam: () => deleteSavedTeam,
     dnaBonus: () => dnaBonus,
     dnaGrade: () => dnaGrade,
     dnaGrades: () => dnaGrades,
     dnaTitle: () => dnaTitle,
     dnaXpForNextGrade: () => dnaXpForNextGrade,
     getCoach: () => getCoach,
+    instantiateSavedTeam: () => instantiateSavedTeam,
     listCoaches: () => listCoaches,
+    listSavedTeams: () => listSavedTeams,
     noteCoachRecords: () => noteCoachRecords,
     noteWorldMeta: () => noteWorldMeta,
     saveGameplanToLibrary: () => saveGameplanToLibrary,
+    saveTeamToLibrary: () => saveTeamToLibrary,
     updateCoach: () => updateCoach,
     worldSlotKey: () => worldSlotKey
   });
@@ -15794,7 +15805,9 @@ var _CFB = (() => {
       created: Date.now(),
       worlds: {},
       // slot(1-4) → { school, season, record, timestamp }
-      plans: { gameplans: [], practice: [] }
+      plans: { gameplans: [], practice: [] },
+      teams: []
+      // optional Play Now snapshots; absent on legacy profiles
     };
     coaches.push(coach);
     persist(coaches);
@@ -15842,6 +15855,71 @@ var _CFB = (() => {
       }
     });
     return saved;
+  }
+  function listSavedTeams() {
+    var _a, _b;
+    const out = [];
+    for (const coach of listCoaches()) {
+      for (const team of coach.teams || []) {
+        out.push(__spreadProps(__spreadValues({}, team), { coachId: coach.id, coachName: `${((_a = coach.name) == null ? void 0 : _a.first) || "Coach"} ${((_b = coach.name) == null ? void 0 : _b.last) || ""}`.trim() }));
+      }
+    }
+    return out.sort((a, b) => (b.saved || 0) - (a.saved || 0));
+  }
+  function saveTeamToLibrary(coachId, name, school, meta = {}) {
+    var _a;
+    if (!coachId || !((_a = school == null ? void 0 : school.roster) == null ? void 0 : _a.length) || !school.gameplan) return false;
+    let saved = false;
+    updateCoach(coachId, (coach) => {
+      coach.teams = coach.teams || [];
+      const cleanSchool = {};
+      for (const key of SAVED_TEAM_FIELDS) {
+        if (school[key] !== void 0) cleanSchool[key] = cloneJson(school[key]);
+      }
+      const cleanName = (name || school.name || "Saved Team").trim().slice(0, 36);
+      const existing = coach.teams.findIndex((t) => t.name === cleanName);
+      const entry = {
+        id: existing >= 0 ? coach.teams[existing].id : `team-${Date.now().toString(36)}`,
+        name: cleanName,
+        saved: Date.now(),
+        season: meta.season || null,
+        record: meta.record ? cloneJson(meta.record) : cloneJson(school.record || { wins: 0, losses: 0 }),
+        school: cleanSchool
+      };
+      if (existing >= 0) {
+        coach.teams[existing] = entry;
+        saved = true;
+      } else if (coach.teams.length < MAX_SAVED_TEAMS) {
+        coach.teams.push(entry);
+        saved = true;
+      }
+    });
+    return saved;
+  }
+  function deleteSavedTeam(coachId, teamId) {
+    updateCoach(coachId, (coach) => {
+      coach.teams = coach.teams || [];
+      const i = coach.teams.findIndex((t) => t.id === teamId);
+      if (i >= 0) coach.teams.splice(i, 1);
+    });
+  }
+  function remapSnapshotIds(value, idMap) {
+    if (typeof value === "string") return idMap.get(value) || value;
+    if (Array.isArray(value)) return value.map((v) => remapSnapshotIds(v, idMap));
+    if (!value || typeof value !== "object") return value;
+    for (const key of Object.keys(value)) value[key] = remapSnapshotIds(value[key], idMap);
+    return value;
+  }
+  function instantiateSavedTeam(entry, side = "home") {
+    if (!(entry == null ? void 0 : entry.school)) return null;
+    const school = cloneJson(entry.school);
+    const suffix = `${side}-${Date.now().toString(36)}-${(++exhibitionCloneNonce).toString(36)}`;
+    const idMap = /* @__PURE__ */ new Map();
+    idMap.set(school.id, `exh-school-${suffix}`);
+    for (const player of school.roster || []) idMap.set(player.id, `exh-player-${suffix}-${player.id}`);
+    remapSnapshotIds(school, idMap);
+    school.record = { wins: 0, losses: 0, confWins: 0, confLosses: 0 };
+    return school;
   }
   function deleteLibraryPlan(coachId, kind, name) {
     updateCoach(coachId, (c) => {
@@ -15975,13 +16053,50 @@ var _CFB = (() => {
     const c = getCoach(coachId);
     return c && c.records || {};
   }
-  var KEY, MAX_COACHES, MAX_WORLDS, MAX_GAMEPLANS, DNA_AXES, DNA_BONUS;
+  var KEY, MAX_COACHES, MAX_WORLDS, MAX_GAMEPLANS, MAX_SAVED_TEAMS, SAVED_TEAM_FIELDS, cloneJson, exhibitionCloneNonce, DNA_AXES, DNA_BONUS;
   var init_coachprofile = __esm({
     "js/engine/coachprofile.js"() {
       KEY = "cfb-coaches-v1";
       MAX_COACHES = 4;
       MAX_WORLDS = 4;
       MAX_GAMEPLANS = 10;
+      MAX_SAVED_TEAMS = 8;
+      SAVED_TEAM_FIELDS = [
+        "id",
+        "name",
+        "nick",
+        "abbr",
+        "logo",
+        "facilities",
+        "staff",
+        "conf",
+        "division",
+        "lat",
+        "lng",
+        "city",
+        "state",
+        "type",
+        "control",
+        "enrollment",
+        "founded",
+        "stadium",
+        "prestige",
+        "baseline",
+        "prestigeMin",
+        "prestigeMax",
+        "colors",
+        "roster",
+        "record",
+        "coach",
+        "gameplan",
+        "weeklyPlan",
+        "practiceMinutes",
+        "depthChart",
+        "depthOrder",
+        "_dnaGrades"
+      ];
+      cloneJson = (value) => JSON.parse(JSON.stringify(value));
+      exhibitionCloneNonce = 0;
       DNA_AXES = {
         groundPound: { label: "Ground & Pound", icon: "\u{1F69C}" },
         airAttack: { label: "Air Attack", icon: "\u2708\uFE0F" },
@@ -21347,6 +21462,13 @@ var _CFB = (() => {
     if (!top || top[1] / snaps < IQC.thr) return;
     defGP._h2Counter = { formationId: top[0], eff: IQC.eff, auto: true };
   }
+  function tokenControlsSide(token, side) {
+    return Array.isArray(token.controlledSides) ? token.controlledSides.includes(side) : side === token.playerSide;
+  }
+  function activateControlledSide(token, side) {
+    var _a;
+    if (tokenControlsSide(token, side) && ((_a = token.controlledSides) == null ? void 0 : _a.length) > 1) token.playerSide = side;
+  }
   function playHalf(token, half, resume = null) {
     var _a, _b, _c, _d, _e, _f, _g;
     const {
@@ -21377,6 +21499,8 @@ var _CFB = (() => {
       resumeDrive = __spreadProps(__spreadValues({}, resume.drive), { decision: resume.decision, call: resume.call });
     }
     while ((clock > 0 || resumeDrive) && driveCount < 20) {
+      activateControlledSide(token, possession);
+      const controlled = tokenControlsSide(token, possession);
       const offense = possession === "home" ? homeTeam : awayTeam;
       const defense = possession === "home" ? awayTeam : homeTeam;
       const gameState = {
@@ -21407,8 +21531,8 @@ var _CFB = (() => {
         }
         return true;
       };
-      const ask = token.askFourth && possession === token.playerSide ? (sit) => skipHolds(sit) ? null : token.askFourth(sit) : null;
-      const askCall = token.callMode && token.callMode !== "off" && possession === token.playerSide ? (sit) => skipHolds(sit) ? null : token.callMode === "all" ? "ASK" : token.callMode === "keydowns" && isKeyDownSituation(sit) ? "ASK" : null : null;
+      const ask = token.askFourth && controlled ? (sit) => skipHolds(sit) ? null : token.askFourth(sit) : null;
+      const askCall = token.callMode && token.callMode !== "off" && controlled ? (sit) => skipHolds(sit) ? null : token.callMode === "all" ? "ASK" : token.callMode === "keydowns" && isKeyDownSituation(sit) ? "ASK" : null : null;
       const driveResult = simulateDrive(
         offense,
         defense,
@@ -21715,7 +21839,10 @@ var _CFB = (() => {
         token._resume = null;
         if (r === "PENDING") return token;
         token.stage = 2;
-        if (token.stopAfterHalf === 1) return token;
+        if (token.stopAfterHalf === 1) {
+          if (token.primaryPlayerSide) token.playerSide = token.primaryPlayerSide;
+          return token;
+        }
       } else if (token.stage === 2) {
         const r = playHalf(token, 2, token._resume || null);
         token._resume = null;
@@ -21760,7 +21887,10 @@ var _CFB = (() => {
       gameState.clock = resume.clock;
       resumeDrive = __spreadProps(__spreadValues({}, resume.drive), { decision: resume.decision, call: resume.call });
     }
-    const mine = (otIsHome ? "home" : "away") === token.playerSide;
+    const otSide = otIsHome ? "home" : "away";
+    activateControlledSide(token, otSide);
+    gameState.playerSide = token.playerSide;
+    const mine = tokenControlsSide(token, otSide);
     const ask = token.askFourth && mine ? token.askFourth : null;
     const askCall = token.callMode && token.callMode !== "off" && mine ? (sit) => token.callMode === "all" ? "ASK" : token.callMode === "keydowns" && isKeyDownSituation(sit) ? "ASK" : null : null;
     const otDrive = simulateDrive(otOffense, otDefense, gameState, log, { ask, askCall, resume: resumeDrive });
@@ -21883,8 +22013,11 @@ var _CFB = (() => {
       awayGameplan
     );
     if (opts) applyDifficulty(token, opts.playerSide, opts.difficulty);
-    if ((opts == null ? void 0 : opts.callMode) && opts.callMode !== "off" && opts.playerSide) {
-      token.playerSide = opts.playerSide;
+    const controlledSides = ((opts == null ? void 0 : opts.controlledSides) || ((opts == null ? void 0 : opts.playerSide) ? [opts.playerSide] : [])).filter((side) => side === "home" || side === "away");
+    if ((opts == null ? void 0 : opts.callMode) && opts.callMode !== "off" && controlledSides.length) {
+      token.playerSide = opts.playerSide || controlledSides[0];
+      token.primaryPlayerSide = token.playerSide;
+      token.controlledSides = [...new Set(controlledSides)];
       token.callMode = opts.callMode;
       token.askFourth = (sit) => {
         if (!token.callMode || token.callMode === "off") return null;
@@ -26899,10 +27032,12 @@ var _CFB = (() => {
       };
     }
     state._exhibition = true;
-    state._exhibitionMode = mode === "watch" ? "watch" : "coach";
+    state._exhibitionMode = ["coach", "away", "both", "watch"].includes(mode) ? mode : "coach";
+    const primarySide = state._exhibitionMode === "away" ? "away" : "home";
+    const controlledSides = state._exhibitionMode === "both" ? ["home", "away"] : state._exhibitionMode === "watch" ? [] : [primarySide];
     state._exhNonce = (state._exhNonce || 0) + 1;
     state.world = { schools: [home, away], conferences: {}, season: state.season || 1, recruits: [] };
-    state.playerSchoolId = home.id;
+    state.playerSchoolId = primarySide === "away" ? away.id : home.id;
     state.ui.autoRun = false;
     state.ui.callSheetFormation = null;
     state.ui.showGameResult = false;
@@ -26916,7 +27051,7 @@ var _CFB = (() => {
       away.depthChart,
       home.gameplan,
       away.gameplan,
-      state._exhibitionMode === "watch" ? null : { playerSide: "home", callMode: "all" }
+      state._exhibitionMode === "watch" ? null : { playerSide: primarySide, controlledSides, callMode: "all" }
     );
     state.pendingHalftime = { token, game: null, home, away, exhibition: true };
     const events = exhibitionEvents();
@@ -27027,8 +27162,10 @@ var _CFB = (() => {
           else if (adj.kind === "deflean") myGP._h2DefLean = { eff: 0.08 };
           else if (adj.kind === "fresh") myGP._h2Fresh = { eff: 0.28 };
         }
-        const aiGP = t.playerSide === "away" ? t.homeGP : t.awayGP;
-        setAutoCounter(aiGP, t.drives, t.playerSide === "away" ? "away" : "home");
+        if (state._exhibitionMode !== "both") {
+          const aiGP = t.playerSide === "away" ? t.homeGP : t.awayGP;
+          setAutoCounter(aiGP, t.drives, t.playerSide === "away" ? "away" : "home");
+        }
         state.ui.showHalftime = false;
         stepSecondHalf(t, homeGPEdits, awayGPEdits);
       });
@@ -29520,7 +29657,8 @@ var _CFB = (() => {
       ${["A", "B", "C"].map((s) => `
         <button class="plan-slot${q.active === s ? " active" : ""}" data-plan-slot="${s}">${s}</button>`).join("")}
       ${state._coachId ? `
-        <button class="btn-ghost btn-sm" id="btn-gp-to-library" style="margin-left:auto">Save to Library</button>
+        <button class="btn-ghost btn-sm" id="btn-gp-save-team" style="margin-left:auto">Save Team to Play Now</button>
+        <button class="btn-ghost btn-sm" id="btn-gp-to-library">Save Plan</button>
         ${lib.length ? `<select class="form-select plan-lib-select" id="gp-lib-load">
           <option value="">Load\u2026</option>
           ${lib.map((p) => `<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join("")}
@@ -29528,7 +29666,7 @@ var _CFB = (() => {
     </div>`;
   }
   function setupListeners() {
-    var _a, _b, _c;
+    var _a, _b, _c, _d;
     document.querySelectorAll("[data-plan-slot]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const school2 = getPlayerSchool();
@@ -29543,7 +29681,17 @@ var _CFB = (() => {
         rerender();
       });
     });
-    (_a = document.getElementById("btn-gp-to-library")) == null ? void 0 : _a.addEventListener("click", () => {
+    (_a = document.getElementById("btn-gp-save-team")) == null ? void 0 : _a.addEventListener("click", () => {
+      const school2 = getPlayerSchool();
+      if (!school2 || !state._coachId) return;
+      const defaultName = `${school2.name} \xB7 Season ${state.season || 1}`;
+      const name = prompt("Name this saved team for Play Now:", defaultName);
+      if (!name) return;
+      const ok = saveTeamToLibrary(state._coachId, name, school2, { season: state.season, record: school2.record });
+      notify(ok ? `"${name}" is ready in Play Now` : "Saved team library is full (8 teams max)", ok ? "success" : "warning");
+      rerender();
+    });
+    (_b = document.getElementById("btn-gp-to-library")) == null ? void 0 : _b.addEventListener("click", () => {
       const school2 = getPlayerSchool();
       const name = prompt("Name this game plan for your coach library:", "My System");
       if (!name || !school2) return;
@@ -29551,7 +29699,7 @@ var _CFB = (() => {
       notify(ok ? `"${name}" saved to your coach library` : "Library is full (10 plans max)", ok ? "success" : "warning");
       rerender();
     });
-    (_b = document.getElementById("gp-lib-load")) == null ? void 0 : _b.addEventListener("change", (e) => {
+    (_c = document.getElementById("gp-lib-load")) == null ? void 0 : _c.addEventListener("change", (e) => {
       var _a2, _b2;
       const school2 = getPlayerSchool();
       const p = (((_b2 = (_a2 = getCoach(state._coachId)) == null ? void 0 : _a2.plans) == null ? void 0 : _b2.gameplans) || []).find((x) => x.name === e.target.value);
@@ -29595,7 +29743,7 @@ var _CFB = (() => {
     if (!gp.pressureSource) gp.pressureSource = { edge: 50, interior: 20, secondary: 30 };
     if (!gp.targetShares) gp.targetShares = { WR1: 22, WR2: 20, WR3: 16, TE1: 20, RB1: 14 };
     if (!gp.coverageScheme) gp.coverageScheme = "balanced";
-    (_c = document.getElementById("max-fg")) == null ? void 0 : _c.addEventListener("input", (e) => {
+    (_d = document.getElementById("max-fg")) == null ? void 0 : _d.addEventListener("input", (e) => {
       gp.maxFGDist = parseInt(e.target.value);
       document.getElementById("max-fg-val").textContent = `${e.target.value} yds`;
     });
@@ -30041,6 +30189,10 @@ var _CFB = (() => {
           ${(c.plans.practice || []).map((p) => `<div class="mm-lib-row"><span>\u{1F3CB} ${escapeHtml(p.name)}</span><button class="btn-mm-del" data-mm-lib-del="pp:${escapeHtml(p.name)}">\u2715</button></div>`).join("")}
         ` : '<div class="mm-lib-empty muted">Save game plans in-game \u2014 they follow this coach into every new world.</div>'}
       </div>
+      <div class="mm-section-label" style="margin-top:14px">SAVED TEAMS \xB7 PLAY NOW</div>
+      <div class="mm-library">
+        ${(c.teams || []).length ? (c.teams || []).map((t) => `<div class="mm-lib-row"><span>\u{1F3C8} ${escapeHtml(t.name)}${t.season ? ` <small>\xB7 S${t.season}</small>` : ""}</span><button class="btn-mm-del" data-mm-team-del="${escapeHtml(t.id)}" title="Delete saved team">\u2715</button></div>`).join("") : '<div class="mm-lib-empty muted">Save your current roster and gameplan from the Game Plan screen, then load it in Play Now.</div>'}
+      </div>
       <button class="btn-mm btn-mm-secondary" id="mm-back-coaches" style="margin-top:10px">\u2190 Coaches</button>
     </div>`;
   }
@@ -30186,6 +30338,10 @@ var _CFB = (() => {
     document.querySelectorAll("[data-mm-lib-del]").forEach((b) => b.addEventListener("click", () => {
       const [kind, ...rest] = b.dataset.mmLibDel.split(":");
       deleteLibraryPlan(mmCoachId, kind === "pp" ? "practice" : "gameplan", rest.join(":"));
+      rerender();
+    }));
+    document.querySelectorAll("[data-mm-team-del]").forEach((b) => b.addEventListener("click", () => {
+      deleteSavedTeam(mmCoachId, b.dataset.mmTeamDel);
       rerender();
     }));
     (_g = document.getElementById("btn-mm-load")) == null ? void 0 : _g.addEventListener("click", () => {
@@ -31480,6 +31636,7 @@ var _CFB = (() => {
   init_world();
   init_ai();
   init_fieldassign();
+  init_coachprofile();
   init_utils();
   init_constants();
   var DIVS = ["D1", "D2", "D3"];
@@ -31487,9 +31644,12 @@ var _CFB = (() => {
     var _a;
     return ((_a = C.PRESTIGE_MAX) == null ? void 0 : _a[div]) || 5;
   };
+  var cloneJson2 = (value) => JSON.parse(JSON.stringify(value));
   var pn = {
     cfg: { home: { div: "D1", prestige: 4 }, away: { div: "D1", prestige: 4 } },
     mode: "coach",
+    // legacy name for Team 1; also supports away | both | watch
+    source: { home: "", away: "" },
     home: null,
     away: null
   };
@@ -31510,9 +31670,15 @@ var _CFB = (() => {
     if (!pn.home) pn.home = makeTeam("home");
     if (!pn.away) pn.away = makeTeam("away");
   }
+  function savedKey(team) {
+    return `${team.coachId}|${team.id}`;
+  }
+  function savedByKey(key) {
+    return listSavedTeams().find((team) => savedKey(team) === key) || null;
+  }
   function teamOvr(school) {
     const top = (school.roster || []).map((p) => p.compositeRating).sort((a, b) => b - a).slice(0, 22);
-    return top.length ? Math.round(top.reduce((s, v) => s + v, 0) / top.length) : 0;
+    return top.length ? Math.round(top.reduce((sum, value) => sum + value, 0) / top.length) : 0;
   }
   function bestAt(school, positions) {
     return (school.roster || []).filter((p) => positions.includes(p.position)).sort((a, b) => b.compositeRating - a.compositeRating)[0] || null;
@@ -31520,26 +31686,45 @@ var _CFB = (() => {
   function starRow(side) {
     const { div, prestige } = pn.cfg[side];
     const cap = capOf(div);
-    let s = "";
+    let html = "";
     for (let i = 1; i <= cap; i++) {
-      s += `<button class="pn-star${i <= prestige ? " on" : ""}" data-pn-star="${side}:${i}" aria-label="${i} star">${i <= prestige ? "\u2605" : "\u2606"}</button>`;
+      html += `<button class="pn-star${i <= prestige ? " on" : ""}" data-pn-star="${side}:${i}" aria-label="${i} star">${i <= prestige ? "\u2605" : "\u2606"}</button>`;
     }
-    return s;
+    return html;
+  }
+  function sideLabel(side) {
+    if (pn.mode === "both" || pn.mode === "watch") return side === "home" ? "TEAM 1" : "TEAM 2";
+    if (pn.mode === "away") return side === "away" ? "YOUR TEAM \xB7 TEAM 2" : "OPPONENT \xB7 TEAM 1";
+    return side === "home" ? "YOUR TEAM \xB7 TEAM 1" : "OPPONENT \xB7 TEAM 2";
+  }
+  function sourcePicker(side) {
+    const saved = listSavedTeams();
+    return `<label class="pn-source-label" for="pn-source-${side}">TEAM SOURCE</label>
+    <select class="form-select pn-source" id="pn-source-${side}" data-pn-source="${side}">
+      <option value=""${pn.source[side] ? "" : " selected"}>Generate a new team</option>
+      ${saved.length ? `<optgroup label="Saved dynasty teams">${saved.map((team) => {
+      const key = savedKey(team);
+      return `<option value="${escapeHtml(key)}"${pn.source[side] === key ? " selected" : ""}>${escapeHtml(team.name)} \u2014 ${escapeHtml(team.coachName)}</option>`;
+    }).join("")}</optgroup>` : ""}
+    </select>`;
   }
   function teamPanel(side, school) {
     var _a, _b;
-    const label = pn.mode === "watch" ? side === "home" ? "TEAM 1" : "TEAM 2" : side === "home" ? "YOUR TEAM" : "OPPONENT";
+    const generated = !pn.source[side];
+    const saved = generated ? null : savedByKey(pn.source[side]);
     const { div } = pn.cfg[side];
     const qb = bestAt(school, ["QB"]);
     const star = (school.roster || []).slice().sort((a, b) => b.compositeRating - a.compositeRating)[0];
     const pname = (p) => p ? `${p.name.first[0]}. ${p.name.last}` : "\u2014";
     return `
     <div class="pn-panel">
-      <div class="pn-side-label">${label}</div>
-      <div class="pn-seg">
-        ${DIVS.map((d) => `<button class="pn-seg-btn${div === d ? " active" : ""}" data-pn-div="${side}:${d}">${d}</button>`).join("")}
-      </div>
-      <div class="pn-stars">${starRow(side)}<span class="pn-star-hint">prestige \u2014 roster strength</span></div>
+      <div class="pn-side-label">${sideLabel(side)}</div>
+      ${sourcePicker(side)}
+      ${generated ? `
+        <div class="pn-seg">
+          ${DIVS.map((d) => `<button class="pn-seg-btn${div === d ? " active" : ""}" data-pn-div="${side}:${d}">${d}</button>`).join("")}
+        </div>
+        <div class="pn-stars">${starRow(side)}<span class="pn-star-hint">prestige \u2014 roster strength</span></div>` : `<div class="pn-saved-meta">SAVED SNAPSHOT${(saved == null ? void 0 : saved.season) ? ` \xB7 SEASON ${saved.season}` : ""}${(saved == null ? void 0 : saved.record) ? ` \xB7 ${saved.record.wins || 0}\u2013${saved.record.losses || 0}` : ""}</div>`}
       <div class="pn-card" style="--pn-c1:${((_a = school.colors) == null ? void 0 : _a[0]) || "#888"};--pn-c2:${((_b = school.colors) == null ? void 0 : _b[1]) || "#ccc"}">
         <div class="pn-card-head">
           <span class="pn-crest">${renderCrest(school, 40)}</span>
@@ -31555,8 +31740,14 @@ var _CFB = (() => {
           <span class="pn-key">BEST <b>${escapeHtml(pname(star))}</b> ${star ? `${star.position} ${Math.round(star.compositeRating)}` : ""}</span>
         </div>
       </div>
-      <button class="btn-secondary pn-reroll" data-pn-reroll="${side}">\u21BB REROLL ${side === "home" ? "TEAM" : "OPPONENT"}</button>
+      ${generated ? `<button class="btn-secondary pn-reroll" data-pn-reroll="${side}">\u21BB REROLL ${side === "home" ? "TEAM 1" : "TEAM 2"}</button>` : ""}
     </div>`;
+  }
+  function modeNote() {
+    if (pn.mode === "watch") return "No coaching prompts. Both teams follow their loaded gameplans for the entire game.";
+    if (pn.mode === "both") return "Local multiplayer: pass the device as the headset switches to whichever team has the ball.";
+    if (pn.mode === "away") return "You control Team 2. Team 1 follows its gameplan.";
+    return "You control Team 1. Team 2 follows its gameplan.";
   }
   function renderPlayNow() {
     ensureTeams();
@@ -31565,7 +31756,7 @@ var _CFB = (() => {
     <div class="playnow-screen">
       <div class="newgame-header pn-header">
         <h1>\u{1F3C8} PLAY NOW</h1>
-        <p class="pn-sub">${watching ? "One game, tonight. Both teams run their own plans \u2014 you watch every snap on the board." : "One game, tonight. Every snap is your call \u2014 the whole thing plays out on the board."}</p>
+        <p class="pn-sub">${watching ? "One game, tonight. Both teams run their own plans \u2014 you watch every snap on the board." : pn.mode === "both" ? "One game, two headsets. Call every offensive snap for both teams." : "One game, tonight. Every offensive snap for your team is your call."}</p>
       </div>
       <div class="pn-body">
         <div class="pn-matchup">
@@ -31576,10 +31767,12 @@ var _CFB = (() => {
         <div class="pn-control">
           <div class="pn-control-title">GAME CONTROL</div>
           <div class="pn-mode" role="group" aria-label="Game control">
-            <button class="pn-mode-btn${!watching ? " active" : ""}" data-pn-mode="coach" aria-pressed="${!watching}">\u{1F3A7} COACH TEAM 1</button>
+            <button class="pn-mode-btn${pn.mode === "coach" ? " active" : ""}" data-pn-mode="coach" aria-pressed="${pn.mode === "coach"}">\u{1F3A7} TEAM 1</button>
+            <button class="pn-mode-btn${pn.mode === "away" ? " active" : ""}" data-pn-mode="away" aria-pressed="${pn.mode === "away"}">\u{1F3A7} TEAM 2</button>
+            <button class="pn-mode-btn${pn.mode === "both" ? " active" : ""}" data-pn-mode="both" aria-pressed="${pn.mode === "both"}">\u{1F3AE} BOTH TEAMS</button>
             <button class="pn-mode-btn${watching ? " active" : ""}" data-pn-mode="watch" aria-pressed="${watching}">\u25B6 WATCH ONLY</button>
           </div>
-          <div class="pn-mode-note">${watching ? "No coaching prompts. Team 1 and Team 2 use their gameplans for the entire game." : "You control Team 1. Team 2 uses its gameplan."}</div>
+          <div class="pn-mode-note">${modeNote()}</div>
         </div>
         <div class="pn-actions">
           <button class="btn-primary pn-start" id="pn-start">${watching ? "WATCH KICKOFF" : "KICK OFF"} \u2192</button>
@@ -31590,33 +31783,46 @@ var _CFB = (() => {
   }
   function playnowListeners() {
     var _a, _b;
-    document.querySelectorAll("[data-pn-mode]").forEach((b) => b.addEventListener("click", () => {
-      pn.mode = b.dataset.pnMode === "watch" ? "watch" : "coach";
+    document.querySelectorAll("[data-pn-mode]").forEach((button) => button.addEventListener("click", () => {
+      const mode = button.dataset.pnMode;
+      pn.mode = ["coach", "away", "both", "watch"].includes(mode) ? mode : "coach";
       rerender();
     }));
-    document.querySelectorAll("[data-pn-div]").forEach((b) => b.addEventListener("click", () => {
-      const [side, div] = b.dataset.pnDiv.split(":");
+    document.querySelectorAll("[data-pn-source]").forEach((select) => select.addEventListener("change", () => {
+      const side = select.dataset.pnSource;
+      const key = select.value;
+      pn.source[side] = key;
+      if (!key) pn[side] = makeTeam(side);
+      else {
+        const entry = savedByKey(key);
+        pn[side] = instantiateSavedTeam(entry, side) || makeTeam(side);
+        if (!entry) pn.source[side] = "";
+      }
+      rerender();
+    }));
+    document.querySelectorAll("[data-pn-div]").forEach((button) => button.addEventListener("click", () => {
+      const [side, div] = button.dataset.pnDiv.split(":");
       if (pn.cfg[side].div === div) return;
       pn.cfg[side].div = div;
       pn.cfg[side].prestige = Math.min(pn.cfg[side].prestige, capOf(div));
       pn[side] = makeTeam(side);
       rerender();
     }));
-    document.querySelectorAll("[data-pn-star]").forEach((b) => b.addEventListener("click", () => {
-      const [side, n] = b.dataset.pnStar.split(":");
+    document.querySelectorAll("[data-pn-star]").forEach((button) => button.addEventListener("click", () => {
+      const [side, n] = button.dataset.pnStar.split(":");
       if (pn.cfg[side].prestige === +n) return;
       pn.cfg[side].prestige = +n;
       pn[side] = makeTeam(side);
       rerender();
     }));
-    document.querySelectorAll("[data-pn-reroll]").forEach((b) => b.addEventListener("click", () => {
-      const side = b.dataset.pnReroll;
+    document.querySelectorAll("[data-pn-reroll]").forEach((button) => button.addEventListener("click", () => {
+      const side = button.dataset.pnReroll;
       pn[side] = makeTeam(side);
       rerender();
     }));
     (_a = document.getElementById("pn-start")) == null ? void 0 : _a.addEventListener("click", () => {
       ensureTeams();
-      startExhibition(pn.home, pn.away, pn.mode);
+      startExhibition(cloneJson2(pn.home), cloneJson2(pn.away), pn.mode);
     });
     (_b = document.getElementById("pn-back")) == null ? void 0 : _b.addEventListener("click", () => {
       endExhibition();
@@ -45379,13 +45585,14 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     </div>`;
   }
   function renderCallFeed(token) {
+    var _a;
     const feed = state.ui.callFeed || [];
     if (!feed.length) return "";
     const names = {};
     for (const pl of [...token.homeRoster || [], ...token.awayRoster || []]) {
       names[pl.id] = { name: `${pl.name.first[0]}. ${pl.name.last}`, pos: pl.position };
     }
-    const mySide = token.playerSide || "home";
+    const mySide = ((_a = token.pending) == null ? void 0 : _a.possession) || token.playerSide || "home";
     const items = feed.slice(-8).map(({ p, poss }) => {
       const mine = poss === mySide;
       let tag = "";
@@ -45529,16 +45736,17 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
   </div>`;
   }
   function callSheetPanelHtml() {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e, _f, _g;
     if (!((_b = (_a = state.pendingHalftime) == null ? void 0 : _a.token) == null ? void 0 : _b.pending)) return "";
     const token = state.pendingHalftime.token;
     const ctx2 = callContext(token);
     if (!ctx2) return "";
-    const school = getPlayerSchool();
-    const mySide = token.playerSide || (((_c = token.homeSchool) == null ? void 0 : _c.id) === (school == null ? void 0 : school.id) ? "home" : "away");
+    const playerSchool = getPlayerSchool();
+    const mySide = ((_c = token.pending) == null ? void 0 : _c.possession) || token.playerSide || (((_d = token.homeSchool) == null ? void 0 : _d.id) === (playerSchool == null ? void 0 : playerSchool.id) ? "home" : "away");
+    const school = mySide === "home" ? token.homeSchool : token.awaySchool;
     const opp = mySide === "home" ? token.awaySchool : token.homeSchool;
     const gp = token[`${mySide}GP`] || {};
-    const weights = (_e = (_d = ctx2.conceptWeights) != null ? _d : gp.conceptWeights) != null ? _e : null;
+    const weights = (_f = (_e = ctx2.conceptWeights) != null ? _e : gp.conceptWeights) != null ? _f : null;
     const qSecs = ctx2.half === 3 ? ctx2.clock : ctx2.clock > 900 ? ctx2.clock - 900 : ctx2.clock;
     const mm = Math.floor(qSecs / 60), ss = String(qSecs % 60).padStart(2, "0");
     const spot = ctx2.fieldPos >= 50 ? `opp ${100 - ctx2.fieldPos}` : `own ${ctx2.fieldPos}`;
@@ -45566,10 +45774,10 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       ["pass_deep", "\u{1F680} DEEP SHOT", "shots"],
       ["gadget", "\u{1F0CF} GADGET", "gadgets"]
     ];
-    const _selFormId = state.ui.callFormation || ((school == null ? void 0 : school.gameplan) == null ? void 0 : school.gameplan.offFormation) || "Single Back";
+    const _selFormId = state.ui.callFormation || (gp == null ? void 0 : gp.offFormation) || "Single Back";
     const _pkg = FORMATION_PACKAGES[aliasFormation(_selFormId)] || FORMATION_PACKAGES["Single Back"] || {};
     const _drillCat = state.ui.callDrill || null;
-    const _carriedIds = (((school == null ? void 0 : school.gameplan) == null ? void 0 : school.gameplan.offFormations) || []).map((f) => f && f.id).filter((id) => id && FORMATION_PACKAGES[id]);
+    const _carriedIds = ((gp == null ? void 0 : gp.offFormations) || []).map((f) => f && f.id).filter((id) => id && FORMATION_PACKAGES[id]);
     const _pbForms = state.ui.callFormation ? [state.ui.callFormation] : _carriedIds.length ? _carriedIds : [_selFormId];
     const _activePlaybook = formationPlaybookSet(_pbForms);
     const _wrOf = (id) => {
@@ -45622,8 +45830,8 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
           </div>
         </div>`;
     }
-    const _carried = ((school == null ? void 0 : school.gameplan) == null ? void 0 : school.gameplan.offFormations) || [];
-    const _formList = (_carried.length ? _carried : [{ id: (school == null ? void 0 : school.gameplan) == null ? void 0 : school.gameplan.offFormation }]).map((f) => f && f.id).filter((id) => id && FORMATION_PACKAGES[id]);
+    const _carried = (gp == null ? void 0 : gp.offFormations) || [];
+    const _formList = (_carried.length ? _carried : [{ id: gp == null ? void 0 : gp.offFormation }]).map((f) => f && f.id).filter((id) => id && FORMATION_PACKAGES[id]);
     const _selForm = state.ui.callFormation || "__auto";
     const _drillGrp = _drillCat ? _drillCat.grp : null;
     const _paDisabled = !!(_drillGrp && (_RUN_GRPS.includes(_drillGrp) || _drillGrp === "gadgets"));
@@ -45640,13 +45848,13 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
           <button class="cs-tag-btn${_qbRunOn ? " active" : ""}" data-cs-qbrun="1" ${_runLevDisabled ? "disabled" : ""} title="${_runLevDisabled ? "QB Run is a run call \u2014 it only applies to run plays" : "QB Run \u2014 the QB keeps it on the called run (a designed QB keeper)"}">\u{1F3C8} QB Run</button>
           ${(() => {
       const _tt = token.timeouts || {};
-      const _ms = token.playerSide || "home";
+      const _ms = mySide;
       const _left = _tt[_ms] != null ? _tt[_ms] : C.TIMEOUTS_PER_HALF;
       const _on = !!state.ui.callTimeout;
       return `<button class="cs-tag-btn${_on ? " active" : ""}" data-cs-timeout="1" ${_left <= 0 ? "disabled" : ""} title="Call timeout \u2014 stops the clock this play (saves the run-off). ${_left} left this half.">\u23F1\uFE0F Timeout (${_left})</button>`;
     })()}
         </div>` : "";
-    const adj = (_f = state.pendingHalftime) == null ? void 0 : _f.adjustment;
+    const adj = (_g = state.pendingHalftime) == null ? void 0 : _g.adjustment;
     const adjChip = adj ? `<span class="cs-adj">${adj.kind === "offlean" ? "\u2694\uFE0F Leaning offensive" : adj.kind === "deflean" ? "\u{1F6E1} Leaning defensive" : adj.kind === "fresh" ? "\u{1F50B} Fresh legs" : "Halftime adjustment live"}</span>` : "";
     const fdLine = goal ? 100 : Math.max(0, Math.min(100, ctx2.fieldPos + ctx2.distance));
     const fieldBar = `
@@ -45655,13 +45863,14 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
           <span class="cs-field-ball" style="left:${ctx2.fieldPos}%"></span>
         </div>`;
     const _to = token.timeouts || {};
-    const _mySide = token.playerSide || "home";
+    const _mySide = mySide;
     const _oppSide = _mySide === "home" ? "away" : "home";
     const _toPips = (n) => `${"\u25CF".repeat(Math.max(0, n))}${"\u25CB".repeat(Math.max(0, C.TIMEOUTS_PER_HALF - n))}`;
     const _toLine = `<span class="cs-timeouts" title="Timeouts remaining this half">TO <b>${escapeHtml((school == null ? void 0 : school.abbr) || "You")}</b> ${_toPips(_to[_mySide] != null ? _to[_mySide] : C.TIMEOUTS_PER_HALF)} \xB7 <b>${escapeHtml((opp == null ? void 0 : opp.abbr) || "Opp")}</b> ${_toPips(_to[_oppSide] != null ? _to[_oppSide] : C.TIMEOUTS_PER_HALF)}</span>`;
+    const controlLabel = state._exhibitionMode === "both" ? `${mySide === "home" ? "TEAM 1" : "TEAM 2"} CALL \xB7 ` : "";
     return `
         <div class="cs-strip">
-          <span class="cs-sit">\u{1F3A7} ${ctx2.half === 3 ? "OT" : `Q${ctx2.quarter}`} \xB7 ${mm}:${ss} \xB7 <b>${downTxt}</b> \xB7 ball on ${spot}</span>
+          <span class="cs-sit">\u{1F3A7} ${controlLabel}${ctx2.half === 3 ? "OT" : `Q${ctx2.quarter}`} \xB7 ${mm}:${ss} \xB7 <b>${downTxt}</b> \xB7 ball on ${spot}</span>
           <span class="cs-score">${escapeHtml((school == null ? void 0 : school.name) || "You")} ${ctx2.scoreOff} \u2014 ${ctx2.scoreDef} ${escapeHtml((opp == null ? void 0 : opp.name) || "")}</span>
         </div>
         <div class="cs-timeout-row">${_toLine}</div>
@@ -45674,7 +45883,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         ${(() => {
       const _dfg = 100 - ctx2.fieldPos;
       const _fgYds = _dfg + 17;
-      const _maxFG = (((school == null ? void 0 : school.gameplan) == null ? void 0 : school.gameplan.maxFGDist) || 42) + 17;
+      const _maxFG = ((gp == null ? void 0 : gp.maxFGDist) || 42) + 17;
       const _inRange = _fgYds <= _maxFG && ctx2.fieldPos >= 55;
       const _stOpen = !!state.ui.callSTOpen;
       return `
@@ -45697,13 +45906,14 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     </div>`;
   }
   function fourthDownPanelHtml() {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e;
     if (((_c = (_b = (_a = state.pendingHalftime) == null ? void 0 : _a.token) == null ? void 0 : _b.pending) == null ? void 0 : _c.kind) !== "fourth") return "";
     const token = state.pendingHalftime.token;
     const ctx2 = decisionContext(token);
     if (!ctx2) return "";
-    const school = getPlayerSchool();
-    const mySide = token.playerSide || (((_d = token.homeSchool) == null ? void 0 : _d.id) === (school == null ? void 0 : school.id) ? "home" : "away");
+    const playerSchool = getPlayerSchool();
+    const mySide = ((_d = token.pending) == null ? void 0 : _d.possession) || token.playerSide || (((_e = token.homeSchool) == null ? void 0 : _e.id) === (playerSchool == null ? void 0 : playerSchool.id) ? "home" : "away");
+    const school = mySide === "home" ? token.homeSchool : token.awaySchool;
     const opp = mySide === "home" ? token.awaySchool : token.homeSchool;
     const qSecs = ctx2.half === 3 ? ctx2.clock : ctx2.clock > 900 ? ctx2.clock - 900 : ctx2.clock;
     const mm = Math.floor(qSecs / 60), ss = String(qSecs % 60).padStart(2, "0");
@@ -45821,7 +46031,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     return out;
   }
   function mountLiveWatch() {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     const lw = state.ui.liveWatch;
     if (!lw || lw.boardDone) return;
     const exhTag = state._exhibition ? `-x${state._exhNonce || 0}` : "";
@@ -45854,8 +46064,8 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         awayScore: t.awayScore,
         playerNames: rosterNames(t)
       };
-      isHome = ((_c = t.homeSchool) == null ? void 0 : _c.id) === (school == null ? void 0 : school.id);
-    } else if (lw.stage === "halftime" && ((_d = state.pendingHalftime) == null ? void 0 : _d.token)) {
+      isHome = state._exhibitionMode === "both" ? (((_c = t.pending) == null ? void 0 : _c.possession) || t.playerSide) === "home" : ((_d = t.homeSchool) == null ? void 0 : _d.id) === (school == null ? void 0 : school.id);
+    } else if (lw.stage === "halftime" && ((_e = state.pendingHalftime) == null ? void 0 : _e.token)) {
       const t = state.pendingHalftime.token;
       const from = t.callMode && t.callMode !== "off" ? t._watchedPlays || 0 : 0;
       t._watchedPlays = (t.drives || []).reduce((n, d) => {
@@ -45870,7 +46080,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         awayScore: t.awayScore,
         playerNames: rosterNames(t)
       };
-      isHome = ((_e = t.homeSchool) == null ? void 0 : _e.id) === (school == null ? void 0 : school.id);
+      isHome = ((_f = t.homeSchool) == null ? void 0 : _f.id) === (school == null ? void 0 : school.id);
     } else if (lw.stage === "final" && state.ui.lastGameResult) {
       const r = state.ui.lastGameResult;
       const fw = state.ui._finalWatched;
@@ -45879,7 +46089,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         return cut >= 0 ? r.drives.slice(cut) : r.drives;
       })();
       gameLike = __spreadProps(__spreadValues({}, r), { drives });
-      isHome = ((_f = r.homeSchool) == null ? void 0 : _f.id) === (school == null ? void 0 : school.id);
+      isHome = ((_g = r.homeSchool) == null ? void 0 : _g.id) === (school == null ? void 0 : school.id);
     }
     if (!gameLike) {
       liveWatchFinish();
@@ -45887,7 +46097,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     }
     initWatchMode(gameLike, isHome, { key: watchKey, onFinish: liveWatchFinish });
     if (_watch) _watch.liveLabel = lw.stage === "halftime" ? "End of the first half \u2014 the locker room is waiting." : lw.stage === "call" ? "The headset crackles \u2014 your call." : "That\u2019s the ballgame.";
-    (_g = document.getElementById("watch-live-skip")) == null ? void 0 : _g.addEventListener("click", () => {
+    (_h = document.getElementById("watch-live-skip")) == null ? void 0 : _h.addEventListener("click", () => {
       var _a2;
       watchStop();
       _watch = null;
