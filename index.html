@@ -5872,7 +5872,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "547bca5daa";
+globalThis.__BUILD__ = "7999af0b93";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -45246,14 +45246,14 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
   function watchSideFieldX(absYard, fieldPos) {
     return 31 + (absYard - fieldPos) * WATCH_SIDE.ypu * WATCH_SIDE.longitudinal;
   }
-  function watchSideCameraX(p, focusX = 31) {
+  function watchSideCameraX(p, focusX = 31, viewW = WATCH_SIDE.viewW) {
     const fp = Number.isFinite(p == null ? void 0 : p.fieldPos) ? p.fieldPos : 50;
     const endZone = 10 * WATCH_SIDE.ypu * WATCH_SIDE.longitudinal;
     const ownEnd = watchSideFieldX(0, fp) - endZone - 4;
     const farEnd = watchSideFieldX(100, fp) + endZone + 4;
-    const maxX = farEnd - WATCH_SIDE.viewW;
+    const maxX = farEnd - viewW;
     const minX = ownEnd;
-    const wanted = focusX - WATCH_SIDE.viewW * 0.38;
+    const wanted = focusX - viewW * 0.38;
     return Math.max(minX, Math.min(Math.max(minX, maxX), wanted));
   }
   function watchBoard(p, durMs, board = null) {
@@ -45296,8 +45296,13 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       svg.style.setProperty("--wsp-def", dF || "#c23a35");
       svg.style.setProperty("--wsp-def-hl", dH || dF || "#f4f0d8");
     }
-    let camX = watchSideCameraX(p, 31);
-    const setCam = () => svg.setAttribute("viewBox", `${camX.toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
+    const CAM_ASPECT = WATCH_SIDE.viewW / WATCH_SIDE.viewH;
+    const CLOSE_H = 48;
+    let camH = CLOSE_H;
+    let camW = camH * CAM_ASPECT;
+    let camY = (WATCH_SIDE.viewH - camH) / 2;
+    let camX = watchSideCameraX(p, 31, camW);
+    const setCam = () => svg.setAttribute("viewBox", `${camX.toFixed(2)} ${camY.toFixed(2)} ${camW.toFixed(2)} ${camH.toFixed(2)}`);
     setCam();
     const nodes = {};
     svg.querySelectorAll("[data-wpa]").forEach((n) => {
@@ -45343,7 +45348,13 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
           spotN.style.opacity = "1";
         } else spotN.style.opacity = "0";
       }
-      const tX = watchSideCameraX(p, bx);
+      const travel = Math.abs(bx - 31);
+      const widen = Math.max(0, Math.min(1, (travel - 10) / 32));
+      const hTarget = CLOSE_H + (WATCH_SIDE.viewH - CLOSE_H) * widen;
+      camH += (hTarget - camH) * 0.06;
+      camW = camH * CAM_ASPECT;
+      camY = (WATCH_SIDE.viewH - camH) / 2;
+      const tX = watchSideCameraX(p, bx, camW);
       camX += (tX - camX) * 0.12;
       setCam();
       if (t > script.presnap && (!lastTrail || Math.hypot(bx - lastTrail[0], by - lastTrail[1]) > 0.6)) {
