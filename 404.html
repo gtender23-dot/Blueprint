@@ -6393,7 +6393,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "31a07e4ed1";
+globalThis.__BUILD__ = "363d197e2b";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -36439,8 +36439,29 @@ var _CFB = (() => {
       const yac = p.complete && !p.turnover ? clamp6(Math.abs(endY - catchPt[1]) / (SPD.WR * 0.92) + 0.2, 0.25, 3.2) : 0;
       const tEnd = p.turnover ? tCatch + 0.55 : tCatch + (p.complete ? yac : 0.12);
       dur = tEnd + LINGER;
-      const dropY = qbSlot.by + (qbSlot.by < 40 ? 2.2 : 3.6);
-      A.QB.behave = (t2) => t2 < PRESNAP ? null : p.playAction && t2 < PRESNAP + 0.3 ? [qbSlot.bx - 1.5, qbSlot.by + 1.2, 4] : [qbSlot.bx, dropY, 5.5];
+      const _qbStartDepthU = Math.max(0, qbSlot.by - LOS);
+      const _quickSet = screen || p.isRPO || t === "pass_short" && !p.playAction;
+      const _setDepthU = _quickSet ? _qbStartDepthU + 0.4 : t === "pass_deep" ? Math.max(_qbStartDepthU + 1.5, 5.4) : t === "pass_medium" ? Math.max(_qbStartDepthU + 1.1, 4.2) : (
+        /* pass_short (3-step) */
+        Math.max(_qbStartDepthU + 0.7, 3.2)
+      );
+      const _setY = LOS + _setDepthU;
+      const _hitchU = clamp6((_setDepthU - _qbStartDepthU) * 0.16, 0, 0.9);
+      const _fakeDur = p.playAction ? 0.3 : 0;
+      const _dropStart = SNAP_END + _fakeDur;
+      const _dropDur = clamp6((_setDepthU - _qbStartDepthU) / 6, 0.16, 0.85);
+      const _setT = _dropStart + _dropDur;
+      const _plantT = Math.max(_setT, throwAt - 0.16);
+      const _bpSp = _quickSet ? 6.6 : 5.6;
+      A.QB.behave = (t2) => {
+        if (t2 < PRESNAP) return null;
+        if (t2 < SNAP_END) return [qbSlot.bx, qbSlot.by, 3];
+        if (p.playAction && t2 < _dropStart) return [qbSlot.bx - 1.5, qbSlot.by + 1.2, 4];
+        if (t2 < _setT) return [qbSlot.bx, _setY, _bpSp];
+        if (t2 < _plantT) return [qbSlot.bx, _setY - _hitchU, 2.4];
+        if (t2 < throwAt) return [qbSlot.bx, _setY - _hitchU - 0.7, 3];
+        return [qbSlot.bx, _setY - _hitchU - 0.5, 1.8];
+      };
       const shapes = CONCEPT_ROUTES[p.concept] || DEPTH_ROUTES[t] || DEPTH_ROUTES.pass_medium;
       const screenShape = screenKind === "bubble" ? "bubble" : screenKind === "tunnel" ? "tunnel" : null;
       const ordered = [...catchers].sort((a2, b2) => Math.abs(b2.bx - 50) - Math.abs(a2.bx - 50));
@@ -36583,6 +36604,10 @@ var _CFB = (() => {
       const jetMeshPt = isJet ? [jetMeshX, LOS + 2.2] : null;
       const meshAt = directSnap ? SNAP_END : isJet ? SNAP_END + 0.18 : SNAP_END + (p.optionPhase === "draw" ? 0.55 : p.isScramble ? 0.85 : 0.28);
       const pitchAt = p.optionPhase === "pitch" ? SNAP_END + 0.85 : null;
+      const HANDOFF = 0.14;
+      const _backSide = carrierSlot.bx <= qbSlot.bx ? -1 : 1;
+      const meshPt = [qbSlot.bx + _backSide * 0.9, qbSlot.by + 0.5];
+      const givePt = isJet && jetMeshPt ? jetMeshPt : meshPt;
       const holePt = [lane, LOS + 1.6];
       const runDist = Math.hypot(holePt[0] - carrierSlot.bx, holePt[1] - carrierSlot.by) + Math.hypot(endPt[0] - holePt[0], endPt[1] - holePt[1]) + (p.isScramble ? 7 : p.optionPhase === "pitch" ? 6 : p.optionPhase === "jet" ? 4 : 0);
       const tEnd = meshAt + clamp6(runDist / (carrier.speed * 0.92) + 0.35, 0.9, 7);
@@ -36596,7 +36621,7 @@ var _CFB = (() => {
         if (p.optionPhase === "jet" && t2 < PRESNAP) return null;
         if (pitchAt && t2 < pitchAt) return [carrierSlot.bx + (endPt[0] - carrierSlot.bx) * 0.3, carrierSlot.by, carrier.speed * 0.8];
         if (isJet && t2 < meshAt) return [jetMeshPt[0], jetMeshPt[1], 8];
-        if (t2 < meshAt + 0.1 && !p.isScramble && carrierSlot.id !== "QB" && !isJet) return [qbSlot.bx + (carrierSlot.bx < qbSlot.bx ? -1 : 1), qbSlot.by, carrier.speed * 0.9];
+        if (t2 < meshAt + HANDOFF && !p.isScramble && carrierSlot.id !== "QB" && !isJet) return [meshPt[0], meshPt[1], carrier.speed * (t2 < meshAt ? 0.82 : 0.66)];
         if (stretchPt && t2 < readAt) return [stretchPt[0], stretchPt[1], carrier.speed * 0.94];
         const past = carrier.y <= hole[1] + 0.5;
         return past ? [endPt[0], endPt[1], schedSp(carrier, endPt, t2, tEnd, carrier.speed)] : [hole[0], hole[1], carrier.speed];
@@ -36618,7 +36643,8 @@ var _CFB = (() => {
         };
       }
       if (carrier !== A.QB) {
-        A.QB.behave = (t2) => t2 < PRESNAP ? null : t2 < meshAt + 0.25 ? [qbSlot.bx, qbSlot.by + (p.optionPhase === "draw" ? 3 : 0.8), 5] : [qbSlot.bx - 4, qbSlot.by + 2, 3.5];
+        const _bootDir = -dir;
+        A.QB.behave = (t2) => t2 < PRESNAP ? null : t2 < SNAP_END ? [qbSlot.bx, qbSlot.by, 3] : t2 < meshAt ? [givePt[0], givePt[1], 4.6] : t2 < meshAt + HANDOFF ? [givePt[0], givePt[1], 2.4] : t2 < meshAt + HANDOFF + 0.55 ? [qbSlot.bx + _bootDir * 5, qbSlot.by + (p.optionPhase === "draw" ? 3 : 1.3), 4.2] : [qbSlot.bx + _bootDir * 7.5, qbSlot.by + 2.2, 3.2];
       }
       if (pitchAt) {
         A.QB.behave = (t2) => t2 < PRESNAP ? null : t2 < pitchAt ? [lane > 50 ? lane - 12 : lane + 12, LOS + 2.5, 6.2] : [A.QB.x, A.QB.y, 2];
@@ -36735,6 +36761,10 @@ var _CFB = (() => {
         const snap = snapFlight(t2, jetHandler);
         if (snap) return snap;
         if (t2 < meshAt) return jetHandler();
+        if (t2 < meshAt + HANDOFF) {
+          const u = (t2 - meshAt) / HANDOFF, h = jetHandler();
+          return [h[0] + (carrier.x - h[0]) * u, h[1] + (carrier.y - h[1]) * u];
+        }
         return [carrier.x, carrier.y];
       } : directSnap ? (t2) => {
         if (t2 < PRESNAP) return [50, LOS + 0.6];
@@ -36751,7 +36781,12 @@ var _CFB = (() => {
         if (t2 < PRESNAP) return [50, LOS + 0.6];
         const snap = snapFlight(t2, () => [A.QB.x, A.QB.y - 0.8]);
         if (snap) return snap;
-        return t2 < meshAt ? [A.QB.x, A.QB.y - 0.8] : [carrier.x, carrier.y];
+        if (t2 < meshAt) return [A.QB.x, A.QB.y - 0.8];
+        if (t2 < meshAt + HANDOFF) {
+          const u = (t2 - meshAt) / HANDOFF, ox = A.QB.x, oy = A.QB.y - 0.8;
+          return [ox + (carrier.x - ox) * u, oy + (carrier.y - oy) * u];
+        }
+        return [carrier.x, carrier.y];
       };
       if (p.turnover) fx.push({ t: tEnd, kind: "fum", x: endPt[0], y: endPt[1] });
       else fx.push({ t: tEnd, kind: p.td ? "td" : "tackle", x: endPt[0], y: endPt[1] });
