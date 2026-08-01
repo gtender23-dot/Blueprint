@@ -5863,6 +5863,174 @@ body *::after {
   .context-help-actions { flex-direction: column; }
   .context-help-actions .btn { width: 100%; }
 }
+
+/* Desktop broadcast viewer: the same accurate sideline simulation in a
+   purpose-built wide-screen control room. Portrait/mobile keeps the compact UI. */
+.watch-desktop-insight,
+.watch-desktop-only { display: none; }
+.watch-art-off .wp-trail { display: none; }
+
+@media (min-width: 900px) and (orientation: landscape) {
+  .watch-live-overlay > .modal,
+  .watch-desktop-modal {
+    width: min(96vw, 1320px);
+    max-width: 1320px;
+  }
+
+  .watch-live-overlay .result-tab-body {
+    padding: 14px 18px 18px;
+  }
+
+  .watch-desktop-modal .result-tab-body {
+    max-height: none;
+  }
+
+  .watch-root {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+    grid-template-areas:
+      "score score"
+      "field feed"
+      "field insight"
+      "field drives"
+      "controls controls";
+    grid-template-rows: auto auto auto 1fr auto;
+    gap: 10px 12px;
+    align-items: start;
+  }
+
+  .watch-bug { grid-area: score; }
+  .watch-board-wrap {
+    grid-area: field;
+    min-width: 0;
+    align-self: start;
+  }
+
+  .watch-board-wrap::before {
+    content: "SIDELINE CAM";
+    position: absolute;
+    top: 11px;
+    left: 11px;
+    z-index: 3;
+    padding: 5px 7px 4px;
+    color: var(--px-black, #05070c);
+    background: var(--px-yellow, #ffd54a);
+    border: 2px solid var(--px-black, #05070c);
+    box-shadow: 3px 3px 0 rgba(0,0,0,.72);
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .12em;
+    pointer-events: none;
+  }
+
+  .watch-ticker {
+    grid-area: feed;
+    position: relative;
+    min-height: 104px;
+    padding: 36px 13px 13px;
+    font-size: .95em;
+  }
+
+  .watch-ticker::before {
+    content: "LIVE PLAY FEED";
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    color: var(--px-yellow, #ffd54a);
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .13em;
+  }
+
+  .watch-desktop-insight {
+    grid-area: insight;
+    display: block;
+    color: var(--text-1);
+    background: var(--px-panel-2, #111827);
+    border: 2px solid var(--px-line, #43536b);
+    box-shadow: 4px 4px 0 var(--px-shadow, #020307);
+  }
+
+  .wdi-kicker {
+    padding: 8px 10px 7px;
+    color: var(--px-yellow, #ffd54a);
+    background: var(--px-black, #05070c);
+    border-bottom: 2px solid var(--px-line, #43536b);
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .13em;
+  }
+
+  .wdi-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .wdi-cell {
+    min-width: 0;
+    padding: 9px 10px;
+    border-right: 1px solid var(--px-line-dim, #283548);
+    border-bottom: 1px solid var(--px-line-dim, #283548);
+  }
+
+  .wdi-cell:nth-child(even) { border-right: 0; }
+  .wdi-cell:nth-last-child(-n+2) { border-bottom: 0; }
+
+  .wdi-cell span {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text-2, #8d99aa);
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: .09em;
+  }
+
+  .wdi-cell b {
+    display: block;
+    overflow: hidden;
+    color: var(--text-0);
+    font-size: 11px;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .watch-drives {
+    grid-area: drives;
+    align-content: flex-start;
+    min-height: 94px;
+    padding: 34px 10px 10px;
+    position: relative;
+    background: var(--px-black, #05070c);
+    border: 2px solid var(--px-line, #43536b);
+  }
+
+  .watch-drives::before {
+    content: "DRIVE SUMMARY";
+    position: absolute;
+    top: 9px;
+    left: 10px;
+    color: var(--px-yellow, #ffd54a);
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .13em;
+  }
+
+  .watch-controls { grid-area: controls; }
+  .watch-desktop-only { display: inline-flex; }
+  .watch-progress { margin-left: auto; }
+
+  #watch-board .wp-actor:hover .wo-lbl,
+  #watch-board .wp-actor:hover .wd-lbl {
+    opacity: 1 !important;
+  }
+
+  #watch-board .wp-actor:hover .wsp {
+    filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 4px var(--px-yellow, #ffd54a));
+  }
+}
+
+
   </style>
 </head>
 <body>
@@ -5872,7 +6040,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "7999af0b93";
+globalThis.__BUILD__ = "ec8b31b1ac";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -43032,7 +43200,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     const tab = state.ui.gameResultTab || "boxscore";
     return `
     <div class="modal-overlay" id="game-result-overlay">
-      <div class="modal game-result-modal">
+      <div class="modal game-result-modal${tab === "watch" ? " watch-desktop-modal" : ""}">
         <div class="modal-header">
           <h2 class="${won ? "win-text" : "loss-text"}">${won ? "VICTORY" : "DEFEAT"}</h2>
           <button class="modal-close" id="close-game-result">\u2715</button>
@@ -45061,6 +45229,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         speed: 1,
         paused: false,
         timer: null,
+        art: true,
         onFinish: opts.onFinish || null
       };
     } else {
@@ -45077,6 +45246,15 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     root.innerHTML = `
     <div class="watch-bug" id="watch-bug"></div>
     <div class="watch-ticker" id="watch-ticker">Kickoff coming up\u2026</div>
+    <aside class="watch-desktop-insight" id="watch-desktop-insight" aria-live="polite">
+      <div class="wdi-kicker">FIELD NOTES</div>
+      <div class="wdi-grid">
+        <div class="wdi-cell"><span>POSSESSION</span><b>Awaiting series</b></div>
+        <div class="wdi-cell"><span>FORMATION</span><b>\u2014</b></div>
+        <div class="wdi-cell"><span>PLAY</span><b>\u2014</b></div>
+        <div class="wdi-cell"><span>FIELD</span><b>\u2014</b></div>
+      </div>
+    </aside>
     <div class="watch-board-wrap"><svg id="watch-board" viewBox="-19 0 100 56" preserveAspectRatio="xMidYMid meet"></svg>
       <div class="watch-flash" id="watch-flash"></div></div>
     <div class="watch-controls broadcast-bar">
@@ -45084,6 +45262,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       <button class="bc-btn bc-icon bc-play" id="watch-pause" title="Play / pause">\u23F8</button>
       ${isLive ? "" : `<button class="bc-btn bc-icon" id="watch-stepfwd" title="Step forward">\u23ED</button>`}
       <button class="bc-btn bc-speed" id="watch-speed" title="Playback speed">1\xD7</button>
+      <button class="bc-btn bc-text watch-desktop-only" id="watch-art" title="Show or hide the developing play trail">Play Art: On</button>
       ${isLive ? "" : `<button class="bc-btn bc-text" id="watch-nextdrive" title="Next drive">Next Drive \u23ED</button>`}
       ${liveCall ? timeControlBar() : `<button class="bc-btn bc-text bc-final" id="watch-final" title="${finalTitle}">${finalLabel}</button>`}
       <span class="watch-progress" id="watch-progress"></span>
@@ -45123,6 +45302,16 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       w.speed = w.speed === 1 ? 2 : w.speed === 2 ? 0.5 : 1;
       document.getElementById("watch-speed").textContent = w.speed === 0.5 ? "\xBD\xD7" : `${w.speed}\xD7`;
     });
+    const artBtn = document.getElementById("watch-art");
+    const syncArt = () => {
+      root.classList.toggle("watch-art-off", w.art === false);
+      if (artBtn) artBtn.textContent = `Play Art: ${w.art === false ? "Off" : "On"}`;
+    };
+    artBtn == null ? void 0 : artBtn.addEventListener("click", () => {
+      w.art = w.art === false;
+      syncArt();
+    });
+    syncArt();
     (_c = document.getElementById("watch-final")) == null ? void 0 : _c.addEventListener("click", () => {
       w.idx = w.seq.length - 1;
       watchStop();
@@ -45179,6 +45368,19 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       <div class="wsb-half">${half}</div>
       ${dd ? `<div class="wsb-dd">${dd}${spot ? ` \xB7 ${spot}` : ""}</div>` : ""}
     </div>`;
+    const insight = document.getElementById("watch-desktop-insight");
+    if (insight) {
+      const possSchool = p ? (d == null ? void 0 : d.possession) === "away" ? r.awaySchool : r.homeSchool : null;
+      const type = String((p == null ? void 0 : p.type) || "");
+      const play = (p == null ? void 0 : p.concept) || ((p == null ? void 0 : p.sack) ? "Pass rush wins" : type.startsWith("pass") ? "Dropback pass" : type.startsWith("run") ? "Designed run" : type === "punt" ? "Punt" : type === "fg" ? "Field goal" : "Awaiting snap");
+      insight.innerHTML = `<div class="wdi-kicker">FIELD NOTES</div>
+      <div class="wdi-grid">
+        <div class="wdi-cell"><span>POSSESSION</span><b>${escapeHtml((possSchool == null ? void 0 : possSchool.name) || "Between drives")}</b></div>
+        <div class="wdi-cell"><span>FORMATION</span><b>${escapeHtml((p == null ? void 0 : p.offFormation) || "\u2014")}</b></div>
+        <div class="wdi-cell"><span>PLAY</span><b>${escapeHtml(play)}</b></div>
+        <div class="wdi-cell"><span>FIELD</span><b>${escapeHtml(dd ? `${dd}${spot ? ` \xB7 ${spot}` : ""}` : "\u2014")}</b></div>
+      </div>`;
+    }
   }
   var _watchAnim = null;
   function watchStopAnim() {
