@@ -4812,6 +4812,7 @@ body.theme-school .data-table tr:hover td {
   letter-spacing: 0.3em; paint-order: stroke; stroke: rgba(0,0,0,0.55); stroke-width: 0.5px; }
 .wf-num { font-size: 4px; fill: rgba(255,255,255,0.82); font-weight: 800; paint-order: stroke; stroke: rgba(0,0,0,0.5); stroke-width: 0.4px; }
 .wf-num-r { text-anchor: end; }
+.wf-num-side { text-anchor: middle; }
 .wo-c { fill: #eaeaea; stroke: #222; stroke-width: 0.3; }
 .wo-c.wo-qb { fill: #ffd54a; }
 .wo-lbl, .wd-lbl { font-size: 2.6px; fill: rgba(255,255,255,0.75); text-anchor: middle; font-family: inherit; }
@@ -5871,7 +5872,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "4a8b6e142b";
+globalThis.__BUILD__ = "547bca5daa";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -45076,7 +45077,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     root.innerHTML = `
     <div class="watch-bug" id="watch-bug"></div>
     <div class="watch-ticker" id="watch-ticker">Kickoff coming up\u2026</div>
-    <div class="watch-board-wrap"><svg id="watch-board" viewBox="0 0 100 62" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="watch-board-wrap"><svg id="watch-board" viewBox="-19 0 100 56" preserveAspectRatio="xMidYMid meet"></svg>
       <div class="watch-flash" id="watch-flash"></div></div>
     <div class="watch-controls broadcast-bar">
       ${isLive ? "" : `<button class="bc-btn bc-icon" id="watch-stepback" title="Step back">\u23EE</button>`}
@@ -45223,14 +45224,44 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     return `<g class="wsp${a.qb ? " wsp-qb" : ""}" style="--gait:${gait}s">${body}</g>${tag}`;
   }
   function ballMarkup(x, y) {
-    return `<g id="wp-ball" class="wa-ballg" transform="translate(${x},${y})"><rect class="wab-core" x="-0.7" y="-1.15" width="1.4" height="2.3"/><rect class="wab-end" x="-0.45" y="-1.6" width="0.9" height="0.5"/><rect class="wab-end" x="-0.45" y="1.1"  width="0.9" height="0.5"/><rect class="wab-lace" x="-0.25" y="-0.5" width="0.5" height="1.0"/></g>`;
+    return `<g id="wp-ball" class="wa-ballg" transform="translate(${x},${y})"><rect class="wab-core" x="-1.15" y="-0.7" width="2.3" height="1.4"/><rect class="wab-end" x="-1.6" y="-0.45" width="0.5" height="0.9"/><rect class="wab-end" x="1.1"  y="-0.45" width="0.5" height="0.9"/><rect class="wab-lace" x="-0.5" y="-0.25" width="1.0" height="0.5"/></g>`;
+  }
+  var WATCH_SIDE = Object.freeze({
+    ypu: 0.85,
+    longitudinal: 1.35,
+    fieldTop: 8,
+    fieldHeight: 42,
+    viewW: 100,
+    viewH: 56
+  });
+  function watchSideX(worldY) {
+    return 31 + (31 - worldY) * WATCH_SIDE.longitudinal;
+  }
+  function watchSideY(worldX) {
+    return WATCH_SIDE.fieldTop + worldX * (WATCH_SIDE.fieldHeight / 100);
+  }
+  function watchSidePoint(worldX, worldY) {
+    return [watchSideX(worldY), watchSideY(worldX)];
+  }
+  function watchSideFieldX(absYard, fieldPos) {
+    return 31 + (absYard - fieldPos) * WATCH_SIDE.ypu * WATCH_SIDE.longitudinal;
+  }
+  function watchSideCameraX(p, focusX = 31) {
+    const fp = Number.isFinite(p == null ? void 0 : p.fieldPos) ? p.fieldPos : 50;
+    const endZone = 10 * WATCH_SIDE.ypu * WATCH_SIDE.longitudinal;
+    const ownEnd = watchSideFieldX(0, fp) - endZone - 4;
+    const farEnd = watchSideFieldX(100, fp) + endZone + 4;
+    const maxX = farEnd - WATCH_SIDE.viewW;
+    const minX = ownEnd;
+    const wanted = focusX - WATCH_SIDE.viewW * 0.38;
+    return Math.max(minX, Math.min(Math.max(minX, maxX), wanted));
   }
   function watchBoard(p, durMs, board = null) {
     var _a, _b, _c;
     const svg = document.getElementById("watch-board");
     if (!svg) return null;
     watchStopAnim();
-    svg.setAttribute("viewBox", "0 0 100 62");
+    svg.setAttribute("viewBox", `${watchSideCameraX(p).toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
     if (p && (p.type === "fg" || p.type === "punt")) return watchBoardKick(svg, p);
     const offL = (_a = OFF_FIELD_LAYOUTS[p == null ? void 0 : p.offFormation]) == null ? void 0 : _a.slots;
     const defL = (_b = DEF_FIELD_LAYOUTS[p == null ? void 0 : p.defFront] || DEF_FIELD_LAYOUTS["4-3"]) == null ? void 0 : _b.slots;
@@ -45247,7 +45278,13 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     if (sprites) svg.classList.add("watch-sprites");
     else svg.classList.remove("watch-sprites");
     const glyph = (a) => sprites ? spriteMarkup(a) : a.team === "def" ? `<text class="wd-x" x="0" y="0">\u2715</text><text class="wd-lbl" x="0" y="-2.6">${a.label}</text>` : `<circle r="1.9" class="wo-c${a.qb ? " wo-qb" : ""}" cx="0" cy="0"/><text class="wo-lbl" x="0" y="4.4">${a.label}</text>`;
-    svg.innerHTML = watchFieldBase(p, board) + `<polyline id="wp-trail" class="wp-trail" points=""/><circle id="wp-spot" class="wp-spot" r="3.4" transform="translate(0,0)"/>` + script.actors.map((a) => `<g class="wp-actor wp-team-${a.team}${a.qb ? " wp-qb" : ""}" data-wpa="${a.id}" data-wpg="${a.grp || ""}" transform="translate(${a.track[0][0].toFixed(2)},${a.track[0][1].toFixed(2)})">` + glyph(a) + `</g>`).join("") + `<g id="wp-fx"></g>` + ballMarkup(script.ball.track[0][0], script.ball.track[0][1]);
+    svg.innerHTML = watchFieldBase(p, board) + `<polyline id="wp-trail" class="wp-trail" points=""/><circle id="wp-spot" class="wp-spot" r="3.4" transform="translate(0,0)"/>` + script.actors.map((a) => {
+      const [sx, sy] = watchSidePoint(a.track[0][0], a.track[0][1]);
+      return `<g class="wp-actor wp-team-${a.team}${a.qb ? " wp-qb" : ""}" data-wpa="${a.id}" data-wpg="${a.grp || ""}" transform="translate(${sx.toFixed(2)},${sy.toFixed(2)})">` + glyph(a) + `</g>`;
+    }).join("") + `<g id="wp-fx"></g>` + (() => {
+      const [sx, sy] = watchSidePoint(script.ball.track[0][0], script.ball.track[0][1]);
+      return ballMarkup(sx, sy);
+    })();
     if (sprites && board) {
       const offHome = board.possession !== "away";
       const oF = offHome ? board.homeFill : board.awayFill;
@@ -45259,23 +45296,8 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       svg.style.setProperty("--wsp-def", dF || "#c23a35");
       svg.style.setProperty("--wsp-def-hl", dH || dF || "#f4f0d8");
     }
-    let yLo = Infinity, yHi = -Infinity;
-    for (const a of script.actors) for (const pt of a.track) {
-      if (pt[1] < yLo) yLo = pt[1];
-      if (pt[1] > yHi) yHi = pt[1];
-    }
-    for (const pt of script.ball.track) {
-      if (pt[1] < yLo) yLo = pt[1];
-      if (pt[1] > yHi) yHi = pt[1];
-    }
-    const CAM_ASPECT = 100 / 62;
-    let camH = 52;
-    let camW = camH * CAM_ASPECT;
-    const fyLo = yLo - 6, fyHi = yHi + 6;
-    const clampCam = (v, lo, hi) => Math.max(lo, Math.min(Math.max(lo, hi), v));
-    let camX = clampCam(50 - camW / 2, 0, 100 - camW);
-    let camY = clampCam(31 - camH * 0.55, fyLo, fyHi - camH);
-    const setCam = () => svg.setAttribute("viewBox", `${camX.toFixed(2)} ${camY.toFixed(2)} ${camW.toFixed(2)} ${camH.toFixed(2)}`);
+    let camX = watchSideCameraX(p, 31);
+    const setCam = () => svg.setAttribute("viewBox", `${camX.toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
     setCam();
     const nodes = {};
     svg.querySelectorAll("[data-wpa]").forEach((n) => {
@@ -45295,12 +45317,14 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         return;
       }
       const t = Math.min(script.dur, (performance.now() - t0) / 1e3 * speed);
-      const [bx, by] = sampleTrack(script.ball.track, script.step, t);
+      const [bwx, bwy] = sampleTrack(script.ball.track, script.step, t);
+      const [bx, by] = watchSidePoint(bwx, bwy);
       ballN == null ? void 0 : ballN.setAttribute("transform", `translate(${bx.toFixed(2)},${by.toFixed(2)})`);
       let cx = null, cy = null, cd = 1e9;
       svg.classList.toggle("watch-in-play", t > script.presnap + 0.15);
       for (const a of script.actors) {
-        const [x, y] = sampleTrack(a.track, script.step, t);
+        const [wx, wy] = sampleTrack(a.track, script.step, t);
+        const [x, y] = watchSidePoint(wx, wy);
         const node = nodes[a.id];
         node == null ? void 0 : node.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)})`);
         node == null ? void 0 : node.classList.toggle("wp-near-ball", t > script.presnap && Math.hypot(x - bx, y - by) < 4.4);
@@ -45319,13 +45343,8 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
           spotN.style.opacity = "1";
         } else spotN.style.opacity = "0";
       }
-      const hTarget = Math.max(50, Math.min(62, Math.abs(by - yHi) + 24));
-      camH += (hTarget - camH) * 0.06;
-      camW = camH * CAM_ASPECT;
-      const tX = clampCam(bx - camW / 2, 0, 100 - camW);
-      const tY = clampCam(by - camH * 0.55, fyLo, fyHi - camH);
+      const tX = watchSideCameraX(p, bx);
       camX += (tX - camX) * 0.12;
-      camY += (tY - camY) * 0.12;
       setCam();
       if (t > script.presnap && (!lastTrail || Math.hypot(bx - lastTrail[0], by - lastTrail[1]) > 0.6)) {
         lastTrail = [bx, by];
@@ -45345,12 +45364,15 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     return script.dur;
   }
   function watchBoardKick(svg, p) {
-    svg.innerHTML = watchFieldBase(p) + ballMarkup(50, 31) + `<g id="wp-fx"></g>`;
+    const [startX, startY] = watchSidePoint(50, 31);
+    svg.setAttribute("viewBox", `${watchSideCameraX(p, startX).toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
+    svg.innerHTML = watchFieldBase(p) + ballMarkup(startX, startY) + `<g id="wp-fx"></g>`;
     const ballN = svg.querySelector("#wp-ball"), fxN = svg.querySelector("#wp-fx");
     const isFG = p.type === "fg";
     const dist = isFG ? p.fgDist || 30 : p.blocked ? 4 : p.puntYds || 40;
-    const endY = Math.max(2.5, 31 - Math.min(dist, 33) * 0.85);
-    const endX = isFG ? 50 : 50 + ((p.fieldPos || 0) % 2 ? 9 : -9);
+    const worldEndY = Math.max(2.5, 31 - Math.min(dist, 33) * WATCH_SIDE.ypu);
+    const worldEndX = isFG ? 50 : 50 + ((p.fieldPos || 0) % 2 ? 9 : -9);
+    const [endX, endY] = watchSidePoint(worldEndX, worldEndY);
     const speed = (_watch == null ? void 0 : _watch.speed) || 1;
     const dur = p.blocked ? 0.8 : 1.5;
     const t0 = performance.now();
@@ -45363,14 +45385,14 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       const u = t / dur;
       ballN == null ? void 0 : ballN.setAttribute(
         "transform",
-        `translate(${(50 + (endX - 50) * u).toFixed(2)},${(31 + (endY - 31) * u).toFixed(2)})`
+        `translate(${(startX + (endX - startX) * u).toFixed(2)},${(startY + (endY - startY) * u).toFixed(2)})`
       );
       if (t >= dur && fxN && !fxN.childElementCount) {
         const label = isFG ? p.made ? "GOOD" : "NO GOOD" : p.blocked ? "BLOCKED" : p.touchback ? "TOUCHBACK" : p.returnTD ? "RETURN TD" : "PUNT";
         const cls = isFG && p.made ? "wa-pick" : isFG || p.blocked || p.returnTD ? "wa-x" : "wp-kick-lbl";
         fxN.insertAdjacentHTML(
           "beforeend",
-          `<text x="${endX}" y="${Math.max(5, endY - 2.2)}" class="${cls}">${label}</text>`
+          `<text x="${endX}" y="${Math.max(5, endY - 3.2)}" class="${cls}">${label}</text>`
         );
       }
       if (t < dur && _watchAnim) _watchAnim.raf = requestAnimationFrame(tick);
@@ -45379,21 +45401,22 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     return dur;
   }
   function watchFxMarkup(f) {
+    const [x, y] = watchSidePoint(f.x, f.y);
     switch (f.kind) {
       case "inc":
-        return `<text x="${f.x}" y="${f.y}" class="wa-x">\u2715</text>`;
+        return `<text x="${x}" y="${y}" class="wa-x">\u2715</text>`;
       case "int":
-        return `<text x="${f.x}" y="${f.y}" class="wa-pick">INT</text>`;
+        return `<text x="${x}" y="${y}" class="wa-pick">INT</text>`;
       case "sack":
-        return `<text x="${f.x}" y="${f.y}" class="wa-pick">SACK</text>`;
+        return `<text x="${x}" y="${y}" class="wa-pick">SACK</text>`;
       case "fum":
-        return `<text x="${f.x}" y="${f.y}" class="wa-pick">FUM</text>`;
+        return `<text x="${x}" y="${y}" class="wa-pick">FUM</text>`;
       case "tackle":
-        return `<circle cx="${f.x}" cy="${f.y}" r="2.4" class="wp-tackle"/>`;
+        return `<circle cx="${x}" cy="${y}" r="2.4" class="wp-tackle"/>`;
       case "contact":
-        return `<g class="wp-contact" transform="translate(${f.x},${f.y})"><circle r="0.6" class="wp-contact-core"/><g class="wp-contact-rays"><line x1="0" y1="-3.4" x2="0" y2="-1.6"/><line x1="0" y1="3.4" x2="0" y2="1.6"/><line x1="-3.4" y1="0" x2="-1.6" y2="0"/><line x1="3.4" y1="0" x2="1.6" y2="0"/><line x1="-2.4" y1="-2.4" x2="-1.2" y2="-1.2"/><line x1="2.4" y1="2.4" x2="1.2" y2="1.2"/><line x1="-2.4" y1="2.4" x2="-1.2" y2="1.2"/><line x1="2.4" y1="-2.4" x2="1.2" y2="-1.2"/></g></g>`;
+        return `<g class="wp-contact" transform="translate(${x},${y})"><circle r="0.6" class="wp-contact-core"/><g class="wp-contact-rays"><line x1="0" y1="-3.4" x2="0" y2="-1.6"/><line x1="0" y1="3.4" x2="0" y2="1.6"/><line x1="-3.4" y1="0" x2="-1.6" y2="0"/><line x1="3.4" y1="0" x2="1.6" y2="0"/><line x1="-2.4" y1="-2.4" x2="-1.2" y2="-1.2"/><line x1="2.4" y1="2.4" x2="1.2" y2="1.2"/><line x1="-2.4" y1="2.4" x2="-1.2" y2="1.2"/><line x1="2.4" y1="-2.4" x2="1.2" y2="-1.2"/></g></g>`;
       case "catch":
-        return `<circle cx="${f.x}" cy="${f.y}" r="2.7" class="wp-catch"/>`;
+        return `<circle cx="${x}" cy="${y}" r="2.7" class="wp-catch"/>`;
       case "td": {
         const cols = ["#ffd34d", "#f4f0d8", "#59d8ff", "#ff8c79", "#3fe04b"];
         let conf = "";
@@ -45402,17 +45425,17 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
           const r = 4 + i % 3 * 1.7;
           conf += `<rect x="-0.45" y="-0.45" width="0.9" height="0.9" fill="${cols[i % cols.length]}" style="--cx:${(Math.cos(ang) * r).toFixed(1)}px;--cy:${(Math.sin(ang) * r - 2.5).toFixed(1)}px"/>`;
         }
-        return `<g class="wp-conf" transform="translate(${f.x},${f.y})">${conf}</g><text x="${f.x}" y="${f.y}" class="wa-td">TD!</text>`;
+        return `<g class="wp-conf" transform="translate(${x},${y})">${conf}</g><text x="${x}" y="${y}" class="wa-td">TD!</text>`;
       }
       default:
         return "";
     }
   }
   function watchFieldBase(p, board = null) {
-    const YPU2 = 0.85;
-    const fp = p == null ? void 0 : p.fieldPos;
-    const EZ = 10 * YPU2;
-    const Y_TOP = -68, Y_BOT = 72;
+    const fp = Number.isFinite(p == null ? void 0 : p.fieldPos) ? p.fieldPos : null;
+    const FT = WATCH_SIDE.fieldTop, FH = WATCH_SIDE.fieldHeight, FB = FT + FH;
+    const EZ = 10 * WATCH_SIDE.ypu * WATCH_SIDE.longitudinal;
+    const X_LEFT = -110, X_RIGHT = 180;
     const defs = `<defs>
       <marker id="wa-arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#ffd54a"/></marker>
       <marker id="wa-arr-r" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#e5533d"/></marker>
@@ -45437,61 +45460,64 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         <rect x="3.9" y="0.2" width="0.9" height="0.9" fill="#8a8ca3"/>
       </pattern>
     </defs>`;
-    let under = "", lines = "";
+    let under = `<rect x="${X_LEFT}" y="0" width="${X_RIGHT - X_LEFT}" height="${WATCH_SIDE.viewH}" fill="url(#wf-crowd)"/>`;
+    let lines = "";
     if (fp != null) {
-      const yOf = (abs) => 31 - (abs - fp) * YPU2;
-      const gFar = yOf(100), gNear = yOf(0);
-      under += `<rect x="0" y="${Y_TOP}" width="100" height="${Y_BOT - Y_TOP}" fill="url(#wf-crowd)"/>`;
-      under += `<rect x="0" y="${(gFar - EZ).toFixed(1)}" width="100" height="${(gNear - gFar + 2 * EZ).toFixed(1)}" class="wf-turf"/>`;
+      const xOf = (abs) => watchSideFieldX(abs, fp);
+      const gOwn = xOf(0), gFar = xOf(100);
+      const grassX = gOwn - EZ, grassW = gFar - gOwn + 2 * EZ;
+      under += `<rect x="${grassX.toFixed(1)}" y="${FT}" width="${grassW.toFixed(1)}" height="${FH}" class="wf-turf"/>`;
       for (let abs = 0; abs < 100; abs += 10) {
-        const y1 = yOf(abs + 5), y0 = yOf(abs);
-        under += `<rect x="0" y="${y1.toFixed(1)}" width="100" height="${(y0 - y1).toFixed(1)}" class="wf-mow"/>`;
+        const x0 = xOf(abs), x5 = xOf(abs + 5);
+        under += `<rect x="${x0.toFixed(1)}" y="${FT}" width="${(x5 - x0).toFixed(1)}" height="${FH}" class="wf-mow"/>`;
       }
       const offHome = (board == null ? void 0 : board.possession) !== "away";
       const offC = offHome ? board == null ? void 0 : board.homeFill : board == null ? void 0 : board.awayFill;
       const defC = offHome ? board == null ? void 0 : board.awayFill : board == null ? void 0 : board.homeFill;
       const offN = offHome ? board == null ? void 0 : board.homeName : board == null ? void 0 : board.awayName;
       const defN = offHome ? board == null ? void 0 : board.awayName : board == null ? void 0 : board.homeName;
-      const ez = (yTop, fill, name) => {
-        let s = `<rect x="0" y="${yTop.toFixed(1)}" width="100" height="${EZ.toFixed(1)}" class="wf-endzone" fill="${fill}"/><rect x="0" y="${yTop.toFixed(1)}" width="100" height="${EZ.toFixed(1)}" fill="url(#wf-ezchk)"/>`;
+      const ez = (xLeft, fill, name) => {
+        const cx = xLeft + EZ / 2, cy = FT + FH / 2;
+        let s = `<rect x="${xLeft.toFixed(1)}" y="${FT}" width="${EZ.toFixed(1)}" height="${FH}" class="wf-endzone" fill="${fill}"/><rect x="${xLeft.toFixed(1)}" y="${FT}" width="${EZ.toFixed(1)}" height="${FH}" fill="url(#wf-ezchk)"/>`;
         if (name) {
           const txt = escapeHtml(String(name).toUpperCase());
-          s += `<text x="50" y="${(yTop + EZ / 2 + 1.7).toFixed(1)}" class="wf-ez-lbl"${txt.length > 9 ? ' textLength="82" lengthAdjust="spacingAndGlyphs"' : ""}>${txt}</text>`;
+          s += `<text x="${cx.toFixed(1)}" y="${(cy + 1.7).toFixed(1)}" class="wf-ez-lbl" transform="rotate(-90 ${cx.toFixed(1)} ${cy.toFixed(1)})"${txt.length > 9 ? ` textLength="${(FH - 6).toFixed(1)}" lengthAdjust="spacingAndGlyphs"` : ""}>${txt}</text>`;
         }
         return s;
       };
-      under += ez(gFar - EZ, defC || "#c23a35", defN);
-      under += ez(gNear, offC || "var(--team-1,#175b35)", offN);
-      under += `<rect x="0" y="${(gFar - EZ).toFixed(1)}" width="100" height="${(gNear - gFar + 2 * EZ).toFixed(1)}" fill="url(#wf-grain)"/>`;
-      lines += `<line x1="0" y1="${(gFar - EZ).toFixed(1)}" x2="100" y2="${(gFar - EZ).toFixed(1)}" class="wf-endline"/><line x1="0" y1="${(gNear + EZ).toFixed(1)}" x2="100" y2="${(gNear + EZ).toFixed(1)}" class="wf-endline"/><line x1="0.5" y1="${(gFar - EZ).toFixed(1)}" x2="0.5" y2="${(gNear + EZ).toFixed(1)}" class="wf-side"/><line x1="99.5" y1="${(gFar - EZ).toFixed(1)}" x2="99.5" y2="${(gNear + EZ).toFixed(1)}" class="wf-side"/>`;
+      under += ez(gOwn - EZ, offC || "var(--team-1,#175b35)", offN);
+      under += ez(gFar, defC || "#c23a35", defN);
+      under += `<rect x="${grassX.toFixed(1)}" y="${FT}" width="${grassW.toFixed(1)}" height="${FH}" fill="url(#wf-grain)"/>`;
+      lines += `<line x1="${grassX.toFixed(1)}" y1="${FT}" x2="${(gFar + EZ).toFixed(1)}" y2="${FT}" class="wf-side"/><line x1="${grassX.toFixed(1)}" y1="${FB}" x2="${(gFar + EZ).toFixed(1)}" y2="${FB}" class="wf-side"/><line x1="${grassX.toFixed(1)}" y1="${FT}" x2="${grassX.toFixed(1)}" y2="${FB}" class="wf-endline"/><line x1="${(gFar + EZ).toFixed(1)}" y1="${FT}" x2="${(gFar + EZ).toFixed(1)}" y2="${FB}" class="wf-endline"/>`;
+      const hashFar = watchSideY(31.4), hashNear = watchSideY(66.6);
       for (let abs = 0; abs <= 100; abs++) {
-        const y = yOf(abs);
-        if (y < Y_TOP || y > Y_BOT) continue;
+        const x = xOf(abs);
         if (abs % 5 === 0) {
           const isGoal = abs === 0 || abs === 100;
-          lines += `<line x1="0" y1="${y.toFixed(1)}" x2="100" y2="${y.toFixed(1)}" class="${isGoal ? "wf-goal" : "wf-yard"}"/>`;
+          lines += `<line x1="${x.toFixed(1)}" y1="${FT}" x2="${x.toFixed(1)}" y2="${FB}" class="${isGoal ? "wf-goal" : "wf-yard"}"/>`;
           if (isGoal) {
-            lines += `<rect x="0.4" y="${(y - 0.5).toFixed(1)}" width="1" height="1" class="wf-pylon"/><rect x="98.6" y="${(y - 0.5).toFixed(1)}" width="1" height="1" class="wf-pylon"/>`;
+            lines += `<rect x="${(x - 0.5).toFixed(1)}" y="${(FT - 0.4).toFixed(1)}" width="1" height="1" class="wf-pylon"/><rect x="${(x - 0.5).toFixed(1)}" y="${(FB - 0.6).toFixed(1)}" width="1" height="1" class="wf-pylon"/>`;
           } else if (abs % 10 === 0) {
             const num = abs <= 50 ? abs : 100 - abs;
-            lines += `<text x="15" y="${(y - 1).toFixed(1)}" class="wf-num">${num}</text><text x="85" y="${(y - 1).toFixed(1)}" class="wf-num wf-num-r">${num}</text>`;
+            const fy = FT + 6, ny = FB - 2;
+            lines += `<text x="${x.toFixed(1)}" y="${fy}" class="wf-num wf-num-side" transform="rotate(180 ${x.toFixed(1)} ${fy})">${num}</text><text x="${x.toFixed(1)}" y="${ny}" class="wf-num wf-num-side">${num}</text>`;
           }
         } else {
-          lines += `<line x1="31.4" y1="${y.toFixed(1)}" x2="33.4" y2="${y.toFixed(1)}" class="wf-hash"/><line x1="66.6" y1="${y.toFixed(1)}" x2="68.6" y2="${y.toFixed(1)}" class="wf-hash"/>`;
+          lines += `<line x1="${(x - 0.7).toFixed(1)}" y1="${hashFar.toFixed(1)}" x2="${(x + 0.7).toFixed(1)}" y2="${hashFar.toFixed(1)}" class="wf-hash"/><line x1="${(x - 0.7).toFixed(1)}" y1="${hashNear.toFixed(1)}" x2="${(x + 0.7).toFixed(1)}" y2="${hashNear.toFixed(1)}" class="wf-hash"/>`;
         }
       }
       if (p.down && p.distance != null && fp + p.distance <= 100) {
-        const fy = 31 - p.distance * YPU2;
-        if (fy > gFar) lines += `<line x1="0" y1="${fy.toFixed(1)}" x2="100" y2="${fy.toFixed(1)}" class="wf-first"/>`;
+        const firstX = xOf(fp + p.distance);
+        lines += `<line x1="${firstX.toFixed(1)}" y1="${FT}" x2="${firstX.toFixed(1)}" y2="${FB}" class="wf-first"/>`;
       }
     } else {
-      under += `<rect x="0" y="-6" width="100" height="74" class="wf-turf"/>`;
-      for (let i = 1; i < 8; i += 2) under += `<rect x="0" y="${(-6 + i * 9.25).toFixed(2)}" width="100" height="9.25" class="wf-mow"/>`;
-      under += `<rect x="0" y="-6" width="100" height="74" fill="url(#wf-grain)"/>`;
-      for (let y = 7; y < 62; y += 8.5) lines += `<line x1="0" y1="${y}" x2="100" y2="${y}" class="wf-yard"/>`;
-      lines += `<line x1="0.5" y1="-6" x2="0.5" y2="68" class="wf-side"/><line x1="99.5" y1="-6" x2="99.5" y2="68" class="wf-side"/>`;
+      under += `<rect x="${X_LEFT}" y="${FT}" width="${X_RIGHT - X_LEFT}" height="${FH}" class="wf-turf"/>`;
+      for (let x = X_LEFT; x < X_RIGHT; x += 14) under += `<rect x="${x}" y="${FT}" width="7" height="${FH}" class="wf-mow"/>`;
+      under += `<rect x="${X_LEFT}" y="${FT}" width="${X_RIGHT - X_LEFT}" height="${FH}" fill="url(#wf-grain)"/>`;
+      for (let x = X_LEFT; x <= X_RIGHT; x += 11.475) lines += `<line x1="${x.toFixed(1)}" y1="${FT}" x2="${x.toFixed(1)}" y2="${FB}" class="wf-yard"/>`;
+      lines += `<line x1="${X_LEFT}" y1="${FT}" x2="${X_RIGHT}" y2="${FT}" class="wf-side"/><line x1="${X_LEFT}" y1="${FB}" x2="${X_RIGHT}" y2="${FB}" class="wf-side"/>`;
     }
-    return defs + under + lines + `<line x1="0" y1="31" x2="100" y2="31" class="wf-los"/>`;
+    return defs + under + lines + `<line x1="31" y1="${FT}" x2="31" y2="${FB}" class="wf-los"/>`;
   }
   function watchTick(immediate = false) {
     const w = _watch;
