@@ -3061,6 +3061,62 @@ input[type="range"] { accent-color: var(--team-1); }
 .formation-info-btn { width: 100%; justify-content: center; gap: 7px; }
 .formation-info-panel { max-width: 560px; }
 .formation-info-list { overflow-y: auto; padding: 10px; }
+.formation-info-visual {
+  border: 1px solid var(--border-sub);
+  background: var(--bg-raised);
+  border-radius: 9px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+.formation-info-visual-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  color: var(--text-0); font-size: 10px; font-weight: 800;
+  letter-spacing: .1em; text-transform: uppercase;
+  margin-bottom: 7px;
+}
+.formation-info-direction { color: var(--text-2); font-size: 9px; white-space: nowrap; }
+.formation-info-direction b { color: var(--team-1); font-size: 15px; line-height: 0; }
+.formation-mini-field {
+  position: relative;
+  height: 210px;
+  overflow: hidden;
+  background: #0d2418;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 6px;
+}
+.formation-mini-field::before,
+.formation-mini-field::after {
+  content: ''; position: absolute; top: 0; bottom: 0;
+  width: 1px; background: rgba(255,255,255,.08);
+}
+.formation-mini-field::before { left: 33.333%; }
+.formation-mini-field::after { right: 33.333%; }
+.formation-mini-los {
+  position: absolute; left: 0; right: 0; top: 16%;
+  height: 1px; background: rgba(255,255,255,.35);
+  color: rgba(255,255,255,.55); font-size: 8px; font-weight: 800;
+  letter-spacing: .08em; text-align: right; padding-right: 4px;
+  z-index: 1;
+}
+.formation-mini-slot {
+  position: absolute; left: var(--mx); top: var(--my);
+  transform: translate(-50%,-50%);
+  z-index: 2;
+  display: grid; place-items: center;
+  min-width: 27px; height: 20px; padding: 0 4px;
+  background: var(--px-black);
+  border: 1px solid var(--team-1);
+  border-radius: 4px;
+  color: var(--team-1);
+  font-size: 9px; font-weight: 900;
+  box-shadow: 0 2px 4px rgba(0,0,0,.35);
+}
+.formation-mini-slot.is-line { background: var(--team-a25); }
+.formation-mini-slot[data-visual-pos="QB"] { border-color: var(--gold); color: var(--gold); }
+.formation-mini-slot[data-visual-pos="WILDCAT"],
+.formation-mini-slot[data-visual-pos="JETMAN"],
+.formation-mini-slot[data-visual-pos="ABACK"],
+.formation-mini-slot[data-visual-pos="WING"] { border-color: var(--green); color: var(--green); }
 .formation-info-unit,
 .formation-info-spot {
   border: 1px solid var(--border-sub);
@@ -4479,6 +4535,31 @@ th.conv-sort.active { color: var(--team-1); }
 .run-dir-item input[type=range] { width: 100%; min-width: 0; }
 .run-dir-lbl { font-size: 10px; font-weight: 800; letter-spacing: 0.06em; color: var(--text-2); text-align: center; }
 
+/* Phone dial safety: sliders and depth-chart steppers require one deliberate
+   tap before editing. JS only installs these guards at phone widths. */
+.phone-dial-unlock { display: none; }
+@media (max-width: 700px) {
+  .phone-dial-guard { position: relative; }
+  .fw-row.phone-dial-range-host { min-height: 38px; }
+  .phone-dial-unlock {
+    position: absolute; z-index: 5; display: flex; align-items: center; justify-content: center;
+    min-height: 34px; padding: 0 8px; border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 7px; background: var(--px-panel-3, #20314d); color: var(--text-1);
+    font-family: inherit; font-size: 9px; font-weight: 800; line-height: 1; letter-spacing: 0.08em; text-transform: uppercase;
+    white-space: nowrap; touch-action: manipulation;
+  }
+  .phone-dial-guard:not(.is-editing) .phone-dial-locked { pointer-events: none; }
+  .phone-dial-range-host:not(.is-editing) input[type=range] { opacity: 0.42; }
+  .phone-dial-guard.is-editing > .phone-dial-unlock { display: none; }
+  .phone-dial-guard.is-editing {
+    outline: 1px solid rgba(102,210,139,0.48); outline-offset: 3px; border-radius: 5px;
+  }
+  .fs-share.phone-dial-guard > .phone-dial-unlock,
+  .fs-blitz.phone-dial-guard > .phone-dial-unlock,
+  .do-carry.phone-dial-guard > .phone-dial-unlock {
+    inset: -2px; width: calc(100% + 4px); height: calc(100% + 4px);
+  }
+}
 /* Phase 6: full DNA record */
 .dna-row-full { display: grid; grid-template-columns: 1fr 28px 80px 58px; align-items: center; gap: 8px; padding: 4px 0; }
 .dna-grade-num { font-weight: 800; font-size: 11px; color: var(--gold, #d4a017); }
@@ -6177,6 +6258,37 @@ body *::after {
 }
 
 
+/* Phone table actions: use the whole action column as the tap target. A single
+   action fills its cell; two management actions split it evenly side by side. */
+@media (max-width: 700px) {
+  .data-table td.table-action-cell {
+    min-width: 86px;
+    padding: 0 !important;
+    font-size: 0;
+    white-space: nowrap;
+  }
+
+  .data-table td.table-action-cell > button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 42px;
+    box-sizing: border-box;
+    margin: 0 !important;
+    border-radius: 0;
+    white-space: nowrap;
+  }
+
+  .data-table td.table-action-cell:has(> button:nth-of-type(2)) {
+    min-width: 148px;
+  }
+
+  .data-table td.table-action-cell:has(> button:nth-of-type(2)) > button {
+    width: 50%;
+  }
+}
+
 /* Phone schedule: give completed-game results their own row so the score and
    Box Score action can never cover a long opponent name or scouting link. */
 @media (max-width: 640px) {
@@ -6241,7 +6353,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "b8ea463a91";
+globalThis.__BUILD__ = "a094299048";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -26243,6 +26355,7 @@ var _CFB = (() => {
     navigateBack: () => navigateBack,
     notify: () => notify,
     openSchool: () => openSchool,
+    processEvents: () => processEvents,
     programGroupTab: () => programGroupTab,
     pushNav: () => pushNav,
     refreshSaves: () => refreshSaves,
@@ -26262,6 +26375,7 @@ var _CFB = (() => {
     startNewGamePrepared: () => startNewGamePrepared,
     state: () => state,
     statsGroupTab: () => statsGroupTab,
+    summarizeCommitmentNotifications: () => summarizeCommitmentNotifications,
     teamGroupTab: () => teamGroupTab,
     tokenAllPlays: () => tokenAllPlays,
     unwatchedPlayCount: () => unwatchedPlayCount
@@ -26926,8 +27040,52 @@ var _CFB = (() => {
     await autosave();
     rerender();
   }
+  function summarizeCommitmentNotifications(playerEvents = [], lostEvents = []) {
+    const signed = playerEvents.length;
+    const lost = lostEvents.length;
+    const total = signed + lost;
+    if (!total) return null;
+    if (total === 1) {
+      if (signed) return {
+        text: `${fullName(playerEvents[0].recruit)} commits!`,
+        type: "success",
+        duration: 3500
+      };
+      return {
+        text: `${fullName(lostEvents[0].recruit)} committed elsewhere`,
+        type: "warning",
+        duration: 3500
+      };
+    }
+    if (signed && lost) return {
+      text: `${signed} recruit${signed === 1 ? "" : "s"} signed \xB7 ${lost} target${lost === 1 ? "" : "s"} committed elsewhere`,
+      type: "success",
+      duration: 4500
+    };
+    if (signed) return {
+      text: `${signed} recruits signed with your program`,
+      type: "success",
+      duration: 4500
+    };
+    return {
+      text: `${lost} targets committed elsewhere`,
+      type: "warning",
+      duration: 4500
+    };
+  }
   function processEvents(events, { suppressModal = false } = {}) {
     var _a, _b, _c, _d, _e, _f, _g, _h;
+    const visibleCommits = events.filter((event) => {
+      var _a2, _b2, _c2;
+      return event.type === "commit" && (event.schoolId === state.playerSchoolId || ((_a2 = state.settings) == null ? void 0 : _a2.rivalCommitNotifications) !== false && ((_c2 = (_b2 = state.playerCoach) == null ? void 0 : _b2.recruitBoard) == null ? void 0 : _c2.some((entry) => {
+        var _a3;
+        return entry.recruitId === ((_a3 = event.recruit) == null ? void 0 : _a3.id);
+      })));
+    });
+    const playerCommits = visibleCommits.filter((event) => event.schoolId === state.playerSchoolId);
+    const lostCommits = visibleCommits.filter((event) => event.schoolId !== state.playerSchoolId);
+    const lastVisibleCommit = visibleCommits[visibleCommits.length - 1] || null;
+    const commitmentToast = summarizeCommitmentNotifications(playerCommits, lostCommits);
     for (const event of events) {
       if (event.type === "game") {
         const r = event.result;
@@ -26956,10 +27114,11 @@ var _CFB = (() => {
         const { recruit, schoolId } = event;
         if (schoolId === state.playerSchoolId) {
           addInboxMessage("Commitment!", `${fullName(recruit)} (${recruit.position}) has committed to your program!`);
-          notify(`${fullName(recruit)} commits!`, "success");
         } else if (((_e = state.settings) == null ? void 0 : _e.rivalCommitNotifications) !== false && ((_g = (_f = state.playerCoach) == null ? void 0 : _f.recruitBoard) == null ? void 0 : _g.find((e) => e.recruitId === recruit.id))) {
           addInboxMessage("Lost Recruit", `${fullName(recruit)} (${recruit.position}) committed to ${((_h = getSchool(schoolId)) == null ? void 0 : _h.name) || "another school"}.`);
-          notify(`${fullName(recruit)} committed elsewhere`, "warning");
+        }
+        if (event === lastVisibleCommit && commitmentToast) {
+          notify(commitmentToast.text, commitmentToast.type, commitmentToast.duration);
         }
       } else if (event.type === "info") {
         addInboxMessage("News", event.text);
@@ -33266,7 +33425,7 @@ var _CFB = (() => {
           <td style="font-weight:700;font-variant-numeric:tabular-nums">
             ${proj == null ? '<span class="muted">\u2014</span>' : `${proj} <span style="color:${diff >= 0 ? "var(--green)" : "var(--red)"};font-size:10px">${diff >= 0 ? "+" : ""}${diff}</span>`}
           </td>
-          <td>${p.position === convTarget ? "" : `<button class="btn-ghost btn-sm conv-row-btn" data-player-id="${p.id}" ${capLeft <= 0 ? "disabled" : ""}>Convert</button>`}
+          <td class="table-action-cell">${p.position === convTarget ? "" : `<button class="btn-ghost btn-sm conv-row-btn" data-player-id="${p.id}" ${capLeft <= 0 ? "disabled" : ""}>Convert</button>`}
           </td>` : ""}
       </tr>`;
     }).join("");
@@ -34718,6 +34877,30 @@ var _CFB = (() => {
     };
     return { name: slot.label, eligible: slot.pos, detail: "Formation-specific offensive position." };
   }
+  function renderFormationMiniDiagram(fid, layout) {
+    const slots = layout.slots.map((slot) => {
+      const mx = (slot.x * 100).toFixed(1);
+      const my = (16 + (slot.y - 0.5) * 175).toFixed(1);
+      const info = formationSpotInfo(fid, slot);
+      return `<span class="formation-mini-slot${slot.pos === "OL" ? " is-line" : ""}"
+                  style="--mx:${mx}%;--my:${my}%"
+                  data-formation-visual-slot="${slot.id}" data-visual-pos="${slot.pos}"
+                  title="${escapeHtml(slot.label + " \u2014 " + info.name)}"
+                  aria-hidden="true">${escapeHtml(slot.label)}</span>`;
+    }).join("");
+    return `
+    <div class="formation-info-visual" data-formation-visual="${escapeHtml(fid)}">
+      <div class="formation-info-visual-head">
+        <span>Formation alignment</span>
+        <span class="formation-info-direction">Offense faces <b aria-hidden="true">\u2191</b></span>
+      </div>
+      <div class="formation-mini-field" role="img"
+           aria-label="${escapeHtml(fid)} offensive formation alignment">
+        <span class="formation-mini-los" aria-hidden="true">LOS</span>
+        ${slots}
+      </div>
+    </div>`;
+  }
   function renderFormationInfo(fid, layout) {
     if (!layout) return "";
     const line = layout.slots.filter((s) => s.pos === "OL").sort((a, b) => a.x - b.x);
@@ -34734,6 +34917,7 @@ var _CFB = (() => {
           <button class="picker-x" type="button" data-formation-info-close="x" aria-label="Close formation guide">\u2715</button>
         </div>
         <div class="formation-info-list">
+          ${renderFormationMiniDiagram(fid, layout)}
           <div class="formation-info-unit" data-formation-info-unit="ol">
             <div class="formation-info-unit-title">Offensive line</div>
             <div class="formation-info-line-labels">
@@ -37107,7 +37291,7 @@ var _CFB = (() => {
       ).join("")}
                   <td class="muted">${dist >= 9999 ? "\u2014" : `${dist}mi`}</td>
                   <td>${recruitStatusChip(r, interest)}</td>
-                  <td>
+                  <td class="table-action-cell">
                     ${onBoard ? `<button class="btn-ghost btn-sm view-profile-btn" data-recruit-id="${r.id}">View</button>` : isOpen ? `<button class="btn-primary btn-sm add-board-btn" data-recruit-id="${r.id}">+ Board</button>` : ""}
                   </td>
                 </tr>
@@ -37246,7 +37430,7 @@ var _CFB = (() => {
                 <td><b>${Math.round(entry.interest || 0)}</b></td>
                 <td>${marginCell}</td>
                 <td>${funnelStageChip(r.committed ? "committed" : r.funnelStage, entry.eliminated)}</td>
-                <td class="board-table-actions">
+                <td class="board-table-actions table-action-cell">
                   <button class="btn-ghost btn-sm view-profile-btn" data-recruit-id="${r.id}">View</button>
                   ${!r.committed ? `<button class="btn-ghost btn-sm btn-danger-ghost drop-btn" data-recruit-id="${r.id}" title="Drop from board">Drop</button>` : ""}
                 </td>
@@ -43300,6 +43484,112 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     if (!header || header.querySelector(".view-help-btn")) return;
     header.insertAdjacentHTML("beforeend", helpButtonHtml(chapterId));
   }
+  var phoneDialActive = null;
+  var phoneDialTimer = null;
+  var phoneDialOutsideHandler = null;
+  var phoneDialResizeHandler = null;
+  var phoneDialLayoutHandler = null;
+  function clearPhoneDialBindings() {
+    clearTimeout(phoneDialTimer);
+    phoneDialTimer = null;
+    phoneDialActive = null;
+    if (phoneDialOutsideHandler) document.removeEventListener("pointerdown", phoneDialOutsideHandler, true);
+    if (phoneDialResizeHandler) window.removeEventListener("resize", phoneDialResizeHandler);
+    if (phoneDialLayoutHandler) document.removeEventListener("toggle", phoneDialLayoutHandler, true);
+    phoneDialOutsideHandler = null;
+    phoneDialResizeHandler = null;
+    phoneDialLayoutHandler = null;
+  }
+  function dialControlLabel(control) {
+    const row = control.closest(".gp-row, .fw-row, .practice-row, .share-row, .run-dir-cell, .run-dir-item");
+    const label = row == null ? void 0 : row.querySelector(".gp-label, .fw-label, .practice-name, .share-slot-label, .run-dir-name, .run-dir-lbl, label");
+    return ((label == null ? void 0 : label.textContent) || control.getAttribute("aria-label") || "control").trim();
+  }
+  function installPhoneDialGuards() {
+    clearPhoneDialBindings();
+    if (!window.matchMedia("(max-width: 700px)").matches) return;
+    const guards = [];
+    const lock = (guard) => {
+      guard.classList.remove("is-editing");
+      guard.controls.forEach((control) => {
+        control.classList.add("phone-dial-locked");
+        control.setAttribute("aria-disabled", "true");
+        control.tabIndex = -1;
+      });
+      if (phoneDialActive === guard) phoneDialActive = null;
+    };
+    const resetTimer = (guard) => {
+      clearTimeout(phoneDialTimer);
+      phoneDialTimer = setTimeout(() => lock(guard), 8e3);
+    };
+    const activate = (guard) => {
+      var _a;
+      if (phoneDialActive && phoneDialActive !== guard) lock(phoneDialActive);
+      phoneDialActive = guard;
+      guard.classList.add("is-editing");
+      guard.controls.forEach((control) => {
+        control.classList.remove("phone-dial-locked");
+        control.removeAttribute("aria-disabled");
+        control.tabIndex = control._phoneDialTabIndex;
+      });
+      resetTimer(guard);
+      (_a = guard.controls[0]) == null ? void 0 : _a.focus({ preventScroll: true });
+    };
+    const addGuard = (guard, controls, label) => {
+      if (!guard || guard.classList.contains("phone-dial-guard")) return;
+      guard.classList.add("phone-dial-guard");
+      guard.controls = controls;
+      controls.forEach((control) => {
+        control._phoneDialTabIndex = control.tabIndex;
+        control.addEventListener("input", () => resetTimer(guard));
+        control.addEventListener("click", () => resetTimer(guard));
+      });
+      const unlock = document.createElement("button");
+      unlock.type = "button";
+      unlock.className = "phone-dial-unlock";
+      unlock.textContent = "Tap to edit";
+      unlock.setAttribute("aria-label", `Tap to edit ${label}`);
+      unlock.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        activate(guard);
+      });
+      guard.appendChild(unlock);
+      guard.unlock = unlock;
+      guards.push(guard);
+      lock(guard);
+    };
+    document.querySelectorAll('#view-root input[type="range"]').forEach((input) => {
+      const host = input.parentElement;
+      if (!host || host.querySelector(":scope > .phone-dial-unlock")) return;
+      host.classList.add("phone-dial-range-host");
+      addGuard(host, [input], dialControlLabel(input));
+    });
+    document.querySelectorAll("#view-root .fs-share, #view-root .fs-blitz, #view-root .do-carry").forEach((group) => {
+      const controls = [...group.querySelectorAll("button")];
+      if (controls.length) addGuard(group, controls, group.getAttribute("title") || "depth chart control");
+    });
+    const positionRangeUnlocks = () => guards.forEach((guard) => {
+      if (!guard.classList.contains("phone-dial-range-host")) return;
+      const input = guard.controls[0];
+      const hostRect = guard.getBoundingClientRect();
+      const inputRect = input.getBoundingClientRect();
+      const height = Math.max(34, inputRect.height + 12);
+      guard.unlock.style.left = `${inputRect.left - hostRect.left}px`;
+      guard.unlock.style.top = `${inputRect.top - hostRect.top - (height - inputRect.height) / 2}px`;
+      guard.unlock.style.width = `${inputRect.width}px`;
+      guard.unlock.style.height = `${height}px`;
+    });
+    positionRangeUnlocks();
+    phoneDialResizeHandler = positionRangeUnlocks;
+    window.addEventListener("resize", phoneDialResizeHandler);
+    phoneDialLayoutHandler = () => requestAnimationFrame(positionRangeUnlocks);
+    document.addEventListener("toggle", phoneDialLayoutHandler, true);
+    phoneDialOutsideHandler = (event) => {
+      if (phoneDialActive && !phoneDialActive.contains(event.target)) lock(phoneDialActive);
+    };
+    document.addEventListener("pointerdown", phoneDialOutsideHandler, true);
+  }
   function renderTipPopover() {
     const id = state.ui.activeTip;
     if (!id) return "";
@@ -43553,6 +43843,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     setupGlobalListeners();
     if (!(state.ui.showHalftime && state.pendingHalftime)) setupViewListeners(view);
     if (!(state.ui.showHalftime && state.pendingHalftime)) injectHelpButton(view);
+    installPhoneDialGuards();
     restoreScroll(_scroll, _viewChanged);
     lastRenderedView = view;
   }
