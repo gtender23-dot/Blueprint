@@ -1443,6 +1443,7 @@ th.col-drag-over {
 .board-left { display: flex; gap: 10px; align-items: center; }
 .board-name { font-size: 14px; font-weight: 600; }
 .board-meta { font-size: 11px; color: var(--text-2); margin-top: 2px; }
+.board-meta-item { white-space: nowrap; }
 .board-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .interest-meter { display: flex; align-items: center; gap: 8px; }
 .interest-bar-track { width: 100px; height: 6px; background: rgba(255,255,255,0.07); border-radius: 3px; overflow: hidden; }
@@ -1482,6 +1483,32 @@ th.col-drag-over {
 .board-considering { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 11px; color: var(--text-2); margin-bottom: 6px; }
 .considering-chip { background: rgba(255,255,255,0.05); border-radius: 3px; padding: 1px 5px; font-size: 10px; }
 .board-spent { font-size: 11px; }
+
+@media (max-width: 640px) {
+  .board-card-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .board-left {
+    width: 100%;
+    min-width: 0;
+    align-items: flex-start;
+  }
+  .board-left > div { min-width: 0; }
+  .board-name { overflow-wrap: break-word; }
+  .board-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 7px;
+    line-height: 1.35;
+  }
+  .board-meta-sep { display: none; }
+  .board-meta-item { display: inline-flex; align-items: center; }
+  .board-right,
+  .interest-meter { width: 100%; }
+  .interest-bar-track { width: auto; flex: 1 1 auto; }
+}
 
 /* Profile */
 .recruit-profile { display: flex; flex-direction: column; gap: 14px; }
@@ -3030,6 +3057,39 @@ input[type="range"] { accent-color: var(--team-1); }
   background: var(--team-a15); border-color: var(--team-1);
   color: var(--team-1);
 }
+.formation-info-row { display: none; margin: -2px 0 12px; }
+.formation-info-btn { width: 100%; justify-content: center; gap: 7px; }
+.formation-info-panel { max-width: 560px; }
+.formation-info-list { overflow-y: auto; padding: 10px; }
+.formation-info-unit,
+.formation-info-spot {
+  border: 1px solid var(--border-sub);
+  background: var(--bg-raised);
+  border-radius: 9px;
+}
+.formation-info-unit { padding: 11px 12px; margin-bottom: 8px; }
+.formation-info-unit-title,
+.formation-info-name { color: var(--text-0); font-weight: 800; }
+.formation-info-unit-title {
+  font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.formation-info-line-labels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 8px; }
+.formation-info-line-labels span,
+.formation-info-label {
+  display: grid; place-items: center;
+  min-width: 38px; min-height: 32px;
+  border: 1px solid var(--team-1);
+  background: var(--team-a12);
+  color: var(--team-1); border-radius: 6px;
+  font-size: 11px; font-weight: 900;
+}
+.formation-info-spot { display: flex; gap: 11px; padding: 10px; margin-bottom: 7px; }
+.formation-info-label { flex: 0 0 48px; align-self: flex-start; }
+.formation-info-copy { min-width: 0; }
+.formation-info-name { font-size: 12px; margin-bottom: 2px; }
+.formation-info-detail { color: var(--text-1); font-size: 11px; line-height: 1.45; }
+.formation-info-eligible { color: var(--text-2); font-size: 10px; font-weight: 700; margin-top: 4px; }
 .ff-front-label { font-size: 13px; color: var(--text-1); }
 .ff-front-label strong { color: var(--team-1); }
 .ff-hint { font-size: 11px; color: var(--text-2); }
@@ -4031,6 +4091,7 @@ th.conv-sort.active { color: var(--team-1); }
 .frow { display: contents; }
 
 @media (max-width: 700px) and (orientation: portrait) {
+  .formation-info-row { display: flex; }
   .field-turf, .field-turf.def-turf {
     aspect-ratio: auto; min-height: 0;
     background: none;
@@ -4393,7 +4454,7 @@ th.conv-sort.active { color: var(--team-1); }
 .testing-sheet b { color: var(--text-1); }
 .testing-sheet .ras-elite { color: var(--gold); }
 .testing-sheet .ras-good { color: var(--green); }
-.build-tag { font-size: 9px; font-weight: 800; border-radius: 999px; padding: 1px 6px; letter-spacing: 0.02em; }
+.build-tag { display:inline-block; white-space:nowrap; vertical-align:baseline; font-size: 9px; font-weight: 800; border-radius: 999px; padding: 1px 6px; letter-spacing: 0.02em; }
 .tag-raw { background: rgba(255,150,60,0.14); color: #ffb066; border: 1px solid rgba(255,150,60,0.3); }
 .tag-gamer { background: rgba(90,200,120,0.14); color: var(--green); border: 1px solid rgba(90,200,120,0.3); }
 
@@ -5467,6 +5528,23 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 .player-row>td:first-child { border-left:4px solid var(--team-1); }
 .sorted { color:var(--px-yellow) !important; }
 
+/* The roster's locked POS column pans over the rest of the table on phones.
+   Both layers must be genuinely opaque: the generic player-row wash and
+   position colors are translucent, which otherwise lets rating digits show
+   through the badge as the table moves underneath it. */
+.roster-table th:first-child,
+.roster-table td.pos-cell { background:var(--px-panel) !important; }
+.roster-table thead th:first-child { background:var(--px-panel-3) !important; }
+.roster-table tbody tr:nth-child(even) td.pos-cell {
+  background:color-mix(in srgb,var(--team-1) 5%,var(--px-panel)) !important;
+}
+.roster-table tr:hover td.pos-cell {
+  background:color-mix(in srgb,var(--team-1) 14%,var(--px-panel-2)) !important;
+}
+.roster-table .pos-cell .pos-chip {
+  background:color-mix(in srgb,currentColor 22%,var(--px-black)) !important;
+}
+
 /* Scoreboard chips and segmented meters. */
 .rating-chip,.pos-chip,.class-badge,.status-chip,.arch-chip,.result-badge,
 .pbp-chip,.dna-chip,.profile-pos-badge,.gp-tag,.cs-adj { border:1px solid currentColor; border-radius:0 !important; box-shadow:2px 2px 0 var(--px-shadow); font-family:inherit; font-weight:900; }
@@ -5681,6 +5759,12 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 .pn-key-row { display:flex; gap:14px; flex-wrap:wrap; font-size:11px; opacity:.9; }
 .pn-key b { font-weight:900; }
 .pn-reroll { min-height:40px; font-weight:900; letter-spacing:.04em; }
+.pn-control { margin-top:18px; padding:12px; background:var(--px-panel,#101827); border:3px solid var(--px-line,#53617a); box-shadow:4px 4px 0 var(--px-shadow,#020308); }
+.pn-control-title { margin-bottom:8px; color:var(--px-yellow,#ffd34d); font-size:10px; font-weight:900; letter-spacing:.14em; }
+.pn-mode { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.pn-mode-btn { min-height:44px; padding:8px 10px; color:var(--px-paper,#f4edda); background:var(--px-panel-2,#162238); border:2px solid var(--px-line,#53617a); border-bottom-width:4px; font-family:inherit; font-size:11px; font-weight:900; letter-spacing:.05em; cursor:pointer; }
+.pn-mode-btn.active { color:var(--px-black,#05070c); background:var(--team-1,var(--px-yellow,#ffd34d)); border-color:var(--team-2,var(--px-paper,#f4edda)); box-shadow:3px 3px 0 var(--px-shadow,#020308); }
+.pn-mode-note { margin-top:9px; color:var(--text-2); font-size:10px; line-height:1.45; }
 .pn-actions { display:flex; gap:10px; margin-top:18px; align-items:center; }
 .pn-start { flex:1; min-height:50px; font-size:16px; font-weight:900; letter-spacing:.08em; }
 @media (max-width:700px) {
@@ -6157,7 +6241,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "2b56549f9a";
+globalThis.__BUILD__ = "b8ea463a91";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -26136,6 +26220,7 @@ var _CFB = (() => {
     answerFourthDown: () => answerFourthDown,
     answerPlayCall: () => answerPlayCall,
     chooseKickoffMode: () => chooseKickoffMode,
+    continueExhibitionSpectator: () => continueExhibitionSpectator,
     devAddBudget: () => devAddBudget,
     devForceSign: () => devForceSign,
     devSimToPlayoffs: () => devSimToPlayoffs,
@@ -26691,7 +26776,7 @@ var _CFB = (() => {
     await autosave();
     rerender();
   }
-  function startExhibition(home, away) {
+  function startExhibition(home, away, mode = "coach") {
     if (!state._exhStash) {
       state._exhStash = {
         world: state.world,
@@ -26700,6 +26785,7 @@ var _CFB = (() => {
       };
     }
     state._exhibition = true;
+    state._exhibitionMode = mode === "watch" ? "watch" : "coach";
     state._exhNonce = (state._exhNonce || 0) + 1;
     state.world = { schools: [home, away], conferences: {}, season: state.season || 1, recruits: [] };
     state.playerSchoolId = home.id;
@@ -26716,7 +26802,7 @@ var _CFB = (() => {
       away.depthChart,
       home.gameplan,
       away.gameplan,
-      { playerSide: "home", callMode: "all" }
+      state._exhibitionMode === "watch" ? null : { playerSide: "home", callMode: "all" }
     );
     state.pendingHalftime = { token, game: null, home, away, exhibition: true };
     const events = exhibitionEvents();
@@ -26736,6 +26822,7 @@ var _CFB = (() => {
       state.pendingHalftime = null;
     }
     state._exhibition = false;
+    state._exhibitionMode = null;
     state.ui.liveWatch = null;
     state.ui.showCallSheet = false;
     state.ui.showFourthDown = false;
@@ -26775,6 +26862,12 @@ var _CFB = (() => {
     }
     state.ui._finalWatched = liveWatchOn() && token._watchedPlays || null;
     exhibitionFinal(token);
+  }
+  async function continueExhibitionSpectator() {
+    var _a;
+    if (!((_a = state.pendingHalftime) == null ? void 0 : _a.exhibition) || state._exhibitionMode !== "watch") return;
+    state.ui.showHalftime = false;
+    return exhibitionResume((token) => stepSecondHalf(token));
   }
   function exhibitionFinal(token) {
     const result = finishInteractiveGame(token);
@@ -29627,7 +29720,7 @@ var _CFB = (() => {
         <button class="btn-mm btn-mm-new" id="btn-mm-newcoach">+ NEW COACH</button>` : ""}
       ${autoSave ? `<button class="btn-mm btn-mm-secondary" id="btn-mm-continue" style="margin-top:8px">\u25B6 Legacy save \xB7 ${escapeHtml(autoSave.school || "?")} S${autoSave.season}</button>` : ""}
       <div class="mm-section-label" style="margin-top:14px">EXHIBITION</div>
-      <button class="btn-mm btn-mm-secondary" id="btn-mm-playnow">\u{1F3C8} PLAY NOW \u2014 one game, call every snap</button>
+      <button class="btn-mm btn-mm-secondary" id="btn-mm-playnow">\u{1F3C8} PLAY NOW \u2014 coach or watch one game</button>
       <button class="btn-mm-guide" id="btn-mm-guide">\u{1F4D6} The Manual</button>
     </div>`;
   }
@@ -31237,6 +31330,7 @@ var _CFB = (() => {
   };
   var pn = {
     cfg: { home: { div: "D1", prestige: 4 }, away: { div: "D1", prestige: 4 } },
+    mode: "coach",
     home: null,
     away: null
   };
@@ -31275,7 +31369,7 @@ var _CFB = (() => {
   }
   function teamPanel(side, school) {
     var _a, _b;
-    const label = side === "home" ? "YOUR TEAM" : "OPPONENT";
+    const label = pn.mode === "watch" ? side === "home" ? "TEAM 1" : "TEAM 2" : side === "home" ? "YOUR TEAM" : "OPPONENT";
     const { div } = pn.cfg[side];
     const qb = bestAt(school, ["QB"]);
     const star = (school.roster || []).slice().sort((a, b) => b.compositeRating - a.compositeRating)[0];
@@ -31307,11 +31401,12 @@ var _CFB = (() => {
   }
   function renderPlayNow() {
     ensureTeams();
+    const watching = pn.mode === "watch";
     return `
     <div class="playnow-screen">
       <div class="newgame-header pn-header">
         <h1>\u{1F3C8} PLAY NOW</h1>
-        <p class="pn-sub">One game, tonight. Every snap is your call \u2014 the whole thing plays out on the board.</p>
+        <p class="pn-sub">${watching ? "One game, tonight. Both teams run their own plans \u2014 you watch every snap on the board." : "One game, tonight. Every snap is your call \u2014 the whole thing plays out on the board."}</p>
       </div>
       <div class="pn-body">
         <div class="pn-matchup">
@@ -31319,8 +31414,16 @@ var _CFB = (() => {
           <div class="pn-vs">VS</div>
           ${teamPanel("away", pn.away)}
         </div>
+        <div class="pn-control">
+          <div class="pn-control-title">GAME CONTROL</div>
+          <div class="pn-mode" role="group" aria-label="Game control">
+            <button class="pn-mode-btn${!watching ? " active" : ""}" data-pn-mode="coach" aria-pressed="${!watching}">\u{1F3A7} COACH TEAM 1</button>
+            <button class="pn-mode-btn${watching ? " active" : ""}" data-pn-mode="watch" aria-pressed="${watching}">\u25B6 WATCH ONLY</button>
+          </div>
+          <div class="pn-mode-note">${watching ? "No coaching prompts. Team 1 and Team 2 use their gameplans for the entire game." : "You control Team 1. Team 2 uses its gameplan."}</div>
+        </div>
         <div class="pn-actions">
-          <button class="btn-primary pn-start" id="pn-start">KICK OFF \u2192</button>
+          <button class="btn-primary pn-start" id="pn-start">${watching ? "WATCH KICKOFF" : "KICK OFF"} \u2192</button>
           <button class="btn-ghost" id="pn-back">\u2190 Main Menu</button>
         </div>
       </div>
@@ -31328,6 +31431,10 @@ var _CFB = (() => {
   }
   function playnowListeners() {
     var _a, _b;
+    document.querySelectorAll("[data-pn-mode]").forEach((b) => b.addEventListener("click", () => {
+      pn.mode = b.dataset.pnMode === "watch" ? "watch" : "coach";
+      rerender();
+    }));
     document.querySelectorAll("[data-pn-div]").forEach((b) => b.addEventListener("click", () => {
       const [side, div] = b.dataset.pnDiv.split(":");
       if (pn.cfg[side].div === div) return;
@@ -31350,7 +31457,7 @@ var _CFB = (() => {
     }));
     (_a = document.getElementById("pn-start")) == null ? void 0 : _a.addEventListener("click", () => {
       ensureTeams();
-      startExhibition(pn.home, pn.away);
+      startExhibition(pn.home, pn.away, pn.mode);
     });
     (_b = document.getElementById("pn-back")) == null ? void 0 : _b.addEventListener("click", () => {
       endExhibition();
@@ -34405,6 +34512,7 @@ var _CFB = (() => {
   var activeOffFormation = null;
   var picker = null;
   var uniqSwap = null;
+  var formationInfoOpen = false;
   function renderUniqSwapPicker(school) {
     const u = UNIQUE_DEPTH_OFF.find((x) => x.pos === uniqSwap);
     if (!u) return "";
@@ -34481,6 +34589,7 @@ var _CFB = (() => {
 
       ${picker ? renderPicker2(school) : ""}
       ${uniqSwap ? renderUniqSwapPicker(school) : ""}
+      ${formationInfoOpen && depthTab === "offense" ? renderFormationInfo(activeOffFormation, OFF_FIELD_LAYOUTS[activeOffFormation]) : ""}
     </div>
   `;
   }
@@ -34506,6 +34615,13 @@ var _CFB = (() => {
       `).join("")}
     </div>
 
+    <div class="formation-info-row">
+      <button class="btn-ghost formation-info-btn" type="button" data-formation-info-open="1"
+              aria-label="Explain the positions in ${escapeHtml(fid)}">
+        <span aria-hidden="true">\u24D8</span> Where everyone lines up
+      </button>
+    </div>
+
     <div class="gp-tip tip-info">\u25B8 Tap any slot to change who starts there. The dial under each pass-catcher is his TARGET SHARE \u2014 his slice of 100% of the QB's looks. Move one man and the rest rebalance (5% a tap). One rule to know: 25%+ makes him the FEATURED man, and defenses bracket featured men \u2014 volume buys attention. The line reads left-to-right: LT \xB7 LG \xB7 C \xB7 RG \xB7 RT \u2014 your run-direction dials on the Game Plan point at these five.</div>
 
     <div class="field-card off-field">
@@ -34526,6 +34642,119 @@ var _CFB = (() => {
     ${gameplanIsSimple() ? renderSimpleOffPanel(school, gp, catchSlots, entry, bySlot) : renderShareBar(catchSlots, entry.shares, shareTotal, school, bySlot)}
     ${renderDepthOrder(school, "offense")}
   `;
+  }
+  function formationSpotInfo(fid, slot) {
+    const side = slot.x < 0.5 ? "left" : slot.x > 0.5 ? "right" : "middle";
+    const onLine = Math.abs(slot.y - 0.5) <= 0.01;
+    if (slot.pos === "WILDCAT") return {
+      name: "Wildcat back",
+      eligible: "RB \xB7 WR \xB7 QB",
+      detail: "Direct-snap ball carrier behind the center. This is the player running the Wildcat offense."
+    };
+    if (slot.pos === "JETMAN") return {
+      name: "Jet motion",
+      eligible: "WR \xB7 RB",
+      detail: "Speed player crossing the formation before the snap for handoffs, fakes, and edge pressure."
+    };
+    if (slot.pos === "WING") return {
+      name: `${slot.label === "LH" ? "Left" : "Right"} halfback`,
+      eligible: "RB \xB7 TE",
+      detail: `Wishbone pitch back aligned deep on the ${side} side of the full-house backfield.`
+    };
+    if (slot.pos === "ABACK") return {
+      name: `${side === "left" ? "Left" : "Right"} A-back`,
+      eligible: "RB \xB7 WR \xB7 TE",
+      detail: `Flexbone wing and pitch back aligned outside the ${side} tackle.`
+    };
+    if (fid === "Wildcat" && slot.id === "QB") return {
+      name: "Quarterback decoy",
+      eligible: "QB",
+      detail: "The regular quarterback is split wide right as a decoy. He does not take the direct snap; the WC back does."
+    };
+    if (slot.id === "QB") return {
+      name: "Quarterback",
+      eligible: "QB",
+      detail: "Receives the snap and operates the offense from behind the line."
+    };
+    if (slot.label === "B") return {
+      name: "B-back",
+      eligible: "RB \xB7 TE",
+      detail: "Flexbone downhill runner aligned behind the quarterback, between the two A-backs."
+    };
+    if (slot.label === "FB" || slot.role === "FB-Lead") return {
+      name: "Fullback",
+      eligible: "RB \xB7 TE",
+      detail: "Lead blocker and inside runner aligned in the backfield."
+    };
+    if (slot.label === "HB") return {
+      name: "Halfback",
+      eligible: "RB",
+      detail: "Primary running back aligned behind or beside the quarterback."
+    };
+    if (slot.label === "X") return {
+      name: "X receiver",
+      eligible: "WR",
+      detail: `Split wide ${side} and ${onLine ? "on" : "just off"} the line of scrimmage.`
+    };
+    if (slot.label === "Z") return {
+      name: "Z receiver",
+      eligible: "WR",
+      detail: `Split wide ${side} and ${onLine ? "on" : "just off"} the line of scrimmage.`
+    };
+    if (slot.label === "SL" || slot.label === "FL") return {
+      name: slot.label === "SL" ? "Slot receiver" : "F receiver",
+      eligible: "WR \xB7 TE \xB7 RB",
+      detail: `Inside receiver aligned off the line on the ${side} side.`
+    };
+    if (slot.pos === "TE") return {
+      name: `${slot.label} tight end`,
+      eligible: "TE \xB7 WR",
+      detail: `${onLine ? "Attached to the line" : "Aligned as a wing"} on the ${side} side; blocks and releases into routes.`
+    };
+    if (slot.pos === "RB") return {
+      name: "Running back",
+      eligible: "RB",
+      detail: "Backfield runner and pass-game outlet."
+    };
+    return { name: slot.label, eligible: slot.pos, detail: "Formation-specific offensive position." };
+  }
+  function renderFormationInfo(fid, layout) {
+    if (!layout) return "";
+    const line = layout.slots.filter((s) => s.pos === "OL").sort((a, b) => a.x - b.x);
+    const skill = layout.slots.filter((s) => s.pos !== "OL").sort((a, b) => a.y - b.y || a.x - b.x);
+    return `
+    <div class="picker-overlay formation-info-overlay" data-formation-info-close="bg">
+      <section class="picker-panel formation-info-panel" data-formation-info-close="stop"
+               role="dialog" aria-modal="true" aria-labelledby="formation-info-title">
+        <div class="picker-head">
+          <div>
+            <div class="picker-title" id="formation-info-title">${escapeHtml(fid)} positions</div>
+            <div class="picker-sub">How the eleven players line up \xB7 eligible roster positions shown below</div>
+          </div>
+          <button class="picker-x" type="button" data-formation-info-close="x" aria-label="Close formation guide">\u2715</button>
+        </div>
+        <div class="formation-info-list">
+          <div class="formation-info-unit" data-formation-info-unit="ol">
+            <div class="formation-info-unit-title">Offensive line</div>
+            <div class="formation-info-line-labels">
+              ${line.map((s) => `<span data-formation-info-slot="${s.id}">${escapeHtml(s.label)}</span>`).join("")}
+            </div>
+            <div class="formation-info-detail">Five blockers on the line of scrimmage, read left to right: left tackle, left guard, center, right guard, right tackle. Eligible: OL \xB7 TE.</div>
+          </div>
+          ${skill.map((s) => {
+      const info = formationSpotInfo(fid, s);
+      return `<div class="formation-info-spot" data-formation-info-slot="${s.id}">
+              <span class="formation-info-label">${escapeHtml(s.label)}</span>
+              <div class="formation-info-copy">
+                <div class="formation-info-name">${escapeHtml(info.name)}</div>
+                <div class="formation-info-detail">${escapeHtml(info.detail)}</div>
+                <div class="formation-info-eligible">Eligible: ${escapeHtml(info.eligible)}</div>
+              </div>
+            </div>`;
+    }).join("")}
+        </div>
+      </section>
+    </div>`;
   }
   function applySimplePlan(school) {
     const gp = school == null ? void 0 : school.gameplan;
@@ -34986,8 +35215,17 @@ var _CFB = (() => {
         recv.slots.push(...movers);
       }
     }
-    return bands.filter((b) => b.slots.length).map((b) => `
-    <div class="frow" data-band="${escapeHtml(bandLabel(b.slots, side))}">
+    const visibleBands = bands.filter((b) => b.slots.length);
+    if (side === "offense") {
+      visibleBands.sort((a, b) => {
+        const aLine = a.slots.some((s) => s.pos === "OL") ? 0 : 1;
+        const bLine = b.slots.some((s) => s.pos === "OL") ? 0 : 1;
+        return aLine - bLine || a.y - b.y;
+      });
+    }
+    return visibleBands.map((b) => `
+    <div class="frow" data-band="${escapeHtml(bandLabel(b.slots, side))}"
+         data-unit="${b.slots.some((s) => s.pos === "OL") ? "line" : "skill"}">
       ${b.slots.sort((a, c) => a.x - c.x).map((s) => slotHtmlById[s.id]).join("")}
     </div>`).join("");
   }
@@ -35264,7 +35502,7 @@ var _CFB = (() => {
     return Object.fromEntries(((school == null ? void 0 : school.roster) || []).map((p) => [p.id, p.compositeRating]));
   }
   function setupListeners9() {
-    var _a, _b;
+    var _a, _b, _c;
     const school = getPlayerSchool();
     if (!school) return;
     const gp = school.gameplan;
@@ -35273,12 +35511,29 @@ var _CFB = (() => {
       btn.addEventListener("click", () => {
         depthTab = btn.dataset.dtab;
         picker = null;
+        formationInfoOpen = false;
         rerender();
       });
     });
     document.querySelectorAll("[data-off-formation]").forEach((btn) => {
       btn.addEventListener("click", () => {
         activeOffFormation = btn.dataset.offFormation;
+        formationInfoOpen = false;
+        rerender();
+      });
+    });
+    (_a = document.querySelector("[data-formation-info-open]")) == null ? void 0 : _a.addEventListener("click", () => {
+      formationInfoOpen = true;
+      rerender();
+    });
+    document.querySelectorAll("[data-formation-info-close]").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        if (el.dataset.formationInfoClose === "stop") {
+          e.stopPropagation();
+          return;
+        }
+        if (el.dataset.formationInfoClose === "bg" && e.target !== el) return;
+        formationInfoOpen = false;
         rerender();
       });
     });
@@ -35304,7 +35559,7 @@ var _CFB = (() => {
         rerender();
       });
     });
-    (_a = document.querySelector("[data-picker-stop]")) == null ? void 0 : _a.addEventListener("click", (e) => e.stopPropagation());
+    (_b = document.querySelector("[data-picker-stop]")) == null ? void 0 : _b.addEventListener("click", (e) => e.stopPropagation());
     document.querySelectorAll("[data-pick]").forEach((el) => {
       el.addEventListener("click", () => {
         if (!picker) return;
@@ -35473,7 +35728,7 @@ var _CFB = (() => {
         rerender();
       });
     });
-    (_b = document.getElementById("btn-auto-sort")) == null ? void 0 : _b.addEventListener("click", () => {
+    (_c = document.getElementById("btn-auto-sort")) == null ? void 0 : _c.addEventListener("click", () => {
       if (depthTab === "offense") {
         const e = gp.fieldAssignments.offense[activeOffFormation];
         if (e) e.slots = {};
@@ -36901,10 +37156,10 @@ var _CFB = (() => {
                 <div>
                   <div class="board-name">${escapeHtml(fullName(recruit))}${buildTag(recruit)}</div>
                   <div class="board-meta muted">
-                    ${derivedArchetype(recruit) ? `<span class="arch-chip">${archetypeLabel(derivedArchetype(recruit))}</span> \xB7 ` : ""}
-                    ${isScouted(recruit.id) ? `${Math.round(recruit.compositeRating)} true \xB7 ${potShort(recruit.potentialBand)} pot` : '<span class="fog">Unscouted</span>'}
-                    \xB7 ${dist < 9999 ? dist + "mi" : "?"}
-                    \xB7 ${funnelStageChip(recruit.funnelStage, entry.eliminated)}
+                    ${derivedArchetype(recruit) ? `<span class="arch-chip board-meta-item">${archetypeLabel(derivedArchetype(recruit))}</span><span class="board-meta-sep">\xB7</span>` : ""}
+                    ${isScouted(recruit.id) ? `<span class="board-meta-item">${Math.round(recruit.compositeRating)} true</span><span class="board-meta-sep">\xB7</span><span class="board-meta-item">${potShort(recruit.potentialBand)} pot</span>` : '<span class="fog board-meta-item">Unscouted</span>'}
+                    <span class="board-meta-sep">\xB7</span><span class="board-meta-item">${dist < 9999 ? dist + "mi" : "?"}</span>
+                    <span class="board-meta-sep">\xB7</span><span class="board-meta-item">${funnelStageChip(recruit.funnelStage, entry.eliminated)}</span>
                   </div>
                 </div>
               </div>
@@ -45241,6 +45496,10 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     }
     state.ui.liveWatch = null;
     state.ui._finalWatched = null;
+    if ((lw == null ? void 0 : lw.stage) === "halftime" && state._exhibitionMode === "watch") {
+      continueExhibitionSpectator();
+      return;
+    }
     if ((lw == null ? void 0 : lw.stage) === "halftime") state.ui.showHalftime = true;
     else {
       state.ui.showGameResult = true;
