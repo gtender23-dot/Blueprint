@@ -5375,10 +5375,9 @@ body.theme-school .data-table tr:hover td {
 html { background:var(--px-black); scrollbar-color:var(--team-1,var(--green)) var(--px-black); scrollbar-width:thin; }
 body {
   color:var(--text-0); background-color:var(--bg-page);
-  background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
-  background-size:16px 16px; letter-spacing:.012em;
+  background-image:none; letter-spacing:.012em;
 }
-body::before { background:linear-gradient(180deg,color-mix(in srgb,var(--team-1) 46%,transparent) 0 4px,transparent 4px),linear-gradient(90deg,color-mix(in srgb,var(--team-1) 8%,transparent),transparent 58%) !important; }
+body::before { inset:0 0 auto; height:4px; background:var(--team-1) !important; }
 ::selection { color:var(--px-black); background:var(--team-1,var(--green)); }
 ::-webkit-scrollbar { width:10px; height:10px; }
 ::-webkit-scrollbar-track { background:var(--px-black); }
@@ -5411,7 +5410,7 @@ button,[role="button"],.nav-item,.card-action,.school-card,.formation-card,
 .nav-badge,.inbox-dot,.rep-badge { border-radius:0 !important; box-shadow:2px 2px 0 var(--px-shadow); }
 .sidebar-footer { padding:12px; background:var(--px-ink); border-top:3px solid var(--px-line); }
 .coach-school { font-size:12px; letter-spacing:.05em; text-transform:uppercase; }
-.main-content { padding:24px 28px 34px; background-color:var(--bg-page); background-image:linear-gradient(color-mix(in srgb,var(--team-2,var(--px-yellow)) 10%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--team-2,var(--px-yellow)) 10%,transparent) 1px,transparent 1px); background-size:24px 24px; }
+.main-content { padding:24px 28px 34px; background-color:var(--bg-page); background-image:none; }
 .view-header { min-height:54px; margin-bottom:18px; padding:0 0 10px; border-bottom:4px solid var(--team-1) !important; }
 .view-title { gap:10px; font-size:24px; font-weight:900; letter-spacing:.035em; text-transform:uppercase; text-shadow:3px 3px 0 var(--px-shadow); }
 .view-title::before { width:8px; height:24px; border-radius:0; background:var(--team-2,var(--px-yellow)); box-shadow:3px 3px 0 var(--px-shadow); }
@@ -5472,7 +5471,7 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 .rating-chip,.pos-chip,.class-badge,.status-chip,.arch-chip,.result-badge,
 .pbp-chip,.dna-chip,.profile-pos-badge,.gp-tag,.cs-adj { border:1px solid currentColor; border-radius:0 !important; box-shadow:2px 2px 0 var(--px-shadow); font-family:inherit; font-weight:900; }
 .attr-bar-track,.progress-track,.dna-bar,.meter-track,.budget-bar,.scout-bar { height:9px; overflow:hidden; background:var(--px-black) !important; border:2px solid var(--px-line-dim); border-radius:0 !important; }
-.attr-bar-fill,.progress-fill,.dna-bar-fill,.meter-fill,.budget-fill,.scout-fill { border-radius:0 !important; background-image:repeating-linear-gradient(90deg,currentColor 0 7px,rgba(0,0,0,.28) 7px 9px) !important; }
+.attr-bar-fill,.progress-fill,.dna-bar-fill,.meter-fill,.budget-fill,.scout-fill { border-radius:0 !important; background-image:none !important; }
 .stat-num,.score-num,.score-display,.wsb-score,.wsb-clock,.budget-value,.dna-grade-num { font-family:"Courier New",ui-monospace,monospace; font-weight:900; text-shadow:3px 3px 0 var(--px-shadow); }
 
 /* Main menu and new-dynasty flow. */
@@ -5487,9 +5486,9 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
   background:var(--bp-navy-2) !important;
 }
 .mainmenu-screen { overflow-y:auto; }
-.mm-bg-grid,.newgame::before { opacity:1; background-image:linear-gradient(rgba(85,214,232,.08) 2px,transparent 2px),linear-gradient(90deg,rgba(85,214,232,.08) 2px,transparent 2px),linear-gradient(rgba(85,214,232,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(85,214,232,.035) 1px,transparent 1px); background-size:64px 64px,64px 64px,16px 16px,16px 16px; }
+.mm-bg-grid,.newgame::before { display:none; }
 .mainmenu-screen::before { display:none; }
-.mainmenu-screen::after { inset:12px; background:linear-gradient(var(--px-cyan),var(--px-cyan)) top left/42px 4px no-repeat,linear-gradient(var(--px-cyan),var(--px-cyan)) top left/4px 42px no-repeat,linear-gradient(var(--px-cyan),var(--px-cyan)) top right/42px 4px no-repeat,linear-gradient(var(--px-cyan),var(--px-cyan)) top right/4px 42px no-repeat,linear-gradient(var(--px-cyan),var(--px-cyan)) bottom left/42px 4px no-repeat,linear-gradient(var(--px-cyan),var(--px-cyan)) bottom left/4px 42px no-repeat,linear-gradient(var(--px-cyan),var(--px-cyan)) bottom right/42px 4px no-repeat,linear-gradient(var(--px-cyan),var(--px-cyan)) bottom right/4px 42px no-repeat; opacity:.55; }
+.mainmenu-screen::after { inset:12px; background:none; border:4px solid color-mix(in srgb,var(--px-cyan) 55%,transparent); opacity:.55; }
 .mm-content { max-width:500px; gap:28px; padding-block:48px; }
 .mm-logo-badge,.logo-hex-mark { border:4px solid var(--px-cyan); border-radius:0; box-shadow:7px 7px 0 var(--px-shadow); image-rendering:pixelated; }
 .mm-logo-badge { width:104px; height:104px; }
@@ -5548,11 +5547,8 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 .wsb-clock { color:#ff6862; font-size:22px; letter-spacing:.08em; }
 .wsb-half,.wsb-dd { font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
 .watch-board-wrap { padding:4px; background:var(--px-black); border:3px solid var(--px-line); box-shadow:5px 5px 0 var(--px-shadow); }
-/* CRT glass over the cabinet: faint scanlines + a corner vignette. Subtle on
-   purpose — it has to read as texture on a phone, never dim the play. */
-.watch-board-wrap::after { content:""; position:absolute; inset:4px; pointer-events:none;
-  background:repeating-linear-gradient(0deg, rgba(4,6,10,.13) 0 1px, transparent 1px 3px),
-             radial-gradient(130% 95% at 50% 42%, transparent 58%, rgba(2,4,8,.30) 100%); }
+/* Clear glass over the cabinet: preserve the field without a gradient wash. */
+.watch-board-wrap::after { display:none; }
 #watch-board { border-radius:0; image-rendering:pixelated; shape-rendering:crispEdges; }
 #watch-board text { font-family:"Courier New",ui-monospace,monospace; font-weight:900; }
 .wf-turf { fill:#175b35; }
@@ -5694,7 +5690,7 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 
 /* School-color mode keeps the same neutral game cabinet and changes trim. */
 body.theme-school { --bg-page:color-mix(in srgb,var(--team-1) 9%,var(--px-ink)); --bg-card:color-mix(in srgb,var(--team-1) 7%,var(--px-panel)); --bg-raised:color-mix(in srgb,var(--team-2,var(--px-yellow)) 6%,var(--px-panel-2)); --bg-input:color-mix(in srgb,var(--team-1) 5%,#080d17); --bg-hover:color-mix(in srgb,var(--team-1) 10%,var(--px-panel-3)); --surface:color-mix(in srgb,var(--team-1) 7%,var(--px-panel)); --surface-2:color-mix(in srgb,var(--team-2,var(--px-yellow)) 6%,var(--px-panel-2)); --border-sub:color-mix(in srgb,var(--team-1) 14%,var(--px-line-dim)); --border:color-mix(in srgb,var(--team-2,var(--px-yellow)) 12%,var(--px-line)); --border-str:color-mix(in srgb,var(--team-2,var(--px-yellow)) 25%,#78869d); }
-body.theme-school::before { background:linear-gradient(180deg,var(--team-1) 0 4px,transparent 4px),linear-gradient(90deg,color-mix(in srgb,var(--team-1) 10%,transparent),transparent 60%) !important; }
+body.theme-school::before { background:var(--team-1) !important; }
 body.theme-school .sidebar,body.theme-school .tabbar { background:color-mix(in srgb,var(--team-1) 8%,#070b13); }
 
 /* Handheld layout. */
@@ -5772,9 +5768,20 @@ body *::after {
   inset:0;
   z-index:0;
   background-color:color-mix(in srgb,var(--portrait-jersey) 44%,#49658d);
-  background-image:linear-gradient(rgba(255,255,255,.22) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.22) 1px,transparent 1px),linear-gradient(135deg,rgba(255,255,255,.12),transparent 58%);
-  background-size:14px 14px;
+  background-image:none;
 }
+
+/* Flat decorative surfaces. Field markings and drive-position strips remain
+   code-drawn because their color breaks communicate football information. */
+.scout-hint { background:var(--px-panel-2); }
+.ob-reveal-banner { background:var(--rv1); }
+.jm-row-courting { background:var(--green-a8,rgba(0,217,95,.08)); }
+.trophy-card { background:var(--bg-card); }
+.trophy-spotlight { background:color-mix(in srgb,var(--accent) 18%,transparent); }
+.alldiv-mine { background:color-mix(in srgb,var(--accent) 10%,var(--bg-card)); }
+.banquet-haul { background:#0e0c08; }
+.event-screen { background:var(--bg-card); }
+.banner-pennant { background:var(--team-1,var(--green)); }
 .portrait-shoulders { left:7%; top:74%; width:86%; height:30%; z-index:1; background:var(--portrait-jersey); border-top:7px solid var(--portrait-accent); box-shadow:inset 7px 0 0 rgba(0,0,0,.28),inset -7px 0 0 rgba(0,0,0,.28); }
 .portrait-jersey-panel { left:43%; top:79%; width:14%; height:25%; z-index:2; background:var(--portrait-accent); }
 .portrait-neck { left:40%; top:61%; width:20%; height:21%; z-index:2; background:var(--portrait-skin-shadow); box-shadow:inset 5px 0 0 rgba(0,0,0,.16),inset -5px 0 0 rgba(0,0,0,.16); }
@@ -6101,9 +6108,21 @@ body *::after {
 
   .game-card-day { grid-area: day; }
   .game-card-matchup { grid-area: matchup; min-width: 0; }
-  .game-teams { flex-wrap: wrap; gap: 3px 6px; }
-  .game-team { min-width: 0; overflow-wrap: anywhere; }
-  .game-opp-record { overflow-wrap: anywhere; }
+  .game-teams {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 3px 6px;
+  }
+  .game-teams .my-team { display: none; }
+  .game-teams .game-vs { grid-column: 1; }
+  .game-teams .opp-team {
+    grid-column: 2;
+    min-width: 0;
+    line-height: 1.25;
+    overflow-wrap: break-word;
+  }
+  .game-opp-record { margin-top: 5px; overflow-wrap: normal; }
 
   .game-card-result {
     grid-area: result;
@@ -6115,6 +6134,8 @@ body *::after {
     align-items: center;
     gap: 4px 10px;
     min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
     padding-top: 10px;
     border-top: 2px solid var(--px-line-dim, var(--border-sub));
     text-align: left;
@@ -6136,7 +6157,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "5effc1e317";
+globalThis.__BUILD__ = "2b56549f9a";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -6624,7 +6645,7 @@ var _CFB = (() => {
         //    busts), and production feeds the attributes it exercised.
         // 3. CAMP: the offseason focus lever — plan-shaped, focus-multiplied.
         INSEASON_DEV_WEEKS: [8, 13, 18],
-        // practice checkpoints (mid, post-bye, late)
+        // engine days; UI displays regular-season Weeks 4, 9, 14
         INSEASON_DEV_MULT: 0.15,
         // each checkpoint = 15% of a classic full tick
         CAMP_DEV_MULT: 0.3,
@@ -10716,7 +10737,7 @@ var _CFB = (() => {
     if (aheadReturning === 0) {
       tier = "starter";
       score = 100;
-      label = "Day-one starter";
+      label = "Immediate starter";
     } else if (aheadReturning < starters) {
       tier = "rotation";
       score = 70;
@@ -33056,7 +33077,7 @@ var _CFB = (() => {
       <span class="offseason-label">Recruiting is open</span>
       <span class="offseason-detail">${assistOn ? "Staff assist: ON" : boardCount > 0 ? `${boardCount} on your board` : "Board is empty"}</span>
     </div>
-    <p class="offseason-hint" style="margin-top:6px">This is where next season's roster is won. Scout prospects and make offers yourself on the <b>Search</b> board, or hand the legwork to your staff under <b>Assist</b> and set the strategy \u2014 either way, the class you build now is the program you coach later. You can come back to it on any recruiting day.</p>
+    <p class="offseason-hint" style="margin-top:6px">This is where next season's roster is won. Scout prospects and make offers yourself on the <b>Search</b> board, or hand the legwork to your staff under <b>Assist</b> and set the strategy \u2014 either way, the class you build now is the program you coach later. You can come back to it on any recruiting week.</p>
     <button class="btn-primary" id="btn-goto-recruiting" style="margin-top:12px;width:100%">Open Recruiting \u2192</button>`;
   }
   function conversionPreviewPanel() {
@@ -33515,7 +33536,7 @@ var _CFB = (() => {
         else if (signings > preSignings) cue("commit");
       } catch (err) {
         console.error("advanceDay error:", err);
-        alert("Error advancing day: " + err.message);
+        alert("Error advancing week: " + err.message);
       } finally {
         rerender();
       }
@@ -35095,7 +35116,7 @@ var _CFB = (() => {
   function renderSimpleShareBadge(slot, entry) {
     var _a;
     const featured = ((_a = entry.shares) == null ? void 0 : _a[slot.id]) || 0;
-    if (featured >= 25) return `<div class="fs-featured" title="Featured target \u2014 the sim funnels the ball here (defenses bracket him)">\u2605</div>`;
+    if (featured >= 25) return `<div class="fs-featured" title="Featured target \u2014 the offense feeds him the ball (defenses bracket him)">\u2605</div>`;
     return "";
   }
   function renderShareBar(catchSlots, shares, shareTotal, school, bySlot) {
@@ -36423,7 +36444,7 @@ var _CFB = (() => {
             <div class="cutline-text muted" style="margin-top:6px">Signed with ${winner}</div>`;
     }
     const stageHeader = `<div class="funnel-status-header">
-    <span class="funnel-status-label">FUNNEL STAGE</span>
+    <span class="funnel-status-label">RECRUITING STAGE</span>
     ${funnelStageChip(recruit.funnelStage, entry == null ? void 0 : entry.eliminated)}
   </div>`;
     if (entry == null ? void 0 : entry.eliminated) {
@@ -36495,7 +36516,6 @@ var _CFB = (() => {
     maxDist: 9999,
     status: "undecided",
     sort: "visionRating",
-    thenBy: "",
     posRank: 0,
     // 0 = any; else top-N at the position
     // Up to 4 attribute threshold filters: { attr, op ('gte'|'lte'), val }
@@ -36630,11 +36650,9 @@ var _CFB = (() => {
       return true;
     });
     const key = searchFilters.sort;
-    const key2 = searchFilters.thenBy;
     list.sort((a, b) => {
       const pa = sortVal(a, key), pb = sortVal(b, key);
       if (pb !== pa) return pb - pa;
-      if (key2) return sortVal(b, key2) - sortVal(a, key2);
       return 0;
     });
     if (searchFilters.posRank > 0) {
@@ -36762,16 +36780,6 @@ var _CFB = (() => {
               ${opt("distance", searchFilters.sort, "Distance")}
               ${opt("ras", searchFilters.sort, "Athletics")}
               ${ATTRIBUTES.map((a) => opt(a, searchFilters.sort, attrLabel(a))).join("")}
-            </select>
-          </div>
-          <div class="sf-field">
-            <label class="filter-label">THEN BY</label>
-            <select class="form-select" id="sf-thenby">
-              ${opt("", searchFilters.thenBy, "\u2014")}
-              ${opt("visionRating", searchFilters.thenBy, "Visibility")}
-              ${opt("compositeRating", searchFilters.thenBy, "True Rating")}
-              ${opt("ras", searchFilters.thenBy, "Athletics")}
-              ${ATTRIBUTES.map((a) => opt(a, searchFilters.thenBy, attrLabel(a))).join("")}
             </select>
           </div>
         </div>
@@ -37166,7 +37174,7 @@ var _CFB = (() => {
       const tag = s.toPlayer ? '<span class="feed-tag feed-win">YOUR SIGNING</span>' : s.lostByPlayer ? '<span class="feed-tag feed-loss">LOST</span>' : "";
       return `
             <div class="feed-row${s.toPlayer ? " feed-row-mine" : ""}${s.lostByPlayer ? " feed-row-lost" : ""}">
-              <span class="feed-day muted">D${s.day}</span>
+              <span class="feed-day muted">${escapeHtml(weekShort(s.day))}</span>
               <span class="pos-chip pos-${s.pos}">${s.pos}</span>
               <span class="feed-name">${escapeHtml(s.name)}</span>
               <span class="rating-chip rating-${ratingColor(s.star)}">${s.star}</span>
@@ -37292,11 +37300,11 @@ var _CFB = (() => {
         <div class="card-header"><span class="card-title">ACTION HISTORY</span></div>
         ${((_b = entry == null ? void 0 : entry.actions) == null ? void 0 : _b.length) ? `
           <table class="data-table compact">
-            <thead><tr><th>Day</th><th>Action</th><th>Cost</th><th>Interest Gained</th></tr></thead>
+            <thead><tr><th>Week</th><th>Action</th><th>Cost</th><th>Interest Gained</th></tr></thead>
             <tbody>
               ${entry.actions.slice().reverse().map((a) => `
                 <tr>
-                  <td>Day ${a.day}</td>
+                  <td>${escapeHtml(weekLabel(a.day))}</td>
                   <td>${a.action.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</td>
                   <td>${fmtMoney(a.cost)}</td>
                   <td class="${a.gain > 10 ? "rating-good" : "muted"}">+${(a.gain || 0).toFixed(1)}</td>
@@ -37429,7 +37437,7 @@ var _CFB = (() => {
     if (log.length === 0) {
       return `<div class="card">
       <div class="card-header"><span class="card-title">STAFF ACTIVITY</span></div>
-      <div class="empty-state">No activity yet. Advance a day during recruiting season to see what your staff does on your behalf.</div>
+      <div class="empty-state">No activity yet. Advance a week during recruiting season to see what your staff does on your behalf.</div>
     </div>`;
     }
     return log.map((entry) => {
@@ -37445,7 +37453,7 @@ var _CFB = (() => {
       return `
       <div class="card ailog-day">
         <div class="card-header">
-          <span class="card-title">DAY ${entry.day}</span>
+          <span class="card-title">${escapeHtml(weekLabel(entry.day).toUpperCase())}</span>
           ${totalSpent > 0 ? `<span class="ailog-total">${fmtMoney(totalSpent)} spent</span>` : ""}
         </div>
         ${entry.adds.length ? `
@@ -37481,7 +37489,7 @@ var _CFB = (() => {
     }).join("");
   }
   function setupListeners10() {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e;
     const school = getPlayerSchool();
     const coach = state.playerCoach;
     document.querySelectorAll(".rec-tab").forEach((btn) => {
@@ -37573,10 +37581,6 @@ var _CFB = (() => {
       searchFilters.sort = e.target.value;
       rerender();
     });
-    (_e = document.getElementById("sf-thenby")) == null ? void 0 : _e.addEventListener("change", (e) => {
-      searchFilters.thenBy = e.target.value;
-      rerender();
-    });
     document.querySelectorAll(".sf-attr-pick").forEach((sel) => {
       sel.addEventListener("change", (e) => {
         const i = parseInt(e.target.dataset.attrIdx);
@@ -37598,7 +37602,7 @@ var _CFB = (() => {
         rerender();
       });
     });
-    (_f = document.getElementById("sf-clear-attrs")) == null ? void 0 : _f.addEventListener("click", () => {
+    (_e = document.getElementById("sf-clear-attrs")) == null ? void 0 : _e.addEventListener("click", () => {
       searchFilters.attrFilters = searchFilters.attrFilters.map(() => ({ attr: "", op: "gte", val: 0 }));
       rerender();
     });
@@ -37790,11 +37794,11 @@ var _CFB = (() => {
       <div class="game-card-matchup">
         <div class="game-loc">${isHome ? "HOME" : "AWAY"}</div>
         <div class="game-teams">
-          <span class="game-team${isHome ? " my-team" : " opp-team"}${school ? " team-link" : ""}"${school ? ` data-scout-team="${school.id}"` : ""}>${escapeHtml((school == null ? void 0 : school.name) || "")}</span>
+          <span class="game-team my-team${school ? " team-link" : ""}"${school ? ` data-scout-team="${school.id}"` : ""}>${escapeHtml((school == null ? void 0 : school.name) || "")}</span>
           <span class="game-vs">${isHome ? "vs" : "@"}</span>
-          <span class="game-team${!isHome ? " my-team" : " opp-team"}${opp ? " team-link" : ""}"${opp ? ` data-scout-team="${opp.id}"` : ""}>${prefixFor(opp)}${escapeHtml((opp == null ? void 0 : opp.name) || "TBD")}</span>
+          <span class="game-team opp-team${opp ? " team-link" : ""}"${opp ? ` data-scout-team="${opp.id}"` : ""}>${prefixFor(opp)}${escapeHtml((opp == null ? void 0 : opp.name) || "TBD")}</span>
         </div>
-        <div class="game-opp-record">${opp ? `<span class="team-link" data-scout-team="${opp.id}">${prefixFor(opp)}${escapeHtml(opp.name)}</span>` : ""} ${fmtRecord(((_a = opp == null ? void 0 : opp.record) == null ? void 0 : _a.wins) || 0, ((_b = opp == null ? void 0 : opp.record) == null ? void 0 : _b.losses) || 0)}</div>
+        <div class="game-opp-record">${opp ? `Opponent record ${fmtRecord(((_a = opp == null ? void 0 : opp.record) == null ? void 0 : _a.wins) || 0, ((_b = opp == null ? void 0 : opp.record) == null ? void 0 : _b.losses) || 0)}` : ""}</div>
       </div>
 
       <div class="game-card-result">
@@ -38011,7 +38015,7 @@ var _CFB = (() => {
     id: "the-year",
     icon: "\u{1F5D3}\uFE0F",
     title: "The Year",
-    blurb: "The full calendar, the order things resolve in on a day you advance, and the deadlines that will not wait on you.",
+    blurb: "The full calendar, the order things resolve in during a week you advance, and the deadlines that will not wait on you.",
     sections: [
       {
         heading: "The shape of a year",
@@ -38043,7 +38047,7 @@ var _CFB = (() => {
 
       <b>Week two is recruiting.</b> A dedicated week to crack open your board: scout prospects and
       make offers yourself on the Search side, or hand the legwork to your staff under Assist and
-      just set the strategy. You can come back to it on any recruiting day, sure, but this is where
+      just set the strategy. You can come back to it on any recruiting week, sure, but this is where
       the class ahead of you gets its first real look.
 
       <b>Week three is the spring game.</b> Development camp and the spring game run together here.
@@ -38059,7 +38063,7 @@ var _CFB = (() => {
       you would mull it over during non-conference, you figured wrong.`
       },
       {
-        heading: "What happens when you advance a day",
+        heading: "What happens when you advance a week",
         body: `The order is fixed, and I will tell you plainly: it is not the order you would guess. So
       learn it.
 
@@ -38070,7 +38074,7 @@ var _CFB = (() => {
 
       Games running last is on purpose \u2014 the result is the payoff at the end of the tick, not the
       thing everything else is reacting to. That carries one consequence worth carving into your
-      brain: a player's layoff ticks down <i>before</i> that day's game, so a man due back this week
+      brain: a player's layoff ticks down <i>before</i> that week's game, so a man due back this week
       is back for this week's game, not next week's. I have stood a healthy body on the bench a whole
       Saturday early in my career because I did not trust that. Trust it.
 
@@ -38085,12 +38089,12 @@ var _CFB = (() => {
       {
         heading: "The practice checkpoints",
         body: `Practice is not some season-long average quietly humming along. It ticks the whole
-      league three times, and that is all: once mid-season, once after the bye, and once late.
+      league three times, and that is all: in regular-season Weeks 4, 9 and 14.
 
-      Whatever plan is set at that moment is the plan that develops your roster. Change it in week
-      two and change it back in week four and you did nothing at all. Change it the week before a
-      checkpoint and that is the plan you get. The clock only reads what is on the board when it
-      strikes.
+      Whatever plan is set at that moment is the plan that develops your roster. Set it before one
+      of those checkpoints and that is the plan you get. Change it after a checkpoint, then change
+      it back before the next, and the roster never trains under the temporary plan. The clock only
+      reads what is on the board when it strikes.
 
       That is what makes the bye week a real coaching week instead of a gap in the schedule, and it
       is what makes a mid-season plan change an actual decision instead of a cosmetic one. I cover
@@ -39703,7 +39707,7 @@ var _CFB = (() => {
 
       Physical tools <b>ramp</b>. A freshman's body is not finished, and the growth in his measured
       attributes accelerates through his career before it flattens. Craft is the other story \u2014 it grows
-      steadily with reps from day one.
+      steadily from the first practice.
 
       So here is the practical read, and it is one I lived by: an underclassman with tools and no
       technique is a much better bet than an underclassman with technique and no tools. His tools are
@@ -39904,7 +39908,7 @@ var _CFB = (() => {
 
       He accepts when four things are all true at once: you lead his race, you hold an offer, his
       interest in you is past his personal bar, and you lead second place by a real margin. On the
-      final day of the window the margin requirement drops, and every recruit whose leader is
+      final week of the window the margin requirement drops, and every recruit whose leader is
       offered and past the bar commits.`
       },
       {
@@ -41794,6 +41798,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
   // js/ui/views/history.js
   init_state();
   init_utils();
+  init_season();
   var activeTab2 = "program";
   function renderHistory(embed = false) {
     const school = getPlayerSchool();
@@ -42037,7 +42042,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         ${cls.map((s) => `
           <div class="offseason-item">
             <span class="offseason-label">${escapeHtml(s.name)}</span>
-            <span class="offseason-detail">${escapeHtml(s.pos)} <span class="muted">\xB7 day ${s.day}</span></span>
+            <span class="offseason-detail">${escapeHtml(s.pos)} <span class="muted">\xB7 ${escapeHtml(weekLabel(s.day))}</span></span>
           </div>`).join("")}
       </div>`;
     }).join("");
@@ -42055,6 +42060,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
   init_state();
   init_utils();
   init_constants();
+  init_season();
   var TOTAL_MINUTES = 100;
   var POS_GROUPS = [
     { id: "QB", label: "QB", positions: ["QB"], unit: "off" },
@@ -42220,6 +42226,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     const over = total > TOTAL_MINUTES;
     const under = total < TOTAL_MINUTES;
     const customCount = POS_GROUPS.filter((g) => isGroupCustom(school, g)).length;
+    const checkpointWeeks = C.INSEASON_DEV_WEEKS.map((day) => weekLabel(day).replace(/^Week /, "")).join(", ");
     return `
     <div class="view-practice">
       <div class="view-header${embed ? " embed-actions" : ""}">
@@ -42234,13 +42241,13 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
 
       <div class="practice-timing-note">
         Practice is your TARGETED channel: it develops the roster at three in-season
-        checkpoints (weeks 8, 13, 18) using whatever plan is set at that moment \u2014 mid-season
+        checkpoints (regular-season Weeks ${checkpointWeeks}) using whatever plan is set at that moment \u2014 mid-season
         changes are real now. Talent grows separately at season's end: potential and Work Ethic
         drive it (your sky-high freshman blooms even on the bench), and production feeds the
         attributes it exercised.
       </div>
 
-      <div class="gp-tip tip-info">\u25B8 100 minutes a week per position group \u2014 this is the growth YOU aim. It ticks at weeks 8, 13 and 18, so retargeting mid-season pays. Bodies RAMP through the years (a senior's weight-room leap is his biggest), craft grows steady with reps, Work Ethic multiplies everything, and your Developer skill plus the Training Complex raise the whole ceiling.</div>
+      <div class="gp-tip tip-info">\u25B8 100 minutes a week per position group \u2014 this is the growth YOU aim. It ticks in regular-season Weeks ${checkpointWeeks}, so retargeting mid-season pays. Bodies RAMP through the years (a senior's weight-room leap is his biggest), craft grows steady with reps, Work Ethic multiplies everything, and your Developer skill plus the Training Complex raise the whole ceiling.</div>
 
       <div class="practice-unit-groups">
         ${PRACTICE_UNITS.map((u) => {
@@ -44186,7 +44193,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
           <div class="save-slot save-slot-auto" data-save-slot="auto">
             <div class="save-slot-label">Auto Save</div>
             <div class="save-slot-info">
-              <div class="save-slot-meta">Overwrites on every day advance</div>
+              <div class="save-slot-meta">Overwrites on every week advance</div>
             </div>
           </div>
           ${ALL_SLOTS.map((slot) => {
