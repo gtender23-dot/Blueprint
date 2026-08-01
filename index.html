@@ -1859,6 +1859,7 @@ input[type="range"] { accent-color: var(--team-1); }
 
 .win-text { color: var(--green); }
 .loss-text { color: var(--red); }
+.classic-text { color: var(--team-1); }
 .game-result-modal { max-width: 520px; }
 /* Halftime takeover — full command-center screen, not a modal */
 .halftime-body { display: flex; flex-direction: column; gap: 16px; }
@@ -6352,6 +6353,37 @@ body *::after {
   .game-card-result .upcoming-badge { grid-column: 1 / -1; }
 }
 
+/* Instant Classics — coach/world archive + standalone replay shell */
+.mm-classics { display:flex; flex-direction:column; gap:7px; text-align:left; }
+.mm-classic-row { display:flex; align-items:stretch; gap:7px; min-width:0; }
+.mm-classic-watch {
+  flex:1; min-width:0; display:grid; grid-template-columns:auto 1fr;
+  grid-template-areas:"score matchup" "score meta"; gap:2px 9px;
+  align-items:center; padding:9px 11px; text-align:left; cursor:pointer;
+  color:var(--text-0); background:var(--bg-card); border:2px solid var(--px-line);
+  border-top:4px solid var(--team-1); box-shadow:5px 5px 0 var(--px-shadow);
+}
+.mm-classic-watch:hover,.mm-classic-watch:focus-visible { border-color:var(--team-1); outline:none; }
+.mm-classic-score { grid-area:score; color:var(--team-1); font:900 17px/1 "Courier New",monospace; white-space:nowrap; }
+.mm-classic-matchup { grid-area:matchup; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:900; }
+.mm-classic-meta { grid-area:meta; color:var(--text-2); font-size:10.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mm-classic-del { min-width:42px; }
+.instant-classic-replay-shell {
+  position:fixed; inset:0; display:grid; place-items:start center; padding-top:24px;
+  color:var(--text-0); background:var(--bg-0); z-index:0;
+}
+.instant-classic-replay-mark {
+  padding:8px 12px; color:var(--team-1); background:var(--bg-card);
+  border:2px solid var(--px-line); border-top:4px solid var(--team-1);
+  box-shadow:5px 5px 0 var(--px-shadow); font:900 12px/1 "Courier New",monospace;
+  letter-spacing:.08em;
+}
+@media (max-width:600px) {
+  .mm-classic-watch { grid-template-columns:1fr; grid-template-areas:"score" "matchup" "meta"; gap:4px; padding:9px; }
+  .mm-classic-score { font-size:15px; }
+  .mm-classic-matchup,.mm-classic-meta { white-space:normal; overflow-wrap:anywhere; }
+  .mm-classic-del { min-width:40px; padding-inline:9px; }
+}
   </style>
 </head>
 <body>
@@ -6361,7 +6393,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "9372ea0537";
+globalThis.__BUILD__ = "31a07e4ed1";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -6384,6 +6416,18 @@ var _CFB = (() => {
     return a;
   };
   var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
+  var __objRest = (source, exclude) => {
+    var target = {};
+    for (var prop in source)
+      if (__hasOwnProp.call(source, prop) && exclude.indexOf(prop) < 0)
+        target[prop] = source[prop];
+    if (source != null && __getOwnPropSymbols)
+      for (var prop of __getOwnPropSymbols(source)) {
+        if (exclude.indexOf(prop) < 0 && __propIsEnum.call(source, prop))
+          target[prop] = source[prop];
+      }
+    return target;
+  };
   var __esm = (fn, res, err) => function __init() {
     if (err) throw err[0];
     try {
@@ -12171,7 +12215,7 @@ var _CFB = (() => {
       const confId = confOrder[ci];
       const conf = D1_CONFS.find((c) => c.id === confId);
       const cls = conf.conferenceClass;
-      const clamp6 = prestigeClamp(cls, "D1");
+      const clamp7 = prestigeClamp(cls, "D1");
       const priv = PRIVATE_TYPES.has(type);
       const enrollment = priv ? 3200 + prestige * 1800 : 18e3 + prestige * 6500;
       const foundedBase = { flagship: 1820, landGrant: 1865, stateUniversity: 1850, tech: 1895, cityUniversity: 1900, regionalState: 1890, privateCollege: 1850, religious: 1870 }[type] || 1875;
@@ -12206,8 +12250,8 @@ var _CFB = (() => {
         stadium: { name: stadiumNm, capacity },
         prestige,
         baseline: prestige,
-        prestigeMin: clamp6.min,
-        prestigeMax: clamp6.max,
+        prestigeMin: clamp7.min,
+        prestigeMax: clamp7.max,
         colors: [colors[0], colors[1]]
       });
       per++;
@@ -12264,7 +12308,7 @@ var _CFB = (() => {
         const lat = +(cityObj.lat + (Math.random() * 2 - 1) * LOC_JITTER_DEG).toFixed(2);
         const lng = +(cityObj.lng + (Math.random() * 2 - 1) * LOC_JITTER_DEG).toFixed(2);
         const prestige = pickPrestige(cls);
-        const clamp6 = prestigeClamp(cls, conf.division);
+        const clamp7 = prestigeClamp(cls, conf.division);
         const flavor = makeFlavor(cls, ident.type, prestige, nickPick.n);
         confSchools.push({
           id: uniqueSchoolId(ident.name, used.ids),
@@ -12287,8 +12331,8 @@ var _CFB = (() => {
           stadium: flavor.stadium,
           prestige,
           baseline: prestige,
-          prestigeMin: clamp6.min,
-          prestigeMax: clamp6.max,
+          prestigeMin: clamp7.min,
+          prestigeMax: clamp7.max,
           colors: [c1, c2]
         });
       }
@@ -15420,6 +15464,7 @@ var _CFB = (() => {
     listSavedTeams: () => listSavedTeams,
     noteCoachRecords: () => noteCoachRecords,
     noteWorldMeta: () => noteWorldMeta,
+    removeWorldClassicMeta: () => removeWorldClassicMeta,
     saveGameplanToLibrary: () => saveGameplanToLibrary,
     saveTeamToLibrary: () => saveTeamToLibrary,
     updateCoach: () => updateCoach,
@@ -15475,6 +15520,14 @@ var _CFB = (() => {
   function noteWorldMeta(coachId, slot, meta) {
     updateCoach(coachId, (c) => {
       c.worlds[slot] = __spreadProps(__spreadValues({}, meta), { timestamp: Date.now() });
+    });
+  }
+  function removeWorldClassicMeta(coachId, slot, classicId) {
+    updateCoach(coachId, (c) => {
+      var _a;
+      const world = (_a = c.worlds) == null ? void 0 : _a[slot];
+      if (!world) return;
+      world.classics = (world.classics || []).filter((item) => item.id !== classicId);
     });
   }
   function clearWorldSlot(coachId, slot) {
@@ -26100,6 +26153,132 @@ var _CFB = (() => {
     }
   });
 
+  // js/engine/instantclassics.js
+  function scoreTimeline(result) {
+    const states = [];
+    let lateClose = false;
+    for (const drive of (result == null ? void 0 : result.drives) || []) {
+      for (const play of drive.plays || []) {
+        if (!Number.isFinite(play == null ? void 0 : play.scoreOff) || !Number.isFinite(play == null ? void 0 : play.scoreDef)) continue;
+        const home = drive.possession === "away" ? play.scoreDef : play.scoreOff;
+        const away = drive.possession === "away" ? play.scoreOff : play.scoreDef;
+        const prev = states[states.length - 1];
+        if (!prev || prev.home !== home || prev.away !== away) states.push({ home, away });
+        if (play.half === 2 && Number(play.clock) <= 300 && Math.abs(home - away) <= 8 || play.half === 3) lateClose = true;
+      }
+    }
+    const finalState = { home: Number(result == null ? void 0 : result.homeScore) || 0, away: Number(result == null ? void 0 : result.awayScore) || 0 };
+    const last = states[states.length - 1];
+    if (!last || last.home !== finalState.home || last.away !== finalState.away) states.push(finalState);
+    return { states, lateClose };
+  }
+  function instantClassicScore(result) {
+    if (!result || result.forfeit || !Number.isFinite(result.homeScore) || !Number.isFinite(result.awayScore)) return 0;
+    const margin = Math.abs(result.homeScore - result.awayScore);
+    const total = result.homeScore + result.awayScore;
+    const { states, lateClose } = scoreTimeline(result);
+    const overtime = (result.drives || []).some((d) => (d.plays || []).some((p) => (p == null ? void 0 : p.half) === 3));
+    let leadChanges = 0, ties = 0, priorLeader = 0, maxHomeDeficit = 0, maxAwayDeficit = 0;
+    for (const s of states) {
+      const diff = s.home - s.away;
+      const leader = Math.sign(diff);
+      if (leader === 0) ties++;
+      else {
+        if (priorLeader && leader !== priorLeader) leadChanges++;
+        priorLeader = leader;
+      }
+      maxHomeDeficit = Math.max(maxHomeDeficit, -diff);
+      maxAwayDeficit = Math.max(maxAwayDeficit, diff);
+    }
+    const winnerComeback = result.homeScore > result.awayScore ? maxHomeDeficit : maxAwayDeficit;
+    let score = 4;
+    score += margin <= 1 ? 32 : margin <= 3 ? 27 : margin <= 7 ? 17 : margin <= 10 ? 8 : margin <= 14 ? 3 : 0;
+    if (overtime) score += 24;
+    if (lateClose) score += 12;
+    score += Math.min(15, leadChanges * 5);
+    score += Math.min(8, ties * 2);
+    score += Math.min(15, Math.round(winnerComeback * 1.5));
+    if (total >= 80) score += 9;
+    else if (total >= 60) score += 6;
+    else if (total >= 45) score += 3;
+    return clamp5(Math.round(score), 0, 100);
+  }
+  function compactSchool(school) {
+    if (!school) return null;
+    const out = {};
+    for (const key of ["id", "name", "nick", "abbr", "logo", "crestImg", "colors", "division"]) {
+      if (school[key] !== void 0) out[key] = cloneJson2(school[key]);
+    }
+    return out;
+  }
+  function compactReplayResult(result) {
+    if (!result) return null;
+    const replay = {};
+    for (const key of [
+      "homeScore",
+      "awayScore",
+      "winner",
+      "homeStats",
+      "awayStats",
+      "homePlayerStats",
+      "awayPlayerStats",
+      "homeSnapCounts",
+      "awaySnapCounts",
+      "homeForm",
+      "awayForm",
+      "drives",
+      "log",
+      "playerNames",
+      "qbInjuries",
+      "forfeit"
+    ]) if (result[key] !== void 0) replay[key] = cloneJson2(result[key]);
+    replay.homeSchool = compactSchool(result.homeSchool);
+    replay.awaySchool = compactSchool(result.awaySchool);
+    return replay;
+  }
+  function classicMetadata(entry) {
+    if (!entry) return null;
+    const _a = entry, { result } = _a, meta = __objRest(_a, ["result"]);
+    return cloneJson2(meta);
+  }
+  function archiveInstantClassic(state2, result, week) {
+    const score = instantClassicScore(result);
+    if (score < INSTANT_CLASSIC_MIN_SCORE) return null;
+    const home = result.homeSchool, away = result.awaySchool;
+    if (!(home == null ? void 0 : home.id) || !(away == null ? void 0 : away.id) || !(state2 == null ? void 0 : state2.playerSchoolId)) return null;
+    const id = `ic-${state2.season}-${state2.day}-${home.id}-${away.id}`;
+    const existing = Array.isArray(state2.instantClassics) ? state2.instantClassics : [];
+    if (existing.some((c) => c.id === id)) return null;
+    const entry = {
+      id,
+      score,
+      saved: Date.now(),
+      season: state2.season,
+      day: state2.day,
+      week: week || `Week ${state2.day}`,
+      playerSchoolId: state2.playerSchoolId,
+      homeId: home.id,
+      awayId: away.id,
+      homeName: home.name || "Home",
+      awayName: away.name || "Away",
+      homeScore: result.homeScore,
+      awayScore: result.awayScore,
+      result: compactReplayResult(result)
+    };
+    const ranked = [...existing, entry].sort((a, b) => (b.score || 0) - (a.score || 0) || (b.saved || 0) - (a.saved || 0)).slice(0, MAX_INSTANT_CLASSICS);
+    state2.instantClassics = ranked;
+    return ranked.some((c) => c.id === id) ? entry : null;
+  }
+  var INSTANT_CLASSIC_MIN_SCORE, MAX_INSTANT_CLASSICS, cloneJson2, clamp5;
+  var init_instantclassics = __esm({
+    "js/engine/instantclassics.js"() {
+      INSTANT_CLASSIC_MIN_SCORE = 50;
+      MAX_INSTANT_CLASSICS = 8;
+      cloneJson2 = (value) => JSON.parse(JSON.stringify(value));
+      clamp5 = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+    }
+  });
+
   // js/state.js
   var state_exports = {};
   __export(state_exports, {
@@ -26107,6 +26286,7 @@ var _CFB = (() => {
     answerFourthDown: () => answerFourthDown,
     answerPlayCall: () => answerPlayCall,
     chooseKickoffMode: () => chooseKickoffMode,
+    closeInstantClassicReplay: () => closeInstantClassicReplay,
     continueExhibitionSpectator: () => continueExhibitionSpectator,
     devAddBudget: () => devAddBudget,
     devForceSign: () => devForceSign,
@@ -26146,6 +26326,7 @@ var _CFB = (() => {
     simToQuarterEnd: () => simToQuarterEnd,
     skipToOffseason: () => skipToOffseason,
     startExhibition: () => startExhibition,
+    startInstantClassicReplay: () => startInstantClassicReplay,
     startNewGame: () => startNewGame,
     startNewGamePrepared: () => startNewGamePrepared,
     state: () => state,
@@ -26344,6 +26525,7 @@ var _CFB = (() => {
     const schedule = generateSchedule(world, 1, []);
     state._exhibition = false;
     state._exhStash = null;
+    state._instantClassicReplay = null;
     Object.assign(state, {
       initialized: true,
       season: 1,
@@ -26366,7 +26548,8 @@ var _CFB = (() => {
         custom ? { id: uuid(), day: 1, subject: `A New Era in ${school.city}`, body: `${school.city}, ${school.state} \u2014 ${school.name} has named ${first} ${last} the first head coach in program history. The ${school.nick} join the ${((_a = custom.conference) == null ? void 0 : _a.name) || school.conf}${custom.replaced ? `, taking the place of ${custom.replaced.name} after that program folded` : ""}. You have $${(playerCoach.budget / 1e3).toFixed(1)}k to spend on ${playerCoach.scholarshipsAvailable} scholarships. Non-conference play starts Week 3. Build something.`, read: false } : { id: uuid(), day: 1, subject: "Welcome to the Program", body: `Welcome, Coach ${first} ${last}! Season 1 begins. You have $${(playerCoach.budget / 1e3).toFixed(1)}k to spend on ${playerCoach.scholarshipsAvailable} scholarships. Non-conference play starts on Week 3. Good luck!`, read: false }
       ],
       gameLog: [],
-      signingsLog: []
+      signingsLog: [],
+      instantClassics: []
     });
     if (school.rival) {
       state.rivalry = {
@@ -26420,7 +26603,8 @@ var _CFB = (() => {
                 var _a2;
                 return [k, typeof v === "number" ? Math.round(v) : (_a2 = v == null ? void 0 : v.xp) != null ? _a2 : 0];
               })
-            ) : null
+            ) : null,
+            classics: (state.instantClassics || []).map(classicMetadata).filter(Boolean)
           }
         );
       } catch (e) {
@@ -26876,7 +27060,11 @@ var _CFB = (() => {
           const myScore = isHome ? r.homeScore : r.awayScore;
           const oppScore = isHome ? r.awayScore : r.homeScore;
           const opp = isHome ? r.awaySchool : r.homeSchool;
+          const archivedClassic = archiveInstantClassic(state, r, weekLabel(state.day));
           addInboxMessage(`Season ${state.season} Game Result`, `${won ? "W" : "L"} ${myScore}-${oppScore} vs ${opp == null ? void 0 : opp.name}`);
+          if (archivedClassic) {
+            notify("Instant Classic " + archivedClassic.score + " \u2014 replay saved to Coach Select", "success", 5e3);
+          }
           if (!suppressModal && ((_d = state.settings) == null ? void 0 : _d.showGameResultModal) !== false) {
             state.ui.lastGameResult = r;
             if (liveWatchOn()) {
@@ -27017,6 +27205,7 @@ var _CFB = (() => {
     Object.assign(state, saved);
     state._exhibition = false;
     state._exhStash = null;
+    state._instantClassicReplay = null;
     state.ui.saves = uiBackup.saves;
     state.ui.showSaveModal = false;
     state.ui.showLoadModal = false;
@@ -27053,6 +27242,7 @@ var _CFB = (() => {
     if (!state.autoRecruitLog) state.autoRecruitLog = [];
     if (!state.awardsLog) state.awardsLog = [];
     if (!state.coachHistory) state.coachHistory = [];
+    if (!Array.isArray(state.instantClassics)) state.instantClassics = [];
     if (state.world) repairRecruitLocations(state.world);
     ensureSkills(state.playerCoach);
     ensureCareerFields(state.playerCoach);
@@ -27068,6 +27258,31 @@ var _CFB = (() => {
     }
     navigate("dashboard");
     return true;
+  }
+  function startInstantClassicReplay(entry) {
+    if (!(entry == null ? void 0 : entry.result)) return false;
+    state._instantClassicReplay = {
+      id: entry.id,
+      playerSchoolId: entry.playerSchoolId,
+      score: entry.score
+    };
+    state.ui.lastGameResult = entry.result;
+    state.ui.showGameResult = true;
+    state.ui.gameResultTab = "watch";
+    state.ui.view = "classicreplay";
+    state.ui.params = {};
+    state.ui.sidebarOpen = false;
+    rerender();
+    return true;
+  }
+  function closeInstantClassicReplay() {
+    state._instantClassicReplay = null;
+    state.ui.showGameResult = false;
+    state.ui.lastGameResult = null;
+    state.ui.gameResultTab = "boxscore";
+    state.ui.view = "mainmenu";
+    state.ui.params = {};
+    rerender();
   }
   async function refreshSaves() {
     state.ui.saves = await listSaves();
@@ -27090,6 +27305,7 @@ var _CFB = (() => {
       init_sim();
       init_persistence();
       init_constants();
+      init_instantclassics();
       init_utils();
       state = {
         initialized: false,
@@ -27117,6 +27333,8 @@ var _CFB = (() => {
         // [{season, day?, scope, category, schoolId, schoolName, playerId, playerName}] — weekly + season awards, all schools
         coachHistory: [],
         // [{season, type: 'milestone'|'development', ...}] — player-coach milestone/dev feed for the Coach Office
+        instantClassics: [],
+        // compact full-game replays; optional on legacy saves
         pendingHalftime: null,
         pendingWeeklyCands: null,
         // {day, cands} — weekly-award candidates stashed while the player's game sits at halftime (Chunk 2)
@@ -29785,6 +30003,16 @@ var _CFB = (() => {
       <button class="btn-mm btn-mm-secondary" data-mm-view="back" style="margin-top:12px">\u2190 Back</button>
     </div>`;
   }
+  function renderInstantClassics(c) {
+    const classics = Object.entries(c.worlds || {}).flatMap(([worldSlot, world]) => (world.classics || []).map((item) => __spreadProps(__spreadValues({}, item), { worldSlot }))).sort((a, b) => (b.saved || 0) - (a.saved || 0));
+    const body = classics.length ? classics.map(
+      (item) => {
+        var _a, _b;
+        return '<div class="mm-classic-row"><button class="mm-classic-watch" data-mm-classic="' + escapeHtml(item.id) + '" data-mm-classic-world="' + escapeHtml(item.worldSlot) + '"><span class="mm-classic-score">\u2605 ' + (item.score || 0) + '</span><span class="mm-classic-matchup">' + escapeHtml(item.homeName || "Home") + " " + ((_a = item.homeScore) != null ? _a : 0) + "\u2013" + ((_b = item.awayScore) != null ? _b : 0) + " " + escapeHtml(item.awayName || "Away") + '</span><span class="mm-classic-meta">World ' + escapeHtml(item.worldSlot) + " \xB7 Season " + (item.season || 1) + " \xB7 " + escapeHtml(item.week || "") + ' \xB7 Watch replay</span></button><button class="btn-mm-del mm-classic-del" data-mm-classic-del="' + escapeHtml(item.id) + '" data-mm-classic-world="' + escapeHtml(item.worldSlot) + '" title="Delete replay">\u2715</button></div>';
+      }
+    ).join("") : '<div class="mm-lib-empty muted">Close finishes, comebacks and overtime games are archived here automatically.</div>';
+    return '<div class="mm-section-label" style="margin-top:14px">INSTANT CLASSICS</div><div class="mm-classics">' + body + "</div>";
+  }
   function renderCoachHome() {
     var _a, _b, _c;
     const c = getCoach(mmCoachId);
@@ -29824,6 +30052,7 @@ var _CFB = (() => {
           </div>` : `
           <button class="btn-mm btn-mm-new mm-world-empty" data-mm-world-new="${n}">\uFF0B WORLD ${n} \u2014 start a new dynasty</button>`;
     }).join("")}
+      ${renderInstantClassics(c)}
       <div class="mm-section-label" style="margin-top:14px">PLAYBOOK LIBRARY</div>
       <div class="mm-library">
         ${(((_b = c.plans) == null ? void 0 : _b.gameplans) || []).length || (((_c = c.plans) == null ? void 0 : _c.practice) || []).length ? `
@@ -29977,6 +30206,37 @@ var _CFB = (() => {
       state._coachProfileName = c ? { first: c.name.first, last: c.name.last } : null;
       navigate("newgame");
     }));
+    document.querySelectorAll("[data-mm-classic]").forEach((b) => b.addEventListener("click", async () => {
+      var _a2;
+      const worldNo = b.dataset.mmClassicWorld;
+      const saved = await loadGame(worldSlotKey(mmCoachId, worldNo));
+      const classic = (_a2 = saved == null ? void 0 : saved.instantClassics) == null ? void 0 : _a2.find((item) => item.id === b.dataset.mmClassic);
+      if (!(classic == null ? void 0 : classic.result)) {
+        notify("That replay is no longer available in this world save.", "warning", 4500);
+        return;
+      }
+      startInstantClassicReplay(classic);
+    }));
+    document.querySelectorAll("[data-mm-classic-del]").forEach((b) => b.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      if (!confirm("Delete this Instant Classic replay?")) return;
+      const worldNo = b.dataset.mmClassicWorld;
+      const classicId = b.dataset.mmClassicDel;
+      const key = worldSlotKey(mmCoachId, worldNo);
+      const saved = await loadGame(key);
+      if (!saved || saved._incompatible) {
+        notify("That world save could not be opened.", "warning");
+        return;
+      }
+      saved.instantClassics = (saved.instantClassics || []).filter((item) => item.id !== classicId);
+      const ok = await saveGame(saved, key);
+      if (!ok) {
+        notify("The replay could not be deleted.", "warning");
+        return;
+      }
+      removeWorldClassicMeta(mmCoachId, worldNo, classicId);
+      rerender();
+    }));
     document.querySelectorAll("[data-mm-lib-del]").forEach((b) => b.addEventListener("click", () => {
       const [kind, ...rest] = b.dataset.mmLibDel.split(":");
       deleteLibraryPlan(mmCoachId, kind === "pp" ? "practice" : "gameplan", rest.join(":"));
@@ -30016,6 +30276,7 @@ var _CFB = (() => {
       init_season();
       init_coachprofile();
       init_logo();
+      init_persistence();
       mmCoachId = null;
       mmNewCoach = false;
       mmView = null;
@@ -31286,7 +31547,7 @@ var _CFB = (() => {
     var _a;
     return ((_a = C.PRESTIGE_MAX) == null ? void 0 : _a[div]) || 5;
   };
-  var cloneJson2 = (value) => JSON.parse(JSON.stringify(value));
+  var cloneJson3 = (value) => JSON.parse(JSON.stringify(value));
   var pn = {
     cfg: { home: { div: "D1", prestige: 4 }, away: { div: "D1", prestige: 4 } },
     mode: "coach",
@@ -31464,7 +31725,7 @@ var _CFB = (() => {
     }));
     (_a = document.getElementById("pn-start")) == null ? void 0 : _a.addEventListener("click", () => {
       ensureTeams();
-      startExhibition(cloneJson2(pn.home), cloneJson2(pn.away), pn.mode);
+      startExhibition(cloneJson3(pn.home), cloneJson3(pn.away), pn.mode);
     });
     (_b = document.getElementById("pn-back")) == null ? void 0 : _b.addEventListener("click", () => {
       endExhibition();
@@ -35831,7 +36092,7 @@ var _CFB = (() => {
   var SEP_R = 1.5;
   var SEP_PUSH = 0.06;
   var SEP_VMAX = 6;
-  var clamp5 = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  var clamp6 = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   function seeded(p) {
     let s = (p.clock || 0) * 7919 + (p.fieldPos || 0) * 104729 + ((p.yards || 0) + 40) * 31 + (p.down || 1) * 7 + (p.half || 1) * 13 >>> 0;
     return () => {
@@ -35868,15 +36129,15 @@ var _CFB = (() => {
       const arrive = Math.min(1, d / 2);
       const spTarget = ((_a = tgt[2]) != null ? _a : a.speed) * arrive;
       const curSp = Math.hypot(a.vx, a.vy);
-      const sp = clamp5(spTarget, curSp - DECEL * dt, curSp + a.linAccel * dt);
+      const sp = clamp6(spTarget, curSp - DECEL * dt, curSp + a.linAccel * dt);
       let dvx = dx / d * sp - a.vx, dvy = dy / d * sp - a.vy;
       const dv = Math.hypot(dvx, dvy) || 1e-6;
       const k = Math.min(1, a.accel * dt / dv);
       a.vx += dvx * k;
       a.vy += dvy * k;
     }
-    a.x = clamp5(a.x + a.vx * dt, 1, 99);
-    a.y = clamp5(a.y + a.vy * dt, 2, 60);
+    a.x = clamp6(a.x + a.vx * dt, 1, 99);
+    a.y = clamp6(a.y + a.vy * dt, 2, 60);
   }
   function constrainTrack(track, iEnd, end, span = null, iFloor = 0) {
     iEnd = Math.min(iEnd, track.length - 1);
@@ -35909,7 +36170,7 @@ var _CFB = (() => {
   }
   function pursuePt(carrier, d, spd2, leadCap = 0.24) {
     const dist = Math.hypot(carrier.x - d.x, carrier.y - d.y);
-    const lead = clamp5(dist / (d.speed || 6), 0, leadCap);
+    const lead = clamp6(dist / (d.speed || 6), 0, leadCap);
     return [carrier.x + (carrier.vx || 0) * lead, carrier.y + (carrier.vy || 0) * lead, spd2];
   }
   var SHAPES = {
@@ -35981,7 +36242,7 @@ var _CFB = (() => {
     pass_deep: ["go", "post", "corner", "seam"]
   };
   function routeWaypoints(shape, x0, y0, mid) {
-    return (SHAPES[shape] || SHAPES.hitch).map((wp) => [clamp5(x0 + wp.w * mid, 2, 98), clamp5(y0 - wp.d * YPU, 2.5, 59)]);
+    return (SHAPES[shape] || SHAPES.hitch).map((wp) => [clamp6(x0 + wp.w * mid, 2, 98), clamp6(y0 - wp.d * YPU, 2.5, 59)]);
   }
   function waypointBehavior(wps, speed, startT = 0) {
     let i = 0;
@@ -36023,10 +36284,10 @@ var _CFB = (() => {
     const defMaxY = defRaw.length ? Math.max(...defRaw.map((s) => s.y)) : 0;
     const def = defRaw.map((s) => __spreadProps(__spreadValues({}, s), { bx: s.x * 100, by: Math.max(3, 29 - (defMaxY - s.y) * 36) }));
     const qbSlot = off.find((s) => s.id === "QB") || { bx: 50, by: LOS + 3 * YPU, id: "QB", label: "QB", pos: "QB" };
-    const gain = clamp5(p.yards || 0, -15, 100);
-    const endY = clamp5(LOS - (p.td ? Math.min(p.yards || 0, 100) : gain) * YPU, -60, 61);
-    const spdFactor = (m) => m ? clamp5(1 + (m.s - 55) / 180, 0.82, 1.2) : 1;
-    const agiFactor = (m) => m ? clamp5(1 + (m.a - 55) / 260, 0.82, 1.15) : 1;
+    const gain = clamp6(p.yards || 0, -15, 100);
+    const endY = clamp6(LOS - (p.td ? Math.min(p.yards || 0, 100) : gain) * YPU, -60, 61);
+    const spdFactor = (m) => m ? clamp6(1 + (m.s - 55) / 180, 0.82, 1.2) : 1;
+    const agiFactor = (m) => m ? clamp6(1 + (m.a - 55) / 260, 0.82, 1.15) : 1;
     const A = {};
     for (const s of off) {
       const base = (_a = SPD[s.pos]) != null ? _a : s.catch ? SPD.WR : SPD.RB;
@@ -36052,7 +36313,7 @@ var _CFB = (() => {
     const PRESNAP = p.optionPhase === "jet" ? 0.95 : 0.55;
     const SNAP_ORIGIN = [50, LOS + 0.6];
     const _qbDepthYds = Math.max(0, (((_g = (_f = off.find((s) => s.id === "QB")) == null ? void 0 : _f.by) != null ? _g : LOS + 3) - LOS) / YPU);
-    const SNAP_T = clamp5(0.12 + _qbDepthYds * 0.028, 0.12, 0.32);
+    const SNAP_T = clamp6(0.12 + _qbDepthYds * 0.028, 0.12, 0.32);
     const SNAP_END = PRESNAP + SNAP_T;
     const snapFlight = (t2, dest) => {
       if (t2 < PRESNAP) return null;
@@ -36074,7 +36335,7 @@ var _CFB = (() => {
       });
     }
     let carrier = null, dur, ballPlan, throwCue = null;
-    const schedSp = (a, pt, tNow, tDue, base) => clamp5(
+    const schedSp = (a, pt, tNow, tDue, base) => clamp6(
       Math.hypot(pt[0] - a.x, pt[1] - a.y) / Math.max(0.15, tDue - tNow),
       base * 0.55,
       9.6
@@ -36084,7 +36345,7 @@ var _CFB = (() => {
       const dl = defs.filter((d) => d.grp === "DL");
       const ols = offs.filter((a) => a.slot.pos === "OL");
       const pairOf = (d) => ols.length ? ols.reduce((a, b) => Math.abs(b.slot.bx - d.slot.bx) < Math.abs(a.slot.bx - d.slot.bx) ? b : a) : null;
-      const nShed = p.sack ? Math.max(1, [p.sackerId, p.sackerId2].filter(Boolean).length) : p.hurried ? clamp5(Math.round((((_a2 = p.pressureIds) == null ? void 0 : _a2.length) || 1) * 0.6) || 1, 1, 2) : 0;
+      const nShed = p.sack ? Math.max(1, [p.sackerId, p.sackerId2].filter(Boolean).length) : p.hurried ? clamp6(Math.round((((_a2 = p.pressureIds) == null ? void 0 : _a2.length) || 1) * 0.6) || 1, 1, 2) : 0;
       const winScore = (d) => -Math.abs(d.slot.bx - qbSlot.bx) + (/^(DE|OLB)/.test(d.slot.pos) ? rnd() * 10 : rnd() * 3);
       const winners = new Set(dl.slice().sort((a, b) => winScore(b) - winScore(a)).slice(0, Math.min(nShed, dl.length)).map((d) => d.id));
       const shedT = PRESNAP + (p.sack ? 0.02 : 0.3);
@@ -36146,7 +36407,7 @@ var _CFB = (() => {
       }
       for (const d of covPool) {
         if (d.behave || taken.has(d.id)) continue;
-        const land = d.slot.pos === "CB" ? p.coverage === "Cover 2" ? [d.slot.bx, 20] : p.coverage === "Cover 4" ? [d.slot.bx, 7] : [d.slot.bx, 9] : d.slot.pos === "S" ? d.home || [d.slot.bx, 8] : [clamp5(d.slot.bx * 0.6 + 20, 20, 80), 21];
+        const land = d.slot.pos === "CB" ? p.coverage === "Cover 2" ? [d.slot.bx, 20] : p.coverage === "Cover 4" ? [d.slot.bx, 7] : [d.slot.bx, 9] : d.slot.pos === "S" ? d.home || [d.slot.bx, 8] : [clamp6(d.slot.bx * 0.6 + 20, 20, 80), 21];
         d.behave = (t2) => t2 < PRESNAP ? null : breakAt != null && t2 >= breakAt ? [breakTo()[0], breakTo()[1], d.speed] : [land[0], land[1], d.speed * 0.8];
       }
     };
@@ -36163,19 +36424,19 @@ var _CFB = (() => {
       const _fadeConcept = /Red-Zone Fade/i.test(_cn);
       const tgtSlot = !screen ? _fadeConcept && _outside.length ? _outside[0] : catchers.length ? catchers.reduce((a, b) => Math.abs(b.bx - side) < Math.abs(a.bx - side) ? b : a) : backs[0] : screenKind === "rb" ? backs[0] || catchers[0] : screenKind === "tunnel" ? _outside[0] || catchers[0] || backs[0] : _slotish[0] || catchers.find((s) => Math.abs(s.bx - 50) < 35) || catchers[0] || backs[0];
       const typAir = t === "pass_deep" ? 27 : t === "pass_medium" ? 15 : 6;
-      const air = screen ? -1.5 : p.complete && !p.turnover ? clamp5(((_h = p.yards) != null ? _h : 2) * 0.6, 2, typAir) : typAir;
+      const air = screen ? -1.5 : p.complete && !p.turnover ? clamp6(((_h = p.yards) != null ? _h : 2) * 0.6, 2, typAir) : typAir;
       const _tbx = (_i = tgtSlot == null ? void 0 : tgtSlot.bx) != null ? _i : 50;
       const _toBoundary = _tbx <= 50 ? -1 : 1;
-      const catchPt = !screen ? [clamp5(((_j = tgtSlot == null ? void 0 : tgtSlot.bx) != null ? _j : side) + (rnd() - 0.5) * 3, 4, 96), clamp5(LOS - air * YPU, 3, 40)] : screenKind === "tunnel" ? [clamp5(_tbx - _toBoundary * 10, 12, 88), LOS - 0.3] : screenKind === "rb" ? [clamp5(_tbx + (_tbx <= 50 ? -9 : 9), 6, 94), LOS + 1.8] : [clamp5(_tbx + _toBoundary * 6, 4, 96), LOS + 1.2];
+      const catchPt = !screen ? [clamp6(((_j = tgtSlot == null ? void 0 : tgtSlot.bx) != null ? _j : side) + (rnd() - 0.5) * 3, 4, 96), clamp6(LOS - air * YPU, 3, 40)] : screenKind === "tunnel" ? [clamp6(_tbx - _toBoundary * 10, 12, 88), LOS - 0.3] : screenKind === "rb" ? [clamp6(_tbx + (_tbx <= 50 ? -9 : 9), 6, 94), LOS + 1.8] : [clamp6(_tbx + _toBoundary * 6, 4, 96), LOS + 1.2];
       const _screenDelay = screenKind === "bubble" ? 0.15 : screenKind === "tunnel" ? 0.55 : 0.62;
       const _catchDepthYds = Math.max(0, (LOS - catchPt[1]) / YPU);
-      const _routeBreak = SNAP_END + clamp5(0.45 + _catchDepthYds / (SPD.WR * 1.4), 0.5, 2.1) + (p.playAction ? 0.3 : 0);
-      const _pocketBreakdown = SNAP_END + (p.hurried ? clamp5(1.15 - (((_k = p.pressureIds) == null ? void 0 : _k.length) || 1) * 0.12, 0.6, 1.15) : 2.4);
+      const _routeBreak = SNAP_END + clamp6(0.45 + _catchDepthYds / (SPD.WR * 1.4), 0.5, 2.1) + (p.playAction ? 0.3 : 0);
+      const _pocketBreakdown = SNAP_END + (p.hurried ? clamp6(1.15 - (((_k = p.pressureIds) == null ? void 0 : _k.length) || 1) * 0.12, 0.6, 1.15) : 2.4);
       const throwAt = screen ? SNAP_END + _screenDelay : Math.max(SNAP_END + 0.45, Math.min(_routeBreak, _pocketBreakdown));
-      const flight = clamp5(Math.hypot(catchPt[0] - qbSlot.bx, catchPt[1] - qbSlot.by) / 28, 0.24, 1.05);
+      const flight = clamp6(Math.hypot(catchPt[0] - qbSlot.bx, catchPt[1] - qbSlot.by) / 28, 0.24, 1.05);
       const tCatch = throwAt + flight;
       throwCue = { start: Math.max(SNAP_END, throwAt - 0.34), release: throwAt, end: throwAt + 0.28 };
-      const yac = p.complete && !p.turnover ? clamp5(Math.abs(endY - catchPt[1]) / (SPD.WR * 0.92) + 0.2, 0.25, 3.2) : 0;
+      const yac = p.complete && !p.turnover ? clamp6(Math.abs(endY - catchPt[1]) / (SPD.WR * 0.92) + 0.2, 0.25, 3.2) : 0;
       const tEnd = p.turnover ? tCatch + 0.55 : tCatch + (p.complete ? yac : 0.12);
       dur = tEnd + LINGER;
       const dropY = qbSlot.by + (qbSlot.by < 40 ? 2.2 : 3.6);
@@ -36195,7 +36456,7 @@ var _CFB = (() => {
         if (screen && b === tgtSlot) {
           A[b.id].behave = (t2, w2, a2) => t2 < PRESNAP ? null : t2 >= tCatch && p.complete && !p.turnover ? [catchPt[0], endY, schedSp(a2, [catchPt[0], endY], t2, tEnd, a2.speed)] : [catchPt[0], catchPt[1], schedSp(a2, catchPt, t2, tCatch, 5.5)];
         } else if (A[b.id] !== A.QB && !A[b.id].behave) {
-          A[b.id].behave = (t2) => t2 < PRESNAP ? null : p.playAction && t2 < PRESNAP + 0.45 ? [qbSlot.bx, LOS + 1.5, 6] : [clamp5(b.bx + (b.bx <= 50 ? -14 : 14), 4, 96), LOS + 1.2, 5.8];
+          A[b.id].behave = (t2) => t2 < PRESNAP ? null : p.playAction && t2 < PRESNAP + 0.45 ? [qbSlot.bx, LOS + 1.5, 6] : [clamp6(b.bx + (b.bx <= 50 ? -14 : 14), 4, 96), LOS + 1.2, 5.8];
         }
       }
       wireRush(p.blitzFired);
@@ -36242,7 +36503,7 @@ var _CFB = (() => {
           const ly = oy + (catchPt[1] - oy) * u;
           const dx = catchPt[0] - ox, dy = catchPt[1] - oy;
           const fd = Math.hypot(dx, dy) || 1;
-          const bow = screen ? 0 : clamp5(fd * 0.13, 0, 2.8);
+          const bow = screen ? 0 : clamp6(fd * 0.13, 0, 2.8);
           const off2 = Math.sin(u * Math.PI) * bow * (catchPt[0] >= ox ? 1 : -1);
           pt = [lx + -dy / fd * off2, ly + dx / fd * off2];
         } else if (carrier) pt = [carrier.x, carrier.y];
@@ -36283,7 +36544,7 @@ var _CFB = (() => {
     } else if (isPass && p.sack) {
       const tSack = PRESNAP + 1.45;
       dur = tSack + LINGER;
-      const sackPt = [clamp5(qbSlot.bx + (rnd() - 0.5) * 6, 6, 94), endY];
+      const sackPt = [clamp6(qbSlot.bx + (rnd() - 0.5) * 6, 6, 94), endY];
       A.QB.behave = (t2, w2, a2) => t2 < PRESNAP ? null : t2 < PRESNAP + 0.4 ? [qbSlot.bx, qbSlot.by + 3.4, 5.5] : [sackPt[0], sackPt[1], schedSp(a2, sackPt, t2, tSack, 4.4)];
       const catchers = off.filter((s) => s.catch && s.pos !== "RB" && s.pos !== "FB");
       const shapes = CONCEPT_ROUTES[p.concept] || DEPTH_ROUTES[t] || DEPTH_ROUTES.pass_medium;
@@ -36304,8 +36565,8 @@ var _CFB = (() => {
     } else {
       const scheme = !p.optionPhase && !p.isScramble ? RUN_SCHEMES[p.concept] || RUN_SCHEMES[RUN_ALIAS[p.concept]] || null : null;
       const dir = p.runDir === "left" ? -1 : p.runDir === "right" ? 1 : rnd() < 0.5 ? -1 : 1;
-      const lane = p.optionPhase === "jet" ? p.runDir === "left" ? 8 : 92 : p.isScramble ? seeded(p)() < 0.5 ? 24 : 76 : scheme ? clamp5(50 + dir * scheme.gap, 6, 94) : p.runDir === "left" ? t === "run_outside" ? 13 : 33 : p.runDir === "right" ? t === "run_outside" ? 87 : 67 : 50;
-      const endPt = [clamp5(lane + (rnd() - 0.5) * 4, 3, 97), endY];
+      const lane = p.optionPhase === "jet" ? p.runDir === "left" ? 8 : 92 : p.isScramble ? seeded(p)() < 0.5 ? 24 : 76 : scheme ? clamp6(50 + dir * scheme.gap, 6, 94) : p.runDir === "left" ? t === "run_outside" ? 13 : 33 : p.runDir === "right" ? t === "run_outside" ? 87 : 67 : 50;
+      const endPt = [clamp6(lane + (rnd() - 0.5) * 4, 3, 97), endY];
       const backs = off.filter((s) => s.pos === "RB" || s.pos === "FB" || s.pos === "WING" || s.pos === "ABACK" || s.pos === "WILDCAT");
       const deepBack = backs.length ? backs.reduce((a2, b2) => b2.by > a2.by ? b2 : a2) : null;
       const _jetMan = () => {
@@ -36324,10 +36585,10 @@ var _CFB = (() => {
       const pitchAt = p.optionPhase === "pitch" ? SNAP_END + 0.85 : null;
       const holePt = [lane, LOS + 1.6];
       const runDist = Math.hypot(holePt[0] - carrierSlot.bx, holePt[1] - carrierSlot.by) + Math.hypot(endPt[0] - holePt[0], endPt[1] - holePt[1]) + (p.isScramble ? 7 : p.optionPhase === "pitch" ? 6 : p.optionPhase === "jet" ? 4 : 0);
-      const tEnd = meshAt + clamp5(runDist / (carrier.speed * 0.92) + 0.35, 0.9, 7);
+      const tEnd = meshAt + clamp6(runDist / (carrier.speed * 0.92) + 0.35, 0.9, 7);
       dur = tEnd + LINGER;
       const hole = holePt;
-      const stretchPt = scheme && scheme.stretch ? [clamp5(50 + dir * (10 + scheme.stretch * 22), 6, 94), LOS + 3.4] : null;
+      const stretchPt = scheme && scheme.stretch ? [clamp6(50 + dir * (10 + scheme.stretch * 22), 6, 94), LOS + 3.4] : null;
       const readAt = scheme ? meshAt + 0.1 + scheme.press * 0.06 : null;
       carrier.behave = (t2) => {
         if (t2 < PRESNAP) return null;
@@ -36345,7 +36606,7 @@ var _CFB = (() => {
         const prev = carrier.behave;
         carrier.behave = (t2, w2, a2) => {
           if (t2 < meshAt) {
-            const u = clamp5(t2 / meshAt, 0, 1);
+            const u = clamp6(t2 / meshAt, 0, 1);
             const e = u * u * (3 - 2 * u);
             a2.x = fromX + (jetMeshPt[0] - fromX) * e;
             a2.y = fromY + (jetMeshPt[1] - fromY) * e;
@@ -36370,8 +36631,8 @@ var _CFB = (() => {
       const backerPool = defs.filter((d) => d.grp === "LB").sort((a2, b2) => Math.abs(a2.slot.bx - lane) - Math.abs(b2.slot.bx - lane));
       const usedBlockers = /* @__PURE__ */ new Set();
       const runBlocks = /* @__PURE__ */ new Map();
-      const blockGain = clamp5(p.yards || 0, -5, 25);
-      const sustain = clamp5(0.58 + Math.max(0, blockGain) * 0.06, 0.42, 2.1);
+      const blockGain = clamp6(p.yards || 0, -5, 25);
+      const sustain = clamp6(0.58 + Math.max(0, blockGain) * 0.06, 0.42, 2.1);
       for (const o of ols) {
         let choices = frontPool.filter((d2) => !usedBlockers.has(d2.id));
         if (!choices.length) choices = backerPool.filter((d2) => !usedBlockers.has(d2.id));
@@ -36379,21 +36640,21 @@ var _CFB = (() => {
         const d = choices.sort((a2, b2) => Math.abs(a2.slot.bx - targetX) - Math.abs(b2.slot.bx - targetX))[0];
         if (!d) {
           const shade = Math.sign(o.slot.bx - lane) || -dir || 1;
-          o.behave = (t2) => t2 < PRESNAP ? null : [clamp5((carrier.x + lane) * 0.5 + shade * 2.2, 4, 96), clamp5(carrier.y - 2, 4, LOS - 0.8), SPD.OL + 0.35];
+          o.behave = (t2) => t2 < PRESNAP ? null : [clamp6((carrier.x + lane) * 0.5 + shade * 2.2, 4, 96), clamp6(carrier.y - 2, 4, LOS - 0.8), SPD.OL + 0.35];
           continue;
         }
         usedBlockers.add(d.id);
         const secondLevel = d.grp === "LB";
         const isPuller = o === puller;
         const wash = Math.sign(d.slot.bx - lane) || Math.sign(o.slot.bx - lane) || -dir || 1;
-        const meetX = clamp5(isPuller ? lane - dir * 1.5 : secondLevel ? lane + wash * 2 : o.slot.bx * 0.58 + d.slot.bx * 0.42, 4, 96);
+        const meetX = clamp6(isPuller ? lane - dir * 1.5 : secondLevel ? lane + wash * 2 : o.slot.bx * 0.58 + d.slot.bx * 0.42, 4, 96);
         const meetY = isPuller ? LOS - 0.2 : secondLevel ? LOS - 3 : LOS + 0.15;
         const engageAt = isPuller ? meshAt + 0.38 : PRESNAP + (secondLevel ? 0.62 : 0.18) + rnd() * 0.1;
         const releaseAt = Math.min(
           tEnd - 0.12,
           Math.max(engageAt + 0.34, PRESNAP + sustain + (secondLevel ? 0.28 : 0) + rnd() * 0.16)
         );
-        const driveX = clamp5(meetX + wash * (1.5 + Math.max(0, blockGain) * 0.035), 3, 97);
+        const driveX = clamp6(meetX + wash * (1.5 + Math.max(0, blockGain) * 0.035), 3, 97);
         const driveY = secondLevel ? LOS - 4.8 : LOS - 1.35 - Math.max(0, blockGain) * 0.018;
         const phase = rnd() * Math.PI * 2;
         const rep = { o, d, meetX, meetY, driveX, driveY, wash, engageAt, releaseAt };
@@ -36404,11 +36665,11 @@ var _CFB = (() => {
           if (t2 < PRESNAP) return null;
           if (isPuller && t2 < meshAt + 0.18) {
             const trap = scheme && scheme.pull === "trap";
-            return [clamp5(50 + dir * (trap ? 4 : 9), 4, 96), LOS + 0.9, SPD.OL + 1.6];
+            return [clamp6(50 + dir * (trap ? 4 : 9), 4, 96), LOS + 0.9, SPD.OL + 1.6];
           }
           if (t2 < engageAt) return [meetX, meetY + 0.75, SPD.OL + (secondLevel ? 0.45 : 0)];
           if (t2 < releaseAt) {
-            const u = clamp5((t2 - engageAt) / Math.max(0.2, releaseAt - engageAt), 0, 1);
+            const u = clamp6((t2 - engageAt) / Math.max(0.2, releaseAt - engageAt), 0, 1);
             return [
               meetX + (driveX - meetX) * u + Math.sin(t2 * 13 + phase) * 0.18,
               meetY + (driveY - meetY) * u,
@@ -36416,8 +36677,8 @@ var _CFB = (() => {
             ];
           }
           return [
-            clamp5((carrier.x + lane) * 0.5 + wash * 2, 4, 96),
-            clamp5(carrier.y - 2.2, 4, LOS - 0.8),
+            clamp6((carrier.x + lane) * 0.5 + wash * 2, 4, 96),
+            clamp6(carrier.y - 2.2, 4, LOS - 0.8),
             SPD.OL + 0.4
           ];
         };
@@ -36431,19 +36692,19 @@ var _CFB = (() => {
       const isOption = ["dive", "keep", "pitch"].includes(p.optionPhase);
       if (isOption) {
         const optDir = dir || (p.runDir === "left" ? -1 : 1);
-        const edgeX = clamp5(50 + optDir * 18, 8, 92);
+        const edgeX = clamp6(50 + optDir * 18, 8, 92);
         const meshBackfield = [qbSlot.bx, LOS + 2.6];
         const isSpeed = String(p.concept || "").includes("Speed") || String(p.type || "") === "run_outside" && !off.find((s) => s.pos === "FB");
         const fbSlot = off.find((s) => s.pos === "FB" || s.id === "FB");
         if (!isSpeed && fbSlot && A[fbSlot.id] && A[fbSlot.id] !== carrier) {
-          A[fbSlot.id].behave = (t2) => t2 < PRESNAP ? null : t2 < meshAt + 0.15 ? [qbSlot.bx + optDir * 0.5, LOS + 1.4, 6] : [clamp5(50 + optDir * 5, 8, 92), LOS - 1, 6];
+          A[fbSlot.id].behave = (t2) => t2 < PRESNAP ? null : t2 < meshAt + 0.15 ? [qbSlot.bx + optDir * 0.5, LOS + 1.4, 6] : [clamp6(50 + optDir * 5, 8, 92), LOS - 1, 6];
         }
         if (A.QB !== carrier) {
           A.QB.behave = (t2) => t2 < PRESNAP ? null : t2 < meshAt + 0.1 ? [meshBackfield[0], meshBackfield[1], 5.5] : [edgeX, LOS + 2.2, 6.4];
         }
         const pitchManSlot = off.filter((s) => (s.pos === "RB" || s.pos === "WING" || s.pos === "ABACK") && A[s.id] !== carrier && s !== fbSlot).sort((a2, b2) => optDir > 0 ? b2.bx - a2.bx : a2.bx - b2.bx)[0];
         if (pitchManSlot && A[pitchManSlot.id] && A[pitchManSlot.id] !== carrier) {
-          A[pitchManSlot.id].behave = (t2) => t2 < PRESNAP ? null : [clamp5(edgeX + optDir * 4, 6, 94), LOS + 4.2, 6.2];
+          A[pitchManSlot.id].behave = (t2) => t2 < PRESNAP ? null : [clamp6(edgeX + optDir * 4, 6, 94), LOS + 4.2, 6.2];
         }
       }
       for (const s of off) {
@@ -36463,7 +36724,7 @@ var _CFB = (() => {
           }
           if (d.grp === "LB" && carrier.y > LOS - 0.5) {
             const lp = pursuePt(carrier, d, spCap);
-            return [lp[0], clamp5(carrier.y - 3.5, 26, 30), spCap];
+            return [lp[0], clamp6(carrier.y - 3.5, 26, 30), spCap];
           }
           return pursuePt(carrier, d, spCap);
         };
@@ -36517,14 +36778,14 @@ var _CFB = (() => {
           const dd = Math.hypot(dx, dy);
           if (dd > 1e-4 && dd < SEP_R) {
             const push = Math.min(SEP_PUSH, (SEP_R - dd) * 0.5);
-            A2.x = clamp5(A2.x + dx / dd * push, 1, 99);
-            A2.y = clamp5(A2.y + dy / dd * push, 2, 60);
+            A2.x = clamp6(A2.x + dx / dd * push, 1, 99);
+            A2.y = clamp6(A2.y + dy / dd * push, 2, 60);
           }
         }
       }
       for (const a2 of everyone) a2.track.push([a2.x, a2.y]);
       const bp = ballPlan(t2);
-      ball.track.push([clamp5(bp[0], 1, 99), clamp5(bp[1], 1.5, 60)]);
+      ball.track.push([clamp6(bp[0], 1, 99), clamp6(bp[1], 1.5, 60)]);
     }
     if (typeof beatenAt !== "undefined" && beatenAt != null) {
       const iC = Math.min(Math.round(beatenAt / STEP), n);
@@ -36597,8 +36858,8 @@ var _CFB = (() => {
       let hi = LOS + p.fieldPos * YPU + 10 * YPU - 1.2;
       lo = Math.min(lo, ballEnd.pt[1] - 0.5, endInfo ? endInfo.pt[1] - 0.5 : lo);
       hi = Math.max(hi, ballEnd.pt[1] + 0.5, endInfo ? endInfo.pt[1] + 0.5 : hi);
-      for (const a2 of everyone) for (const pt of a2.track) pt[1] = clamp5(pt[1], lo, hi);
-      for (const pt of ball.track) pt[1] = clamp5(pt[1], lo, hi);
+      for (const a2 of everyone) for (const pt of a2.track) pt[1] = clamp6(pt[1], lo, hi);
+      for (const pt of ball.track) pt[1] = clamp6(pt[1], lo, hi);
     }
     return {
       dur: dur + 1e-9,
@@ -36624,9 +36885,9 @@ var _CFB = (() => {
   function sampleTrack(track, step, t) {
     if (!track.length) return [0, 0];
     const f = t / step;
-    const i = clamp5(Math.floor(f), 0, track.length - 1);
+    const i = clamp6(Math.floor(f), 0, track.length - 1);
     const j = Math.min(i + 1, track.length - 1);
-    const u = clamp5(f - i, 0, 1);
+    const u = clamp6(f - i, 0, 1);
     return [
       track[i][0] + (track[j][0] - track[i][0]) * u,
       track[i][1] + (track[j][1] - track[i][1]) * u
@@ -43539,11 +43800,19 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     apply();
     requestAnimationFrame(() => requestAnimationFrame(apply));
   }
+  function resultViewerSchool(result) {
+    var _a, _b, _c;
+    const replaySchoolId = (_a = state._instantClassicReplay) == null ? void 0 : _a.playerSchoolId;
+    if (replaySchoolId && result) {
+      return ((_b = result.homeSchool) == null ? void 0 : _b.id) === replaySchoolId ? result.homeSchool : ((_c = result.awaySchool) == null ? void 0 : _c.id) === replaySchoolId ? result.awaySchool : result.homeSchool || result.awaySchool || null;
+    }
+    return getPlayerSchool();
+  }
   function renderApp() {
     var _a, _b, _c, _d, _e, _f;
     const _scroll = captureScroll();
     const _viewChanged = state.ui.view !== lastRenderedView;
-    const _pSchool = getPlayerSchool();
+    const _pSchool = state._instantClassicReplay ? resultViewerSchool(state.ui.lastGameResult) : getPlayerSchool();
     applyTeamColors(_pSchool);
     document.body.classList.toggle(
       "theme-school",
@@ -43573,6 +43842,13 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     if (view === "playnow") {
       root.innerHTML = `<div class="newgame-wrapper playnow-wrapper">${state.ui.showHalftime && state.pendingHalftime ? renderHalftimeTakeover() : renderPlayNow()}</div>` + renderNotification() + renderLiveWatchOverlay() + renderGameResultModal() + renderCallSheetModal() + renderFourthDownModal() + renderPlayerCardModal() + renderContextHelp() + renderTipPopover();
       playnowListeners();
+      setupGlobalListeners();
+      lastRenderedView = view;
+      return;
+    }
+    if (view === "classicreplay") {
+      const classic = state._instantClassicReplay;
+      root.innerHTML = '<div class="instant-classic-replay-shell"><div class="instant-classic-replay-mark">\u2605 INSTANT CLASSIC ' + ((classic == null ? void 0 : classic.score) || "") + "</div></div>" + renderGameResultModal();
       setupGlobalListeners();
       lastRenderedView = view;
       return;
@@ -43745,18 +44021,23 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     var _a, _b, _c;
     const r = state.ui.lastGameResult;
     if (!r || !state.ui.showGameResult) return "";
-    const school = getPlayerSchool();
+    const school = resultViewerSchool(r);
     const isHome = ((_a = r.homeSchool) == null ? void 0 : _a.id) === (school == null ? void 0 : school.id);
     const myScore = isHome ? r.homeScore : r.awayScore;
     const oppScore = isHome ? r.awayScore : r.homeScore;
     const opp = isHome ? r.awaySchool : r.homeSchool;
     const won = myScore > oppScore;
     const tab = state.ui.gameResultTab || "boxscore";
+    const isClassic = !!state._instantClassicReplay;
+    const resultTitle = isClassic ? "INSTANT CLASSIC \xB7 " + (state._instantClassicReplay.score || 0) : won ? "VICTORY" : "DEFEAT";
+    const resultTitleClass = isClassic ? "classic-text" : won ? "win-text" : "loss-text";
+    const continueLabel = isClassic ? "Back to Coach Select" : "Continue \u2192";
+    const watchLiveOption = isClassic ? "" : '<label class="watch-live-opt"><input type="checkbox" id="watch-live-toggle" ' + (((_b = state.settings) == null ? void 0 : _b.liveWatch) !== false ? "checked" : "") + "/> Watch my games LIVE (first half \u2192 locker room \u2192 second half \u2192 final)</label>";
     return `
     <div class="modal-overlay" id="game-result-overlay">
       <div class="modal game-result-modal${tab === "watch" ? " watch-desktop-modal" : ""}">
         <div class="modal-header">
-          <h2 class="${won ? "win-text" : "loss-text"}">${won ? "VICTORY" : "DEFEAT"}</h2>
+          <h2 class="${resultTitleClass}">${escapeHtml(resultTitle)}</h2>
           <button class="modal-close" id="close-game-result">\u2715</button>
         </div>
         <div class="score-display">
@@ -43766,7 +44047,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
           </div>
           <div class="score-vs">\u2013</div>
           <div class="score-team">
-            <div class="score-name">${escapeHtml(((_b = isHome ? r.awaySchool : r.homeSchool) == null ? void 0 : _b.name) || "")}</div>
+            <div class="score-name">${escapeHtml(((_c = isHome ? r.awaySchool : r.homeSchool) == null ? void 0 : _c.name) || "")}</div>
             <div class="score-num ${!won ? "win-score" : "loss-score"}">${oppScore}</div>
           </div>
         </div>
@@ -43779,10 +44060,10 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         </div>
 
         <div class="result-tab-body">
-          ${tab === "pbp" ? renderPlayByPlay(r, isHome) : tab === "watch" ? `<label class="watch-live-opt"><input type="checkbox" id="watch-live-toggle" ${((_c = state.settings) == null ? void 0 : _c.liveWatch) !== false ? "checked" : ""}/> Watch my games LIVE (first half \u2192 locker room \u2192 second half \u2192 final)</label><div id="watch-root" class="watch-root"></div>` : tab === "plan" ? renderPlanReport(r, isHome, school) : renderBoxScoreTab(r, school, isHome)}
+          ${tab === "pbp" ? renderPlayByPlay(r, isHome) : tab === "watch" ? `${watchLiveOption}<div id="watch-root" class="watch-root"></div>` : tab === "plan" ? renderPlanReport(r, isHome, school) : renderBoxScoreTab(r, school, isHome)}
         </div>
 
-        <button class="btn-primary" style="margin:0 20px 16px;width:calc(100% - 40px)" id="close-game-result-btn">Continue \u2192</button>
+        <button class="btn-primary" style="margin:0 20px 16px;width:calc(100% - 40px)" id="close-game-result-btn">${escapeHtml(continueLabel)}</button>
       </div>
     </div>
   `;
@@ -44824,19 +45105,30 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       });
     });
     (_u = document.getElementById("close-game-result")) == null ? void 0 : _u.addEventListener("click", () => {
+      if (state._instantClassicReplay) {
+        closeInstantClassicReplay();
+        return;
+      }
       state.ui.showGameResult = false;
       renderApp();
     });
     (_v = document.getElementById("close-game-result-btn")) == null ? void 0 : _v.addEventListener("click", () => {
+      if (state._instantClassicReplay) {
+        closeInstantClassicReplay();
+        return;
+      }
       state.ui.showGameResult = false;
       state.ui.lastGameResult = null;
       renderApp();
     });
     (_w = document.getElementById("game-result-overlay")) == null ? void 0 : _w.addEventListener("click", (e) => {
-      if (e.target.id === "game-result-overlay") {
-        state.ui.showGameResult = false;
-        renderApp();
+      if (e.target.id !== "game-result-overlay") return;
+      if (state._instantClassicReplay) {
+        closeInstantClassicReplay();
+        return;
       }
+      state.ui.showGameResult = false;
+      renderApp();
     });
     if (state.ui.showGameResult && (state.ui.gameResultTab || "boxscore") === "watch" && state.ui.lastGameResult) {
       initWatchMode(state.ui.lastGameResult, ((_x = state.ui.lastGameResult.homeSchool) == null ? void 0 : _x.id) === ((_y = getPlayerSchool()) == null ? void 0 : _y.id));
