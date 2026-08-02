@@ -5897,7 +5897,13 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 @keyframes wsp-deject { 0% { transform:none; } 100% { transform:rotate(6deg) translateY(.14px) scaleY(.95); } }
 /* Ball flight (Group 11) — the spiral wobble, only while the pass is in the air. */
 .wab-spin { transform-box:fill-box; transform-origin:50% 50%; }
+.wab-lift { transform-box:fill-box; transform-origin:50% 50%; }
+/* the ground shadow only shows while the ball is airborne — the height cue */
+.wab-shadow { fill:rgba(0,0,0,.35); visibility:hidden; }
+.wp-ball-air .wab-shadow, .wp-ball-kick .wab-shadow { visibility:visible; }
 .wp-ball-air .wab-spin { animation:wab-spiral .34s linear infinite; }
+/* PBP formation tag — every snap reads like film */
+.pbp-form { opacity:.62; font-weight:800; letter-spacing:.04em; }
 @keyframes wab-spiral { 0% { transform:rotate(-9deg) scaleY(.94); } 50% { transform:rotate(9deg) scaleY(1.02); } 100% { transform:rotate(-9deg) scaleY(.94); } }
 /* Broadcast cards (Group 21). */
 .wp-card-bg { fill:rgba(5,7,12,.85); stroke:var(--px-yellow); stroke-width:.4; }
@@ -5920,6 +5926,32 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 .wf-downbox-card { fill:#05070c; stroke:var(--px-yellow); stroke-width:.32; }
 .wf-downbox-num { fill:var(--px-yellow); font-size:2.9px; text-anchor:middle; font-weight:900; font-family:var(--font-pixel,monospace); }
 .wf-bench-man { opacity:.85; stroke:rgba(6,9,14,.55); stroke-width:.14; }
+/* Penalty flag (Group 19): the recorded flag tumbles in, FLAG flashes, the
+   call card follows. Only ever drawn for plays the engine flagged. */
+.wp-flag-cloth { fill:var(--px-yellow); stroke:#8a6d00; stroke-width:.22; }
+.wp-flag-knot { fill:#8a6d00; }
+.wp-flag { transform-box:fill-box; transform-origin:50% 50%;
+  animation:wp-flag-throw .85s cubic-bezier(.25,.6,.4,1) both; }
+@keyframes wp-flag-throw {
+  0% { transform:translate(-26px,-15px) rotate(0turn); opacity:0; }
+  8% { opacity:1; }
+  55% { transform:translate(-8px,-10px) rotate(1.5turn); }
+  100% { transform:translate(0,0) rotate(2.75turn); }
+}
+.wa-flag-call { fill:var(--px-yellow); font-size:7px; text-anchor:middle; font-weight:900;
+  letter-spacing:.12em; font-family:var(--font-pixel,monospace);
+  paint-order:stroke; stroke:#05070c; stroke-width:.8;
+  animation:wp-cardfade .4s steps(3,end) .55s both; }
+.wp-flag-detail { animation:wp-cardfade .3s steps(2,end) .85s both; }
+.wp-card-sub { fill:var(--px-paper,#f4f0d8); font-size:2.6px; }
+/* In-game tempo chips (coach headset bar) */
+.tc-tempo-group { display:inline-flex; gap:2px; margin-right:6px; }
+.tc-tempo { min-width:34px; }
+.tc-tempo-on { color:var(--px-black) !important; background:var(--px-yellow) !important; border-color:var(--px-paper) !important; }
+/* Flag-rate dial (Settings › Game) */
+.penalty-dial { display:flex; align-items:center; gap:10px; min-width:190px; }
+.penalty-dial input[type="range"] { flex:1; accent-color:var(--px-yellow,#ffd34d); min-height:28px; }
+.penalty-dial-val { min-width:44px; text-align:right; font-weight:900; color:var(--px-yellow,#ffd34d); }
 /* Special teams (Group 14): the leg swing and the end-over-end kicked ball. */
 #watch-board .wp-kicking .wsp-shell { animation:wsp-kick-swing .4s cubic-bezier(.3,.6,.35,1) both !important; }
 @keyframes wsp-kick-swing { 0% { transform:rotate(9deg) translateY(.06px); } 45% { transform:rotate(-16deg) translateY(-.12px); } 100% { transform:rotate(-6deg); } }
@@ -6526,7 +6558,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "0304e74bde";
+globalThis.__BUILD__ = "ff8b6f49a1";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -20132,6 +20164,10 @@ var _CFB = (() => {
     const recovered = Math.random() < 0.15;
     return { recovered, fieldPos: recovered ? 50 : clamp2(Math.round(randNorm(48, 4)), 40, 60) };
   }
+  function setPenaltyScale(v) {
+    const n = Number(v);
+    _penaltyScale = clamp2(Number.isFinite(n) ? n : 0.9, 0, 1.5);
+  }
   function rollPenalty(side, offRoster, defRoster) {
     const pool = PENALTY_CATALOG.filter((p) => p.side === side);
     const total = pool.reduce((s, p) => s + p.weight, 0);
@@ -20168,7 +20204,7 @@ var _CFB = (() => {
     return { penalty, player };
   }
   function simulateDrive(offense, defense, gameState, log, opts = {}) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya, _za;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya, _za, _Aa;
     const { roster: offRoster, depth: offDepth, gameplan: offPlan, school: offSchool, ctx: offCtx } = offense;
     const { roster: defRoster, depth: defDepth, gameplan: defPlan, school: defSchool, ctx: defCtx } = defense;
     const R = opts.resume || null;
@@ -20435,10 +20471,20 @@ var _CFB = (() => {
         const _penBlitz = (_penDefEff == null ? void 0 : _penDefEff.blitzPct) != null ? _penDefEff.blitzPct : (_k = defPlan.blitzPct) != null ? _k : 20;
         const defAggrPen = 1 + (_penPress === "press" ? 0.12 : 0) + (_penBlitz >= 40 ? 0.08 : 0);
         const sideMult = flagOnOffense ? offPenMult * iqPenMult : defPenMult * defAggrPen;
-        if (Math.random() < C.PENALTY_PER_PLAY * sideMult) {
+        if (Math.random() < C.PENALTY_PER_PLAY * sideMult * _penaltyScale) {
           const onOffense = flagOnOffense;
           const { penalty, player } = rollPenalty(onOffense ? "offense" : "defense", offRoster, defRoster);
-          const drilledAway = onOffense && penalty.preSnap && Math.random() < (((_l = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : _l.discipline) || 0) * 0.012;
+          const _forms = offPlan.offFormations || [];
+          let _fw = _forms.reduce((s2, f) => s2 + (f.weight || 1), 0) * Math.random();
+          let _penForm = ((_l = _forms[0]) == null ? void 0 : _l.id) || "Spread";
+          for (const f of _forms) {
+            if ((_fw -= f.weight || 1) <= 0) {
+              _penForm = f.id;
+              break;
+            }
+          }
+          const _penFront = defPlan.defFront && defPlan.defFront !== "auto" ? defPlan.defFront : "4-3";
+          const drilledAway = onOffense && penalty.preSnap && Math.random() < (((_m = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : _m.discipline) || 0) * 0.012;
           const yds = penalty.yards;
           const who = player ? `${player.name.first[0]}. ${player.name.last}` : null;
           const teamName = onOffense ? offSchool.name : defSchool.name;
@@ -20453,7 +20499,10 @@ var _CFB = (() => {
               penaltyName: penalty.name,
               penaltyOn: teamName,
               penaltySide: "offense",
-              penaltyPlayerId: (_m = player == null ? void 0 : player.id) != null ? _m : null,
+              penaltyPlayerId: (_n = player == null ? void 0 : player.id) != null ? _n : null,
+              offFormation: _penForm,
+              defFront: _penFront,
+              preSnap: !!penalty.preSnap,
               yards: -yds,
               autoFirst: false,
               down,
@@ -20490,7 +20539,10 @@ var _CFB = (() => {
               penaltyName: penalty.name,
               penaltyOn: teamName,
               penaltySide: "defense",
-              penaltyPlayerId: (_n = player == null ? void 0 : player.id) != null ? _n : null,
+              penaltyPlayerId: (_o = player == null ? void 0 : player.id) != null ? _o : null,
+              offFormation: _penForm,
+              defFront: _penFront,
+              preSnap: !!penalty.preSnap,
               yards: yds,
               autoFirst,
               down,
@@ -20537,7 +20589,7 @@ var _CFB = (() => {
         conceptWeights: offEff.conceptWeights,
         protEmphasis: offEff.protEmphasis,
         qbAggr: offEff.qbAggr,
-        _ocQbRunDesign: (_r = (_q = (_p = (_o = offSchool == null ? void 0 : offSchool.staff) == null ? void 0 : _o.oc) == null ? void 0 : _p.ratings) == null ? void 0 : _q.qbRunDesign) != null ? _r : 50,
+        _ocQbRunDesign: (_s = (_r = (_q = (_p = offSchool == null ? void 0 : offSchool.staff) == null ? void 0 : _p.oc) == null ? void 0 : _q.ratings) == null ? void 0 : _r.qbRunDesign) != null ? _s : 50,
         _injuriesOff: (offSchool == null ? void 0 : offSchool._injuriesOff) === true,
         _dnaAir: ((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.airAttack) || 0,
         _dnaGround: ((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.groundPound) || 0,
@@ -20568,8 +20620,8 @@ var _CFB = (() => {
         // auto/te1/slot/hot
         // DC Blitz Design (Phase 3): disguise quality. 50 is
         // neutral — the pre-coordinator game exactly.
-        blitzDesign: (_v = (_u = (_t = (_s = defSchool == null ? void 0 : defSchool.staff) == null ? void 0 : _s.dc) == null ? void 0 : _t.ratings) == null ? void 0 : _u.blitzDesign) != null ? _v : 50,
-        _dnaPressure: ((_w = defSchool == null ? void 0 : defSchool._dnaGrades) == null ? void 0 : _w.pressure) || 0,
+        blitzDesign: (_w = (_v = (_u = (_t = defSchool == null ? void 0 : defSchool.staff) == null ? void 0 : _t.dc) == null ? void 0 : _u.ratings) == null ? void 0 : _v.blitzDesign) != null ? _w : 50,
+        _dnaPressure: ((_x = defSchool == null ? void 0 : defSchool._dnaGrades) == null ? void 0 : _x.pressure) || 0,
         _dnaBallHawk: ((defSchool == null ? void 0 : defSchool._dnaGrades) == null ? void 0 : defSchool._dnaGrades.ballHawk) || 0
       });
       const _namedPlay = forcedCall && forcedCall.concept && forcedCall.concept !== "sheet" && FORMATION_PLAYBOOK && Object.values(FORMATION_PLAYBOOK).some((l) => l.includes(forcedCall.concept)) ? forcedCall.concept : null;
@@ -20583,7 +20635,7 @@ var _CFB = (() => {
         gameState.half,
         gameState.score.def - gameState.score.off,
         offFormationId,
-        (_y = (_x = defEff.subPhilosophy) != null ? _x : defPlan.subPhilosophy) != null ? _y : "auto"
+        (_z = (_y = defEff.subPhilosophy) != null ? _y : defPlan.subPhilosophy) != null ? _z : "auto"
       );
       let playType = pickPlayType(
         offFormationId,
@@ -20616,7 +20668,7 @@ var _CFB = (() => {
         } else if (PASS_CONCEPTS[nm]) {
           playType = "pass_" + PASS_CONCEPTS[nm].depth;
           forcedConceptName = nm;
-        } else if ((_z = RUN_CONCEPTS[nm]) == null ? void 0 : _z.type) {
+        } else if ((_A = RUN_CONCEPTS[nm]) == null ? void 0 : _A.type) {
           playType = RUN_CONCEPTS[nm].type;
           forcedConceptName = nm;
         }
@@ -20652,9 +20704,9 @@ var _CFB = (() => {
       const familyPinned = coachCalled || categoryCalled;
       const activeOffDepth = filterActiveDepth(offDepth, offCtx, "off");
       const activeDefDepth = filterActiveDepth(defDepth, defCtx, "def");
-      const offFA = (_B = (_A = offPlan.fieldAssignments) == null ? void 0 : _A.offense) == null ? void 0 : _B[offFormationId];
+      const offFA = (_C = (_B = offPlan.fieldAssignments) == null ? void 0 : _B.offense) == null ? void 0 : _C[offFormationId];
       const baseFront = defPlan.defBaseFront || "4-3";
-      const defFA = (_D = (_C = defPlan.fieldAssignments) == null ? void 0 : _C.defense) == null ? void 0 : _D[baseFront];
+      const defFA = (_E = (_D = defPlan.fieldAssignments) == null ? void 0 : _D.defense) == null ? void 0 : _E[baseFront];
       const offPosOf = (id) => {
         var _a2;
         return ((_a2 = offRoster.find((p) => p.id === id)) == null ? void 0 : _a2.position) || null;
@@ -20666,7 +20718,7 @@ var _CFB = (() => {
       const MESH_DEPTH_KEYS = ["SLOT", "FB", "WING", "ABACK", "WILDCAT", "JETMAN"];
       let offDepthWithSlot = activeOffDepth;
       for (const key of MESH_DEPTH_KEYS) {
-        const named = (_E = offSchool == null ? void 0 : offSchool.depthOrder) == null ? void 0 : _E[key];
+        const named = (_F = offSchool == null ? void 0 : offSchool.depthOrder) == null ? void 0 : _F[key];
         if (!(named == null ? void 0 : named.length)) continue;
         const live = named.filter((id) => offRoster.some((p) => p.id === id && p.injuryGamesOut === 0));
         if (live.length) offDepthWithSlot = __spreadProps(__spreadValues({}, offDepthWithSlot), { [key]: live });
@@ -20679,10 +20731,10 @@ var _CFB = (() => {
         const id = ((offPersonnel == null ? void 0 : offPersonnel.QB) || [])[0];
         return id ? offRoster.find((p) => p.id === id) : null;
       })();
-      const losFree = (_F = offEff.losFreedom) != null ? _F : "auto";
+      const losFree = (_G = offEff.losFreedom) != null ? _G : "auto";
       const sPl0 = (defPersonnel.S || []).map((id) => defRoster.find((pl) => pl.id === id)).filter(Boolean);
       const sAwr0 = sPl0.length ? sPl0.reduce((t, pl) => t + pl.attributes.AWR, 0) / sPl0.length : 50;
-      const covFam = coverageFamily((_G = defEff.covShell) != null ? _G : "balanced", (_H = defEff.covStyle) != null ? _H : "balanced", sAwr0);
+      const covFam = coverageFamily((_H = defEff.covShell) != null ? _H : "balanced", (_I = defEff.covStyle) != null ? _I : "balanced", sAwr0);
       const DISGUISE_SHOW = {
         "Cover 1": "Cover 2",
         "Cover 3": "Cover 2",
@@ -20694,11 +20746,11 @@ var _CFB = (() => {
       const oppMemPre = seenMemory(defCtx);
       let shownFam = covFam, fooled = false;
       if ((playType.startsWith("pass") || playType.startsWith("run")) && qb0) {
-        const pDisguise = clamp2(0.1 + (((_I = defPlanEff.blitzDesign) != null ? _I : 50) - 50) * 4e-3 + (sAwr0 - 50) * 2e-3 + Math.min(0.1, (oppMemPre.audibles || 0) * 0.012), 0.04, 0.45);
+        const pDisguise = clamp2(0.1 + (((_J = defPlanEff.blitzDesign) != null ? _J : 50) - 50) * 4e-3 + (sAwr0 - 50) * 2e-3 + Math.min(0.1, (oppMemPre.audibles || 0) * 0.012), 0.04, 0.45);
         if (Math.random() < pDisguise) {
-          shownFam = (_J = DISGUISE_SHOW[covFam]) != null ? _J : covFam;
-          const craft = ((_K = defPlanEff.blitzDesign) != null ? _K : 50) * 0.5 + sAwr0 * 0.5;
-          const read = ((_L = qb0.attributes.AWR) != null ? _L : 50) * 0.7 + ((_M = qb0.attributes.TEC) != null ? _M : 50) * 0.3;
+          shownFam = (_K = DISGUISE_SHOW[covFam]) != null ? _K : covFam;
+          const craft = ((_L = defPlanEff.blitzDesign) != null ? _L : 50) * 0.5 + sAwr0 * 0.5;
+          const read = ((_M = qb0.attributes.AWR) != null ? _M : 50) * 0.7 + ((_N = qb0.attributes.TEC) != null ? _N : 50) * 0.3;
           fooled = Math.random() < clamp2(0.5 + (craft - read) * 0.01, 0.15, 0.85);
         }
       }
@@ -20707,7 +20759,7 @@ var _CFB = (() => {
       if (qb0 && losFree !== "never" && !familyPinned) {
         const shellSeen = fooled && defEff.covShell !== "balanced" && defEff.covShell != null ? ["Cover 2", "Cover 4", "Cover 2-Man"].includes(shownFam) ? -1 : 1 : defEff.covShell === "single" ? 1 : defEff.covShell === "two" ? -1 : 0;
         const boxScore = shellSeen + (defEff.runCommit || 0) / 12;
-        const seeIt = clamp2((((_N = qb0.attributes.AWR) != null ? _N : 50) - 55) * 8e-3 * (losFree === "free" ? 1.5 : 1), 0, 0.25);
+        const seeIt = clamp2((((_O = qb0.attributes.AWR) != null ? _O : 50) - 55) * 8e-3 * (losFree === "free" ? 1.5 : 1), 0, 0.25);
         if ((playType === "run_inside" || playType === "run_outside") && boxScore >= 1 && Math.random() < seeIt) {
           playType = "pass_short";
           killCall = "toPass";
@@ -20725,7 +20777,7 @@ var _CFB = (() => {
           shotCall = true;
         }
         if (playType === "pass_short" && covMem.blitz / covMem.dropbacks >= 0.35) {
-          offPlanEff.screenRate = ((_O = offPlanEff.screenRate) != null ? _O : 14) + 6;
+          offPlanEff.screenRate = ((_P = offPlanEff.screenRate) != null ? _P : 14) + 6;
         }
       }
       const offWeights = getOffWeights(offFormationId, playType) || OFF_WEIGHTS[playType];
@@ -20739,16 +20791,16 @@ var _CFB = (() => {
       else if (playType === "run_inside" || playType === "run_outside") concept = pickRunConcept(playType, offPersonnel, offRoster, defEff, offPlanEff.conceptWeights || null, forcedConceptName, _pbGate);
       let audible = false;
       if (concept.name && playType.startsWith("pass") && qb0 && losFree !== "never" && audiblesUsed < (losFree === "free" ? 2 : 1)) {
-        const calledVs = (_R = (_Q = (_P = PASS_CONCEPTS[concept.name]) == null ? void 0 : _P.vs) == null ? void 0 : _Q[believedFam]) != null ? _R : 0;
-        const pAud = clamp2((((_S = qb0.attributes.AWR) != null ? _S : 50) - 55) * 0.012, 0, 0.35) * (losFree === "free" ? 1.4 : 1);
+        const calledVs = (_S = (_R = (_Q = PASS_CONCEPTS[concept.name]) == null ? void 0 : _Q.vs) == null ? void 0 : _R[believedFam]) != null ? _S : 0;
+        const pAud = clamp2((((_T = qb0.attributes.AWR) != null ? _T : 50) - 55) * 0.012, 0, 0.35) * (losFree === "free" ? 1.4 : 1);
         if (calledVs <= -0.02 && Math.random() < pAud) {
           const depth = playType.replace("pass_", "");
           const wrN = ((offPersonnel == null ? void 0 : offPersonnel.WR) || []).length;
           let bestName = null, bestVs = calledVs;
           for (const [nm, c] of Object.entries(PASS_CONCEPTS)) {
             if (c.depth !== depth || c.minWR && wrN < c.minWR) continue;
-            if (offPlanEff.conceptWeights && ((_T = offPlanEff.conceptWeights[nm]) != null ? _T : 50) <= 0) continue;
-            const v = (_V = (_U = c.vs) == null ? void 0 : _U[believedFam]) != null ? _V : 0;
+            if (offPlanEff.conceptWeights && ((_U = offPlanEff.conceptWeights[nm]) != null ? _U : 50) <= 0) continue;
+            const v = (_W = (_V = c.vs) == null ? void 0 : _V[believedFam]) != null ? _W : 0;
             if (v > bestVs) {
               bestVs = v;
               bestName = nm;
@@ -20762,7 +20814,7 @@ var _CFB = (() => {
             const skill = execSkill(c.exec || {}, offRoster, offPersonnel);
             concept = {
               name: bestName,
-              mod: ((_X = (_W = c.vs) == null ? void 0 : _W[covFam]) != null ? _X : 0) * clamp2(1 + (skill - 50) / 100, 0.6, 1.4)
+              mod: ((_Y = (_X = c.vs) == null ? void 0 : _X[covFam]) != null ? _Y : 0) * clamp2(1 + (skill - 50) / 100, 0.6, 1.4)
             };
           }
         }
@@ -20770,17 +20822,17 @@ var _CFB = (() => {
       if (fooled) offPlanEff._fooled = true;
       _conceptCtx = {
         name: concept.name,
-        def: concept.name ? (_Z = (_Y = PASS_CONCEPTS[concept.name]) != null ? _Y : RUN_CONCEPTS[concept.name]) != null ? _Z : null : null,
+        def: concept.name ? (__ = (_Z = PASS_CONCEPTS[concept.name]) != null ? _Z : RUN_CONCEPTS[concept.name]) != null ? __ : null : null,
         fam: covFam
       };
       offPlanEff._forcePANative = !!(concept.name && PASS_CONCEPTS[concept.name] && PASS_CONCEPTS[concept.name].paNative);
-      const offUnit = baseOffUnit * (1 + concept.mod) * (fakeSurprise ? 1.1 : 1) * h2Counter * coordIqMod(offSchool, "off", offFormationId) * (2 - coordIqMod(defSchool, "def", defFrontId)) * getMatchupEdge(offFormationId, defFrontId) * getSituationalMod(offFormationId, down, distance, gameState.clock, fieldPos) * shortYardagePower(playType, distance, offPersonnel, offRoster) * (1 + (((__ = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : __.groundPound) || 0) * 8e-3) * (down === 4 ? 1 + (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.riverboat) || 0) * 0.01 : 1) * (offense.isHome ? C.HOME_EDGE : 1 - (1 - (2 - C.HOME_EDGE)) * (1 - (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.roadWarrior) || 0) * 0.08)) * ((_$ = offense.form) != null ? _$ : 1) * (2 - ((_aa = defense.form) != null ? _aa : 1)) * ((_ba = offense.execMult) != null ? _ba : 1) * (2 - ((_ca = defense.execMult) != null ? _ca : 1)) + ((offPlan == null ? void 0 : offPlan._h2OffLean) ? offPlan._h2OffLean.eff * C.K_CONTEXT : 0);
+      const offUnit = baseOffUnit * (1 + concept.mod) * (fakeSurprise ? 1.1 : 1) * h2Counter * coordIqMod(offSchool, "off", offFormationId) * (2 - coordIqMod(defSchool, "def", defFrontId)) * getMatchupEdge(offFormationId, defFrontId) * getSituationalMod(offFormationId, down, distance, gameState.clock, fieldPos) * shortYardagePower(playType, distance, offPersonnel, offRoster) * (1 + (((_$ = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : _$.groundPound) || 0) * 8e-3) * (down === 4 ? 1 + (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.riverboat) || 0) * 0.01 : 1) * (offense.isHome ? C.HOME_EDGE : 1 - (1 - (2 - C.HOME_EDGE)) * (1 - (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.roadWarrior) || 0) * 0.08)) * ((_aa = offense.form) != null ? _aa : 1) * (2 - ((_ba = defense.form) != null ? _ba : 1)) * ((_ca = offense.execMult) != null ? _ca : 1) * (2 - ((_da = defense.execMult) != null ? _da : 1)) + ((offPlan == null ? void 0 : offPlan._h2OffLean) ? offPlan._h2OffLean.eff * C.K_CONTEXT : 0);
       const rcDef = defEff.runCommit || 0;
       const shellRunMult = playType === "run_inside" || playType === "run_outside" ? defEff.covShell === "single" ? 1.04 : defEff.covShell === "two" ? 0.95 : 1 : 1;
       const edgeRunMult = defEff.edgePlay === "contain" ? playType === "run_outside" ? 1.04 : playType === "run_inside" ? 0.98 : 1 : defEff.edgePlay === "crash" ? playType === "run_outside" ? 0.96 : playType === "run_inside" ? 1.02 : 1 : 1;
       const oppMem = seenMemory(defCtx);
-      _tkStyle = (_ea = (_da = defEff.tackleStyle) != null ? _da : defPlan.tackleStyle) != null ? _ea : "balanced";
-      _optKey = (_ga = (_fa = defEff.optionKey) != null ? _fa : defPlan.optionKey) != null ? _ga : "balanced";
+      _tkStyle = (_fa = (_ea = defEff.tackleStyle) != null ? _ea : defPlan.tackleStyle) != null ? _fa : "balanced";
+      _optKey = (_ha = (_ga = defEff.optionKey) != null ? _ga : defPlan.optionKey) != null ? _ha : "balanced";
       const defAwrFactor = (() => {
         const readers = [...defPersonnel.LB || [], ...defPersonnel.S || []].map((id) => defRoster.find((p) => p.id === id)).filter(Boolean);
         const awr = readers.length ? readers.reduce((s2, p) => s2 + p.attributes.AWR, 0) / readers.length : 50;
@@ -20799,14 +20851,14 @@ var _CFB = (() => {
         offRoster,
         offCtx.fatigueMap,
         slotMap(offPersonnel),
-        (((_ha = offense.form) != null ? _ha : 1) * ((_ia = offense.execMult) != null ? _ia : 1) - 1) * C.FORM_ATTR_SCALE
+        (((_ia = offense.form) != null ? _ia : 1) * ((_ja = offense.execMult) != null ? _ja : 1) - 1) * C.FORM_ATTR_SCALE
       );
       const effDefRoster = makeEffectiveRoster(
         onFieldDef,
         defRoster,
         defCtx.fatigueMap,
         slotMap(defPersonnel),
-        (((_ja = defense.form) != null ? _ja : 1) * ((_ka = defense.execMult) != null ? _ka : 1) - 1) * C.FORM_ATTR_SCALE
+        (((_ka = defense.form) != null ? _ka : 1) * ((_la = defense.execMult) != null ? _la : 1) - 1) * C.FORM_ATTR_SCALE
       );
       const qbId = ((offPersonnel == null ? void 0 : offPersonnel.QB) || activeOffDepth["QB"] || [])[0];
       let qb = qbId ? effOffRoster.find((p) => p.id === qbId) : null;
@@ -20837,17 +20889,17 @@ var _CFB = (() => {
           const optShare = offPlanEff.optionRate != null ? clamp2(offPlanEff.optionRate / 100, 0, 1) : OPTION_CAPABLE[offFormationId];
           optionSnap = Math.random() < optShare;
         } else if (SPEED_OPTION[offFormationId] != null) {
-          const optShare = SPEED_OPTION[offFormationId] * clamp2(((_la = offPlanEff.optionRate) != null ? _la : 70) / 70, 0, 1.5);
+          const optShare = SPEED_OPTION[offFormationId] * clamp2(((_ma = offPlanEff.optionRate) != null ? _ma : 70) / 70, 0, 1.5);
           if (Math.random() < optShare) {
             optionSnap = true;
             optionStyle = "speed";
           }
         }
       }
-      const rpoFit = (_ma = C.RPO_FIT[offFormationId]) != null ? _ma : 0.5;
+      const rpoFit = (_na = C.RPO_FIT[offFormationId]) != null ? _na : 0.5;
       const rpoKeyMult = defEff.optionKey === "qb" ? 0.7 : 1;
       const calledRPO = !!(offPlanEff && offPlanEff._forceRPO);
-      if (!optionSnap && !forcedGadget && qb && (calledRPO || rpoFit > 0 && playType.startsWith("run") && Math.random() < ((_na = offPlanEff.rpoRate) != null ? _na : 40) / 100 * rpoFit * rpoKeyMult)) {
+      if (!optionSnap && !forcedGadget && qb && (calledRPO || rpoFit > 0 && playType.startsWith("run") && Math.random() < ((_oa = offPlanEff.rpoRate) != null ? _oa : 40) / 100 * rpoFit * rpoKeyMult)) {
         const lbs = ((defPersonnel == null ? void 0 : defPersonnel.LB) || []).map((id) => {
           var _a2;
           return (_a2 = defRoster == null ? void 0 : defRoster.find) == null ? void 0 : _a2.call(defRoster, (p) => p.id === id);
@@ -20879,13 +20931,13 @@ var _CFB = (() => {
         }
       }
       let wildcatTaker = null;
-      if (offFormationId === "Wildcat" && !jetMan && (!coachCalled || forcedGadget === "wildcat") && (effPlayType === "run_inside" || effPlayType === "run_outside") && ((_oa = offField == null ? void 0 : offField.bySlot) == null ? void 0 : _oa.RB_H)) {
+      if (offFormationId === "Wildcat" && !jetMan && (!coachCalled || forcedGadget === "wildcat") && (effPlayType === "run_inside" || effPlayType === "run_outside") && ((_pa = offField == null ? void 0 : offField.bySlot) == null ? void 0 : _pa.RB_H)) {
         wildcatTaker = effOffRoster.find((p) => p.id === offField.bySlot.RB_H) || null;
       }
       let drawSnap = false;
       if (forcedGadget === "draw" && effPlayType === "run_inside") {
         drawSnap = true;
-      } else if (!optionSnap && !jetMan && !wildcatTaker && !coachCalled && effPlayType === "run_inside" && Math.random() < clamp2(((_pa = offPlanEff.drawRate) != null ? _pa : DRAW_DEFAULT) / 100, 0, 0.35)) {
+      } else if (!optionSnap && !jetMan && !wildcatTaker && !coachCalled && effPlayType === "run_inside" && Math.random() < clamp2(((_qa = offPlanEff.drawRate) != null ? _qa : DRAW_DEFAULT) / 100, 0, 0.35)) {
         drawSnap = true;
       }
       let playResult;
@@ -20911,7 +20963,7 @@ var _CFB = (() => {
         let pitchManId = null;
         if (offField == null ? void 0 : offField.bySlot) {
           const wings = ["RB_H", "RB_2"].map((sid) => offField.bySlot[sid]).map((id) => id && effOffRoster.find((p) => p.id === id)).filter(Boolean);
-          pitchManId = (_ra = (_qa = wings.sort((a, b) => (b.attributes.SPD || 0) - (a.attributes.SPD || 0))[0]) == null ? void 0 : _qa.id) != null ? _ra : null;
+          pitchManId = (_sa = (_ra = wings.sort((a, b) => (b.attributes.SPD || 0) - (a.attributes.SPD || 0))[0]) == null ? void 0 : _ra.id) != null ? _sa : null;
         }
         playResult = resolveOptionPlay(
           effPlayType,
@@ -20933,12 +20985,12 @@ var _CFB = (() => {
       } else if (effPlayType === "run_inside" || effPlayType === "run_outside") {
         let drawOverride = null;
         if (drawSnap) {
-          const caughtBlitz = Math.random() < clamp2(((_sa = defPlanEff.blitzPct) != null ? _sa : 20) / 100 + (defPlanEff.edgePlayEff === "crash" ? 0.12 : defPlanEff.edgePlayEff === "contain" ? -0.06 : 0), 0.05, 0.75);
+          const caughtBlitz = Math.random() < clamp2(((_ta = defPlanEff.blitzPct) != null ? _ta : 20) / 100 + (defPlanEff.edgePlayEff === "crash" ? 0.12 : defPlanEff.edgePlayEff === "contain" ? -0.06 : 0), 0.05, 0.75);
           if (caughtBlitz) {
             drawOverride = { laneShift: 0.14, forcePenetrator: null, phase: "draw" };
           } else {
             const mike = (defPersonnel.LB || []).map((id) => effDefRoster.find((p) => p.id === id)).filter(Boolean)[0] || null;
-            const sniffP = clamp2(0.28 + (((_ta = mike == null ? void 0 : mike.attributes.AWR) != null ? _ta : 50) - 50) * 5e-3 - (((_ua = qb == null ? void 0 : qb.attributes.TEC) != null ? _ua : 50) - 50) * 18e-4 + Math.min(0.15, (oppMem.draw || 0) * 0.03), 0.1, 0.65);
+            const sniffP = clamp2(0.28 + (((_ua = mike == null ? void 0 : mike.attributes.AWR) != null ? _ua : 50) - 50) * 5e-3 - (((_va = qb == null ? void 0 : qb.attributes.TEC) != null ? _va : 50) - 50) * 18e-4 + Math.min(0.15, (oppMem.draw || 0) * 0.03), 0.1, 0.65);
             drawOverride = Math.random() < sniffP ? { laneShift: -0.12, forcePenetrator: mike, phase: "draw" } : { laneShift: 0.04, forcePenetrator: null, phase: "draw" };
           }
         }
@@ -20989,7 +21041,7 @@ var _CFB = (() => {
       {
         let fam = covFam;
         if (playResult.fireZone) fam = "C3 Fire Zone";
-        else if (playResult.blitzFired && fam === "Cover 1" && ((_va = defEff.blitzPct) != null ? _va : 20) >= 40) fam = "Cover 0";
+        else if (playResult.blitzFired && fam === "Cover 1" && ((_wa = defEff.blitzPct) != null ? _wa : 20) >= 40) fam = "Cover 0";
         playResult.coverage = fam;
         if (shownFam !== covFam) {
           playResult.shownCoverage = shownFam;
@@ -21005,6 +21057,7 @@ var _CFB = (() => {
         }
         playResult.concept = playResult.optionPhase === "jet" ? "Jet Sweep" : playResult.optionPhase === "draw" ? "Draw" : playResult.optionPhase === "wildcat" ? "Wildcat Power" : ["dive", "keep", "pitch"].includes(playResult.optionPhase) ? optionStyle === "speed" ? "Speed Option" : "Triple Option" : concept.name;
       }
+      if (fakeSurprise) playResult.stFake = true;
       fakeSurprise = false;
       oppMem.snaps++;
       oppMem.types[playType] = (oppMem.types[playType] || 0) + 1;
@@ -21025,17 +21078,25 @@ var _CFB = (() => {
         offFormation: offFormationId,
         defFront: defFrontId,
         carrierSlotId: _carrierSlotId,
+        // Arm talent stamp (recording only): the viewer reads this for
+        // ball-flight zip/arc. Never feeds back into any outcome.
+        qbArm: (() => {
+          var _a2;
+          const qid = (_a2 = offField == null ? void 0 : offField.bySlot) == null ? void 0 : _a2.QB;
+          const q = qid ? offRoster.find((pp) => pp.id === qid) : null;
+          return q ? q.attributes.STR : null;
+        })(),
         offSpd: slotSpeedMap(offField == null ? void 0 : offField.bySlot, offRoster),
         defSpd: slotSpeedMap(defBaseField == null ? void 0 : defBaseField.bySlot, defRoster),
         offSit,
-        tempo: offEff.tempo,
-        blitzFired: (_wa = playResult.blitzFired) != null ? _wa : false,
+        tempo: offPlan._liveTempo || offEff.tempo,
+        blitzFired: (_xa = playResult.blitzFired) != null ? _xa : false,
         clock: gameState.clock,
         half: gameState.half,
         scoreOff: gameState.score.off,
         scoreDef: gameState.score.def
       }));
-      const isHurry = offEff.tempo === "Hurry";
+      const isHurry = (offPlan._liveTempo || offEff.tempo) === "Hurry";
       const _gpGrade = ((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.groundPound) || 0;
       const _late = (gameState.half || 1) >= 2;
       const _gpFatigueMult = _late ? 1 - _gpGrade * 0.015 : 1;
@@ -21054,13 +21115,13 @@ var _CFB = (() => {
       if (!offPlanEff._injuriesOff && playResult.qbInjured && playResult.qbInjuryGames > 0 && playResult.rusherId) {
         const injQb = offRoster.find((p) => p.id === playResult.rusherId);
         if (injQb) {
-          const medMult = 1 - (((_ya = (_xa = offSchool == null ? void 0 : offSchool.facilities) == null ? void 0 : _xa.medicine) != null ? _ya : 2) - 2) * 0.08;
+          const medMult = 1 - (((_za = (_ya = offSchool == null ? void 0 : offSchool.facilities) == null ? void 0 : _ya.medicine) != null ? _za : 2) - 2) * 0.08;
           injQb.injuryGamesOut = Math.max(1, Math.round(Math.max(injQb.injuryGamesOut || 0, playResult.qbInjuryGames) * medMult));
           injQb.injury = makeInjury(injQb.injuryGamesOut, gameState.week || 0);
           offCtx.benchedMap[injQb.id] = true;
         }
       }
-      const tempoMult = (_za = C.TEMPO_MULT[offEff.tempo]) != null ? _za : 1;
+      const tempoMult = (_Aa = C.TEMPO_MULT[offPlan._liveTempo || offEff.tempo]) != null ? _Aa : 1;
       let elapsed = Math.max(4, Math.round(randNorm(
         (playType.startsWith("run") ? C.CLOCK_RUN.mean : C.CLOCK_PASS.mean) * tempoMult,
         playType.startsWith("run") ? C.CLOCK_RUN.sd : C.CLOCK_PASS.sd
@@ -21397,7 +21458,9 @@ var _CFB = (() => {
         const oppScore = possession === "home" ? token.awayScore : token.homeScore;
         const marginBefore = scorerScore - oppScore;
         const secsLeft = half >= 2 ? clock : 9999;
-        const chaseTwo = secsLeft <= 480 && (marginBefore === -2 || marginBefore === -5 || marginBefore === -10 || marginBefore === -12 || marginBefore === -13);
+        const _sGP = possession === "home" ? token.homeGP : token.awayGP;
+        const _pat = (_sGP == null ? void 0 : _sGP.patApproach) || "chart";
+        const chaseTwo = _pat === "kick" ? secsLeft <= 300 && marginBefore === -2 : _pat === "aggressive" ? secsLeft <= 900 && [1, -2, -5, -9, -10, -12, -13, -16].includes(marginBefore) : secsLeft <= 480 && (marginBefore === -2 || marginBefore === -5 || marginBefore === -10 || marginBefore === -12 || marginBefore === -13);
         let addPts = 6;
         const dStats = possession === "home" ? homeStats : awayStats;
         if (chaseTwo) {
@@ -22110,7 +22173,7 @@ var _CFB = (() => {
       twoPtMade: 0
     };
   }
-  var QB_RUN_BASE, OPTION_CAPABLE, CALL_CATEGORIES, SPEED_OPTION, JET_CAPABLE, DRAW_DEFAULT, JET_SLOTS, _passCtx, _tkStyle, _optKey, _conceptCtx, FATIGUE_PHYSICAL, REAL_SLOTS, _rosterByIdCache, TYPE_BASELINE, DIFFICULTY_EDGE;
+  var QB_RUN_BASE, OPTION_CAPABLE, CALL_CATEGORIES, SPEED_OPTION, JET_CAPABLE, DRAW_DEFAULT, JET_SLOTS, _passCtx, _tkStyle, _optKey, _conceptCtx, FATIGUE_PHYSICAL, REAL_SLOTS, _rosterByIdCache, _penaltyScale, TYPE_BASELINE, DIFFICULTY_EDGE;
   var init_sim = __esm({
     "js/engine/sim.js"() {
       init_constants();
@@ -22182,6 +22245,7 @@ var _CFB = (() => {
       FATIGUE_PHYSICAL = ["SPD", "STR", "AGI", "PWR", "JMP"];
       REAL_SLOTS = /* @__PURE__ */ new Set(["QB", "RB", "WR", "TE", "OL", "DE", "DT", "OLB", "LB", "CB", "S", "K", "P"]);
       _rosterByIdCache = /* @__PURE__ */ new WeakMap();
+      _penaltyScale = 0.9;
       TYPE_BASELINE = {
         run_inside: 0.28,
         run_outside: 0.18,
@@ -27366,6 +27430,8 @@ var _CFB = (() => {
       autoRecruit: false,
       revealScouting: false,
       darkMode: false,
+      penaltyRate: 90,
+      // flag-rate dial default: 10% fewer flags than the old tuned rate
       recruitStrategy: { priorities: [], aggression: "balanced", qualityFloor: 0 }
     }, state.settings || {});
     if (state.settings.recruitAssist == null) {
@@ -27512,6 +27578,9 @@ var _CFB = (() => {
           // Game settings
           showGameResultModal: true,
           rivalCommitNotifications: true,
+          // Flag rate (Aug 2026): percent of the old tuned penalty rate, applied to
+          // every simulated game. Default 90 = 10% fewer flags. Settings › Game dial.
+          penaltyRate: 90,
           darkMode: false,
           // default OFF (Jul 2026): new dynasties open in
           // school-color mode; dark is opt-in via Settings.
@@ -27793,6 +27862,17 @@ var _CFB = (() => {
                 `).join("")}
               </div>
               <div class="gp-tip tip-info">\u25B8 A standing green light, not a play call: on makeable 4th downs (short distance, decent field position) your unit occasionally runs it instead of kicking, with the element of surprise on your side. Aggressive gets you a few gifts a season \u2014 and a few gut-punch turnovers on downs.</div>
+            </div>
+
+            <div class="gp-row">
+              <label class="gp-label">PAT Approach <span class="gp-hint">(after touchdowns)</span></label>
+              <div class="gp-options">
+                ${[["kick", "Kick It"], ["chart", "By the Chart"], ["aggressive", "Aggressive"]].map(([val, lbl]) => `
+                  <button class="gp-option gp-option-sm${(gp.patApproach || "chart") === val ? " active" : ""}"
+                          data-gp-set="patApproach" data-gp-val="${val}">${lbl}</button>
+                `).join("")}
+              </div>
+              <div class="gp-tip tip-info">\u25B8 BY THE CHART (default) kicks the near-automatic point and only chases two in the classic late-game deficits (down 2, 5, 10\u2026). KICK IT trots the kicker out unless it's the naked must-have two in the final five minutes. AGGRESSIVE opens the full analytics card in the second half \u2014 up 1, down 9, down 16 \u2014 for coaches who play for the lead, not the tie.</div>
             </div>
 
             <div class="gp-row">
@@ -28476,6 +28556,18 @@ var _CFB = (() => {
                   data-gp-set="${key}" data-gp-val="${val}">${lbl}</button>`).join("")}
       </div>
     </div>`;
+    const boolRow = (label, cur, key) => `
+    <div class="ht-adj-row">
+      <div class="ht-adj-head">
+        <span class="ht-adj-label">${label}</span>
+        <span class="ht-adj-cur">${cur === true ? "ON" : "OFF"}</span>
+      </div>
+      <div class="gp-options ht-adj-opts">
+        ${[[false, "Off"], [true, "On"]].map(([val, lbl]) => `
+          <button class="gp-option gp-option-sm${cur === true === val ? " active" : ""}"
+                  data-gp-boolset="${key}" data-gp-boolval="${val}">${lbl}</button>`).join("")}
+      </div>
+    </div>`;
     const pass = Math.round((PASS_TENDENCY[gp.tendency] || 0.5) * 100);
     const tendOpts = Object.keys(PASS_TENDENCY).map((t) => [t, t]);
     const fourthShort = { "Very Conservative": "V.Cons", "Conservative": "Cons", "Moderate": "Mod", "Aggressive": "Aggr", "Very Aggressive": "V.Aggr" };
@@ -28508,6 +28600,8 @@ var _CFB = (() => {
         ${chipRow("Safety Shell", gp.covShell || "balanced", [["single", "1-High"], ["balanced", "Mix"], ["two", "2-High"]], "covShell")}
         ${chipRow("Coverage Style", gp.covStyle || "balanced", [["man", "Man"], ["balanced", "Mix"], ["zone", "Zone"]], "covStyle")}
         ${chipRow("Cushion", gp.pressLevel || "balanced", [["press", "Press"], ["balanced", "Mix"], ["off", "Off"]], "pressLevel")}
+        ${boolRow("QB Spy", gp.spyQB === true, "spyQB")}
+        ${boolRow("Green Dog", gp.greenDog === true, "greenDog")}
         <div class="ht-adj-row">
           <div class="ht-adj-head"><span class="ht-adj-label">Blitz Rate</span><span class="ht-adj-cur" id="blitz-val">${gp.blitzPct != null ? gp.blitzPct : 20}%</span></div>
           <input class="gp-slider" type="range" id="blitz-pct" min="0" max="60" value="${gp.blitzPct != null ? gp.blitzPct : 20}" />
@@ -28618,6 +28712,8 @@ var _CFB = (() => {
       [["wrap", "Wrap Up"], ["balanced", "Mix"], ["strip", "Strip"]],
       "tackleStyle"
     )}
+        ${boolRow("QB Spy", gp.spyQB === true, "spyQB")}
+        ${boolRow("Green Dog", gp.greenDog === true, "greenDog")}
         <div class="ht-adj-row">
           <div class="ht-adj-head">
             <span class="ht-adj-label">Run Commit (box)</span>
@@ -36417,11 +36513,12 @@ var _CFB = (() => {
   };
   var RUN_ALIAS = { "Wildcat Power": "Power", "Triple Option": "Inside Zone", "Speed Option": "Outside Zone" };
   function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
     const t = String((p == null ? void 0 : p.type) || "");
-    const isRun = t.startsWith("run") || (p == null ? void 0 : p.isScramble);
+    const isRun = (t.startsWith("run") || (p == null ? void 0 : p.isScramble)) && t !== "penalty";
     const isPass = t.startsWith("pass") && !(p == null ? void 0 : p.isScramble);
-    if (!p || !(offSlotsRaw == null ? void 0 : offSlotsRaw.length) || !isRun && !isPass) return null;
+    const isPen = t === "penalty" && !!(p == null ? void 0 : p.offFormation);
+    if (!p || !(offSlotsRaw == null ? void 0 : offSlotsRaw.length) || !isRun && !isPass && !isPen) return null;
     const rnd = seeded(p);
     const DEPTH_YDS_PER_Y = 18;
     const yToBoard = (y) => LOS + Math.max(0, y - 0.5) * DEPTH_YDS_PER_Y * YPU;
@@ -36459,6 +36556,8 @@ var _CFB = (() => {
     let tackleCue = null, moveCue = null;
     const rushCues = [], jamCues = [];
     let pressCue = null, pumpCue = null, celebrateCue = null;
+    let _penWhistle = null;
+    const missCues = [];
     const pickMove = () => {
       if (p.btStyle === "truck") return "truck";
       if (p.btStyle === "evade") {
@@ -36548,7 +36647,7 @@ var _CFB = (() => {
           mine ? Math.min(2.4, Math.max(0, t2 - PRESNAP) * mine._push) : 0,
           isOT ? Math.min(1.3, Math.max(0, t2 - PRESNAP) * 2) : 0
         );
-        o.behave = (t2) => t2 < PRESNAP ? null : beaten && t2 >= shedT ? [(o.x + A.QB.x) / 2, A.QB.y - 3.5, SPD.OL] : [ax + (rnd() - 0.5) * 0.5, ay + setAt(t2), SPD.OL];
+        o.behave = (t2) => t2 < PRESNAP ? null : beaten && t2 >= shedT ? [(o.x + A.QB.x) / 2, A.QB.y - 3.5, o.speed] : [ax + (rnd() - 0.5) * 0.5, ay + setAt(t2), o.speed];
       });
       if (blitz) {
         const dog = defs.find((d) => d.grp === "LB");
@@ -36596,7 +36695,48 @@ var _CFB = (() => {
         d.behave = (t2) => t2 < PRESNAP ? null : breakAt != null && t2 >= breakAt ? [breakTo()[0], breakTo()[1], d.speed] : [land[0], land[1], d.speed * 0.8];
       }
     };
-    if (isPass && !p.sack) {
+    if (isPen) {
+      const preFoul = p.preSnap !== false;
+      const tWhistle = preFoul ? PRESNAP + 0.05 : SNAP_END + 1.15;
+      _penWhistle = tWhistle;
+      dur = tWhistle + 0.45 + LINGER;
+      if (!preFoul) {
+        const catchers = off.filter((s) => s.catch && s.pos !== "RB" && s.pos !== "FB");
+        const shapes = DEPTH_ROUTES.pass_medium;
+        [...catchers].sort((a2, b2) => Math.abs(b2.bx - 50) - Math.abs(a2.bx - 50)).forEach((s, i) => {
+          A[s.id].behave = waypointBehavior(routeWaypoints(shapes[i % shapes.length], s.bx, s.by, s.bx <= 50 ? 1 : -1), A[s.id].speed, PRESNAP);
+        });
+        A.QB.behave = (t2) => t2 < PRESNAP ? null : t2 < SNAP_END ? [qbSlot.bx, qbSlot.by, 3] : [qbSlot.bx, qbSlot.by + 1.4, 4.5];
+        for (const s of off) {
+          if (A[s.id].behave || s.pos === "OL") continue;
+          A[s.id].behave = (t2) => t2 < PRESNAP ? null : [clamp6(s.bx + (s.bx <= 50 ? -8 : 8), 4, 96), LOS + 1.4, 5.5];
+        }
+        wireRush(false);
+        wireCoverage(catchers, null, () => [50, 22]);
+        for (const a2 of [...offs, ...defs]) {
+          const pv = a2.behave;
+          a2.behave = (t2, w2, aa) => t2 >= tWhistle ? null : pv ? pv(t2, w2, aa) : null;
+        }
+      }
+      ballPlan = (t2) => {
+        if (preFoul || t2 < PRESNAP) return [50, LOS + 0.6];
+        const snap = snapFlight(t2, () => [A.QB.x, A.QB.y - 0.8]);
+        return snap || [A.QB.x, A.QB.y - 0.8];
+      };
+      const pyds = Math.abs(p.yards || 0);
+      const verdict = p.penaltySide === "offense" ? `${pyds} YDS \u2014 REPLAY THE DOWN` : `${pyds} YDS${p.autoFirst ? " \u2014 AUTOMATIC 1ST DOWN" : ""}`;
+      fx.push({
+        t: preFoul ? Math.max(0.1, PRESNAP - 0.2) : tWhistle - 0.25,
+        kind: "flag",
+        x: clamp6(50 + ((p.fieldPos || 50) % 5 - 2) * 2.2, 8, 92),
+        y: LOS + (preFoul ? 0.6 : 2.4),
+        name: String(p.penaltyName || "PENALTY"),
+        team: String(p.penaltyOn || ""),
+        verdict,
+        pre: preFoul
+      });
+      var ballEnd = { at: dur, pt: null };
+    } else if (isPass && !p.sack) {
       const catchers = off.filter((s) => s.catch && s.pos !== "RB" && s.pos !== "FB");
       const backs = off.filter((s) => s.catch && (s.pos === "RB" || s.pos === "FB"));
       const seedId = String(p.receiverId || p.targetId || "");
@@ -36618,9 +36758,10 @@ var _CFB = (() => {
       const _routeBreak = SNAP_END + clamp6(0.45 + _catchDepthYds / (SPD.WR * 1.4), 0.5, 2.1) + (p.playAction ? 0.3 : 0);
       const _pocketBreakdown = SNAP_END + (p.hurried ? clamp6(1.15 - (((_k = p.pressureIds) == null ? void 0 : _k.length) || 1) * 0.12, 0.6, 1.15) : 2.4);
       const throwAt = screen ? SNAP_END + _screenDelay : Math.max(SNAP_END + 0.45, Math.min(_routeBreak, _pocketBreakdown));
-      const flight = clamp6(Math.hypot(catchPt[0] - qbSlot.bx, catchPt[1] - qbSlot.by) / 28, 0.24, 1.05);
+      const armF = p.qbArm != null ? clamp6(1 + (p.qbArm - 55) / 160, 0.86, 1.16) : 1;
+      const flight = clamp6(Math.hypot(catchPt[0] - qbSlot.bx, catchPt[1] - qbSlot.by) / (28 * armF), 0.22, 1.05);
       const tCatch = throwAt + flight;
-      throwCue = { start: Math.max(SNAP_END, throwAt - 0.34), release: throwAt, end: throwAt + 0.28 };
+      throwCue = { start: Math.max(SNAP_END, throwAt - 0.34), release: throwAt, end: throwAt + 0.28, arm: (_l = p.qbArm) != null ? _l : null };
       if (p.hurried && !screen) pressCue = { start: Math.max(SNAP_END + 0.25, throwAt - 0.5), end: throwAt + 0.05 };
       if (!screen && t === "pass_deep" && throwAt - SNAP_END > 1.35 && rnd() < 0.4) {
         const pt2 = SNAP_END + (throwAt - SNAP_END) * 0.45;
@@ -36705,7 +36846,7 @@ var _CFB = (() => {
         } else {
           const climbing = offs.filter((a) => a.slot.pos === "OL").slice(0, 2);
           climbing.forEach((o, i) => {
-            o.behave = (t2) => t2 < throwAt - 0.15 ? [o.slot.bx, o.slot.by + 1.2, 3] : [catchPt[0] + (i ? 2 : -2), catchPt[1] - 2 - i, SPD.OL + 1];
+            o.behave = (t2) => t2 < throwAt - 0.15 ? [o.slot.bx, o.slot.by + 1.2, 3] : [catchPt[0] + (i ? 2 : -2), catchPt[1] - 2 - i, o.speed + 1];
           });
         }
       }
@@ -36731,7 +36872,7 @@ var _CFB = (() => {
           const ly = oy + (catchPt[1] - oy) * u;
           const dx = catchPt[0] - ox, dy = catchPt[1] - oy;
           const fd = Math.hypot(dx, dy) || 1;
-          const bow = screen ? 0 : clamp6(fd * (t === "pass_deep" ? 0.17 : t === "pass_short" ? 0.1 : 0.13), 0, 3.2);
+          const bow = screen ? 0 : clamp6(fd * (t === "pass_deep" ? 0.1 : t === "pass_short" ? 0.045 : 0.07) * (2 - armF), 0, 2);
           const off2 = Math.sin(u * Math.PI) * bow * (catchPt[0] >= ox ? 1 : -1);
           pt = [lx + -dy / fd * off2, ly + dx / fd * off2];
         } else if (carrier) pt = [carrier.x, carrier.y];
@@ -36770,7 +36911,7 @@ var _CFB = (() => {
         if (!p.td && p.distance != null && (p.yards || 0) >= p.distance)
           fx.push({ t: tEnd + 0.35, kind: "fd", x: catchPt[0], y: endY });
       }
-      if (p.complete && !p.turnover && ((_l = p.yards) != null ? _l : 0) >= 15) {
+      if (p.complete && !p.turnover && ((_m = p.yards) != null ? _m : 0) >= 15) {
         var beatenAt = tCatch, beatenPt = catchPt;
       }
       var endInfo = carrier ? { actor: carrier, at: tEnd, pt: [catchPt[0], endY] } : null;
@@ -36816,6 +36957,7 @@ var _CFB = (() => {
       const jetMeshX = Math.abs(_qbX - 50) < 20 ? _qbX + (p.runDir === "left" ? -2 : 2) : 50 + (p.runDir === "left" ? -2 : 2);
       const jetMeshPt = isJet ? [jetMeshX, LOS + 2.2] : null;
       const meshAt = directSnap ? SNAP_END : isJet ? SNAP_END + 0.18 : SNAP_END + (p.optionPhase === "draw" ? 0.55 : p.isScramble ? 0.85 : 0.28);
+      if (isJet) carrier.speed = Math.max(carrier.speed, 8);
       const pitchAt = p.optionPhase === "pitch" ? SNAP_END + 0.85 : null;
       const HANDOFF = 0.14;
       const _backSide = carrierSlot.bx <= qbSlot.bx ? -1 : 1;
@@ -36834,10 +36976,11 @@ var _CFB = (() => {
         if (p.optionPhase === "jet" && t2 < PRESNAP) return null;
         if (pitchAt && t2 < pitchAt) return [carrierSlot.bx + (endPt[0] - carrierSlot.bx) * 0.3, carrierSlot.by, carrier.speed * 0.8];
         if (isJet && t2 < meshAt) return [jetMeshPt[0], jetMeshPt[1], 8];
-        if (t2 < meshAt + HANDOFF && !p.isScramble && carrierSlot.id !== "QB" && !isJet) return [meshPt[0], meshPt[1], carrier.speed * (t2 < meshAt ? 0.82 : 0.66)];
+        if (t2 < meshAt + HANDOFF && !p.isScramble && carrierSlot.id !== "QB" && !isJet && !directSnap) return [meshPt[0], meshPt[1], carrier.speed * (t2 < meshAt ? 0.82 : 0.66)];
         if (stretchPt && t2 < readAt) return [stretchPt[0], stretchPt[1], carrier.speed * 0.94];
         const past = carrier.y <= hole[1] + 0.5;
-        return past ? [endPt[0], endPt[1], schedSp(carrier, endPt, t2, tEnd, carrier.speed)] : [hole[0], hole[1], carrier.speed];
+        const floorSp = isJet ? 7.8 : 0;
+        return past ? [endPt[0], endPt[1], Math.max(floorSp, schedSp(carrier, endPt, t2, tEnd, carrier.speed))] : [hole[0], hole[1], Math.max(floorSp, carrier.speed)];
       };
       if (isJet) {
         const fromX = carrierSlot.bx, fromY = carrierSlot.by;
@@ -36857,7 +37000,11 @@ var _CFB = (() => {
       }
       if (carrier !== A.QB) {
         const _bootDir = -dir;
-        A.QB.behave = (t2) => t2 < PRESNAP ? null : t2 < SNAP_END ? [qbSlot.bx, qbSlot.by, 3] : t2 < meshAt ? [givePt[0], givePt[1], 4.6] : t2 < meshAt + HANDOFF ? [givePt[0], givePt[1], 2.4] : t2 < meshAt + HANDOFF + 0.55 ? [qbSlot.bx + _bootDir * 5, qbSlot.by + (p.optionPhase === "draw" ? 3 : 1.3), 4.2] : [qbSlot.bx + _bootDir * 7.5, qbSlot.by + 2.2, 3.2];
+        if (directSnap) {
+          A.QB.behave = (t2) => t2 < PRESNAP ? null : [clamp6(qbSlot.bx + (qbSlot.bx <= 50 ? -6 : 6), 4, 96), qbSlot.by + 0.8, 4.2];
+        } else {
+          A.QB.behave = (t2) => t2 < PRESNAP ? null : t2 < SNAP_END ? [qbSlot.bx, qbSlot.by, 3] : t2 < meshAt ? [givePt[0], givePt[1], 4.6] : t2 < meshAt + HANDOFF ? [givePt[0], givePt[1], 2.4] : t2 < meshAt + HANDOFF + 0.55 ? [qbSlot.bx + _bootDir * 5, qbSlot.by + (p.optionPhase === "draw" ? 3 : 1.3), 4.2] : [qbSlot.bx + _bootDir * 7.5, qbSlot.by + 2.2, 3.2];
+        }
       }
       if (pitchAt) {
         A.QB.behave = (t2) => t2 < PRESNAP ? null : t2 < pitchAt ? [lane > 50 ? lane - 12 : lane + 12, LOS + 2.5, 6.2] : [A.QB.x, A.QB.y, 2];
@@ -36879,7 +37026,7 @@ var _CFB = (() => {
         const d = choices.sort((a2, b2) => Math.abs(a2.slot.bx - targetX) - Math.abs(b2.slot.bx - targetX))[0];
         if (!d) {
           const shade = Math.sign(o.slot.bx - lane) || -dir || 1;
-          o.behave = (t2) => t2 < PRESNAP ? null : [clamp6((carrier.x + lane) * 0.5 + shade * 2.2, 4, 96), clamp6(carrier.y - 2, 4, LOS - 0.8), SPD.OL + 0.35];
+          o.behave = (t2) => t2 < PRESNAP ? null : [clamp6((carrier.x + lane) * 0.5 + shade * 2.2, 4, 96), clamp6(carrier.y - 2, 4, LOS - 0.8), o.speed + 0.35];
           continue;
         }
         usedBlockers.add(d.id);
@@ -36906,23 +37053,23 @@ var _CFB = (() => {
           if (t2 < PRESNAP) return null;
           if (isPuller && t2 < meshAt + 0.18) {
             const trap = scheme && scheme.pull === "trap";
-            return [clamp6(50 + dir * (trap ? 4 : 9), 4, 96), LOS + 0.9, SPD.OL + 1.6];
+            return [clamp6(50 + dir * (trap ? 4 : 9), 4, 96), LOS + 0.9, o.speed + 1.6];
           }
           if (comboFrom && t2 > PRESNAP + 0.12 && t2 < engageAt - 0.08)
-            return [comboFrom.meetX + wash * 0.9, comboFrom.meetY + 0.3, SPD.OL + 0.3];
-          if (t2 < engageAt) return [meetX, meetY + 0.75, SPD.OL + (secondLevel ? 0.45 : 0)];
+            return [comboFrom.meetX + wash * 0.9, comboFrom.meetY + 0.3, o.speed + 0.3];
+          if (t2 < engageAt) return [meetX, meetY + 0.75, o.speed + (secondLevel ? 0.45 : 0)];
           if (t2 < releaseAt) {
             const u = clamp6((t2 - engageAt) / Math.max(0.2, releaseAt - engageAt), 0, 1);
             return [
               meetX + (driveX - meetX) * u + Math.sin(t2 * 13 + phase) * 0.18,
               meetY + (driveY - meetY) * u,
-              SPD.OL
+              o.speed
             ];
           }
           return [
             clamp6((carrier.x + lane) * 0.5 + wash * 2, 4, 96),
             clamp6(carrier.y - 2.2, 4, LOS - 0.8),
-            SPD.OL + 0.4
+            o.speed + 0.4
           ];
         };
       }
@@ -36957,7 +37104,7 @@ var _CFB = (() => {
       const react = { DL: 0.05, LB: 0.28, S: 0.65, DB: 1 };
       const bigRun = p.breakaway || (p.yards || 0) >= 25;
       for (const d of defs) {
-        const delay = PRESNAP + ((_m = react[d.grp]) != null ? _m : 0.4);
+        const delay = PRESNAP + ((_n = react[d.grp]) != null ? _n : 0.4);
         const spCap = d.grp === "DL" ? 3.4 : d.speed;
         const block = runBlocks.get(d.id);
         const readStep = (rnd() - 0.5) * 1.6;
@@ -37131,6 +37278,18 @@ var _CFB = (() => {
           x: ex,
           y: ey
         };
+        const iFrom = Math.max(0, iEnd - 26);
+        for (const d of defs) {
+          if (d === tackler || missCues.length >= 2) continue;
+          for (let i = iFrom; i < iEnd - 8; i += 4) {
+            const tr = d.track[Math.min(i, d.track.length - 1)];
+            const cr = carrier.track[Math.min(i, carrier.track.length - 1)];
+            if (tr && cr && Math.hypot(tr[0] - cr[0], tr[1] - cr[1]) < 2) {
+              missCues.push({ id: d.id, t: i * STEP });
+              break;
+            }
+          }
+        }
       }
     }
     if (endInfo && isPass && p.sack && carrier === A.QB) {
@@ -37168,13 +37327,17 @@ var _CFB = (() => {
       }
     }
     if (p.td && endInfo && endInfo.actor) celebrateCue = { id: endInfo.actor.id, t: endInfo.at + 0.15 };
-    constrainTrack(
+    if (ballEnd.pt) constrainTrack(
       ball.track,
       Math.round(ballEnd.at / STEP),
       ballEnd.pt,
       null,
       typeof _ballFloorFrame !== "undefined" ? _ballFloorFrame : 0
     );
+    if (_penWhistle != null && ball.track.length) {
+      const iW = Math.min(Math.round(_penWhistle / STEP), ball.track.length - 1);
+      for (let i = iW; i < ball.track.length; i++) ball.track[i] = [...ball.track[iW]];
+    }
     if (endInfo && carrier) {
       const iEnd = Math.round(endInfo.at / STEP);
       for (let i = iEnd; i < ball.track.length; i++) ball.track[i] = [...carrier.track[Math.min(i, carrier.track.length - 1)]];
@@ -37215,8 +37378,8 @@ var _CFB = (() => {
     if (p.fieldPos != null) {
       let lo = LOS - (100 - p.fieldPos) * YPU - 10 * YPU + 1.2;
       let hi = LOS + p.fieldPos * YPU + 10 * YPU - 1.2;
-      lo = Math.min(lo, ballEnd.pt[1] - 0.5, endInfo ? endInfo.pt[1] - 0.5 : lo);
-      hi = Math.max(hi, ballEnd.pt[1] + 0.5, endInfo ? endInfo.pt[1] + 0.5 : hi);
+      lo = Math.min(lo, ballEnd.pt ? ballEnd.pt[1] - 0.5 : lo, endInfo ? endInfo.pt[1] - 0.5 : lo);
+      hi = Math.max(hi, ballEnd.pt ? ballEnd.pt[1] + 0.5 : hi, endInfo ? endInfo.pt[1] + 0.5 : hi);
       for (const a2 of everyone) for (const pt of a2.track) pt[1] = clamp6(pt[1], lo, hi);
       for (const pt of ball.track) pt[1] = clamp6(pt[1], lo, hi);
     }
@@ -37245,6 +37408,7 @@ var _CFB = (() => {
       pressCue,
       pumpCue,
       celebrateCue,
+      missCues,
       fx: fx.filter((f) => f.kind !== "pitch")
     };
   }
@@ -42439,6 +42603,19 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
 
           <div class="setting-row">
             <div class="setting-info">
+              <div class="setting-label">Flag Rate</div>
+              <div class="setting-desc">How often the officials throw flags, in every simulated game \u2014 yours and the AI's, so league stats stay honest. 100% is the old tuned rate; the default is 90% (10% fewer flags). 0% turns penalties off entirely.</div>
+            </div>
+            <div class="penalty-dial">
+              <input type="range" id="penalty-rate-dial" min="0" max="150" step="5"
+                     value="${Number.isFinite(+s.penaltyRate) ? +s.penaltyRate : 90}"
+                     aria-label="Flag rate percent">
+              <span class="penalty-dial-val" id="penalty-rate-val">${Number.isFinite(+s.penaltyRate) ? +s.penaltyRate : 90}%</span>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
               <div class="setting-label">Rival Commit Alerts</div>
               <div class="setting-desc">Inbox notification when a recruit you're chasing commits elsewhere</div>
             </div>
@@ -42655,6 +42832,16 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         rerender();
       });
     });
+    const penDial = document.getElementById("penalty-rate-dial");
+    if (penDial) {
+      penDial.addEventListener("input", () => {
+        const lbl = document.getElementById("penalty-rate-val");
+        if (lbl) lbl.textContent = `${penDial.value}%`;
+        if (!state.settings) state.settings = {};
+        state.settings.penaltyRate = +penDial.value;
+      });
+      penDial.addEventListener("change", () => rerender());
+    }
     document.querySelectorAll("[data-setting]").forEach((btn) => {
       btn.addEventListener("click", () => {
         if (!state.settings) state.settings = {};
@@ -44175,14 +44362,15 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     return getPlayerSchool();
   }
   function renderApp() {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     const _scroll = captureScroll();
     const _viewChanged = state.ui.view !== lastRenderedView;
+    setPenaltyScale(((_b = (_a = state.settings) == null ? void 0 : _a.penaltyRate) != null ? _b : 90) / 100);
     const _pSchool = state._instantClassicReplay ? resultViewerSchool(state.ui.lastGameResult) : getPlayerSchool();
     applyTeamColors(_pSchool);
     document.body.classList.toggle(
       "theme-school",
-      ((_a = state.settings) == null ? void 0 : _a.darkMode) !== true && !!((_b = _pSchool == null ? void 0 : _pSchool.colors) == null ? void 0 : _b[0])
+      ((_c = state.settings) == null ? void 0 : _c.darkMode) !== true && !!((_d = _pSchool == null ? void 0 : _pSchool.colors) == null ? void 0 : _d[0])
     );
     const root = document.getElementById("app");
     const view = state.ui.view;
@@ -44201,7 +44389,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         ${renderManual()}
       </div>`;
       setupListeners12();
-      (_c = document.getElementById("btn-manual-to-menu")) == null ? void 0 : _c.addEventListener("click", () => navigate("mainmenu"));
+      (_e = document.getElementById("btn-manual-to-menu")) == null ? void 0 : _e.addEventListener("click", () => navigate("mainmenu"));
       lastRenderedView = view;
       return;
     }
@@ -44278,7 +44466,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
             <div class="coach-school">${escapeHtml((school == null ? void 0 : school.name) || "")}</div>
             <div class="coach-meta">
               <span class="rep-badge">${escapeHtml((coach == null ? void 0 : coach.reputation) || "C")}</span>
-              ${renderPrestige((_e = (_d = school == null ? void 0 : school.prestige) != null ? _d : coach == null ? void 0 : coach.prestige) != null ? _e : 3, ((_f = C.PRESTIGE_MAX) == null ? void 0 : _f[school == null ? void 0 : school.division]) || 5)}
+              ${renderPrestige((_g = (_f = school == null ? void 0 : school.prestige) != null ? _f : coach == null ? void 0 : coach.prestige) != null ? _g : 3, ((_h = C.PRESTIGE_MAX) == null ? void 0 : _h[school == null ? void 0 : school.division]) || 5)}
             </div>
           </div>
           <div class="budget-info">
@@ -45685,6 +45873,16 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     (_P = document.getElementById("tc-skipbreak")) == null ? void 0 : _P.addEventListener("click", () => {
       if (callTapOk()) simToBreak();
     });
+    document.querySelectorAll("[data-tc-tempo]").forEach((b) => b.addEventListener("click", () => {
+      var _a2, _b2;
+      const tk = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token;
+      if (!tk) return;
+      const meHome = ((_b2 = tk.homeSchool) == null ? void 0 : _b2.id) === state.playerSchoolId;
+      const gp2 = meHome ? tk.homeGP : tk.awayGP;
+      if (!gp2) return;
+      gp2._liveTempo = b.dataset.tcTempo || null;
+      renderApp();
+    }));
     (_Q = document.getElementById("cs-autorun")) == null ? void 0 : _Q.addEventListener("click", () => {
       var _a2, _b2, _c2;
       state.ui.autoRun = true;
@@ -45914,16 +46112,21 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     </div>`;
   }
   function timeControlBar() {
-    var _a;
+    var _a, _b;
     const lw = state.ui.liveWatch;
     const token = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
     if (!(token == null ? void 0 : token.pending) || (lw == null ? void 0 : lw.stage) !== "call") return "";
     const half = token.pending.half;
     const auto = !!state.ui.autoRun;
     const breakLabel = half === 1 ? "\u23ED Skip to halftime" : "\u23ED Skip to final";
+    const meHome = ((_b = token.homeSchool) == null ? void 0 : _b.id) === state.playerSchoolId;
+    const myGP = meHome ? token.homeGP : token.awayGP;
+    const lt = (myGP == null ? void 0 : myGP._liveTempo) || "";
+    const tBtn = (v, l, tip) => `<button class="bc-btn bc-text tc-tempo${lt === v ? " tc-tempo-on" : ""}" data-tc-tempo="${v}" title="${tip}">${l}</button>`;
+    const tempoGroup = `<span class="tc-tempo-group" title="Live tempo \u2014 beats the game plan until you hand it back">` + tBtn("Chew", "\u{1F422}", "Chew clock: milk the play clock on every snap") + tBtn("", "TEMPO", "Back to the game plan\u2019s tempo") + tBtn("Hurry", "\u26A1", "Hurry-up: no-huddle pace (tires both sides)") + `</span>`;
     const mid = auto ? `<button class="bc-btn bc-text tc-coach" id="tc-jumpin" title="Take the headset back and call the plays yourself">\u{1F3A7} Coach up</button>` : `<button class="bc-btn bc-text" id="tc-keydowns" title="Game plan runs the sim; stops at the next key down">\u23E9 Sim to next key down</button>
        <button class="bc-btn bc-text" id="tc-headset" title="Headset off \u2014 the game plan calls it and you watch">\u{1F3A7} Headset off</button>`;
-    return `<div class="tc-bar">${mid}<button class="bc-btn bc-text" id="tc-skipbreak" title="Sim straight to the ${half === 1 ? "locker room" : "final gun"}">${breakLabel}</button></div>`;
+    return `<div class="tc-bar">${tempoGroup}${mid}<button class="bc-btn bc-text" id="tc-skipbreak" title="Sim straight to the ${half === 1 ? "locker room" : "final gun"}">${breakLabel}</button></div>`;
   }
   var CONCEPT_ROUTE_ART = {
     "Mesh": ["M18 46 L18 31 L44 26 L76 26", "M82 46 L82 31 L56 28 L28 28"],
@@ -46608,7 +46811,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     _watchAnim = null;
   }
   function watchBoardColors(w, d) {
-    var _a, _b;
+    var _a, _b, _c, _d;
     const r = w == null ? void 0 : w.r;
     if (!r) return null;
     const pick2 = (school, i, fb) => {
@@ -46616,6 +46819,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       const c = ((_a2 = school == null ? void 0 : school.colors) == null ? void 0 : _a2[i]) || ((_b2 = school == null ? void 0 : school.colors) == null ? void 0 : _b2[0]);
       return c ? teamAccentColor(c) : fb;
     };
+    const divM = (dv) => dv === "D3" ? 0.86 : dv === "D2" ? 0.93 : 1;
     return {
       possession: (d == null ? void 0 : d.possession) === "away" ? "away" : "home",
       homeFill: pick2(r.homeSchool, 0, "var(--team-1,#eaeaea)"),
@@ -46623,7 +46827,8 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       awayFill: pick2(r.awaySchool, 0, "#c23a35"),
       awayHi: pick2(r.awaySchool, 1, "#f4f0d8"),
       homeName: ((_a = r.homeSchool) == null ? void 0 : _a.name) || "",
-      awayName: ((_b = r.awaySchool) == null ? void 0 : _b.name) || ""
+      awayName: ((_b = r.awaySchool) == null ? void 0 : _b.name) || "",
+      divMult: (divM((_c = r.homeSchool) == null ? void 0 : _c.division) + divM((_d = r.awaySchool) == null ? void 0 : _d.division)) / 2
     };
   }
   function spriteMarkup(a) {
@@ -46648,7 +46853,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     return `<g class="wsp${a.qb ? " wsp-qb" : ""}" style="--gait:${gait}s;--wsp-lean:0deg">${body}</g>${tag}`;
   }
   function ballMarkup(x, y) {
-    return `<g id="wp-ball" class="wa-ballg" transform="translate(${x},${y})"><g class="wab-spin"><rect class="wab-core" x="-1.15" y="-0.7" width="2.3" height="1.4"/><rect class="wab-end" x="-1.6" y="-0.45" width="0.5" height="0.9"/><rect class="wab-end" x="1.1"  y="-0.45" width="0.5" height="0.9"/><rect class="wab-lace" x="-0.5" y="-0.25" width="1.0" height="0.5"/></g></g>`;
+    return `<g id="wp-ball" class="wa-ballg" transform="translate(${x},${y})"><ellipse class="wab-shadow" cx="0" cy="0.55" rx="1.15" ry="0.4"/><g class="wab-lift"><g class="wab-spin"><rect class="wab-core" x="-1.15" y="-0.7" width="2.3" height="1.4"/><rect class="wab-end" x="-1.6" y="-0.45" width="0.5" height="0.9"/><rect class="wab-end" x="1.1"  y="-0.45" width="0.5" height="0.9"/><rect class="wab-lace" x="-0.5" y="-0.25" width="1.0" height="0.5"/></g></g></g>`;
   }
   var WATCH_SIDE = Object.freeze({
     ypu: 0.85,
@@ -46690,11 +46895,13 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     const offL = (_a = OFF_FIELD_LAYOUTS[p == null ? void 0 : p.offFormation]) == null ? void 0 : _a.slots;
     const defL = (_b = DEF_FIELD_LAYOUTS[p == null ? void 0 : p.defFront] || DEF_FIELD_LAYOUTS["4-3"]) == null ? void 0 : _b.slots;
     if (!p || !offL) {
+      if ((p == null ? void 0 : p.type) === "penalty") return watchBoardFlag(svg, p);
       svg.innerHTML = watchFieldBase(p);
       return null;
     }
     const script = buildPlayScript(p, offL, defL);
     if (!script) {
+      if (p.type === "penalty") return watchBoardFlag(svg, p);
       svg.innerHTML = watchFieldBase(p);
       return null;
     }
@@ -46797,7 +47004,17 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     }
     const catchT = (_e = (_d = (script.fx || []).find((f) => f.kind === "catch" || f.kind === "inc" || f.kind === "int")) == null ? void 0 : _d.t) != null ? _e : null;
     const repCls = [...new Set((script.blocks || []).filter((b) => b.rep).map((b) => "wp-rep-" + b.rep))];
-    const speed = (_watch == null ? void 0 : _watch.speed) || 1;
+    const liftN = ballN == null ? void 0 : ballN.querySelector(".wab-lift");
+    let flightArc = null;
+    if (script.throwCue && catchT != null && catchT > script.throwCue.release) {
+      const rel = script.throwCue.release;
+      const [rx, ry] = sampleTrack(script.ball.track, script.step, rel);
+      const [cx2, cy2] = sampleTrack(script.ball.track, script.step, catchT);
+      const fdist = Math.hypot(cx2 - rx, cy2 - ry);
+      const armM = script.throwCue.arm != null ? Math.max(0.55, Math.min(1.35, 1 - (script.throwCue.arm - 55) / 130)) : 1;
+      flightArc = { rel, end: catchT, loft: Math.max(0.8, Math.min(5.2, fdist * 0.16 * armM)) };
+    }
+    const speed = ((_watch == null ? void 0 : _watch.speed) || 1) * ((board == null ? void 0 : board.divMult) || 1);
     const t0 = performance.now();
     const shown = /* @__PURE__ */ new Set();
     const trail = [];
@@ -46842,6 +47059,12 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       (_b2 = nodes.QB) == null ? void 0 : _b2.classList.toggle("wp-throwing", throwOn || pumpOn);
       (_c2 = nodes.QB) == null ? void 0 : _c2.classList.toggle("wp-pressed", !!pressCue && !throwOn && t >= pressCue.start && t <= pressCue.end);
       ballN == null ? void 0 : ballN.classList.toggle("wp-ball-air", !!throwCue && catchT != null && t >= throwCue.release && t < catchT);
+      if (liftN) {
+        if (flightArc && t >= flightArc.rel && t < flightArc.end) {
+          const u2 = (t - flightArc.rel) / (flightArc.end - flightArc.rel);
+          liftN.style.transform = `translateY(${(-Math.sin(u2 * Math.PI) * flightArc.loft).toFixed(2)}px)`;
+        } else if (liftN.style.transform) liftN.style.transform = "";
+      }
       if (catchCue) {
         const on = t >= catchCue.start && t <= catchCue.end;
         const cnode = nodes[catchCue.id];
@@ -46894,6 +47117,14 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       for (const jc of jamCues) (_e2 = nodes[jc.id]) == null ? void 0 : _e2.classList.toggle("wp-blocking", t >= jc.start && t <= jc.end);
       if (beatenCue) (_f = nodes[beatenCue.id]) == null ? void 0 : _f.classList.toggle("wp-stumbled", t >= beatenCue.start && t <= beatenCue.end);
       if (celebrateCue) (_g = nodes[celebrateCue.id]) == null ? void 0 : _g.classList.toggle("wp-celebrating", t >= celebrateCue.start && t <= celebrateCue.end);
+      for (const mc of script.missCues || []) {
+        const on = t >= mc.t && t <= mc.t + 0.35;
+        const n2 = nodes[mc.id];
+        if (n2) {
+          n2.classList.toggle("wp-tackling", on);
+          n2.classList.toggle("wp-tk-wrap", on);
+        }
+      }
       (script.blocks || []).forEach((b, i) => {
         var _a3, _b3, _c3, _d3;
         const line = blockNodes[i], op = actorPts[b.offId], dp = actorPts[b.defId];
@@ -46957,21 +47188,30 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     const [holdX, holdY] = watchSidePoint(holdW[0], holdW[1]);
     const [kickX0, kickY0] = watchSidePoint(holdW[0] + 2.3, holdW[1] + 2.1);
     const [retX, retY] = watchSidePoint(worldEndX, Math.max(3.2, worldEndY - 4));
+    const retYds = !isFG && !p.blocked && !p.touchback && p.returnerId ? Math.max(0, p.returnYds || 0) : 0;
+    const retDur = retYds > 0 ? Math.max(0.45, Math.min(3.2, retYds / 8)) : 0;
+    const [retEndX, retEndY] = watchSidePoint(worldEndX, Math.min(58, worldEndY + retYds * WATCH_SIDE.ypu));
+    const [g1X, g1Y] = watchSidePoint(12, 30), [g2X, g2Y] = watchSidePoint(88, 30);
+    const [rushX0, rushY0] = watchSidePoint(30, 29.5);
     const sprites = ((_a = state.settings) == null ? void 0 : _a.spriteWatch) !== false;
     if (sprites) svg.classList.add("watch-sprites");
     else svg.classList.remove("watch-sprites");
     const cast = (a) => sprites ? `<g class="wp-actor wp-team-${a.team}" data-wpk="${a.id}" transform="translate(${a.x.toFixed(2)},${a.y.toFixed(2)})">${spriteMarkup(a)}</g>` : "";
-    svg.innerHTML = watchFieldBase(p) + cast({ id: "LS", team: "off", label: "LS", x: startX, y: startY }) + (isFG ? cast({ id: "H", team: "off", label: "H", x: holdX, y: holdY }) : "") + cast({ id: "K", team: "off", label: isFG ? "K" : "P", x: isFG ? kickX0 : holdX, y: isFG ? kickY0 : holdY }) + (!isFG && !p.blocked ? cast({ id: "PR", team: "def", label: "PR", x: retX, y: retY }) : "") + ballMarkup(startX, startY) + `<g id="wp-fx"></g>`;
+    svg.innerHTML = watchFieldBase(p) + cast({ id: "LS", team: "off", label: "LS", x: startX, y: startY }) + (isFG ? cast({ id: "H", team: "off", label: "H", x: holdX, y: holdY }) : "") + cast({ id: "K", team: "off", label: isFG ? "K" : "P", x: isFG ? kickX0 : holdX, y: isFG ? kickY0 : holdY }) + (!isFG && !p.blocked ? cast({ id: "PR", team: "def", label: "PR", x: retX, y: retY }) : "") + (!isFG && !p.blocked && !p.touchback ? cast({ id: "G1", team: "off", label: "G", x: g1X, y: g1Y }) + cast({ id: "G2", team: "off", label: "G", x: g2X, y: g2Y }) : "") + (p.blocked ? cast({ id: "RS", team: "def", label: "LB", x: rushX0, y: rushY0 }) : "") + ballMarkup(startX, startY) + `<g id="wp-fx"></g>`;
     const ballN = svg.querySelector("#wp-ball"), fxN = svg.querySelector("#wp-fx");
     const kN = svg.querySelector('[data-wpk="K"]'), prN = svg.querySelector('[data-wpk="PR"]');
+    const g1N = svg.querySelector('[data-wpk="G1"]'), g2N = svg.querySelector('[data-wpk="G2"]');
+    const rsN = svg.querySelector('[data-wpk="RS"]');
     const speed = (_watch == null ? void 0 : _watch.speed) || 1;
     const snapT = isFG ? 0.28 : 0.38;
     const placeT = snapT + (isFG ? 0.22 : 0.26);
     const swingT = placeT + (isFG ? 0.34 : 0.18);
     const flight = p.blocked ? 0.5 : 1.5;
-    const dur = swingT + flight;
+    const landT = swingT + flight;
+    const dur = landT + retDur + (retYds > 0 || p.returnTD ? 0.35 : 0);
     const t0 = performance.now();
     const lerp = (a, b, u) => a + (b - a) * u;
+    let camX = watchSideCameraX(p, startX);
     const tick = () => {
       if (!svg.isConnected) {
         watchStopAnim();
@@ -46987,34 +47227,67 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       } else if (t < swingT) {
         bx = holdX;
         by = holdY;
-      } else {
+      } else if (t < landT) {
         const u = (t - swingT) / flight;
         bx = lerp(holdX, endX, u);
         by = lerp(holdY, endY, u) - Math.sin(u * Math.PI) * (p.blocked ? 0 : 6);
+      } else {
+        const u = retDur ? Math.min(1, (t - landT) / retDur) : 1;
+        bx = lerp(endX, retEndX, u);
+        by = lerp(endY, retEndY, u);
       }
       ballN == null ? void 0 : ballN.setAttribute("transform", `translate(${bx.toFixed(2)},${by.toFixed(2)})`);
-      ballN == null ? void 0 : ballN.classList.toggle("wp-ball-kick", t >= swingT && t < dur);
+      ballN == null ? void 0 : ballN.classList.toggle("wp-ball-kick", t >= swingT && t < landT);
       if (kN && isFG) {
         const u = Math.max(0, Math.min(1, (t - placeT) / Math.max(0.01, swingT - placeT)));
         kN.setAttribute("transform", `translate(${lerp(kickX0, holdX + 1.2, u).toFixed(2)},${lerp(kickY0, holdY + 0.4, u).toFixed(2)})`);
       }
       kN == null ? void 0 : kN.classList.toggle("wp-kicking", t >= swingT - 0.06 && t <= swingT + 0.4);
       if (prN && t >= swingT) {
-        const u = Math.min(1, (t - swingT) / flight);
-        prN.setAttribute("transform", `translate(${lerp(retX, endX, u * 0.9).toFixed(2)},${lerp(retY, endY - 1.5, u * 0.9).toFixed(2)})`);
+        if (t < landT) {
+          const u = Math.min(1, (t - swingT) / flight);
+          prN.setAttribute("transform", `translate(${lerp(retX, endX, u * 0.9).toFixed(2)},${lerp(retY, endY - 1.5, u * 0.9).toFixed(2)})`);
+        } else prN.setAttribute("transform", `translate(${bx.toFixed(2)},${by.toFixed(2)})`);
       }
+      if (g1N && t >= swingT) {
+        const u = Math.min(1, (t - swingT) / (flight + Math.max(0.3, retDur)));
+        g1N.setAttribute("transform", `translate(${lerp(g1X, bx - 3.4, u).toFixed(2)},${lerp(g1Y, by - 1.2, u).toFixed(2)})`);
+        g2N == null ? void 0 : g2N.setAttribute("transform", `translate(${lerp(g2X, bx + 3.4, u).toFixed(2)},${lerp(g2Y, by + 1.2, u).toFixed(2)})`);
+      }
+      if (rsN) {
+        const u = Math.min(1, t / Math.max(0.01, swingT + 0.08));
+        rsN.setAttribute("transform", `translate(${lerp(rushX0, holdX - 1.6, u).toFixed(2)},${lerp(rushY0, holdY - 0.6, u).toFixed(2)})`);
+      }
+      camX += (watchSideCameraX(p, bx) - camX) * 0.1;
+      svg.setAttribute("viewBox", `${camX.toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
       if (t >= dur && fxN && !fxN.childElementCount) {
-        const label = isFG ? p.made ? "GOOD" : "NO GOOD" : p.blocked ? "BLOCKED" : p.touchback ? "TOUCHBACK" : p.returnTD ? "RETURN TD" : "PUNT";
+        const label = isFG ? p.made ? "GOOD" : "NO GOOD" : p.blocked ? "BLOCKED" : p.touchback ? "TOUCHBACK" : p.returnTD ? "RETURN TD" : retYds > 0 ? `RET ${retYds} YDS` : "PUNT";
         const cls = isFG && p.made ? "wa-pick" : isFG || p.blocked || p.returnTD ? "wa-x" : "wp-kick-lbl";
         fxN.insertAdjacentHTML(
           "beforeend",
-          `<text x="${endX}" y="${Math.max(5, endY - 3.2)}" class="${cls}">${label}</text>`
+          `<text x="${bx.toFixed(1)}" y="${Math.max(5, by - 3.2).toFixed(1)}" class="${cls}">${label}</text>`
         );
       }
       if (t < dur && _watchAnim) _watchAnim.raf = requestAnimationFrame(tick);
     };
     _watchAnim = { raf: requestAnimationFrame(tick) };
     return dur;
+  }
+  function watchBoardFlag(svg, p) {
+    const [fx0, fy0] = watchSidePoint(50, 31);
+    svg.classList.remove("watch-in-play");
+    const camX = watchSideCameraX(p, fx0);
+    svg.setAttribute("viewBox", `${camX.toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
+    const cx = Math.max(camX + 28, Math.min(camX + WATCH_SIDE.viewW - 28, fx0));
+    const name = escapeHtml(String(p.penaltyName || "PENALTY").toUpperCase());
+    const team = escapeHtml(String(p.penaltyOn || "").toUpperCase());
+    const yds = Math.abs(p.yards || 0);
+    const verdict = p.penaltySide === "offense" ? `${yds} YDS \u2014 REPLAY THE DOWN` : `${yds} YDS${p.autoFirst ? " \u2014 AUTOMATIC 1ST DOWN" : ""}`;
+    const lx = fx0 + ((p.fieldPos || 50) % 5 - 2) * 2.2;
+    const ly = fy0 + (((p.clock || 0) / 10 % 3 | 0) - 1) * 4;
+    const line1 = team ? `${name} \u2014 ${team}` : name;
+    svg.innerHTML = watchFieldBase(p) + `<g transform="translate(${lx.toFixed(1)},${ly.toFixed(1)})"><g class="wp-flag"><rect x="-1.15" y="-1.15" width="2.3" height="2.3" class="wp-flag-cloth"/><rect x="-0.4" y="-0.4" width="0.8" height="0.8" class="wp-flag-knot"/></g></g><text x="${cx.toFixed(1)}" y="${(fy0 - 9).toFixed(1)}" class="wa-flag-call">FLAG</text><g class="wp-card wp-flag-detail"><rect x="${(cx - 26).toFixed(1)}" y="${(fy0 + 3).toFixed(1)}" width="52" height="11" class="wp-card-bg"/><text x="${cx.toFixed(1)}" y="${(fy0 + 7.6).toFixed(1)}" class="wp-card-txt"${line1.length > 24 ? ` textLength="48" lengthAdjust="spacingAndGlyphs"` : ""}>${line1}</text><text x="${cx.toFixed(1)}" y="${(fy0 + 11.6).toFixed(1)}" class="wp-card-txt wp-card-sub">${verdict}</text></g>`;
+    return 2.6;
   }
   function watchFxMarkup(f) {
     const [x, y] = watchSidePoint(f.x, f.y);
@@ -47037,6 +47310,12 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         return `<circle cx="${x}" cy="${y}" r="2.7" class="wp-catch"/>`;
       case "fd":
         return `<g class="wp-card" transform="translate(${x},${y})"><rect x="-9" y="-9.2" width="18" height="4.8" class="wp-card-bg"/><text x="0" y="-5.8" class="wp-card-txt">1ST DOWN</text></g>`;
+      case "flag": {
+        const nm2 = escapeHtml(String(f.name || "PENALTY").toUpperCase());
+        const tm2 = escapeHtml(String(f.team || "").toUpperCase());
+        const line1 = tm2 ? `${nm2} \u2014 ${tm2}` : nm2;
+        return `<g transform="translate(${x},${y})"><g class="wp-flag"><rect x="-1.15" y="-1.15" width="2.3" height="2.3" class="wp-flag-cloth"/><rect x="-0.4" y="-0.4" width="0.8" height="0.8" class="wp-flag-knot"/></g></g><text x="${x}" y="${(y - 8).toFixed(1)}" class="wa-flag-call">FLAG</text><g class="wp-card wp-flag-detail"><rect x="${(x - 26).toFixed(1)}" y="${(y + 4).toFixed(1)}" width="52" height="11" class="wp-card-bg"/><text x="${x}" y="${(y + 8.6).toFixed(1)}" class="wp-card-txt"${line1.length > 24 ? ' textLength="48" lengthAdjust="spacingAndGlyphs"' : ""}>${line1}</text><text x="${x}" y="${(y + 12.6).toFixed(1)}" class="wp-card-txt wp-card-sub">${escapeHtml(f.verdict || "")}</text></g>`;
+      }
       case "td": {
         const cols = ["#ffd34d", "#f4f0d8", "#59d8ff", "#ff8c79", "#3fe04b"];
         let conf = "";
@@ -47226,8 +47505,30 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       else if (yds <= 3) tempo = 0.7;
       holdMs = baseMs * tempo;
       if (scriptDur) holdMs = Math.max(holdMs, scriptDur * 1e3 / w.speed + 1200);
+      const formTag = p.offFormation && p.type !== "penalty" ? `<span class="pbp-form">[${escapeHtml(p.offFormation)}${p.defFront ? " v " + escapeHtml(p.defFront) : ""}]</span> ` : "";
+      const fakeTag = p.stFake ? `<span class="wa-td">FAKE! </span>` : "";
+      const patchScore = () => {
+        var _a2;
+        let np = null, nd = null;
+        for (let i = w.idx + 1; i < w.seq.length; i++) {
+          const it = w.seq[i];
+          if (it.kind === "play" && ((_a2 = it.p) == null ? void 0 : _a2.scoreOff) != null) {
+            np = it.p;
+            nd = it.d;
+            break;
+          }
+        }
+        const hs2 = np ? nd.possession === "home" ? np.scoreOff : np.scoreDef : w.r.homeScore;
+        const as2 = np ? nd.possession === "home" ? np.scoreDef : np.scoreOff : w.r.awayScore;
+        const bug = document.getElementById("watch-bug");
+        if (!bug) return;
+        const sc2 = bug.querySelectorAll(".wsb-score");
+        if (sc2[0]) sc2[0].textContent = hs2;
+        if (sc2[1]) sc2[1].textContent = as2;
+      };
       const reveal = () => {
-        ticker.innerHTML = `${desc.text} ${extra}`;
+        ticker.innerHTML = `${fakeTag}${formTag}${desc.text} ${extra}`;
+        patchScore();
         if (p.td) {
           const f = document.getElementById("watch-flash");
           if (f) {
