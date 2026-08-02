@@ -5944,6 +5944,14 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
   animation:wp-cardfade .4s steps(3,end) .55s both; }
 .wp-flag-detail { animation:wp-cardfade .3s steps(2,end) .85s both; }
 .wp-card-sub { fill:var(--px-paper,#f4f0d8); font-size:2.6px; }
+/* Recorded QB injury: down and staying down; medical cross overhead. */
+#watch-board .wp-injured .wsp-shell { animation:wsp-injured .7s ease-out both !important; }
+@keyframes wsp-injured { 0% { transform:rotate(0) translateY(0); } 100% { transform:rotate(84deg) translateY(.45px) scaleY(.9); } }
+.wp-hurt rect { fill:#ff4b45; stroke:#f4f0d8; stroke-width:.24; }
+.wp-hurt { animation:wp-cardfade .3s steps(2,end) both; }
+/* Victory formation: the QB takes the knee. */
+#watch-board .wp-kneeling .wsp-shell { animation:wsp-kneel .5s ease-out both !important; }
+@keyframes wsp-kneel { 0% { transform:translateY(0); } 100% { transform:translateY(.34px) rotate(12deg) scaleY(.78); } }
 /* In-game tempo chips (coach headset bar) */
 .tc-tempo-group { display:inline-flex; gap:2px; margin-right:6px; }
 .tc-tempo { min-width:34px; }
@@ -6558,7 +6566,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "ff8b6f49a1";
+globalThis.__BUILD__ = "a6767fc3d5";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -18954,6 +18962,7 @@ var _CFB = (() => {
     const _rbPE = (_m = offPlan == null ? void 0 : offPlan.protEmphasis) != null ? _m : 50;
     const rbReleased = rbPlayers.length > 0 && _rbPE < 50 && Math.random() < (50 - _rbPE) / 50;
     if (rbPlayers.length > 0 && !rbReleased) blockers.push(rbPlayers[0]);
+    result.rbKeptIn = rbPlayers.length > 0 && !rbReleased;
     if (defPlan.greenDog && rbPlayers.length > 0) {
       const rbBlocking = rbPlayers.filter((rb) => rb._gameArch === "RB-Power" || rb._gameArch === "RB-Workhorse" || Math.random() < 0.4).length;
       if (rbBlocking > 0) {
@@ -19138,6 +19147,7 @@ var _CFB = (() => {
         result.brokenByCarrier = scrOutcome.brokenById ? qb.id : null;
         result.breakaway = scrOutcome.breakaway || false;
         result.isScramble = true;
+        result.qbSlid = contact.slid === true;
         result.qbInjured = contact.qbInjured;
         result.qbInjuryGames = contact.injuryGamesOut;
         return result;
@@ -19179,6 +19189,7 @@ var _CFB = (() => {
         result.brokenByCarrier = scrOutcome.brokenById ? qb.id : null;
         result.breakaway = scrOutcome.breakaway || false;
         result.isScramble = true;
+        result.qbSlid = contact.slid === true;
         result.qbInjured = contact.qbInjured;
         result.qbInjuryGames = contact.injuryGamesOut;
         return result;
@@ -19254,6 +19265,7 @@ var _CFB = (() => {
       blitzerDbId,
       _passCtx.pressLevel
     );
+    result.covAssign = coverageAssigned.map((c) => ({ r: c.receiverId, d: c.defender ? c.defender.id : null, t: c.coverageType })).filter((c) => c.r && c.d);
     let motionReadEdge = 0;
     {
       const MOTION_RATE = {
@@ -19452,7 +19464,7 @@ var _CFB = (() => {
     return Math.ceil(Math.random() * 5) + 6;
   }
   function qbContactResult(qb, outcome) {
-    if (!outcome.tacklerId) return { yards: outcome.yards, qbInjured: false, injuryGamesOut: 0 };
+    if (!outcome.tacklerId) return { yards: outcome.yards, qbInjured: false, injuryGamesOut: 0, slid: false };
     const avoidance = clamp2(
       (qb.attributes.AWR - 70) / 100 + (qb.attributes.TEC - 70) / 100,
       -0.4,
@@ -19460,13 +19472,15 @@ var _CFB = (() => {
     );
     const slidePenalty = avoidance > 0 ? Math.max(0, Math.round(randNorm(avoidance * 2.5, 0.8))) : 0;
     const adjYards = Math.max(outcome.yards - slidePenalty, 0);
+    const slid = slidePenalty > 0;
     const durScale = 1 - (qb.attributes.CON - 70) / 200;
     const injProb = clamp2(C.QB_INJURY_PER_CARRY * (1 - avoidance) * durScale, C.INJURY_MIN, C.INJURY_MAX);
     const qbInjured = Math.random() < injProb;
     return {
       yards: adjYards,
       qbInjured,
-      injuryGamesOut: qbInjured ? qbInjuryDuration() : 0
+      injuryGamesOut: qbInjured ? qbInjuryDuration() : 0,
+      slid
     };
   }
   function resolveOptionPlay(playType, offPersonnel, defPersonnel, offRoster, defRoster, offUnit, defUnit, gameplan, defPlan, frontId, formationId, qb, rbShares = null, rbPool = null, style = "triple") {
@@ -20204,7 +20218,7 @@ var _CFB = (() => {
     return { penalty, player };
   }
   function simulateDrive(offense, defense, gameState, log, opts = {}) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya, _za, _Aa;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya, _za, _Aa, _Ba, _Ca;
     const { roster: offRoster, depth: offDepth, gameplan: offPlan, school: offSchool, ctx: offCtx } = offense;
     const { roster: defRoster, depth: defDepth, gameplan: defPlan, school: defSchool, ctx: defCtx } = defense;
     const R = opts.resume || null;
@@ -20215,6 +20229,7 @@ var _CFB = (() => {
     let forcedCall = R ? R.call || null : null;
     let fourthDecided = R ? !!R.fourthDecided : false;
     let fakeSurprise = false;
+    let _spikedThisDrive = false;
     let audiblesUsed = R ? R.audiblesUsed || 0 : 0;
     const teamPenaltyMult = (roster) => {
       if (!roster.length) return 1;
@@ -20226,6 +20241,49 @@ var _CFB = (() => {
     const offFormIQ = coordPackageIQ(offSchool, offPlan);
     const pen = R ? R.pen : { offCount: 0, offYds: 0, defCount: 0, defYds: 0 };
     while (gameState.clock > 0 || down === 4 && !fourthDecided && gameState.half >= 2) {
+      {
+        const _lead = gameState.score.off - gameState.score.def;
+        if (gameState.half >= 2 && _lead > 0 && down <= 3 && gameState.clock <= 42 * (4 - down)) {
+          const burn = Math.min(gameState.clock, 42);
+          gameState.clock -= burn;
+          if (gameState.clock <= 0) fourthDecided = true;
+          log.push(`${offSchool.name} takes a knee`);
+          plays.push({
+            type: "kneel",
+            yards: -1,
+            down,
+            distance,
+            fieldPos,
+            clock: gameState.clock,
+            half: gameState.half,
+            scoreOff: gameState.score.off,
+            scoreDef: gameState.score.def
+          });
+          fieldPos = clamp2(fieldPos - 1, 1, 99);
+          distance += 1;
+          down++;
+          forcedCall = null;
+          continue;
+        }
+        if (gameState.half >= 2 && _lead < 0 && _lead >= -8 && down <= 2 && !_spikedThisDrive && gameState.clock <= 25 && gameState.clock > 4 && fieldPos >= 45) {
+          _spikedThisDrive = true;
+          gameState.clock -= 3;
+          log.push(`${offSchool.name} spikes it \u2014 clock stopped`);
+          plays.push({
+            type: "spike",
+            yards: 0,
+            down,
+            distance,
+            fieldPos,
+            clock: gameState.clock,
+            half: gameState.half,
+            scoreOff: gameState.score.off,
+            scoreDef: gameState.score.def
+          });
+          down++;
+          continue;
+        }
+      }
       const forcedST = forcedCall && (forcedCall.specialTeams === "fg" || forcedCall.specialTeams === "punt") ? forcedCall.specialTeams : null;
       if (down === 4 && !fourthDecided || forcedST) {
         const distFromGoal = 100 - fieldPos;
@@ -20500,6 +20558,7 @@ var _CFB = (() => {
               penaltyOn: teamName,
               penaltySide: "offense",
               penaltyPlayerId: (_n = player == null ? void 0 : player.id) != null ? _n : null,
+              penaltyPos: (_o = player == null ? void 0 : player.position) != null ? _o : null,
               offFormation: _penForm,
               defFront: _penFront,
               preSnap: !!penalty.preSnap,
@@ -20539,7 +20598,8 @@ var _CFB = (() => {
               penaltyName: penalty.name,
               penaltyOn: teamName,
               penaltySide: "defense",
-              penaltyPlayerId: (_o = player == null ? void 0 : player.id) != null ? _o : null,
+              penaltyPlayerId: (_p = player == null ? void 0 : player.id) != null ? _p : null,
+              penaltyPos: (_q = player == null ? void 0 : player.position) != null ? _q : null,
               offFormation: _penForm,
               defFront: _penFront,
               preSnap: !!penalty.preSnap,
@@ -20589,7 +20649,7 @@ var _CFB = (() => {
         conceptWeights: offEff.conceptWeights,
         protEmphasis: offEff.protEmphasis,
         qbAggr: offEff.qbAggr,
-        _ocQbRunDesign: (_s = (_r = (_q = (_p = offSchool == null ? void 0 : offSchool.staff) == null ? void 0 : _p.oc) == null ? void 0 : _q.ratings) == null ? void 0 : _r.qbRunDesign) != null ? _s : 50,
+        _ocQbRunDesign: (_u = (_t = (_s = (_r = offSchool == null ? void 0 : offSchool.staff) == null ? void 0 : _r.oc) == null ? void 0 : _s.ratings) == null ? void 0 : _t.qbRunDesign) != null ? _u : 50,
         _injuriesOff: (offSchool == null ? void 0 : offSchool._injuriesOff) === true,
         _dnaAir: ((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.airAttack) || 0,
         _dnaGround: ((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.groundPound) || 0,
@@ -20620,8 +20680,8 @@ var _CFB = (() => {
         // auto/te1/slot/hot
         // DC Blitz Design (Phase 3): disguise quality. 50 is
         // neutral — the pre-coordinator game exactly.
-        blitzDesign: (_w = (_v = (_u = (_t = defSchool == null ? void 0 : defSchool.staff) == null ? void 0 : _t.dc) == null ? void 0 : _u.ratings) == null ? void 0 : _v.blitzDesign) != null ? _w : 50,
-        _dnaPressure: ((_x = defSchool == null ? void 0 : defSchool._dnaGrades) == null ? void 0 : _x.pressure) || 0,
+        blitzDesign: (_y = (_x = (_w = (_v = defSchool == null ? void 0 : defSchool.staff) == null ? void 0 : _v.dc) == null ? void 0 : _w.ratings) == null ? void 0 : _x.blitzDesign) != null ? _y : 50,
+        _dnaPressure: ((_z = defSchool == null ? void 0 : defSchool._dnaGrades) == null ? void 0 : _z.pressure) || 0,
         _dnaBallHawk: ((defSchool == null ? void 0 : defSchool._dnaGrades) == null ? void 0 : defSchool._dnaGrades.ballHawk) || 0
       });
       const _namedPlay = forcedCall && forcedCall.concept && forcedCall.concept !== "sheet" && FORMATION_PLAYBOOK && Object.values(FORMATION_PLAYBOOK).some((l) => l.includes(forcedCall.concept)) ? forcedCall.concept : null;
@@ -20635,7 +20695,7 @@ var _CFB = (() => {
         gameState.half,
         gameState.score.def - gameState.score.off,
         offFormationId,
-        (_z = (_y = defEff.subPhilosophy) != null ? _y : defPlan.subPhilosophy) != null ? _z : "auto"
+        (_B = (_A = defEff.subPhilosophy) != null ? _A : defPlan.subPhilosophy) != null ? _B : "auto"
       );
       let playType = pickPlayType(
         offFormationId,
@@ -20668,7 +20728,7 @@ var _CFB = (() => {
         } else if (PASS_CONCEPTS[nm]) {
           playType = "pass_" + PASS_CONCEPTS[nm].depth;
           forcedConceptName = nm;
-        } else if ((_A = RUN_CONCEPTS[nm]) == null ? void 0 : _A.type) {
+        } else if ((_C = RUN_CONCEPTS[nm]) == null ? void 0 : _C.type) {
           playType = RUN_CONCEPTS[nm].type;
           forcedConceptName = nm;
         }
@@ -20704,9 +20764,9 @@ var _CFB = (() => {
       const familyPinned = coachCalled || categoryCalled;
       const activeOffDepth = filterActiveDepth(offDepth, offCtx, "off");
       const activeDefDepth = filterActiveDepth(defDepth, defCtx, "def");
-      const offFA = (_C = (_B = offPlan.fieldAssignments) == null ? void 0 : _B.offense) == null ? void 0 : _C[offFormationId];
+      const offFA = (_E = (_D = offPlan.fieldAssignments) == null ? void 0 : _D.offense) == null ? void 0 : _E[offFormationId];
       const baseFront = defPlan.defBaseFront || "4-3";
-      const defFA = (_E = (_D = defPlan.fieldAssignments) == null ? void 0 : _D.defense) == null ? void 0 : _E[baseFront];
+      const defFA = (_G = (_F = defPlan.fieldAssignments) == null ? void 0 : _F.defense) == null ? void 0 : _G[baseFront];
       const offPosOf = (id) => {
         var _a2;
         return ((_a2 = offRoster.find((p) => p.id === id)) == null ? void 0 : _a2.position) || null;
@@ -20718,7 +20778,7 @@ var _CFB = (() => {
       const MESH_DEPTH_KEYS = ["SLOT", "FB", "WING", "ABACK", "WILDCAT", "JETMAN"];
       let offDepthWithSlot = activeOffDepth;
       for (const key of MESH_DEPTH_KEYS) {
-        const named = (_F = offSchool == null ? void 0 : offSchool.depthOrder) == null ? void 0 : _F[key];
+        const named = (_H = offSchool == null ? void 0 : offSchool.depthOrder) == null ? void 0 : _H[key];
         if (!(named == null ? void 0 : named.length)) continue;
         const live = named.filter((id) => offRoster.some((p) => p.id === id && p.injuryGamesOut === 0));
         if (live.length) offDepthWithSlot = __spreadProps(__spreadValues({}, offDepthWithSlot), { [key]: live });
@@ -20731,10 +20791,10 @@ var _CFB = (() => {
         const id = ((offPersonnel == null ? void 0 : offPersonnel.QB) || [])[0];
         return id ? offRoster.find((p) => p.id === id) : null;
       })();
-      const losFree = (_G = offEff.losFreedom) != null ? _G : "auto";
+      const losFree = (_I = offEff.losFreedom) != null ? _I : "auto";
       const sPl0 = (defPersonnel.S || []).map((id) => defRoster.find((pl) => pl.id === id)).filter(Boolean);
       const sAwr0 = sPl0.length ? sPl0.reduce((t, pl) => t + pl.attributes.AWR, 0) / sPl0.length : 50;
-      const covFam = coverageFamily((_H = defEff.covShell) != null ? _H : "balanced", (_I = defEff.covStyle) != null ? _I : "balanced", sAwr0);
+      const covFam = coverageFamily((_J = defEff.covShell) != null ? _J : "balanced", (_K = defEff.covStyle) != null ? _K : "balanced", sAwr0);
       const DISGUISE_SHOW = {
         "Cover 1": "Cover 2",
         "Cover 3": "Cover 2",
@@ -20746,11 +20806,11 @@ var _CFB = (() => {
       const oppMemPre = seenMemory(defCtx);
       let shownFam = covFam, fooled = false;
       if ((playType.startsWith("pass") || playType.startsWith("run")) && qb0) {
-        const pDisguise = clamp2(0.1 + (((_J = defPlanEff.blitzDesign) != null ? _J : 50) - 50) * 4e-3 + (sAwr0 - 50) * 2e-3 + Math.min(0.1, (oppMemPre.audibles || 0) * 0.012), 0.04, 0.45);
+        const pDisguise = clamp2(0.1 + (((_L = defPlanEff.blitzDesign) != null ? _L : 50) - 50) * 4e-3 + (sAwr0 - 50) * 2e-3 + Math.min(0.1, (oppMemPre.audibles || 0) * 0.012), 0.04, 0.45);
         if (Math.random() < pDisguise) {
-          shownFam = (_K = DISGUISE_SHOW[covFam]) != null ? _K : covFam;
-          const craft = ((_L = defPlanEff.blitzDesign) != null ? _L : 50) * 0.5 + sAwr0 * 0.5;
-          const read = ((_M = qb0.attributes.AWR) != null ? _M : 50) * 0.7 + ((_N = qb0.attributes.TEC) != null ? _N : 50) * 0.3;
+          shownFam = (_M = DISGUISE_SHOW[covFam]) != null ? _M : covFam;
+          const craft = ((_N = defPlanEff.blitzDesign) != null ? _N : 50) * 0.5 + sAwr0 * 0.5;
+          const read = ((_O = qb0.attributes.AWR) != null ? _O : 50) * 0.7 + ((_P = qb0.attributes.TEC) != null ? _P : 50) * 0.3;
           fooled = Math.random() < clamp2(0.5 + (craft - read) * 0.01, 0.15, 0.85);
         }
       }
@@ -20759,7 +20819,7 @@ var _CFB = (() => {
       if (qb0 && losFree !== "never" && !familyPinned) {
         const shellSeen = fooled && defEff.covShell !== "balanced" && defEff.covShell != null ? ["Cover 2", "Cover 4", "Cover 2-Man"].includes(shownFam) ? -1 : 1 : defEff.covShell === "single" ? 1 : defEff.covShell === "two" ? -1 : 0;
         const boxScore = shellSeen + (defEff.runCommit || 0) / 12;
-        const seeIt = clamp2((((_O = qb0.attributes.AWR) != null ? _O : 50) - 55) * 8e-3 * (losFree === "free" ? 1.5 : 1), 0, 0.25);
+        const seeIt = clamp2((((_Q = qb0.attributes.AWR) != null ? _Q : 50) - 55) * 8e-3 * (losFree === "free" ? 1.5 : 1), 0, 0.25);
         if ((playType === "run_inside" || playType === "run_outside") && boxScore >= 1 && Math.random() < seeIt) {
           playType = "pass_short";
           killCall = "toPass";
@@ -20777,7 +20837,7 @@ var _CFB = (() => {
           shotCall = true;
         }
         if (playType === "pass_short" && covMem.blitz / covMem.dropbacks >= 0.35) {
-          offPlanEff.screenRate = ((_P = offPlanEff.screenRate) != null ? _P : 14) + 6;
+          offPlanEff.screenRate = ((_R = offPlanEff.screenRate) != null ? _R : 14) + 6;
         }
       }
       const offWeights = getOffWeights(offFormationId, playType) || OFF_WEIGHTS[playType];
@@ -20791,16 +20851,16 @@ var _CFB = (() => {
       else if (playType === "run_inside" || playType === "run_outside") concept = pickRunConcept(playType, offPersonnel, offRoster, defEff, offPlanEff.conceptWeights || null, forcedConceptName, _pbGate);
       let audible = false;
       if (concept.name && playType.startsWith("pass") && qb0 && losFree !== "never" && audiblesUsed < (losFree === "free" ? 2 : 1)) {
-        const calledVs = (_S = (_R = (_Q = PASS_CONCEPTS[concept.name]) == null ? void 0 : _Q.vs) == null ? void 0 : _R[believedFam]) != null ? _S : 0;
-        const pAud = clamp2((((_T = qb0.attributes.AWR) != null ? _T : 50) - 55) * 0.012, 0, 0.35) * (losFree === "free" ? 1.4 : 1);
+        const calledVs = (_U = (_T = (_S = PASS_CONCEPTS[concept.name]) == null ? void 0 : _S.vs) == null ? void 0 : _T[believedFam]) != null ? _U : 0;
+        const pAud = clamp2((((_V = qb0.attributes.AWR) != null ? _V : 50) - 55) * 0.012, 0, 0.35) * (losFree === "free" ? 1.4 : 1);
         if (calledVs <= -0.02 && Math.random() < pAud) {
           const depth = playType.replace("pass_", "");
           const wrN = ((offPersonnel == null ? void 0 : offPersonnel.WR) || []).length;
           let bestName = null, bestVs = calledVs;
           for (const [nm, c] of Object.entries(PASS_CONCEPTS)) {
             if (c.depth !== depth || c.minWR && wrN < c.minWR) continue;
-            if (offPlanEff.conceptWeights && ((_U = offPlanEff.conceptWeights[nm]) != null ? _U : 50) <= 0) continue;
-            const v = (_W = (_V = c.vs) == null ? void 0 : _V[believedFam]) != null ? _W : 0;
+            if (offPlanEff.conceptWeights && ((_W = offPlanEff.conceptWeights[nm]) != null ? _W : 50) <= 0) continue;
+            const v = (_Y = (_X = c.vs) == null ? void 0 : _X[believedFam]) != null ? _Y : 0;
             if (v > bestVs) {
               bestVs = v;
               bestName = nm;
@@ -20814,7 +20874,7 @@ var _CFB = (() => {
             const skill = execSkill(c.exec || {}, offRoster, offPersonnel);
             concept = {
               name: bestName,
-              mod: ((_Y = (_X = c.vs) == null ? void 0 : _X[covFam]) != null ? _Y : 0) * clamp2(1 + (skill - 50) / 100, 0.6, 1.4)
+              mod: ((__ = (_Z = c.vs) == null ? void 0 : _Z[covFam]) != null ? __ : 0) * clamp2(1 + (skill - 50) / 100, 0.6, 1.4)
             };
           }
         }
@@ -20822,17 +20882,17 @@ var _CFB = (() => {
       if (fooled) offPlanEff._fooled = true;
       _conceptCtx = {
         name: concept.name,
-        def: concept.name ? (__ = (_Z = PASS_CONCEPTS[concept.name]) != null ? _Z : RUN_CONCEPTS[concept.name]) != null ? __ : null : null,
+        def: concept.name ? (_aa = (_$ = PASS_CONCEPTS[concept.name]) != null ? _$ : RUN_CONCEPTS[concept.name]) != null ? _aa : null : null,
         fam: covFam
       };
       offPlanEff._forcePANative = !!(concept.name && PASS_CONCEPTS[concept.name] && PASS_CONCEPTS[concept.name].paNative);
-      const offUnit = baseOffUnit * (1 + concept.mod) * (fakeSurprise ? 1.1 : 1) * h2Counter * coordIqMod(offSchool, "off", offFormationId) * (2 - coordIqMod(defSchool, "def", defFrontId)) * getMatchupEdge(offFormationId, defFrontId) * getSituationalMod(offFormationId, down, distance, gameState.clock, fieldPos) * shortYardagePower(playType, distance, offPersonnel, offRoster) * (1 + (((_$ = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : _$.groundPound) || 0) * 8e-3) * (down === 4 ? 1 + (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.riverboat) || 0) * 0.01 : 1) * (offense.isHome ? C.HOME_EDGE : 1 - (1 - (2 - C.HOME_EDGE)) * (1 - (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.roadWarrior) || 0) * 0.08)) * ((_aa = offense.form) != null ? _aa : 1) * (2 - ((_ba = defense.form) != null ? _ba : 1)) * ((_ca = offense.execMult) != null ? _ca : 1) * (2 - ((_da = defense.execMult) != null ? _da : 1)) + ((offPlan == null ? void 0 : offPlan._h2OffLean) ? offPlan._h2OffLean.eff * C.K_CONTEXT : 0);
+      const offUnit = baseOffUnit * (1 + concept.mod) * (fakeSurprise ? 1.1 : 1) * h2Counter * coordIqMod(offSchool, "off", offFormationId) * (2 - coordIqMod(defSchool, "def", defFrontId)) * getMatchupEdge(offFormationId, defFrontId) * getSituationalMod(offFormationId, down, distance, gameState.clock, fieldPos) * shortYardagePower(playType, distance, offPersonnel, offRoster) * (1 + (((_ba = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : _ba.groundPound) || 0) * 8e-3) * (down === 4 ? 1 + (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.riverboat) || 0) * 0.01 : 1) * (offense.isHome ? C.HOME_EDGE : 1 - (1 - (2 - C.HOME_EDGE)) * (1 - (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.roadWarrior) || 0) * 0.08)) * ((_ca = offense.form) != null ? _ca : 1) * (2 - ((_da = defense.form) != null ? _da : 1)) * ((_ea = offense.execMult) != null ? _ea : 1) * (2 - ((_fa = defense.execMult) != null ? _fa : 1)) + ((offPlan == null ? void 0 : offPlan._h2OffLean) ? offPlan._h2OffLean.eff * C.K_CONTEXT : 0);
       const rcDef = defEff.runCommit || 0;
       const shellRunMult = playType === "run_inside" || playType === "run_outside" ? defEff.covShell === "single" ? 1.04 : defEff.covShell === "two" ? 0.95 : 1 : 1;
       const edgeRunMult = defEff.edgePlay === "contain" ? playType === "run_outside" ? 1.04 : playType === "run_inside" ? 0.98 : 1 : defEff.edgePlay === "crash" ? playType === "run_outside" ? 0.96 : playType === "run_inside" ? 1.02 : 1 : 1;
       const oppMem = seenMemory(defCtx);
-      _tkStyle = (_fa = (_ea = defEff.tackleStyle) != null ? _ea : defPlan.tackleStyle) != null ? _fa : "balanced";
-      _optKey = (_ha = (_ga = defEff.optionKey) != null ? _ga : defPlan.optionKey) != null ? _ha : "balanced";
+      _tkStyle = (_ha = (_ga = defEff.tackleStyle) != null ? _ga : defPlan.tackleStyle) != null ? _ha : "balanced";
+      _optKey = (_ja = (_ia = defEff.optionKey) != null ? _ia : defPlan.optionKey) != null ? _ja : "balanced";
       const defAwrFactor = (() => {
         const readers = [...defPersonnel.LB || [], ...defPersonnel.S || []].map((id) => defRoster.find((p) => p.id === id)).filter(Boolean);
         const awr = readers.length ? readers.reduce((s2, p) => s2 + p.attributes.AWR, 0) / readers.length : 50;
@@ -20851,14 +20911,14 @@ var _CFB = (() => {
         offRoster,
         offCtx.fatigueMap,
         slotMap(offPersonnel),
-        (((_ia = offense.form) != null ? _ia : 1) * ((_ja = offense.execMult) != null ? _ja : 1) - 1) * C.FORM_ATTR_SCALE
+        (((_ka = offense.form) != null ? _ka : 1) * ((_la = offense.execMult) != null ? _la : 1) - 1) * C.FORM_ATTR_SCALE
       );
       const effDefRoster = makeEffectiveRoster(
         onFieldDef,
         defRoster,
         defCtx.fatigueMap,
         slotMap(defPersonnel),
-        (((_ka = defense.form) != null ? _ka : 1) * ((_la = defense.execMult) != null ? _la : 1) - 1) * C.FORM_ATTR_SCALE
+        (((_ma = defense.form) != null ? _ma : 1) * ((_na = defense.execMult) != null ? _na : 1) - 1) * C.FORM_ATTR_SCALE
       );
       const qbId = ((offPersonnel == null ? void 0 : offPersonnel.QB) || activeOffDepth["QB"] || [])[0];
       let qb = qbId ? effOffRoster.find((p) => p.id === qbId) : null;
@@ -20889,17 +20949,17 @@ var _CFB = (() => {
           const optShare = offPlanEff.optionRate != null ? clamp2(offPlanEff.optionRate / 100, 0, 1) : OPTION_CAPABLE[offFormationId];
           optionSnap = Math.random() < optShare;
         } else if (SPEED_OPTION[offFormationId] != null) {
-          const optShare = SPEED_OPTION[offFormationId] * clamp2(((_ma = offPlanEff.optionRate) != null ? _ma : 70) / 70, 0, 1.5);
+          const optShare = SPEED_OPTION[offFormationId] * clamp2(((_oa = offPlanEff.optionRate) != null ? _oa : 70) / 70, 0, 1.5);
           if (Math.random() < optShare) {
             optionSnap = true;
             optionStyle = "speed";
           }
         }
       }
-      const rpoFit = (_na = C.RPO_FIT[offFormationId]) != null ? _na : 0.5;
+      const rpoFit = (_pa = C.RPO_FIT[offFormationId]) != null ? _pa : 0.5;
       const rpoKeyMult = defEff.optionKey === "qb" ? 0.7 : 1;
       const calledRPO = !!(offPlanEff && offPlanEff._forceRPO);
-      if (!optionSnap && !forcedGadget && qb && (calledRPO || rpoFit > 0 && playType.startsWith("run") && Math.random() < ((_oa = offPlanEff.rpoRate) != null ? _oa : 40) / 100 * rpoFit * rpoKeyMult)) {
+      if (!optionSnap && !forcedGadget && qb && (calledRPO || rpoFit > 0 && playType.startsWith("run") && Math.random() < ((_qa = offPlanEff.rpoRate) != null ? _qa : 40) / 100 * rpoFit * rpoKeyMult)) {
         const lbs = ((defPersonnel == null ? void 0 : defPersonnel.LB) || []).map((id) => {
           var _a2;
           return (_a2 = defRoster == null ? void 0 : defRoster.find) == null ? void 0 : _a2.call(defRoster, (p) => p.id === id);
@@ -20931,13 +20991,13 @@ var _CFB = (() => {
         }
       }
       let wildcatTaker = null;
-      if (offFormationId === "Wildcat" && !jetMan && (!coachCalled || forcedGadget === "wildcat") && (effPlayType === "run_inside" || effPlayType === "run_outside") && ((_pa = offField == null ? void 0 : offField.bySlot) == null ? void 0 : _pa.RB_H)) {
+      if (offFormationId === "Wildcat" && !jetMan && (!coachCalled || forcedGadget === "wildcat") && (effPlayType === "run_inside" || effPlayType === "run_outside") && ((_ra = offField == null ? void 0 : offField.bySlot) == null ? void 0 : _ra.RB_H)) {
         wildcatTaker = effOffRoster.find((p) => p.id === offField.bySlot.RB_H) || null;
       }
       let drawSnap = false;
       if (forcedGadget === "draw" && effPlayType === "run_inside") {
         drawSnap = true;
-      } else if (!optionSnap && !jetMan && !wildcatTaker && !coachCalled && effPlayType === "run_inside" && Math.random() < clamp2(((_qa = offPlanEff.drawRate) != null ? _qa : DRAW_DEFAULT) / 100, 0, 0.35)) {
+      } else if (!optionSnap && !jetMan && !wildcatTaker && !coachCalled && effPlayType === "run_inside" && Math.random() < clamp2(((_sa = offPlanEff.drawRate) != null ? _sa : DRAW_DEFAULT) / 100, 0, 0.35)) {
         drawSnap = true;
       }
       let playResult;
@@ -20963,7 +21023,7 @@ var _CFB = (() => {
         let pitchManId = null;
         if (offField == null ? void 0 : offField.bySlot) {
           const wings = ["RB_H", "RB_2"].map((sid) => offField.bySlot[sid]).map((id) => id && effOffRoster.find((p) => p.id === id)).filter(Boolean);
-          pitchManId = (_sa = (_ra = wings.sort((a, b) => (b.attributes.SPD || 0) - (a.attributes.SPD || 0))[0]) == null ? void 0 : _ra.id) != null ? _sa : null;
+          pitchManId = (_ua = (_ta = wings.sort((a, b) => (b.attributes.SPD || 0) - (a.attributes.SPD || 0))[0]) == null ? void 0 : _ta.id) != null ? _ua : null;
         }
         playResult = resolveOptionPlay(
           effPlayType,
@@ -20985,12 +21045,12 @@ var _CFB = (() => {
       } else if (effPlayType === "run_inside" || effPlayType === "run_outside") {
         let drawOverride = null;
         if (drawSnap) {
-          const caughtBlitz = Math.random() < clamp2(((_ta = defPlanEff.blitzPct) != null ? _ta : 20) / 100 + (defPlanEff.edgePlayEff === "crash" ? 0.12 : defPlanEff.edgePlayEff === "contain" ? -0.06 : 0), 0.05, 0.75);
+          const caughtBlitz = Math.random() < clamp2(((_va = defPlanEff.blitzPct) != null ? _va : 20) / 100 + (defPlanEff.edgePlayEff === "crash" ? 0.12 : defPlanEff.edgePlayEff === "contain" ? -0.06 : 0), 0.05, 0.75);
           if (caughtBlitz) {
             drawOverride = { laneShift: 0.14, forcePenetrator: null, phase: "draw" };
           } else {
             const mike = (defPersonnel.LB || []).map((id) => effDefRoster.find((p) => p.id === id)).filter(Boolean)[0] || null;
-            const sniffP = clamp2(0.28 + (((_ua = mike == null ? void 0 : mike.attributes.AWR) != null ? _ua : 50) - 50) * 5e-3 - (((_va = qb == null ? void 0 : qb.attributes.TEC) != null ? _va : 50) - 50) * 18e-4 + Math.min(0.15, (oppMem.draw || 0) * 0.03), 0.1, 0.65);
+            const sniffP = clamp2(0.28 + (((_wa = mike == null ? void 0 : mike.attributes.AWR) != null ? _wa : 50) - 50) * 5e-3 - (((_xa = qb == null ? void 0 : qb.attributes.TEC) != null ? _xa : 50) - 50) * 18e-4 + Math.min(0.15, (oppMem.draw || 0) * 0.03), 0.1, 0.65);
             drawOverride = Math.random() < sniffP ? { laneShift: -0.12, forcePenetrator: mike, phase: "draw" } : { laneShift: 0.04, forcePenetrator: null, phase: "draw" };
           }
         }
@@ -21041,7 +21101,7 @@ var _CFB = (() => {
       {
         let fam = covFam;
         if (playResult.fireZone) fam = "C3 Fire Zone";
-        else if (playResult.blitzFired && fam === "Cover 1" && ((_wa = defEff.blitzPct) != null ? _wa : 20) >= 40) fam = "Cover 0";
+        else if (playResult.blitzFired && fam === "Cover 1" && ((_ya = defEff.blitzPct) != null ? _ya : 20) >= 40) fam = "Cover 0";
         playResult.coverage = fam;
         if (shownFam !== covFam) {
           playResult.shownCoverage = shownFam;
@@ -21086,11 +21146,31 @@ var _CFB = (() => {
           const q = qid ? offRoster.find((pp) => pp.id === qid) : null;
           return q ? q.attributes.STR : null;
         })(),
+        // Slot-level truth stamps (recording only): the beaten cover
+        // man and the coverage matchups, translated player→slot so the
+        // viewer animates the SIM'S assignments, not proximity guesses.
+        beatenDefSlot: (() => {
+          const bs = defBaseField == null ? void 0 : defBaseField.bySlot;
+          if (!bs || !playResult.beatenDefId) return null;
+          return Object.keys(bs).find((sid) => bs[sid] === playResult.beatenDefId) || null;
+        })(),
+        covSlots: (() => {
+          const ob2 = offField == null ? void 0 : offField.bySlot, db = defBaseField == null ? void 0 : defBaseField.bySlot;
+          if (!ob2 || !db || !playResult.covAssign) return null;
+          const inv = (m) => {
+            const o = {};
+            for (const k of Object.keys(m)) o[m[k]] = k;
+            return o;
+          };
+          const oi = inv(ob2), di = inv(db);
+          const out = playResult.covAssign.map((c) => ({ r: oi[c.r], d: di[c.d], t: c.t })).filter((c) => c.r && c.d);
+          return out.length ? out : null;
+        })(),
         offSpd: slotSpeedMap(offField == null ? void 0 : offField.bySlot, offRoster),
         defSpd: slotSpeedMap(defBaseField == null ? void 0 : defBaseField.bySlot, defRoster),
         offSit,
         tempo: offPlan._liveTempo || offEff.tempo,
-        blitzFired: (_xa = playResult.blitzFired) != null ? _xa : false,
+        blitzFired: (_za = playResult.blitzFired) != null ? _za : false,
         clock: gameState.clock,
         half: gameState.half,
         scoreOff: gameState.score.off,
@@ -21115,13 +21195,13 @@ var _CFB = (() => {
       if (!offPlanEff._injuriesOff && playResult.qbInjured && playResult.qbInjuryGames > 0 && playResult.rusherId) {
         const injQb = offRoster.find((p) => p.id === playResult.rusherId);
         if (injQb) {
-          const medMult = 1 - (((_za = (_ya = offSchool == null ? void 0 : offSchool.facilities) == null ? void 0 : _ya.medicine) != null ? _za : 2) - 2) * 0.08;
+          const medMult = 1 - (((_Ba = (_Aa = offSchool == null ? void 0 : offSchool.facilities) == null ? void 0 : _Aa.medicine) != null ? _Ba : 2) - 2) * 0.08;
           injQb.injuryGamesOut = Math.max(1, Math.round(Math.max(injQb.injuryGamesOut || 0, playResult.qbInjuryGames) * medMult));
           injQb.injury = makeInjury(injQb.injuryGamesOut, gameState.week || 0);
           offCtx.benchedMap[injQb.id] = true;
         }
       }
-      const tempoMult = (_Aa = C.TEMPO_MULT[offPlan._liveTempo || offEff.tempo]) != null ? _Aa : 1;
+      const tempoMult = (_Ca = C.TEMPO_MULT[offPlan._liveTempo || offEff.tempo]) != null ? _Ca : 1;
       let elapsed = Math.max(4, Math.round(randNorm(
         (playType.startsWith("run") ? C.CLOCK_RUN.mean : C.CLOCK_PASS.mean) * tempoMult,
         playType.startsWith("run") ? C.CLOCK_RUN.sd : C.CLOCK_PASS.sd
@@ -21359,7 +21439,7 @@ var _CFB = (() => {
     if (tokenControlsSide(token, side) && ((_a = token.controlledSides) == null ? void 0 : _a.length) > 1) token.playerSide = side;
   }
   function playHalf(token, half, resume = null) {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
     const {
       homeTeam,
       awayTeam,
@@ -21376,6 +21456,7 @@ var _CFB = (() => {
     let possession = half === 2 ? token.openingReceiver === "home" ? "away" : "home" : token.openingReceiver;
     let fieldPos = 25;
     let driveCount = 0;
+    let pendingKickoff = null;
     let resumeDrive = null;
     if (!resume) {
       token.timeouts = { home: C.TIMEOUTS_PER_HALF, away: C.TIMEOUTS_PER_HALF };
@@ -21445,6 +21526,15 @@ var _CFB = (() => {
       }
       clock = gameState.clock;
       drives.push(__spreadValues({ possession }, driveResult));
+      if (pendingKickoff && driveResult.plays) {
+        const _koScore = {
+          scoreOff: possession === "home" ? token.homeScore : token.awayScore,
+          scoreDef: possession === "home" ? token.awayScore : token.homeScore
+        };
+        for (const _ko of pendingKickoff.reverse())
+          driveResult.plays.unshift(__spreadProps(__spreadValues(__spreadValues({}, _ko), _koScore), { clock, half, down: 0, distance: 0 }));
+        pendingKickoff = null;
+      }
       if (driveResult.pen) {
         const offStats = possession === "home" ? homeStats : awayStats;
         const defStats = possession === "home" ? awayStats : homeStats;
@@ -21463,13 +21553,36 @@ var _CFB = (() => {
         const chaseTwo = _pat === "kick" ? secsLeft <= 300 && marginBefore === -2 : _pat === "aggressive" ? secsLeft <= 900 && [1, -2, -5, -9, -10, -12, -13, -16].includes(marginBefore) : secsLeft <= 480 && (marginBefore === -2 || marginBefore === -5 || marginBefore === -10 || marginBefore === -12 || marginBefore === -13);
         let addPts = 6;
         const dStats = possession === "home" ? homeStats : awayStats;
+        const _tryDD = drives[drives.length - 1];
+        const _tryBase = {
+          down: 0,
+          distance: 0,
+          fieldPos: 97,
+          clock,
+          half,
+          scoreOff: scorerScore + 6,
+          scoreDef: oppScore
+        };
         if (chaseTwo) {
           dStats.twoPtAtt++;
           const _rbSchool = possession === "home" ? homeSchool : awaySchool;
           const _rbGrade = ((_rbSchool == null ? void 0 : _rbSchool._dnaGrades) == null ? void 0 : _rbSchool._dnaGrades.riverboat) || 0;
-          if (Math.random() < C.PAT2_RATE * (1 + _rbGrade * 0.01)) {
+          const twoGood = Math.random() < C.PAT2_RATE * (1 + _rbGrade * 0.01);
+          if (twoGood) {
             addPts += 2;
             dStats.twoPtMade++;
+          }
+          if (_tryDD == null ? void 0 : _tryDD.plays) {
+            const _forms = (_sGP == null ? void 0 : _sGP.offFormations) || [];
+            let _tw = _forms.reduce((s2, f2) => s2 + (f2.weight || 1), 0) * Math.random();
+            let _tform = ((_a = _forms[0]) == null ? void 0 : _a.id) || "Spread";
+            for (const f2 of _forms) {
+              if ((_tw -= f2.weight || 1) <= 0) {
+                _tform = f2.id;
+                break;
+              }
+            }
+            _tryDD.plays.push(__spreadValues({ type: "pat2", made: twoGood, offFormation: _tform }, _tryBase));
           }
         } else {
           const xpGood = Math.random() < C.PAT_RATE;
@@ -21478,8 +21591,13 @@ var _CFB = (() => {
           if (dd) {
             dd.xpAtt = 1;
             dd.xpMade = xpGood ? 1 : 0;
-            dd.xpKickerId = (_b = (((_a = offense.depth) == null ? void 0 : _a["K"]) || [])[0]) != null ? _b : null;
+            dd.xpKickerId = (_c = (((_b = offense.depth) == null ? void 0 : _b["K"]) || [])[0]) != null ? _c : null;
           }
+          if (_tryDD == null ? void 0 : _tryDD.plays) _tryDD.plays.push(__spreadValues({
+            type: "pat",
+            made: xpGood,
+            kickerId: (_e = (((_d = offense.depth) == null ? void 0 : _d["K"]) || [])[0]) != null ? _e : null
+          }, _tryBase));
         }
         if (possession === "home") token.homeScore += addPts;
         else token.awayScore += addPts;
@@ -21516,6 +21634,16 @@ var _CFB = (() => {
           const wantOnside = margin < 0 && secsLeft <= 180;
           if (wantOnside) {
             const onside = onsideResult();
+            pendingKickoff = [{
+              type: "kickoff",
+              onside: true,
+              recovered: onside.recovered,
+              touchback: false,
+              retYds: 0,
+              returnerId: null,
+              returnTD: false,
+              fieldPos: 50
+            }];
             if (onside.recovered) {
               possession = scoringTeam;
               fieldPos = onside.fieldPos;
@@ -21531,7 +21659,7 @@ var _CFB = (() => {
             const recvRoster = receivingTeam === "home" ? homeRoster : awayRoster;
             const recvSchool = receivingTeam === "home" ? homeSchool : awaySchool;
             const kickSchool = scoringTeam === "home" ? homeSchool : awaySchool;
-            const ko = kickoffOutcome(kickRoster, recvRoster, (((_c = recvSchool == null ? void 0 : recvSchool.depthOrder) == null ? void 0 : _c.RET) || [])[0], ((_d = kickSchool == null ? void 0 : kickSchool._dnaGrades) == null ? void 0 : _d.specialTeams) || 0);
+            const ko = kickoffOutcome(kickRoster, recvRoster, (((_f = recvSchool == null ? void 0 : recvSchool.depthOrder) == null ? void 0 : _f.RET) || [])[0], ((_g = kickSchool == null ? void 0 : kickSchool._dnaGrades) == null ? void 0 : _g.specialTeams) || 0);
             const retName = ko.returner ? `${ko.returner.name.first[0]}. ${ko.returner.name.last}` : null;
             if (!token.koReturns) token.koReturns = [];
             if (!ko.touchback && ko.returner) {
@@ -21542,12 +21670,21 @@ var _CFB = (() => {
                 td: !!ko.td
               });
             }
+            pendingKickoff = ko.td ? [] : [{
+              type: "kickoff",
+              onside: false,
+              touchback: !!ko.touchback,
+              returnerId: (_i = (_h = ko.returner) == null ? void 0 : _h.id) != null ? _i : null,
+              retYds: ko.retYds || 0,
+              returnTD: false,
+              fieldPos: 50
+            }];
             if (ko.td) {
               log.push(`KICKOFF RETURN TOUCHDOWN \u2014 ${retName || "The returner"} takes it all the way for ${recvSchool.name}!`);
               const pat = Math.random() < C.PAT_RATE ? 1 : 0;
               if (receivingTeam === "home") token.homeScore += 6 + pat;
               else token.awayScore += 6 + pat;
-              const ko2 = kickoffOutcome(recvRoster, kickRoster, (((_f = (_e = scoringTeam === "home" ? homeSchool : awaySchool) == null ? void 0 : _e.depthOrder) == null ? void 0 : _f.RET) || [])[0], ((_g = recvSchool == null ? void 0 : recvSchool._dnaGrades) == null ? void 0 : _g.specialTeams) || 0);
+              const ko2 = kickoffOutcome(recvRoster, kickRoster, (((_k = (_j = scoringTeam === "home" ? homeSchool : awaySchool) == null ? void 0 : _j.depthOrder) == null ? void 0 : _k.RET) || [])[0], ((_l = recvSchool == null ? void 0 : recvSchool._dnaGrades) == null ? void 0 : _l.specialTeams) || 0);
               if (!ko2.touchback && ko2.returner) {
                 token.koReturns.push({
                   side: scoringTeam,
@@ -21556,6 +21693,27 @@ var _CFB = (() => {
                   td: false
                 });
               }
+              pendingKickoff = [
+                {
+                  type: "kickoff",
+                  onside: false,
+                  touchback: false,
+                  returnerId: (_n = (_m = ko.returner) == null ? void 0 : _m.id) != null ? _n : null,
+                  retYds: ko.retYds || 0,
+                  returnTD: true,
+                  koTeam: (recvSchool == null ? void 0 : recvSchool.name) || "",
+                  fieldPos: 50
+                },
+                {
+                  type: "kickoff",
+                  onside: false,
+                  touchback: !!ko2.touchback,
+                  returnerId: (_p = (_o = ko2.returner) == null ? void 0 : _o.id) != null ? _p : null,
+                  retYds: ko2.retYds || 0,
+                  returnTD: false,
+                  fieldPos: 50
+                }
+              ];
               possession = scoringTeam;
               fieldPos = ko2.fieldPos;
             } else {
@@ -36666,10 +36824,16 @@ var _CFB = (() => {
         return ((_a2 = rank[a2.grp]) != null ? _a2 : 3) - ((_b2 = rank[b2.grp]) != null ? _b2 : 3);
       });
       const taken = /* @__PURE__ */ new Set();
-      if (man) {
+      const stampedFor = (c) => {
+        const pair = (p.covSlots || []).find((cs) => cs.r === c.id && cs.t !== "zone");
+        if (!pair) return null;
+        const d = D[pair.d];
+        return d && !d.behave && d.grp !== "DL" && !taken.has(d.id) ? d : null;
+      };
+      if (man || (p.covSlots || []).some((cs) => cs.t !== "zone")) {
         for (const c of catchers) {
-          let best = null, bd = 1e9;
-          for (const d of covPool) {
+          let best = stampedFor(c), bd = 1e9;
+          if (!best && man) for (const d of covPool) {
             if (taken.has(d.id)) continue;
             const dd = (d.x - c.bx) ** 2 + (d.y - c.by) ** 2;
             if (dd < bd) {
@@ -36677,7 +36841,7 @@ var _CFB = (() => {
               best = d;
             }
           }
-          if (!best) break;
+          if (!best) continue;
           taken.add(best.id);
           const wr = A[c.id];
           const press = best.grp === "DB" && rnd() < 0.45;
@@ -36725,11 +36889,34 @@ var _CFB = (() => {
       };
       const pyds = Math.abs(p.yards || 0);
       const verdict = p.penaltySide === "offense" ? `${pyds} YDS \u2014 REPLAY THE DOWN` : `${pyds} YDS${p.autoFirst ? " \u2014 AUTOMATIC 1ST DOWN" : ""}`;
+      let flagX = clamp6(50 + ((p.fieldPos || 50) % 5 - 2) * 2.2, 8, 92);
+      let flagY = LOS + (preFoul ? 0.6 : 2.4);
+      if (p.penaltyPos) {
+        const fam = {
+          OL: ["OL"],
+          TE: ["TE"],
+          WR: ["WR", "SLOT"],
+          RB: ["RB", "FB"],
+          QB: ["QB"],
+          DL: ["DE", "DT"],
+          LB: ["OLB", "MLB", "ILB", "LB"],
+          CB: ["CB"],
+          S: ["S"]
+        }[p.penaltyPos] || [p.penaltyPos];
+        const side = p.penaltySide === "offense" ? offs : defs;
+        const cands = side.filter((a2) => fam.includes(a2.slot.pos));
+        if (cands.length) {
+          const culprit = cands[Math.floor(rnd() * cands.length) % cands.length];
+          flagX = clamp6(culprit.x + 1.2, 4, 96);
+          flagY = clamp6(culprit.y + 0.8, 3, 59);
+          var culpritCue = { id: culprit.id, t: preFoul ? PRESNAP : tWhistle };
+        }
+      }
       fx.push({
         t: preFoul ? Math.max(0.1, PRESNAP - 0.2) : tWhistle - 0.25,
         kind: "flag",
-        x: clamp6(50 + ((p.fieldPos || 50) % 5 - 2) * 2.2, 8, 92),
-        y: LOS + (preFoul ? 0.6 : 2.4),
+        x: flagX,
+        y: flagY,
         name: String(p.penaltyName || "PENALTY"),
         team: String(p.penaltyOn || ""),
         verdict,
@@ -36821,12 +37008,14 @@ var _CFB = (() => {
         blocks.push({ offId: s.id, defId: edgeD.id, start: PRESNAP + 0.1, end: PRESNAP + 0.4, rep: "chip" });
         break;
       }
-      if (p.blitzFired && !screen) {
+      if ((p.rbKeptIn === true || p.rbKeptIn == null && p.blitzFired) && !screen) {
         const dog = defs.find((d) => d.grp === "LB" && d.behave);
         const pb = backs.find((b2) => b2 !== tgtSlot && A[b2.id] && A[b2.id] !== A.QB);
         if (dog && pb) {
           A[pb.id].behave = (t2) => t2 < PRESNAP ? null : [(dog.x + A.QB.x) / 2, Math.min(A.QB.y - 1.2, (dog.y + A.QB.y) / 2), 6.2];
           blocks.push({ offId: pb.id, defId: dog.id, start: PRESNAP + 0.5, end: throwAt + 0.25, rep: "pickup" });
+        } else if (pb && p.rbKeptIn === true) {
+          A[pb.id].behave = (t2) => t2 < PRESNAP ? null : [A.QB.x + ((pb.bx || 50) <= 50 ? -2.2 : 2.2), A.QB.y - 1.8, 5.5];
         }
       }
       const ballAt = () => bl.x != null ? [bl.x, bl.y] : catchPt;
@@ -37200,15 +37389,18 @@ var _CFB = (() => {
       ball.track.push([clamp6(bp[0], 1, 99), clamp6(bp[1], 1.5, 60)]);
     }
     if (typeof beatenAt !== "undefined" && beatenAt != null) {
-      const iC = Math.min(Math.round(beatenAt / STEP), n);
-      let best = null, bd = 1e9;
-      for (const d of defs) {
-        if (d.grp === "DL") continue;
-        const tr = d.track[Math.min(iC, d.track.length - 1)];
-        const dd = (tr[0] - beatenPt[0]) ** 2 + (tr[1] - beatenPt[1]) ** 2;
-        if (dd < bd) {
-          bd = dd;
-          best = d;
+      let best = p.beatenDefSlot ? defs.find((d) => d.slot.id === p.beatenDefSlot) : null;
+      if (!best) {
+        const iC = Math.min(Math.round(beatenAt / STEP), n);
+        let bd = 1e9;
+        for (const d of defs) {
+          if (d.grp === "DL") continue;
+          const tr = d.track[Math.min(iC, d.track.length - 1)];
+          const dd = (tr[0] - beatenPt[0]) ** 2 + (tr[1] - beatenPt[1]) ** 2;
+          if (dd < bd) {
+            bd = dd;
+            best = d;
+          }
         }
       }
       if (best) fx.push({ t: beatenAt, kind: "beaten", actorId: best.id, x: beatenPt[0], y: beatenPt[1] });
@@ -37320,13 +37512,15 @@ var _CFB = (() => {
       let mv = pickMove();
       const runLike = String(p.type || "").startsWith("run") || p.isScramble;
       if (!mv && runLike && p.td && (p.fieldPos == null || p.fieldPos >= 94)) mv = "dive";
-      if (!mv && p.isScramble && !p.td && (p.yards || 0) > 0 && rnd() < 0.55) mv = "slide";
+      if (!mv && p.isScramble && !p.td && (p.yards || 0) > 0 && (p.qbSlid === true || p.qbSlid == null && rnd() < 0.55)) mv = "slide";
       if (mv) {
         const mvT = mv === "dive" || mv === "slide" ? Math.max(PRESNAP + 0.1, endInfo.at - 0.3) : PRESNAP + (endInfo.at - PRESNAP) * 0.6;
         moveCue = { id: carrier.id, style: mv, t: mvT };
       }
     }
     if (p.td && endInfo && endInfo.actor) celebrateCue = { id: endInfo.actor.id, t: endInfo.at + 0.15 };
+    var injuryCue = p.qbInjured && endInfo ? { id: "QB", t: endInfo.at + 0.3, x: endInfo.pt[0], y: endInfo.pt[1] } : null;
+    if (injuryCue) fx.push({ t: injuryCue.t + 0.25, kind: "hurt", x: injuryCue.x, y: injuryCue.y });
     if (ballEnd.pt) constrainTrack(
       ball.track,
       Math.round(ballEnd.at / STEP),
@@ -37409,6 +37603,8 @@ var _CFB = (() => {
       pumpCue,
       celebrateCue,
       missCues,
+      culpritCue: typeof culpritCue !== "undefined" ? culpritCue : null,
+      injuryCue: typeof injuryCue !== "undefined" ? injuryCue : null,
       fx: fx.filter((f) => f.kind !== "pitch")
     };
   }
@@ -44898,6 +45094,21 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         cls: "pbp-good"
       };
     }
+    if (play.type === "pat") {
+      const kn = nm(play.kickerId);
+      return play.made ? { text: `Extra point is GOOD${kn ? ` \u2014 ${kn}` : ""}`, cls: "pbp-good" } : { text: `Extra point is NO GOOD!${kn ? ` ${kn} pushes it wide` : ""}`, cls: "pbp-bad" };
+    }
+    if (play.type === "pat2") {
+      return play.made ? { text: `TWO-POINT TRY IS GOOD!`, cls: "pbp-good" } : { text: `Two-point try is stopped short`, cls: "pbp-bad" };
+    }
+    if (play.type === "kickoff") {
+      if (play.onside) return play.recovered ? { text: `ONSIDE KICK \u2014 the kicking team recovers!`, cls: "pbp-good" } : { text: `Onside kick fails \u2014 the hands team falls on it`, cls: "pbp-bad" };
+      if (play.returnTD) return { text: `KICKOFF RETURN TOUCHDOWN \u2014 ${nm(play.returnerId) || "the returner"} takes it to the house!`, cls: "pbp-good" };
+      if (play.touchback) return { text: `Kickoff sails through the end zone \u2014 touchback`, cls: "" };
+      return { text: `Kickoff returned ${play.retYds || 0} yards${nm(play.returnerId) ? ` by ${nm(play.returnerId)}` : ""}`, cls: "" };
+    }
+    if (play.type === "kneel") return { text: `Victory formation \u2014 the quarterback takes a knee`, cls: "" };
+    if (play.type === "spike") return { text: `Spike! Clock stopped`, cls: "" };
     if (play.type === "fg") {
       const kn = nm(play.kickerId);
       if (play.made) {
@@ -46891,7 +47102,10 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     if (!svg) return null;
     watchStopAnim();
     svg.setAttribute("viewBox", `${watchSideCameraX(p).toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
-    if (p && (p.type === "fg" || p.type === "punt")) return watchBoardKick(svg, p);
+    if (p && (p.type === "fg" || p.type === "punt" || p.type === "pat")) return watchBoardKick(svg, p);
+    if (p && p.type === "kickoff") return watchBoardKickoff(svg, p);
+    if (p && p.type === "pat2") return watchBoardTry(svg, p);
+    if (p && (p.type === "kneel" || p.type === "spike")) return watchBoardSituational(svg, p);
     const offL = (_a = OFF_FIELD_LAYOUTS[p == null ? void 0 : p.offFormation]) == null ? void 0 : _a.slots;
     const defL = (_b = DEF_FIELD_LAYOUTS[p == null ? void 0 : p.defFront] || DEF_FIELD_LAYOUTS["4-3"]) == null ? void 0 : _b.slots;
     if (!p || !offL) {
@@ -46963,7 +47177,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         }
         if (best) {
           let cls = "";
-          if (p.type === "pass_deep" || cf.kind === "int") cls = "wp-catch-hi";
+          if (p.type === "pass_deep" || cf.kind === "int" || p.contested === true) cls = "wp-catch-hi";
           else if ((31 - cf.y) / 0.85 < 3) cls = "wp-catch-low";
           catchCue = { id: best.id, cls, start: cf.t - 0.2, end: cf.t + (cf.kind === "inc" ? 0.12 : 0.3) };
         }
@@ -47020,7 +47234,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     const trail = [];
     let lastTrail = null;
     const tick = () => {
-      var _a2, _b2, _c2, _d2, _e2, _f, _g, _h, _i, _j;
+      var _a2, _b2, _c2, _d2, _e2, _f, _g, _h, _i, _j, _k;
       if (!svg.isConnected) {
         watchStopAnim();
         return;
@@ -47125,6 +47339,17 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
           n2.classList.toggle("wp-tk-wrap", on);
         }
       }
+      if (script.culpritCue) (_h = nodes[script.culpritCue.id]) == null ? void 0 : _h.classList.toggle("wp-dejected", t >= script.culpritCue.t);
+      if (script.injuryCue) {
+        const on = t >= script.injuryCue.t;
+        const qn = nodes.QB;
+        if (qn) {
+          qn.classList.toggle("wp-injured", on);
+          if (on) {
+            qn.classList.remove("wp-tackled", "wp-sacked");
+          }
+        }
+      }
       (script.blocks || []).forEach((b, i) => {
         var _a3, _b3, _c3, _d3;
         const line = blockNodes[i], op = actorPts[b.offId], dp = actorPts[b.defId];
@@ -47165,9 +47390,9 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       for (const f of script.fx) {
         if (t >= f.t && !shown.has(f)) {
           shown.add(f);
-          if (f.kind === "beaten") (_i = (_h = nodes[f.actorId]) == null ? void 0 : _h.querySelector(".wd-x")) == null ? void 0 : _i.classList.add("wd-beaten");
+          if (f.kind === "beaten") (_j = (_i = nodes[f.actorId]) == null ? void 0 : _i.querySelector(".wd-x")) == null ? void 0 : _j.classList.add("wd-beaten");
           else fxN == null ? void 0 : fxN.insertAdjacentHTML("beforeend", watchFxMarkup(f));
-          if (f.kind === "inc" && catchCue) (_j = nodes[catchCue.id]) == null ? void 0 : _j.classList.add("wp-dejected");
+          if (f.kind === "inc" && catchCue) (_k = nodes[catchCue.id]) == null ? void 0 : _k.classList.add("wp-dejected");
         }
       }
       if (t < script.dur && _watchAnim) _watchAnim.raf = requestAnimationFrame(tick);
@@ -47179,8 +47404,8 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
     var _a;
     const [startX, startY] = watchSidePoint(50, 31);
     svg.setAttribute("viewBox", `${watchSideCameraX(p, startX).toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
-    const isFG = p.type === "fg";
-    const dist = isFG ? p.fgDist || 30 : p.blocked ? 4 : p.puntYds || 40;
+    const isFG = p.type === "fg" || p.type === "pat";
+    const dist = p.type === "pat" ? 20 : isFG ? p.fgDist || 30 : p.blocked ? 4 : p.puntYds || 40;
     const worldEndY = Math.max(2.5, 31 - Math.min(dist, 33) * WATCH_SIDE.ypu);
     const worldEndX = isFG ? 50 : 50 + ((p.fieldPos || 0) % 2 ? 9 : -9);
     const [endX, endY] = watchSidePoint(worldEndX, worldEndY);
@@ -47261,12 +47486,198 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       camX += (watchSideCameraX(p, bx) - camX) * 0.1;
       svg.setAttribute("viewBox", `${camX.toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
       if (t >= dur && fxN && !fxN.childElementCount) {
-        const label = isFG ? p.made ? "GOOD" : "NO GOOD" : p.blocked ? "BLOCKED" : p.touchback ? "TOUCHBACK" : p.returnTD ? "RETURN TD" : retYds > 0 ? `RET ${retYds} YDS` : "PUNT";
+        const label = isFG ? p.made ? "GOOD" : "NO GOOD" : p.blocked ? "BLOCKED" : p.touchback ? "TOUCHBACK" : p.returnTD ? "RETURN TD" : retYds > 0 ? `RET ${retYds} YDS` : p.returnerId && !p.touchback && !p.blocked ? "FAIR CATCH" : "PUNT";
         const cls = isFG && p.made ? "wa-pick" : isFG || p.blocked || p.returnTD ? "wa-x" : "wp-kick-lbl";
         fxN.insertAdjacentHTML(
           "beforeend",
           `<text x="${bx.toFixed(1)}" y="${Math.max(5, by - 3.2).toFixed(1)}" class="${cls}">${label}</text>`
         );
+      }
+      if (t < dur && _watchAnim) _watchAnim.raf = requestAnimationFrame(tick);
+    };
+    _watchAnim = { raf: requestAnimationFrame(tick) };
+    return dur;
+  }
+  function watchBoardKickoff(svg, p) {
+    var _a;
+    const sprites = ((_a = state.settings) == null ? void 0 : _a.spriteWatch) !== false;
+    if (sprites) svg.classList.add("watch-sprites");
+    else svg.classList.remove("watch-sprites");
+    const [teeX, teeY] = watchSidePoint(50, 31);
+    const kickYds = p.onside ? 12 : 58;
+    const [endX, endY] = watchSidePoint(p.onside ? 44 : 50, Math.max(2.6, 31 - kickYds * WATCH_SIDE.ypu));
+    const retYds = !p.onside && !p.touchback ? Math.max(0, p.retYds || 0) : 0;
+    const [retEndX, retEndY] = watchSidePoint(50, Math.min(58, 31 - kickYds * WATCH_SIDE.ypu + retYds * WATCH_SIDE.ypu));
+    const [c1X, c1Y] = watchSidePoint(20, 33), [c2X, c2Y] = watchSidePoint(80, 33);
+    const cast = (a) => sprites ? `<g class="wp-actor wp-team-${a.team}" data-wpk="${a.id}" transform="translate(${a.x.toFixed(2)},${a.y.toFixed(2)})">${spriteMarkup(a)}</g>` : "";
+    svg.innerHTML = watchFieldBase(p) + cast({ id: "K", team: "off", label: "K", x: teeX - 8, y: teeY }) + cast({ id: "C1", team: "off", label: "CV", x: c1X, y: c1Y }) + cast({ id: "C2", team: "off", label: "CV", x: c2X, y: c2Y }) + (!p.touchback || p.onside ? cast({ id: "PR", team: "def", label: p.onside ? "HANDS" : "PR", x: endX, y: endY - 2 }) : "") + ballMarkup(teeX, teeY) + `<g id="wp-fx"></g>`;
+    const ballN = svg.querySelector("#wp-ball"), fxN = svg.querySelector("#wp-fx");
+    const kN = svg.querySelector('[data-wpk="K"]'), prN = svg.querySelector('[data-wpk="PR"]');
+    const c1N = svg.querySelector('[data-wpk="C1"]'), c2N = svg.querySelector('[data-wpk="C2"]');
+    const speed = (_watch == null ? void 0 : _watch.speed) || 1;
+    const runT = 0.6, flight = p.onside ? 0.7 : 1.7;
+    const boomT = runT + flight;
+    const retDur = retYds > 0 ? Math.max(0.5, Math.min(3.4, retYds / 8)) : p.onside ? 0.8 : 0.3;
+    const dur = boomT + retDur + 0.35;
+    const t0 = performance.now();
+    const lerp = (a, b, u) => a + (b - a) * u;
+    let camX = watchSideCameraX(p, teeX);
+    const tick = () => {
+      if (!svg.isConnected) {
+        watchStopAnim();
+        return;
+      }
+      const t = Math.min(dur, (performance.now() - t0) / 1e3 * speed);
+      svg.classList.toggle("watch-in-play", t > 0.05);
+      let bx, by;
+      if (t < runT) {
+        bx = teeX;
+        by = teeY;
+      } else if (t < boomT) {
+        const u = (t - runT) / flight;
+        bx = lerp(teeX, endX, u);
+        by = lerp(teeY, endY, u) - Math.sin(u * Math.PI) * (p.onside ? 1.5 : 7);
+      } else if (retYds > 0) {
+        const u = Math.min(1, (t - boomT) / retDur);
+        bx = lerp(endX, retEndX, u);
+        by = lerp(endY, retEndY, u);
+      } else {
+        bx = endX;
+        by = endY;
+      }
+      ballN == null ? void 0 : ballN.setAttribute("transform", `translate(${bx.toFixed(2)},${by.toFixed(2)})`);
+      ballN == null ? void 0 : ballN.classList.toggle("wp-ball-kick", t >= runT && t < boomT);
+      if (kN) {
+        const u = Math.min(1, t / runT);
+        kN.setAttribute("transform", `translate(${lerp(teeX - 8, teeX - 1.4, u).toFixed(2)},${teeY.toFixed(2)})`);
+      }
+      kN == null ? void 0 : kN.classList.toggle("wp-kicking", t >= runT - 0.06 && t <= runT + 0.4);
+      if (c1N && t >= runT) {
+        const u = Math.min(1, (t - runT) / (flight + Math.max(0.4, retDur)));
+        c1N.setAttribute("transform", `translate(${lerp(c1X, bx - 3.2, u).toFixed(2)},${lerp(c1Y, by - 1.1, u).toFixed(2)})`);
+        c2N == null ? void 0 : c2N.setAttribute("transform", `translate(${lerp(c2X, bx + 3.2, u).toFixed(2)},${lerp(c2Y, by + 1.1, u).toFixed(2)})`);
+      }
+      if (prN && t >= boomT - 0.2) prN.setAttribute("transform", `translate(${bx.toFixed(2)},${by.toFixed(2)})`);
+      camX += (watchSideCameraX(p, bx) - camX) * 0.1;
+      svg.setAttribute("viewBox", `${camX.toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
+      if (t >= dur && fxN && !fxN.childElementCount) {
+        const label = p.onside ? p.recovered ? "ONSIDE \u2014 RECOVERED!" : "ONSIDE FAILS" : p.returnTD ? "RETURN TD!" : p.touchback ? "TOUCHBACK" : `RET ${retYds} YDS`;
+        const cls = p.returnTD || p.recovered ? "wa-pick" : p.onside ? "wa-x" : "wp-kick-lbl";
+        fxN.insertAdjacentHTML("beforeend", `<text x="${bx.toFixed(1)}" y="${Math.max(5, by - 3.2).toFixed(1)}" class="${cls}">${label}</text>`);
+      }
+      if (t < dur && _watchAnim) _watchAnim.raf = requestAnimationFrame(tick);
+    };
+    _watchAnim = { raf: requestAnimationFrame(tick) };
+    return dur;
+  }
+  function watchBoardTry(svg, p) {
+    var _a, _b;
+    const sprites = ((_a = state.settings) == null ? void 0 : _a.spriteWatch) !== false;
+    if (sprites) svg.classList.add("watch-sprites");
+    else svg.classList.remove("watch-sprites");
+    const offL = ((_b = OFF_FIELD_LAYOUTS[p.offFormation]) == null ? void 0 : _b.slots) || OFF_FIELD_LAYOUTS["Spread"].slots;
+    const defL = DEF_FIELD_LAYOUTS["4-3"].slots;
+    const LOSW = 31, YPU2 = WATCH_SIDE.ypu;
+    const defMaxY = Math.max(...defL.map((sl) => sl.y));
+    const cast = [];
+    for (const sl of offL) cast.push({
+      id: "O_" + sl.id,
+      team: "off",
+      label: sl.label,
+      qb: sl.id === "QB",
+      wx: sl.x * 100,
+      wy: LOSW + Math.max(0, sl.y - 0.5) * 18 * YPU2
+    });
+    for (const sl of defL) cast.push({
+      id: "D_" + sl.id,
+      team: "def",
+      label: sl.label,
+      wx: sl.x * 100,
+      wy: Math.max(23, 29 - (defMaxY - sl.y) * 36)
+    });
+    const [bx0, by0] = watchSidePoint(50, LOSW + 0.6);
+    const [gx, gy] = watchSidePoint(50, LOSW - 3 * YPU2 - 0.5);
+    const [sx2, sy2] = watchSidePoint(50, LOSW - 2 * YPU2);
+    svg.innerHTML = watchFieldBase(p) + cast.map((a) => {
+      const [x, y] = watchSidePoint(a.wx, a.wy);
+      return sprites ? `<g class="wp-actor wp-team-${a.team}${a.qb ? " wp-qb" : ""}" transform="translate(${x.toFixed(2)},${y.toFixed(2)})">${spriteMarkup(a)}</g>` : "";
+    }).join("") + ballMarkup(bx0, by0) + `<g id="wp-fx"></g>`;
+    const ballN = svg.querySelector("#wp-ball"), fxN = svg.querySelector("#wp-fx");
+    const [tx, ty] = p.made ? [gx, gy] : [sx2, sy2];
+    const speed = (_watch == null ? void 0 : _watch.speed) || 1;
+    const snapT = 0.6, pushT = snapT + 1, dur = pushT + 1;
+    const t0 = performance.now();
+    const tick = () => {
+      if (!svg.isConnected) {
+        watchStopAnim();
+        return;
+      }
+      const t = Math.min(dur, (performance.now() - t0) / 1e3 * speed);
+      svg.classList.toggle("watch-in-play", t > snapT * 0.9);
+      let x = bx0, y = by0;
+      if (t >= snapT) {
+        const u = Math.min(1, (t - snapT) / (pushT - snapT));
+        x = bx0 + (tx - bx0) * u;
+        y = by0 + (ty - by0) * u;
+      }
+      ballN == null ? void 0 : ballN.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)})`);
+      if (t >= pushT && fxN && !fxN.childElementCount) {
+        fxN.insertAdjacentHTML("beforeend", `<g class="wp-card"><rect x="${x - 22}" y="${y - 12}" width="44" height="5.4" class="wp-card-bg"/><text x="${x}" y="${y - 8.2}" class="wp-card-txt">${p.made ? "TWO-POINT TRY \u2014 GOOD!" : "TRY IS STOPPED!"}</text></g>`);
+      }
+      if (t < dur && _watchAnim) _watchAnim.raf = requestAnimationFrame(tick);
+    };
+    _watchAnim = { raf: requestAnimationFrame(tick) };
+    return dur;
+  }
+  function watchBoardSituational(svg, p) {
+    var _a;
+    const sprites = ((_a = state.settings) == null ? void 0 : _a.spriteWatch) !== false;
+    if (sprites) svg.classList.add("watch-sprites");
+    else svg.classList.remove("watch-sprites");
+    const kneel = p.type === "kneel";
+    const [cx0, cy0] = watchSidePoint(50, 31);
+    const mk2 = (id, team, label, wx, wy, qb = false) => {
+      const [x, y] = watchSidePoint(wx, wy);
+      return sprites ? `<g class="wp-actor wp-team-${team}${qb ? " wp-qb" : ""}" data-wpk="${id}" transform="translate(${x.toFixed(2)},${y.toFixed(2)})">${spriteMarkup({ id, team, label, qb })}</g>` : "";
+    };
+    let bodies = "";
+    for (let i = 0; i < 5; i++) bodies += mk2("OL" + i, "off", "OL", 38 + i * 6, 31.8);
+    bodies += mk2("QB", "off", "QB", 50, kneel ? 35.5 : 34, true);
+    if (kneel) {
+      bodies += mk2("RB1", "off", "RB", 44, 38) + mk2("RB2", "off", "RB", 56, 38);
+    }
+    for (let i = 0; i < 4; i++) bodies += mk2("DL" + i, "def", "DL", 40 + i * 6.6, 30.2);
+    bodies += mk2("LB1", "def", "LB", 44, 27) + mk2("LB2", "def", "LB", 56, 27);
+    const [qx, qy] = watchSidePoint(50, kneel ? 35.5 : 34);
+    svg.setAttribute("viewBox", `${watchSideCameraX(p, cx0).toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
+    svg.innerHTML = watchFieldBase(p) + bodies + ballMarkup(cx0, cy0) + `<g id="wp-fx"></g>`;
+    const ballN = svg.querySelector("#wp-ball"), fxN = svg.querySelector("#wp-fx");
+    const qbN = svg.querySelector('[data-wpk="QB"]');
+    const speed = (_watch == null ? void 0 : _watch.speed) || 1;
+    const snapT = 0.55, actT = snapT + 0.35, dur = kneel ? 2.2 : 1.7;
+    const t0 = performance.now();
+    const tick = () => {
+      if (!svg.isConnected) {
+        watchStopAnim();
+        return;
+      }
+      const t = Math.min(dur, (performance.now() - t0) / 1e3 * speed);
+      svg.classList.toggle("watch-in-play", t > snapT * 0.8);
+      let x = cx0, y = cy0;
+      if (t >= snapT) {
+        const u = Math.min(1, (t - snapT) / 0.22);
+        x = cx0 + (qx - cx0) * u;
+        y = cy0 + (qy - cy0) * u;
+        if (!kneel && t >= actT) {
+          const v = Math.min(1, (t - actT) / 0.15);
+          y = qy + (cy0 + 1.2 - qy) * v;
+        }
+      }
+      ballN == null ? void 0 : ballN.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)})`);
+      qbN == null ? void 0 : qbN.classList.toggle("wp-kneeling", kneel && t >= actT);
+      qbN == null ? void 0 : qbN.classList.toggle("wp-throwing", !kneel && t >= snapT && t <= actT + 0.15);
+      if (t >= actT + 0.3 && fxN && !fxN.childElementCount) {
+        fxN.insertAdjacentHTML("beforeend", `<text x="${cx0}" y="${(cy0 - 8).toFixed(1)}" class="wp-kick-lbl">${kneel ? "VICTORY FORMATION" : "CLOCK STOPPED"}</text>`);
       }
       if (t < dur && _watchAnim) _watchAnim.raf = requestAnimationFrame(tick);
     };
@@ -47310,6 +47721,8 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         return `<circle cx="${x}" cy="${y}" r="2.7" class="wp-catch"/>`;
       case "fd":
         return `<g class="wp-card" transform="translate(${x},${y})"><rect x="-9" y="-9.2" width="18" height="4.8" class="wp-card-bg"/><text x="0" y="-5.8" class="wp-card-txt">1ST DOWN</text></g>`;
+      case "hurt":
+        return `<g class="wp-hurt" transform="translate(${x},${(y - 5).toFixed(1)})"><rect x="-2" y="-0.7" width="4" height="1.4"/><rect x="-0.7" y="-2" width="1.4" height="4"/></g>`;
       case "flag": {
         const nm2 = escapeHtml(String(f.name || "PENALTY").toUpperCase());
         const tm2 = escapeHtml(String(f.team || "").toUpperCase());
