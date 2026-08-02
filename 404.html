@@ -6566,7 +6566,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "a6767fc3d5";
+globalThis.__BUILD__ = "8aaad114d1";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -9404,7 +9404,8 @@ var _CFB = (() => {
   }
   function crestHash(school) {
     let h = 2166136261;
-    const key = String(`${(school == null ? void 0 : school.name) || "School"}|${(school == null ? void 0 : school.abbr) || ""}`);
+    const seedPart = (school == null ? void 0 : school.crestSeed) ? `|${school.crestSeed}` : "";
+    const key = String(`${(school == null ? void 0 : school.name) || "School"}|${(school == null ? void 0 : school.abbr) || ""}${seedPart}`);
     for (let i = 0; i < key.length; i++) {
       h ^= key.charCodeAt(i);
       h = Math.imul(h, 16777619);
@@ -10117,9 +10118,14 @@ var _CFB = (() => {
         for (const a of ["SPD", "AGI"]) {
           attrs[a] = clamp2(Math.round(Math.max(attrs[a], randNorm(mobTarget, 6))), 1, 99);
         }
-      } else if (archetype === "QB-Pocket") {
-        for (const a of ["SPD", "AGI"]) attrs[a] = clamp2(attrs[a] - randInt3(2, 6), 1, 99);
+      } else {
+        for (const a of ["SPD", "AGI"]) attrs[a] = clamp2(attrs[a] - randInt3(6, 13), 1, 99);
       }
+    }
+    if (position === "RB" && archetype && archetype.startsWith("FB")) {
+      for (const a of ["SPD", "AGI"]) attrs[a] = clamp2(Math.min(attrs[a], randInt3(34, 48)), 1, 99);
+      attrs.STR = clamp2(attrs.STR + randInt3(6, 12), 1, 99);
+      attrs.PWR = clamp2(attrs.PWR + randInt3(5, 10), 1, 99);
     }
     const loc = randomLocation();
     const distance = distanceMiles(schoolLat, schoolLng, loc.lat, loc.lng);
@@ -10166,6 +10172,12 @@ var _CFB = (() => {
         const c = spawnCapOf(a);
         if (attrs[a] > c) attrs[a] = c;
       }
+    }
+    if (position === "RB" && archetype && archetype.startsWith("FB")) {
+      for (const a of ["SPD", "AGI"]) attrs[a] = clamp2(Math.min(attrs[a], randInt3(28, 40)), 1, 99);
+      const blockFloor = Math.min(spawnCapOf("STR"), 60);
+      attrs.STR = clamp2(Math.max(attrs.STR, blockFloor), 1, 99);
+      attrs.PWR = clamp2(Math.max(attrs.PWR, Math.min(spawnCapOf("PWR"), 58)), 1, 99);
     }
     const weCfg = C.CAP_WE_OVERAGE || { pivot: 55, step: 0.22, max: 7 };
     const weBonus = physCap < 99 ? clamp2(Math.round(((attrs.WE || 0) - weCfg.pivot) * weCfg.step), 0, weCfg.max) : 0;
@@ -10270,6 +10282,18 @@ var _CFB = (() => {
   function rollArchetype(position) {
     const roles = ROLES_BY_POS[position];
     if (!roles) return null;
+    const w = GEN_ARCH_WEIGHTS[position];
+    if (w) {
+      let total = 0;
+      for (const r of roles) total += w[r] || 0;
+      if (total > 0) {
+        let x = Math.random() * total;
+        for (const r of roles) {
+          x -= w[r] || 0;
+          if (x <= 0) return r;
+        }
+      }
+    }
     return roles[Math.floor(Math.random() * roles.length)];
   }
   function emptyStats() {
@@ -10380,7 +10404,7 @@ var _CFB = (() => {
     const ras = pcts.length ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length * 100) / 10 : 5;
     return { measurables: m, ras };
   }
-  var INJURY_CATALOG, ROLES_BY_POS, ARCHETYPE_DERIVE, POS_TABLE, jit;
+  var INJURY_CATALOG, ROLES_BY_POS, ARCHETYPE_DERIVE, GEN_ARCH_WEIGHTS, POS_TABLE, jit;
   var init_player = __esm({
     "js/engine/player.js"() {
       init_constants();
@@ -10523,6 +10547,19 @@ var _CFB = (() => {
           if (freeLean > 6) return "S-Free";
           if (boxLean > 6) return "S-Strong";
           return "S-Hybrid";
+        }
+      };
+      GEN_ARCH_WEIGHTS = {
+        QB: { "QB-Pocket": 46, "QB-Game-Manager": 16, "QB-Gunslinger": 20, "QB-Dual": 12, "QB-Scrambler": 6 },
+        RB: {
+          "RB-Speed": 19,
+          "RB-Workhorse": 18,
+          "RB-Power": 17,
+          "RB-Elusive": 16,
+          "RB-Scat": 15,
+          "FB-Lead": 8,
+          "FB-Hybrid": 4,
+          "FB-HBack": 3
         }
       };
       POS_TABLE = {
@@ -15953,6 +15990,8 @@ var _CFB = (() => {
         "prestigeMin",
         "prestigeMax",
         "colors",
+        "crestImg",
+        "crestSeed",
         "roster",
         "record",
         "coach",
@@ -26561,7 +26600,7 @@ var _CFB = (() => {
   function compactSchool(school) {
     if (!school) return null;
     const out = {};
-    for (const key of ["id", "name", "nick", "abbr", "logo", "crestImg", "colors", "division"]) {
+    for (const key of ["id", "name", "nick", "abbr", "logo", "crestImg", "crestSeed", "colors", "division"]) {
       if (school[key] !== void 0) out[key] = cloneJson2(school[key]);
     }
     return out;
@@ -27997,7 +28036,7 @@ var _CFB = (() => {
       <div class="gameplan-sections">
 
         ${gameplanSection === "situations" ? renderSituationsSection(gp) : ""}
-        ${gameplanSection === "offense" ? renderIdentityCard(gp) + renderOffenseDefaults(gp) : ""}
+        ${gameplanSection === "offense" ? renderSchemeProfile(gp) + renderIdentityCard(gp) + renderOffenseDefaults(gp) : ""}
         ${gameplanSection === "defense" ? renderDefenseDefaults(gp) : ""}
 
         <!-- SPECIAL TEAMS -->
@@ -28249,6 +28288,76 @@ var _CFB = (() => {
     } else if (key === "simpleTempo") {
       gp.baseTempo = val === "fast" ? "Hurry" : val === "slow" ? "Chew" : "Normal";
     }
+  }
+  function renderSchemeProfile(gp) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
+    const clampV = (v, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
+    const R = (v) => Math.round(clampV(v) * 100);
+    const passLean = (_a = PASS_TENDENCY[gp.tendency || "Balanced"]) != null ? _a : 0.5;
+    const d = gp.passDepth || { short: 40, medium: 40, deep: 20 };
+    const deepLean = clampV(((_b = d.deep) != null ? _b : 20) / 35);
+    const tempo = (_c = { Chew: 0.18, Normal: 0.5, Hurry: 0.9 }[gp.baseTempo || "Normal"]) != null ? _c : 0.5;
+    const blitz = clampV((gp.blitzPct != null ? gp.blitzPct : 20) / 55);
+    const press = gp.pressLevel === "press" ? 1 : gp.pressLevel === "off" ? 0 : 0.5;
+    const man = gp.covStyle === "man" ? 1 : gp.covStyle === "zone" ? 0 : 0.5;
+    const oneHigh = gp.covShell === "single" ? 1 : gp.covShell === "two" ? 0 : 0.5;
+    const fourth = (_d = {
+      "Very Conservative": 0,
+      "Conservative": 0.25,
+      "Moderate": 0.5,
+      "Aggressive": 0.75,
+      "Very Aggressive": 1
+    }[gp.fourthDown || "Moderate"]) != null ? _d : 0.5;
+    const qbRun = clampV((gp.qbRunPct || 0) / 40);
+    const losFree = gp.losFreedom === "free" ? 1 : gp.losFreedom === "never" ? 0 : 0.5;
+    const forms = (gp.offFormations || [{ id: gp.offFormation || "Single Back", weight: 100 }]).filter((f) => f && (f.weight || 0) > 0);
+    const tot = forms.reduce((s, f) => s + (f.weight || 0), 0) || 1;
+    const shares = forms.map((f) => (f.weight || 0) / tot);
+    const evenness = forms.length <= 1 ? 0 : -shares.reduce((s, p) => p > 0 ? s + p * Math.log(p) : s, 0) / Math.log(forms.length);
+    const spread = clampV((forms.length - 1) / 4);
+    const motion = clampV(((_e = gp.motionRate) != null ? _e : 100) / 120);
+    const pa = clampV(((_f = gp.paRate) != null ? _f : 100) / 120);
+    const rpo = clampV(((_g = gp.rpoRate) != null ? _g : 40) / 100);
+    const jet = clampV(((_h = gp.jetRate) != null ? _h : 15) / 30);
+    const draw = clampV(((_i = gp.drawRate) != null ? _i : 8) / 25);
+    const screens = clampV(((_j = gp.screenRate) != null ? _j : 14) / 25);
+    const aggression = R(
+      0.24 * blitz + 0.19 * fourth + 0.15 * deepLean + 0.11 * press + 0.1 * man + 0.08 * oneHigh + 0.08 * qbRun + 0.05 * losFree
+    );
+    const tempoScore = R(tempo);
+    const airGround = R(passLean);
+    const deception = R(
+      0.22 * spread + 0.16 * evenness + 0.14 * motion + 0.12 * pa + 0.12 * rpo + 0.1 * screens + 0.08 * jet + 0.06 * draw
+    );
+    const leanWord = airGround >= 62 ? "pass-first" : airGround <= 38 ? "ground-based" : "balanced";
+    const tempoWord = tempoScore >= 70 ? "up-tempo" : tempoScore <= 30 ? "clock-controlling" : "measured";
+    const aggWord = aggression >= 62 ? "attacking" : aggression <= 38 ? "bend-don\u2019t-break" : "even-keeled";
+    const decWord = deception >= 60 ? ", multiple looks" : deception <= 25 ? ", vanilla" : "";
+    const identity = `${tempoWord.charAt(0).toUpperCase()}${tempoWord.slice(1)} ${leanWord}, ${aggWord}${decWord}`;
+    const grade = (v) => v >= 80 ? "var(--green)" : v >= 55 ? "var(--gold, #d9a441)" : v >= 30 ? "#c9803a" : "#9a5a4a";
+    const meter = (label, val, lo, hi) => `
+      <div class="id-row" style="align-items:center">
+        <span class="id-lbl">${label}</span>
+        <span style="display:flex;align-items:center;gap:9px;flex:1;justify-content:flex-end">
+          <span style="font-size:10px;opacity:.6;min-width:74px;text-align:right">${lo}</span>
+          <span style="position:relative;width:120px;height:8px;background:rgba(255,255,255,.12);border-radius:5px;overflow:hidden">
+            <span style="position:absolute;left:0;top:0;height:100%;width:${val}%;background:${grade(val)}"></span>
+          </span>
+          <span style="font-size:10px;opacity:.6;min-width:52px">${hi}</span>
+          <b style="min-width:26px;text-align:right">${val}</b>
+        </span>
+      </div>`;
+    return `
+    <div class="card identity-card">
+      <div class="card-header"><span class="card-title">SCHEME PROFILE</span>
+        <span class="muted" style="font-size:11px">every dial + formation weight, scored</span></div>
+      <div class="id-row" style="margin-bottom:4px"><span class="id-lbl">\u{1F9ED} Identity</span>
+        <span><b>${escapeHtml(identity)}</b></span></div>
+      ${meter("\u2694\uFE0F Aggression", aggression, "Ball-control", "All-out")}
+      ${meter("\u23F1\uFE0F Tempo", tempoScore, "Grind clock", "No-huddle")}
+      ${meter("\u{1F3AF} Air \u2194 Ground", airGround, "Run-heavy", "Pass-heavy")}
+      ${meter("\u{1F0CF} Deception", deception, "Vanilla", "Multiple")}
+    </div>`;
   }
   function renderIdentityCard(gp) {
     var _a, _b, _c, _d, _e, _f, _g, _h, _i;
@@ -35820,7 +35929,7 @@ var _CFB = (() => {
       return `<div class="depth-slot${idx === 0 ? " starter" : ""}">
             <div class="depth-slot-rank">${idx + 1}</div>
             <div class="depth-slot-info">
-              <div class="depth-slot-name">${escapeHtml(fullName(p))} <span class="ret-pos">${p.position}</span></div>
+              <div class="depth-slot-name"><span class="player-link" data-pcard="${p.id}">${escapeHtml(fullName(p))}</span> <span class="ret-pos">${p.position}</span></div>
             </div>
             <div class="ret-controls">
               ${idx > 0 ? `<button class="ret-btn" data-ret-up="${id}" title="Move up">\u25B2</button>` : ""}
@@ -35849,7 +35958,7 @@ var _CFB = (() => {
       if (!p) return "";
       return `<div class="depth-slot${idx < starterCount ? " starter" : ""}">
             <div class="depth-slot-rank">${idx + 1}</div>
-            <div class="depth-slot-info"><div class="depth-slot-name">${escapeHtml(fullName(p))}</div></div>
+            <div class="depth-slot-info"><div class="depth-slot-name"><span class="player-link" data-pcard="${p.id}">${escapeHtml(fullName(p))}</span></div></div>
             <span class="depth-slot-rating ${ratingColor(Math.round(p.compositeRating))}">${Math.round(p.compositeRating)}</span>
           </div>`;
     }).join("")}
@@ -42702,6 +42811,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
             <span class="logo-preview">${pSchool ? renderCrest(pSchool, 44) : ""}</span>
             <button class="btn-ghost btn-sm" id="btn-logo-upload">${(pSchool == null ? void 0 : pSchool.crestImg) ? "Replace logo" : "Upload logo"}</button>
             <button class="btn-ghost btn-sm" id="btn-logo-remove" ${(pSchool == null ? void 0 : pSchool.crestImg) ? "" : "disabled"}>Use letter mark</button>
+            <button class="btn-ghost btn-sm" id="btn-logo-reroll" ${(pSchool == null ? void 0 : pSchool.crestImg) ? "disabled" : ""} title="Spin a new letter-mark look \u2014 same letters and colors, different frame and style">\u21BB Reroll mark</button>
             <input type="file" id="logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display:none" />
           </span>
         </div>
@@ -42870,7 +42980,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
   `;
   }
   function setupListeners15() {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
     document.querySelectorAll("[data-settings-tab]").forEach((btn) => {
       btn.addEventListener("click", () => {
         settingsTab = btn.dataset.settingsTab;
@@ -42964,7 +43074,16 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
       notify("Back to your letter mark.", "success");
       rerender();
     });
-    (_h = document.getElementById("btn-export-save")) == null ? void 0 : _h.addEventListener("click", () => {
+    (_h = document.getElementById("btn-logo-reroll")) == null ? void 0 : _h.addEventListener("click", () => {
+      var _a2, _b2;
+      const school = (_b2 = (_a2 = state.world) == null ? void 0 : _a2.schools) == null ? void 0 : _b2.find((x) => x.id === state.playerSchoolId);
+      if (!school || school.crestImg) return;
+      school.crestSeed = (school.crestSeed || 0) + 1;
+      saveNow();
+      notify("New mark spun up.", "success");
+      rerender();
+    });
+    (_i = document.getElementById("btn-export-save")) == null ? void 0 : _i.addEventListener("click", () => {
       try {
         exportJSON(state);
         notify("Save exported \u2014 check your downloads.");
@@ -42972,11 +43091,11 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         notify("Export failed: " + e.message);
       }
     });
-    (_i = document.getElementById("btn-import-save")) == null ? void 0 : _i.addEventListener("click", () => {
+    (_j = document.getElementById("btn-import-save")) == null ? void 0 : _j.addEventListener("click", () => {
       var _a2;
       (_a2 = document.getElementById("import-save-file")) == null ? void 0 : _a2.click();
     });
-    (_j = document.getElementById("import-save-file")) == null ? void 0 : _j.addEventListener("change", async (e) => {
+    (_k = document.getElementById("import-save-file")) == null ? void 0 : _k.addEventListener("change", async (e) => {
       var _a2;
       const file = (_a2 = e.target.files) == null ? void 0 : _a2[0];
       if (!file) return;
@@ -43004,7 +43123,7 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         e.target.value = "";
       }
     });
-    (_k = document.getElementById("btn-settings-guide")) == null ? void 0 : _k.addEventListener("click", () => {
+    (_l = document.getElementById("btn-settings-guide")) == null ? void 0 : _l.addEventListener("click", () => {
       navigate("manual");
     });
     document.querySelectorAll("[data-diff-key]").forEach((btn) => {
@@ -43050,20 +43169,20 @@ And the same warning: don't pay for the bottom of the list. It's a leg job. The 
         rerender();
       });
     });
-    (_l = document.getElementById("dev-add-10k")) == null ? void 0 : _l.addEventListener("click", () => {
+    (_m = document.getElementById("dev-add-10k")) == null ? void 0 : _m.addEventListener("click", () => {
       devAddBudget(1e4);
       notify("+ $10k added to your budget", "success");
       rerender();
     });
-    (_m = document.getElementById("dev-add-50k")) == null ? void 0 : _m.addEventListener("click", () => {
+    (_n = document.getElementById("dev-add-50k")) == null ? void 0 : _n.addEventListener("click", () => {
       devAddBudget(5e4);
       notify("+ $50k added to your budget", "success");
       rerender();
     });
-    (_n = document.getElementById("dev-next-game")) == null ? void 0 : _n.addEventListener("click", async () => {
+    (_o = document.getElementById("dev-next-game")) == null ? void 0 : _o.addEventListener("click", async () => {
       await devSkipToNextGame();
     });
-    (_o = document.getElementById("dev-sim-season")) == null ? void 0 : _o.addEventListener("click", async () => {
+    (_p = document.getElementById("dev-sim-season")) == null ? void 0 : _p.addEventListener("click", async () => {
       await devSimToPlayoffs();
       notify("Simulated to playoffs \u2014 check inbox for results", "info");
     });
