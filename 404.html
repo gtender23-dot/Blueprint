@@ -5774,13 +5774,47 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 #watch-board.watch-in-play .wp-catching .wsp-catch-arm-r { animation:wsp-catch-r .30s cubic-bezier(.2,.7,.3,1) both; }
 .wsp-limb { transform-box:fill-box; transform-origin:50% 12%; }
 .wsp-fB { visibility:hidden; }
-#watch-board.watch-in-play .wsp-fA { animation:wsp-gait-a .34s steps(1,end) infinite; animation-delay:var(--gait,0s); }
-#watch-board.watch-in-play .wsp-fB { animation:wsp-gait-b .34s steps(1,end) infinite; animation-delay:var(--gait,0s); }
-#watch-board.watch-in-play .wp-actor:not(.wp-blocking):not(.wp-blocked) .wsp-shell { animation:wsp-body-bob .34s steps(2,end) infinite; animation-delay:var(--gait,0s); }
-#watch-board.watch-in-play .wsp-run-arm-l { animation:wsp-arm-pump-l .34s ease-in-out infinite; animation-delay:var(--gait,0s); }
-#watch-board.watch-in-play .wsp-run-arm-r { animation:wsp-arm-pump-r .34s ease-in-out infinite; animation-delay:var(--gait,0s); }
+/* Legs are an odometer, not a clock: spriteMotionTick() toggles wsp-stepB on the
+   actor from ground actually covered, so the stride matches real speed and the
+   feet stop the instant the man does. */
+.wsp-stepB .wsp-fA { visibility:hidden; }
+.wsp-stepB .wsp-fB { visibility:visible; }
+/* Directional bodies: front (vf) by default, back (vb) heading upfield-away,
+   side profile (vs) on the east/west facings; west mirrors via .wsp-flip. */
+.wsp-vb,.wsp-vs { display:none; }
+.wsp-face-n .wsp-vf { display:none; }
+.wsp-face-n .wsp-vb { display:block; }
+.wsp-face-e .wsp-vf,.wsp-face-w .wsp-vf { display:none; }
+.wsp-face-e .wsp-vs,.wsp-face-w .wsp-vs { display:block; }
+/* A standing man hangs his hands instead of pumping ghost arms. */
+.wsp-pose-idle { display:none; }
+.wsp-still .wsp-pose-run { display:none; }
+.wsp-still .wsp-pose-idle { display:block; }
+.wp-near-ball.wsp-still .wsp-pose-idle,.wp-blocking.wsp-still .wsp-pose-idle,.wp-blocked.wsp-still .wsp-pose-idle,.wp-throwing.wsp-still .wsp-pose-idle,.wp-catching.wsp-still .wsp-pose-idle,.wp-tackling.wsp-still .wsp-pose-idle,.wp-celebrating.wsp-still .wsp-pose-idle,.wp-moving.wsp-still .wsp-pose-idle { display:none; }
+#watch-board.watch-in-play .wp-actor:not(.wp-blocking):not(.wp-blocked):not(.wsp-still) .wsp-shell { animation:wsp-body-bob .34s steps(2,end) infinite; animation-delay:var(--gait,0s); }
+#watch-board.watch-in-play .wp-actor:not(.wsp-still) .wsp-run-arm-l { animation:wsp-arm-pump-l .34s ease-in-out infinite; animation-delay:var(--gait,0s); }
+#watch-board.watch-in-play .wp-actor:not(.wsp-still) .wsp-run-arm-r { animation:wsp-arm-pump-r .34s ease-in-out infinite; animation-delay:var(--gait,0s); }
 #watch-board.watch-in-play .wsp-carry-arm-l { animation:wsp-cradle-l .38s ease-in-out infinite; animation-delay:var(--gait,0s); }
 #watch-board.watch-in-play .wsp-carry-arm-r { animation:wsp-cradle-r .38s ease-in-out infinite; animation-delay:var(--gait,0s); }
+/* Side-profile limbs (authored facing east; the flip mirrors everything). */
+.wsp-sd-arm,.wsp-sd-carry-arm { transform-origin:18% 12%; }
+.wsp-sd-throw-arm { transform-origin:85% 92%; }
+.wsp-sd-guide-arm,.wsp-sd-block-arm,.wsp-sd-tkl-arm,.wsp-sd-stiff-arm { transform-origin:10% 50%; }
+.wsp-sd-catch-arm { transform-origin:12% 88%; }
+#watch-board.watch-in-play .wp-actor:not(.wsp-still) .wsp-sd-arm { animation:wsp-sd-pump .34s ease-in-out infinite alternate; animation-delay:var(--gait,0s); }
+#watch-board.watch-in-play .wsp-sd-carry-arm { animation:wsp-cradle-l .38s ease-in-out infinite; animation-delay:var(--gait,0s); }
+.wp-throwing .wsp-sd-guide-arm { animation:wsp-sd-guide .62s cubic-bezier(.22,.72,.32,1) both; }
+.wp-throwing .wsp-sd-throw-arm { animation:wsp-sd-throw .62s cubic-bezier(.22,.72,.32,1) both; }
+#watch-board.watch-in-play .wp-catching .wsp-sd-catch-arm { animation:wsp-sd-catch .30s cubic-bezier(.2,.7,.3,1) both; }
+.wp-blocking .wsp-sd-block-arm,.wp-blocked .wsp-sd-block-arm { animation:wsp-sd-punch .22s ease-in-out infinite; }
+#watch-board .wp-tackling .wsp-sd-tkl-arm { animation:wsp-sd-tkl .26s cubic-bezier(.2,.7,.3,1) both; }
+#watch-board.watch-in-play .wp-moving.wp-mv-stiff .wsp-sd-stiff-arm { animation:wsp-stiff .40s ease-out both; }
+@keyframes wsp-sd-pump { from { transform:rotate(-24deg); } to { transform:rotate(26deg); } }
+@keyframes wsp-sd-guide { 0%,28% { transform:rotate(4deg); } 62% { transform:rotate(-10deg); } 100% { transform:rotate(8deg); } }
+@keyframes wsp-sd-throw { 0% { transform:rotate(-10deg); } 35% { transform:rotate(-22deg) translate(-.06px,-.06px); } 70% { transform:rotate(70deg) translate(.14px,.1px); } 100% { transform:rotate(92deg) translate(.16px,.2px); } }
+@keyframes wsp-sd-catch { 0% { transform:rotate(46deg) translate(-.2px,.6px); } 100% { transform:none; } }
+@keyframes wsp-sd-tkl { 0% { transform:rotate(18deg) translate(-.35px,.25px); } 100% { transform:rotate(-4deg) translate(.1px,0); } }
+@keyframes wsp-sd-punch { 0%,100% { transform:translate(-.05px,.02px); } 50% { transform:translate(.14px,-.05px); } }
 .wp-throwing .wsp-throw-guide { animation:wsp-throw-guide .62s cubic-bezier(.22,.72,.32,1) both; }
 .wp-throwing .wsp-throw-arm { animation:wsp-throw-arm .62s cubic-bezier(.22,.72,.32,1) both; }
 .wp-blocking .wsp-shell,.wp-blocked .wsp-shell { animation:wsp-pad-drive .22s steps(2,end) infinite; }
@@ -5788,8 +5822,6 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 .wp-blocking .wsp-block-arm-r,.wp-blocked .wsp-block-arm-r { animation:wsp-punch-r .22s ease-in-out infinite; }
 .wp-blocking .wsp-fA,.wp-blocked .wsp-fA { visibility:visible !important; animation:none !important; }
 .wp-blocking .wsp-fB,.wp-blocked .wsp-fB { visibility:hidden !important; animation:none !important; }
-@keyframes wsp-gait-a { 0%,49.9% { visibility:visible; } 50%,100% { visibility:hidden; } }
-@keyframes wsp-gait-b { 0%,49.9% { visibility:hidden; } 50%,100% { visibility:visible; } }
 @keyframes wsp-body-bob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(.12px); } }
 @keyframes wsp-pad-drive { 0%,100% { transform:translateY(0) scaleX(1); } 50% { transform:translateY(.06px) scaleX(1.04); } }
 @keyframes wsp-arm-pump-l { 0%,100% { transform:rotate(-17deg); } 50% { transform:rotate(16deg); } }
@@ -6566,7 +6598,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "883aefca44";
+globalThis.__BUILD__ = "d0b49a3545";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -45799,6 +45831,124 @@ ${renderAutoRecruitLog()}`;
     ];
   }
 
+  // js/ui/sprite.js
+  init_utils();
+  function spriteMarkup(a, face) {
+    const off = a.team === "off";
+    const c = off ? "wsp-off" : "wsp-def";
+    const hl = off ? "wsp-off-hl" : "wsp-def-hl";
+    let gh = 0;
+    for (let i = 0; i < String(a.id).length; i++) gh = (gh + String(a.id).charCodeAt(i)) % 97;
+    const gait = (-(gh % 8 * 0.045)).toFixed(3);
+    const num = `<text class="wsp-number" x="0" y="-2.43">${escapeHtml(String(a.label || "").slice(0, 2))}</text>`;
+    const legsA = `<path class="wsp-leg" d="M-1.08-1.72h.82l-.04.76-.28.96h-.66l.18-1.02z"/><path class="wsp-leg" d="M.26-1.72h.82l-.02.7.18 1.02H.58L.3-.96z"/><path class="wsp-shoe" d="M-1.28-.22h.76l.24.22h-1.08zM.54-.22h.7l.28.22H.46z"/>`;
+    const legsB = `<path class="wsp-leg" d="M-1.06-1.72h.82l-.3.7-.52.68-.62-.2.54-.84z"/><path class="wsp-leg" d="M.24-1.72h.82l.18.7.12 1.02H.7L.5-.94z"/><path class="wsp-shoe" d="M-1.72-.72l.74.24.14.3-1.08-.32zM.72-.22h.7l.28.22H.64z"/>`;
+    const runPose = `<g class="wsp-pose-run"><g class="wsp-limb wsp-run-arm-l"><path class="wsp-arm ${c}" d="M-1.45-3.2l-.62.42.34.86.5.68.53-.3-.36-.77.18-.65z"/><circle class="wsp-skin" cx="-1.16" cy="-1.44" r=".31"/></g><g class="wsp-limb wsp-run-arm-r"><path class="wsp-arm ${c}" d="M1.45-3.2l.58.48-.38.72-.56.52-.49-.34.44-.66-.2-.54z"/><circle class="wsp-skin" cx="1.02" cy="-1.45" r=".31"/></g></g>`;
+    const carryPose = `<g class="wsp-pose-carry"><g class="wsp-limb wsp-carry-arm-l"><path class="wsp-arm ${c}" d="M-1.42-3.15l-.44.54.64.66.94.39.24-.48-.78-.5-.12-.5z"/><circle class="wsp-skin" cx="-.17" cy="-1.65" r=".3"/></g><g class="wsp-limb wsp-carry-arm-r"><path class="wsp-arm ${c}" d="M1.42-3.12l.38.6-.64.66-.98.36-.2-.5.8-.48.1-.5z"/><circle class="wsp-skin" cx=".2" cy="-1.62" r=".28"/></g></g>`;
+    const blockPose = `<g class="wsp-pose-block"><g class="wsp-limb wsp-block-arm-l"><path class="wsp-arm ${c}" d="M-1.42-3.16l-.5.34.56.76.86.37.24-.47-.7-.48-.1-.4z"/><circle class="wsp-skin" cx="-.38" cy="-1.79" r=".32"/></g><g class="wsp-limb wsp-block-arm-r"><path class="wsp-arm ${c}" d="M1.42-3.16l.5.34-.56.76-.86.37-.24-.47.7-.48.1-.4z"/><circle class="wsp-skin" cx=".38" cy="-1.79" r=".32"/></g></g>`;
+    const catchPose = `<g class="wsp-pose-catch"><g class="wsp-limb wsp-catch-arm-l"><path class="wsp-arm ${c}" d="M-1.28-3.30l-.64-.62.30-.72.90.30.12.62-.48.48z"/><circle class="wsp-skin" cx="-1.54" cy="-4.30" r=".33"/></g><g class="wsp-limb wsp-catch-arm-r"><path class="wsp-arm ${c}" d="M1.28-3.30l.64-.62-.30-.72-.90.30-.12.62.48.48z"/><circle class="wsp-skin" cx="1.54" cy="-4.30" r=".33"/></g></g>`;
+    const throwPose = `<g class="wsp-pose-throw"><g class="wsp-limb wsp-throw-guide"><path class="wsp-arm ${c}" d="M-1.4-3.16l-.48.39.55.7.9.27.2-.47-.72-.4-.08-.38z"/><circle class="wsp-skin" cx="-.34" cy="-1.83" r=".3"/></g><g class="wsp-limb wsp-throw-arm"><path class="wsp-arm ${c}" d="M1.4-3.18l.43-.15.25-.72-.35-.55-.43.18.12.58-.36.54z"/><circle class="wsp-skin" cx="1.82" cy="-4.1" r=".3"/></g></g>`;
+    const tacklePose = `<g class="wsp-pose-tackle"><g class="wsp-limb wsp-tkl-arm-l"><path class="wsp-arm ${c}" d="M-1.44-3.05l-.72.10.02.86.74.6.44-.42-.34-.6.06-.56z"/><circle class="wsp-skin" cx="-1.86" cy="-1.86" r=".32"/></g><g class="wsp-limb wsp-tkl-arm-r"><path class="wsp-arm ${c}" d="M1.44-3.05l.72.10-.02.86-.74.6-.44-.42.34-.6-.06-.56z"/><circle class="wsp-skin" cx="1.86" cy="-1.86" r=".32"/></g></g>`;
+    const stiffPose = `<g class="wsp-pose-stiff"><g class="wsp-limb wsp-stiff-arm"><path class="wsp-arm ${c}" d="M1.35-3.15l1.05-.02.30.58-.38.5-1.02.06-.30-.5z"/><circle class="wsp-skin" cx="2.62" cy="-3.0" r=".34"/></g><g class="wsp-limb wsp-carry-arm-l"><path class="wsp-arm ${c}" d="M-1.42-3.15l-.44.54.64.66.94.39.24-.48-.78-.5-.12-.5z"/><circle class="wsp-skin" cx="-.17" cy="-1.65" r=".3"/></g></g>`;
+    const idlePose = `<g class="wsp-pose-idle"><path class="wsp-arm ${c}" d="M-1.5-3.35l-.5.28.06.9.22.72.5-.08-.12-.82.14-.66z"/><circle class="wsp-skin" cx="-1.32" cy="-1.58" r=".3"/><path class="wsp-arm ${c}" d="M1.5-3.35l.5.28-.06.9-.22.72-.5-.08.12-.82-.14-.66z"/><circle class="wsp-skin" cx="1.32" cy="-1.58" r=".3"/></g>`;
+    const torso = `<path class="wsp-pants" d="M-1.34-2.13h2.68l-.25.72-.92-.05L0-1.7l-.17.24-.92.05z"/><path class="wsp-jersey ${c}" d="M-1.26-3.55h2.52l.25.68-.45.83H-1.06l-.45-.83z"/><path class="wsp-shoulder ${c}" d="M-1.82-3.18q.12-.48.62-.64H1.2q.5.16.62.64l-.28.52-1.08-.22h-.92l-1.08.22z"/><path class="wsp-band ${hl}" d="M-1.22-2.81h2.44l-.16.48H-1.06z"/><rect class="wsp-neck" x="-.42" y="-3.78" width=".84" height=".42" rx=".18"/>`;
+    const dome = `<path class="wsp-helmet ${hl}" d="M-1.04-3.67l-.08-.46q.08-.73.55-1.05Q0-5.52.57-5.18q.47.32.55 1.05l-.08.46-.45.35H-.6z"/><path class="wsp-helmet-hi" d="M-.68-4.8q.32-.35.75-.34l-.2.28q-.33.05-.55.3z"/>`;
+    const frontHelmet = dome + `<circle class="wsp-earhole" cx=".73" cy="-3.94" r=".16"/><path class="wsp-facemask" d="M-.62-4.05h1.24M-.5-3.78h1M0-4.05v.3"/>`;
+    const backHelmet = dome + `<path class="wsp-stripe-line" d="M0-5.3v1.9"/>`;
+    const poses = runPose + carryPose + blockPose + catchPose + (a.qb ? throwPose : "") + (off ? stiffPose : tacklePose) + idlePose;
+    const vf = `<g class="wsp-vf"><g class="wsp-fA">${legsA}</g><g class="wsp-fB">${legsB}</g>${torso}${poses}${num}${frontHelmet}</g>`;
+    const vb = `<g class="wsp-vb"><g class="wsp-fA">${legsA}</g><g class="wsp-fB">${legsB}</g>${torso}${poses}${num}${backHelmet}</g>`;
+    const sLegsA = `<path class="wsp-leg" d="M.1-1.62l.62.05.52 1.02-.1.5-.55-.06-.24-.92z"/><path class="wsp-shoe" d="M.5-.16h.68l.3.16h-1z"/><path class="wsp-leg" d="M-.08-1.6l.55.05-.42.78-.62.5-.4-.34.58-.52z"/><path class="wsp-shoe" d="M-1.2-.62l.5.3-.1.16-.56-.28z"/>`;
+    const sLegsB = `<path class="wsp-leg" d="M-.02-1.62h.6l.1 1.42-.12.2h-.52l.08-.9z"/><path class="wsp-shoe" d="M-.06-.14h.7l.3.14h-1.02z"/><path class="wsp-leg" d="M-.1-1.58l.52.08.26.5-.42.36-.5-.14v-.5z"/><path class="wsp-shoe" d="M-.4-.78l.44.2-.1.16-.46-.2z"/>`;
+    const sTorso = `<path class="wsp-pants" d="M-.5-2.12l1.34.04-.12.62-1.14-.03z"/><path class="wsp-jersey ${c}" d="M-.78-3.52l1.58-.08.4.62-.22.9-1.36.02-.5-.66z"/><path class="wsp-shoulder ${c}" d="M-.95-3.42q.08-.5.55-.62l1.05-.05q.5.1.6.56l-.16.42-2.04.06z"/><path class="wsp-band ${hl}" d="M-.62-2.42l1.5-.02-.1.42-1.36.02z"/><rect class="wsp-neck" x="-.14" y="-3.82" width=".52" height=".42" rx=".16"/>`;
+    const sHelmet = `<circle class="wsp-helmet ${hl}" cx=".12" cy="-4.44" r=".8"/><path class="wsp-helmet-hi" d="M-.4-5q.42-.4.95-.3"/><path class="wsp-stripe-line" d="M-.62-4.98q.74-.6 1.5-.06"/><circle class="wsp-earhole" cx=".08" cy="-4.3" r=".17"/><path class="wsp-facemask" d="M.7-4.4h.58M.66-4.1h.62M1.16-4.5v.52"/>`;
+    const sRun = `<g class="wsp-pose-run"><g class="wsp-limb wsp-sd-arm"><path class="wsp-arm ${c}" d="M-.1-3.4l.6-.08.5.6-.08.55-.5.06-.3-.6z"/><circle class="wsp-skin" cx=".85" cy="-2.32" r=".3"/></g></g>`;
+    const sCarryArm = `<g class="wsp-limb wsp-sd-carry-arm"><path class="wsp-arm ${c}" d="M-.05-3.38l.6-.06.6.5-.04.5-.6.05-.5-.5z"/><circle class="wsp-skin" cx="1" cy="-2.6" r=".28"/></g>`;
+    const sCarry = `<g class="wsp-pose-carry">${sCarryArm}</g>`;
+    const sBlock = `<g class="wsp-pose-block"><g class="wsp-limb wsp-sd-block-arm"><path class="wsp-arm ${c}" d="M.1-3.3l.85-.1.4.25-.06.4-1 .03z"/><circle class="wsp-skin" cx="1.4" cy="-3.05" r=".3"/></g><g class="wsp-limb wsp-sd-block-arm"><path class="wsp-arm ${c}" d="M.1-2.9l.8-.06.4.24-.08.4-.95.02z"/><circle class="wsp-skin" cx="1.32" cy="-2.62" r=".28"/></g></g>`;
+    const sCatch = `<g class="wsp-pose-catch"><g class="wsp-limb wsp-sd-catch-arm"><path class="wsp-arm ${c}" d="M0-3.5l.3-.55.5-.5.4.3-.35.55-.35.45z"/><circle class="wsp-skin" cx=".95" cy="-4.6" r=".32"/></g></g>`;
+    const sThrow = `<g class="wsp-pose-throw"><g class="wsp-limb wsp-sd-guide-arm"><path class="wsp-arm ${c}" d="M.15-3.3l.7-.08.35.3-.1.38-.85-.05z"/><circle class="wsp-skin" cx="1.22" cy="-2.95" r=".28"/></g><g class="wsp-limb wsp-sd-throw-arm"><path class="wsp-arm ${c}" d="M0-3.42l-.5-.28-.3-.62.34-.34.42.3.2.6z"/><circle class="wsp-skin" cx="-.72" cy="-4.5" r=".3"/></g></g>`;
+    const sTackle = `<g class="wsp-pose-tackle"><g class="wsp-limb wsp-sd-tkl-arm"><path class="wsp-arm ${c}" d="M.1-3.1l.9-.15.45.3-.08.4-1.05.05z"/><circle class="wsp-skin" cx="1.5" cy="-2.85" r=".3"/></g><g class="wsp-limb wsp-sd-tkl-arm"><path class="wsp-arm ${c}" d="M.08-2.7l.85-.1.4.28-.1.4-.95.02z"/><circle class="wsp-skin" cx="1.38" cy="-2.42" r=".28"/></g></g>`;
+    const sStiff = `<g class="wsp-pose-stiff"><g class="wsp-limb wsp-sd-stiff-arm"><path class="wsp-arm ${c}" d="M.15-3.15l1.2-.02.3.28-.12.34-1.3-.08z"/><circle class="wsp-skin" cx="1.8" cy="-2.85" r=".32"/></g>${sCarryArm}</g>`;
+    const sIdle = `<g class="wsp-pose-idle"><path class="wsp-arm ${c}" d="M-.05-3.4l.55.02.12.9-.1.55-.5-.04.03-.85z"/><circle class="wsp-skin" cx=".45" cy="-1.95" r=".28"/></g>`;
+    const sPoses = sRun + sCarry + sBlock + sCatch + (a.qb ? sThrow : "") + (off ? sStiff : sTackle) + sIdle;
+    const vs = `<g class="wsp-vs"><g class="wsp-fA">${sLegsA}</g><g class="wsp-fB">${sLegsB}</g>${sTorso}${sPoses}${sHelmet}</g>`;
+    const flip = `<g class="wsp-flip"${face === "w" ? ' transform="scale(-1,1)"' : ""}>${vf}${vb}${vs}</g>`;
+    const body = `<ellipse class="wsp-shadow" cx="0" cy="-.12" rx="1.72" ry=".38"/><g class="wsp-shell">${flip}</g>`;
+    const tag = `<text class="${off ? "wo-lbl" : "wd-lbl"} wsp-tag" x="0" y="${off ? "1.9" : "-5.8"}">${a.label}</text>`;
+    return `<g class="wsp${a.qb ? " wsp-qb" : ""}" style="--gait:${gait}s;--wsp-lean:0deg">${body}</g>${tag}`;
+  }
+  function ballMarkup(x, y) {
+    return `<g id="wp-ball" class="wa-ballg" transform="translate(${x},${y})"><ellipse class="wab-shadow" cx="0" cy="0.55" rx="1.15" ry="0.4"/><g class="wab-lift"><g class="wab-spin"><rect class="wab-core" x="-1.15" y="-0.7" width="2.3" height="1.4"/><rect class="wab-end" x="-1.6" y="-0.45" width="0.5" height="0.9"/><rect class="wab-end" x="1.1"  y="-0.45" width="0.5" height="0.9"/><rect class="wab-lace" x="-0.5" y="-0.25" width="1.0" height="0.5"/></g></g></g>`;
+  }
+  var WSP_STILL_V = 1.1;
+  var WSP_TURN_V = 4.6;
+  var WSP_VERT_V = 1.6;
+  var WSP_STRIDE = 0.85;
+  var WSP_FACES = ["e", "w", "n", "s"];
+  function spriteMotionTick(node, x, y) {
+    if (!node) return;
+    let m = node._wsm;
+    if (!m) {
+      const face = WSP_FACES.find((f) => node.classList.contains("wsp-face-" + f)) || "e";
+      node._wsm = { x, y, t: performance.now(), face, fwd: face, odo: 0, step: false, lean: 0, q: 0, vx: 0, vy: 0, flip: node.querySelector(".wsp-flip"), still: true };
+      node.classList.add("wsp-face-" + face, "wsp-still");
+      return;
+    }
+    const now = performance.now();
+    const dt = (now - m.t) / 1e3;
+    if (dt <= 0) return;
+    m.t = now;
+    const idt = Math.min(dt, 0.08);
+    const dx = x - m.x, dy = y - m.y;
+    m.x = x;
+    m.y = y;
+    const k = Math.min(1, idt * 9);
+    m.vx += (dx / idt - m.vx) * k;
+    m.vy += (dy / idt - m.vy) * k;
+    const v = Math.hypot(m.vx, m.vy);
+    const still = v < WSP_STILL_V;
+    if (still !== m.still) {
+      m.still = still;
+      node.classList.toggle("wsp-still", still);
+    }
+    if (!still) {
+      const ax = Math.abs(m.vx), ay = Math.abs(m.vy);
+      let nf = m.face;
+      if (ax >= ay) {
+        const f = m.vx > 0 ? "e" : "w";
+        nf = f === m.fwd || v > WSP_TURN_V ? f : m.fwd;
+      } else if (ay > ax * 1.35 && v > WSP_VERT_V) nf = m.vy > 0 ? "s" : "n";
+      if (nf !== m.face) {
+        node.classList.remove("wsp-face-" + m.face);
+        node.classList.add("wsp-face-" + nf);
+        m.face = nf;
+        if (m.flip) {
+          if (nf === "w") m.flip.setAttribute("transform", "scale(-1,1)");
+          else m.flip.removeAttribute("transform");
+        }
+      }
+      m.odo += Math.hypot(dx, dy);
+      const step = Math.floor(m.odo / WSP_STRIDE) % 2 === 1;
+      if (step !== m.step) {
+        m.step = step;
+        node.classList.toggle("wsp-stepB", step);
+      }
+    }
+    const tgt = still ? 0 : m.face === "e" ? Math.min(11, v * 1.55) : m.face === "w" ? -Math.min(11, v * 1.55) : Math.max(-7, Math.min(7, m.vx * 1.2));
+    m.lean += (tgt - m.lean) * Math.min(1, idt * 10);
+    const q = Math.round(m.lean * 2) / 2;
+    if (q !== m.q) {
+      m.q = q;
+      node.style.setProperty("--wsp-lean", q + "deg");
+    }
+  }
+  function wspPlace(node, x, y) {
+    if (!node) return;
+    node.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)})`);
+    spriteMotionTick(node, x, y);
+  }
+
   // js/ui/app.js
   init_utils();
   function hexToHsl(hex) {
@@ -48835,30 +48985,6 @@ ${renderAutoRecruitLog()}`;
       divMult: (divM((_c = r.homeSchool) == null ? void 0 : _c.division) + divM((_d = r.awaySchool) == null ? void 0 : _d.division)) / 2
     };
   }
-  function spriteMarkup(a) {
-    const off = a.team === "off";
-    const c = off ? "wsp-off" : "wsp-def";
-    const hl = off ? "wsp-off-hl" : "wsp-def-hl";
-    let gh = 0;
-    for (let i = 0; i < String(a.id).length; i++) gh = (gh + String(a.id).charCodeAt(i)) % 97;
-    const gait = (-(gh % 8 * 0.045)).toFixed(3);
-    const legsA = `<path class="wsp-leg" d="M-1.08-1.72h.82l-.04.76-.28.96h-.66l.18-1.02z"/><path class="wsp-leg" d="M.26-1.72h.82l-.02.7.18 1.02H.58L.3-.96z"/><path class="wsp-shoe" d="M-1.28-.22h.76l.24.22h-1.08zM.54-.22h.7l.28.22H.46z"/>`;
-    const legsB = `<path class="wsp-leg" d="M-1.06-1.72h.82l-.3.7-.52.68-.62-.2.54-.84z"/><path class="wsp-leg" d="M.24-1.72h.82l.18.7.12 1.02H.7L.5-.94z"/><path class="wsp-shoe" d="M-1.72-.72l.74.24.14.3-1.08-.32zM.72-.22h.7l.28.22H.64z"/>`;
-    const runPose = `<g class="wsp-pose-run"><g class="wsp-limb wsp-run-arm-l"><path class="wsp-arm ${c}" d="M-1.45-3.2l-.62.42.34.86.5.68.53-.3-.36-.77.18-.65z"/><circle class="wsp-skin" cx="-1.16" cy="-1.44" r=".31"/></g><g class="wsp-limb wsp-run-arm-r"><path class="wsp-arm ${c}" d="M1.45-3.2l.58.48-.38.72-.56.52-.49-.34.44-.66-.2-.54z"/><circle class="wsp-skin" cx="1.02" cy="-1.45" r=".31"/></g></g>`;
-    const carryPose = `<g class="wsp-pose-carry"><g class="wsp-limb wsp-carry-arm-l"><path class="wsp-arm ${c}" d="M-1.42-3.15l-.44.54.64.66.94.39.24-.48-.78-.5-.12-.5z"/><circle class="wsp-skin" cx="-.17" cy="-1.65" r=".3"/></g><g class="wsp-limb wsp-carry-arm-r"><path class="wsp-arm ${c}" d="M1.42-3.12l.38.6-.64.66-.98.36-.2-.5.8-.48.1-.5z"/><circle class="wsp-skin" cx=".2" cy="-1.62" r=".28"/></g></g>`;
-    const blockPose = `<g class="wsp-pose-block"><g class="wsp-limb wsp-block-arm-l"><path class="wsp-arm ${c}" d="M-1.42-3.16l-.5.34.56.76.86.37.24-.47-.7-.48-.1-.4z"/><circle class="wsp-skin" cx="-.38" cy="-1.79" r=".32"/></g><g class="wsp-limb wsp-block-arm-r"><path class="wsp-arm ${c}" d="M1.42-3.16l.5.34-.56.76-.86.37-.24-.47.7-.48.1-.4z"/><circle class="wsp-skin" cx=".38" cy="-1.79" r=".32"/></g></g>`;
-    const catchPose = `<g class="wsp-pose-catch"><g class="wsp-limb wsp-catch-arm-l"><path class="wsp-arm ${c}" d="M-1.28-3.30l-.64-.62.30-.72.90.30.12.62-.48.48z"/><circle class="wsp-skin" cx="-1.54" cy="-4.30" r=".33"/></g><g class="wsp-limb wsp-catch-arm-r"><path class="wsp-arm ${c}" d="M1.28-3.30l.64-.62-.30-.72-.90.30-.12.62.48.48z"/><circle class="wsp-skin" cx="1.54" cy="-4.30" r=".33"/></g></g>`;
-    const throwPose = `<g class="wsp-pose-throw"><g class="wsp-limb wsp-throw-guide"><path class="wsp-arm ${c}" d="M-1.4-3.16l-.48.39.55.7.9.27.2-.47-.72-.4-.08-.38z"/><circle class="wsp-skin" cx="-.34" cy="-1.83" r=".3"/></g><g class="wsp-limb wsp-throw-arm"><path class="wsp-arm ${c}" d="M1.4-3.18l.43-.15.25-.72-.35-.55-.43.18.12.58-.36.54z"/><circle class="wsp-skin" cx="1.82" cy="-4.1" r=".3"/></g></g>`;
-    const tacklePose = `<g class="wsp-pose-tackle"><g class="wsp-limb wsp-tkl-arm-l"><path class="wsp-arm ${c}" d="M-1.44-3.05l-.72.10.02.86.74.6.44-.42-.34-.6.06-.56z"/><circle class="wsp-skin" cx="-1.86" cy="-1.86" r=".32"/></g><g class="wsp-limb wsp-tkl-arm-r"><path class="wsp-arm ${c}" d="M1.44-3.05l.72.10-.02.86-.74.6-.44-.42.34-.6-.06-.56z"/><circle class="wsp-skin" cx="1.86" cy="-1.86" r=".32"/></g></g>`;
-    const stiffPose = `<g class="wsp-pose-stiff"><g class="wsp-limb wsp-stiff-arm"><path class="wsp-arm ${c}" d="M1.35-3.15l1.05-.02.30.58-.38.5-1.02.06-.30-.5z"/><circle class="wsp-skin" cx="2.62" cy="-3.0" r=".34"/></g><g class="wsp-limb wsp-carry-arm-l"><path class="wsp-arm ${c}" d="M-1.42-3.15l-.44.54.64.66.94.39.24-.48-.78-.5-.12-.5z"/><circle class="wsp-skin" cx="-.17" cy="-1.65" r=".3"/></g></g>`;
-    const helmet = `<path class="wsp-helmet ${hl}" d="M-1.04-3.67l-.08-.46q.08-.73.55-1.05Q0-5.52.57-5.18q.47.32.55 1.05l-.08.46-.45.35H-.6z"/><path class="wsp-helmet-hi" d="M-.68-4.8q.32-.35.75-.34l-.2.28q-.33.05-.55.3z"/><circle class="wsp-earhole" cx=".73" cy="-3.94" r=".16"/>` + (off ? `<path class="wsp-stripe-line" d="M0-5.3v1.9"/>` : `<path class="wsp-facemask" d="M.56-4.05h.7v.5H.42M.9-4.05v-.34"/>`);
-    const body = `<ellipse class="wsp-shadow" cx="0" cy="-.12" rx="1.72" ry=".38"/><g class="wsp-shell"><g class="wsp-fA">${legsA}</g><g class="wsp-fB">${legsB}</g><path class="wsp-pants" d="M-1.34-2.13h2.68l-.25.72-.92-.05L0-1.7l-.17.24-.92.05z"/><path class="wsp-jersey ${c}" d="M-1.26-3.55h2.52l.25.68-.45.83H-1.06l-.45-.83z"/><path class="wsp-shoulder ${c}" d="M-1.82-3.18q.12-.48.62-.64H1.2q.5.16.62.64l-.28.52-1.08-.22h-.92l-1.08.22z"/><path class="wsp-band ${hl}" d="M-1.22-2.81h2.44l-.16.48H-1.06z"/><rect class="wsp-neck" x="-.42" y="-3.78" width=".84" height=".42" rx=".18"/>` + runPose + carryPose + blockPose + catchPose + (a.qb ? throwPose : "") + (off ? stiffPose : tacklePose) + `<text class="wsp-number" x="0" y="-2.43">${escapeHtml(String(a.label || "").slice(0, 2))}</text>` + helmet + `</g>`;
-    const tag = `<text class="${off ? "wo-lbl" : "wd-lbl"} wsp-tag" x="0" y="${off ? "1.9" : "-5.8"}">${a.label}</text>`;
-    return `<g class="wsp${a.qb ? " wsp-qb" : ""}" style="--gait:${gait}s;--wsp-lean:0deg">${body}</g>${tag}`;
-  }
-  function ballMarkup(x, y) {
-    return `<g id="wp-ball" class="wa-ballg" transform="translate(${x},${y})"><ellipse class="wab-shadow" cx="0" cy="0.55" rx="1.15" ry="0.4"/><g class="wab-lift"><g class="wab-spin"><rect class="wab-core" x="-1.15" y="-0.7" width="2.3" height="1.4"/><rect class="wab-end" x="-1.6" y="-0.45" width="0.5" height="0.9"/><rect class="wab-end" x="1.1"  y="-0.45" width="0.5" height="0.9"/><rect class="wab-lace" x="-0.5" y="-0.25" width="1.0" height="0.5"/></g></g></g>`;
-  }
   var WATCH_SIDE = Object.freeze({
     ypu: 0.85,
     longitudinal: 1.35,
@@ -48915,10 +49041,10 @@ ${renderAutoRecruitLog()}`;
     const sprites = ((_c = state.settings) == null ? void 0 : _c.spriteWatch) !== false;
     if (sprites) svg.classList.add("watch-sprites");
     else svg.classList.remove("watch-sprites");
-    const glyph = (a) => sprites ? spriteMarkup(a) : a.team === "def" ? `<text class="wd-x" x="0" y="0">\u2715</text><text class="wd-lbl" x="0" y="-2.6">${a.label}</text>` : `<circle r="1.9" class="wo-c${a.qb ? " wo-qb" : ""}" cx="0" cy="0"/><text class="wo-lbl" x="0" y="4.4">${a.label}</text>`;
+    const glyph = (a) => sprites ? spriteMarkup(a, a.team === "off" ? "e" : "w") : a.team === "def" ? `<text class="wd-x" x="0" y="0">\u2715</text><text class="wd-lbl" x="0" y="-2.6">${a.label}</text>` : `<circle r="1.9" class="wo-c${a.qb ? " wo-qb" : ""}" cx="0" cy="0"/><text class="wo-lbl" x="0" y="4.4">${a.label}</text>`;
     svg.innerHTML = watchFieldBase(p, board) + `<polyline id="wp-trail" class="wp-trail" points=""/><circle id="wp-spot" class="wp-spot" r="3.4" transform="translate(0,0)"/><g id="wp-blocks">${(script.blocks || []).map((b, i) => `<line class="wp-block-link" data-wblock="${i}"/>`).join("")}</g>` + script.actors.map((a) => {
       const [sx, sy] = watchSidePoint(a.track[0][0], a.track[0][1]);
-      return `<g class="wp-actor wp-team-${a.team}${a.qb ? " wp-qb" : ""}" data-wpa="${a.id}" data-wpg="${a.grp || ""}" transform="translate(${sx.toFixed(2)},${sy.toFixed(2)})">` + glyph(a) + `</g>`;
+      return `<g class="wp-actor wp-team-${a.team}${a.qb ? " wp-qb" : ""}${sprites ? ` wsp-still wsp-face-${a.team === "off" ? "e" : "w"}` : ""}" data-wpa="${a.id}" data-wpg="${a.grp || ""}" transform="translate(${sx.toFixed(2)},${sy.toFixed(2)})">` + glyph(a) + `</g>`;
     }).join("") + `<g id="wp-fx"></g>` + (() => {
       const [sx, sy] = watchSidePoint(script.ball.track[0][0], script.ball.track[0][1]);
       return ballMarkup(sx, sy);
@@ -49044,10 +49170,10 @@ ${renderAutoRecruitLog()}`;
         const [x, y] = watchSidePoint(wx, wy);
         actorPts[a.id] = [x, y];
         const node = nodes[a.id];
-        node == null ? void 0 : node.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)})`);
-        const [nwx, nwy] = sampleTrack(a.track, script.step, Math.min(script.dur, t + script.step));
-        const [nx] = watchSidePoint(nwx, nwy);
-        node == null ? void 0 : node.style.setProperty("--wsp-lean", `${Math.max(-10, Math.min(10, (nx - x) * 16)).toFixed(1)}deg`);
+        if (node) {
+          node.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)})`);
+          if (sprites) spriteMotionTick(node, x, y);
+        }
         if (a.team === "off") {
           const dd = Math.hypot(x - bx, y - by);
           if (dd < cd) {
@@ -49214,7 +49340,7 @@ ${renderAutoRecruitLog()}`;
     const sprites = ((_a = state.settings) == null ? void 0 : _a.spriteWatch) !== false;
     if (sprites) svg.classList.add("watch-sprites");
     else svg.classList.remove("watch-sprites");
-    const cast = (a) => sprites ? `<g class="wp-actor wp-team-${a.team}" data-wpk="${a.id}" transform="translate(${a.x.toFixed(2)},${a.y.toFixed(2)})">${spriteMarkup(a)}</g>` : "";
+    const cast = (a) => sprites ? `<g class="wp-actor wp-team-${a.team} wsp-still wsp-face-${a.team === "off" ? "e" : "w"}" data-wpk="${a.id}" transform="translate(${a.x.toFixed(2)},${a.y.toFixed(2)})">${spriteMarkup(a, a.team === "off" ? "e" : "w")}</g>` : "";
     svg.innerHTML = watchFieldBase(p) + cast({ id: "LS", team: "off", label: "LS", x: startX, y: startY }) + (isFG ? cast({ id: "H", team: "off", label: "H", x: holdX, y: holdY }) : "") + cast({ id: "K", team: "off", label: isFG ? "K" : "P", x: isFG ? kickX0 : holdX, y: isFG ? kickY0 : holdY }) + (!isFG && !p.blocked ? cast({ id: "PR", team: "def", label: "PR", x: retX, y: retY }) : "") + (!isFG && !p.blocked && !p.touchback ? cast({ id: "G1", team: "off", label: "G", x: g1X, y: g1Y }) + cast({ id: "G2", team: "off", label: "G", x: g2X, y: g2Y }) : "") + (p.blocked ? cast({ id: "RS", team: "def", label: "LB", x: rushX0, y: rushY0 }) : "") + ballMarkup(startX, startY) + `<g id="wp-fx"></g>`;
     const ballN = svg.querySelector("#wp-ball"), fxN = svg.querySelector("#wp-fx");
     const kN = svg.querySelector('[data-wpk="K"]'), prN = svg.querySelector('[data-wpk="PR"]');
@@ -49258,23 +49384,23 @@ ${renderAutoRecruitLog()}`;
       ballN == null ? void 0 : ballN.classList.toggle("wp-ball-kick", t >= swingT && t < landT);
       if (kN && isFG) {
         const u = Math.max(0, Math.min(1, (t - placeT) / Math.max(0.01, swingT - placeT)));
-        kN.setAttribute("transform", `translate(${lerp(kickX0, holdX + 1.2, u).toFixed(2)},${lerp(kickY0, holdY + 0.4, u).toFixed(2)})`);
+        wspPlace(kN, lerp(kickX0, holdX + 1.2, u), lerp(kickY0, holdY + 0.4, u));
       }
       kN == null ? void 0 : kN.classList.toggle("wp-kicking", t >= swingT - 0.06 && t <= swingT + 0.4);
       if (prN && t >= swingT) {
         if (t < landT) {
           const u = Math.min(1, (t - swingT) / flight);
-          prN.setAttribute("transform", `translate(${lerp(retX, endX, u * 0.9).toFixed(2)},${lerp(retY, endY - 1.5, u * 0.9).toFixed(2)})`);
-        } else prN.setAttribute("transform", `translate(${bx.toFixed(2)},${by.toFixed(2)})`);
+          wspPlace(prN, lerp(retX, endX, u * 0.9), lerp(retY, endY - 1.5, u * 0.9));
+        } else wspPlace(prN, bx, by);
       }
       if (g1N && t >= swingT) {
         const u = Math.min(1, (t - swingT) / (flight + Math.max(0.3, retDur)));
-        g1N.setAttribute("transform", `translate(${lerp(g1X, bx - 3.4, u).toFixed(2)},${lerp(g1Y, by - 1.2, u).toFixed(2)})`);
-        g2N == null ? void 0 : g2N.setAttribute("transform", `translate(${lerp(g2X, bx + 3.4, u).toFixed(2)},${lerp(g2Y, by + 1.2, u).toFixed(2)})`);
+        wspPlace(g1N, lerp(g1X, bx - 3.4, u), lerp(g1Y, by - 1.2, u));
+        wspPlace(g2N, lerp(g2X, bx + 3.4, u), lerp(g2Y, by + 1.2, u));
       }
       if (rsN) {
         const u = Math.min(1, t / Math.max(0.01, swingT + 0.08));
-        rsN.setAttribute("transform", `translate(${lerp(rushX0, holdX - 1.6, u).toFixed(2)},${lerp(rushY0, holdY - 0.6, u).toFixed(2)})`);
+        wspPlace(rsN, lerp(rushX0, holdX - 1.6, u), lerp(rushY0, holdY - 0.6, u));
       }
       camX += (watchSideCameraX(p, bx) - camX) * 0.1;
       svg.setAttribute("viewBox", `${camX.toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
@@ -49302,7 +49428,7 @@ ${renderAutoRecruitLog()}`;
     const retYds = !p.onside && !p.touchback ? Math.max(0, p.retYds || 0) : 0;
     const [retEndX, retEndY] = watchSidePoint(50, Math.min(58, 31 - kickYds * WATCH_SIDE.ypu + retYds * WATCH_SIDE.ypu));
     const [c1X, c1Y] = watchSidePoint(20, 33), [c2X, c2Y] = watchSidePoint(80, 33);
-    const cast = (a) => sprites ? `<g class="wp-actor wp-team-${a.team}" data-wpk="${a.id}" transform="translate(${a.x.toFixed(2)},${a.y.toFixed(2)})">${spriteMarkup(a)}</g>` : "";
+    const cast = (a) => sprites ? `<g class="wp-actor wp-team-${a.team} wsp-still wsp-face-${a.team === "off" ? "e" : "w"}" data-wpk="${a.id}" transform="translate(${a.x.toFixed(2)},${a.y.toFixed(2)})">${spriteMarkup(a, a.team === "off" ? "e" : "w")}</g>` : "";
     svg.innerHTML = watchFieldBase(p) + cast({ id: "K", team: "off", label: "K", x: teeX - 8, y: teeY }) + cast({ id: "C1", team: "off", label: "CV", x: c1X, y: c1Y }) + cast({ id: "C2", team: "off", label: "CV", x: c2X, y: c2Y }) + (!p.touchback || p.onside ? cast({ id: "PR", team: "def", label: p.onside ? "HANDS" : "PR", x: endX, y: endY - 2 }) : "") + ballMarkup(teeX, teeY) + `<g id="wp-fx"></g>`;
     const ballN = svg.querySelector("#wp-ball"), fxN = svg.querySelector("#wp-fx");
     const kN = svg.querySelector('[data-wpk="K"]'), prN = svg.querySelector('[data-wpk="PR"]');
@@ -49342,15 +49468,15 @@ ${renderAutoRecruitLog()}`;
       ballN == null ? void 0 : ballN.classList.toggle("wp-ball-kick", t >= runT && t < boomT);
       if (kN) {
         const u = Math.min(1, t / runT);
-        kN.setAttribute("transform", `translate(${lerp(teeX - 8, teeX - 1.4, u).toFixed(2)},${teeY.toFixed(2)})`);
+        wspPlace(kN, lerp(teeX - 8, teeX - 1.4, u), teeY);
       }
       kN == null ? void 0 : kN.classList.toggle("wp-kicking", t >= runT - 0.06 && t <= runT + 0.4);
       if (c1N && t >= runT) {
         const u = Math.min(1, (t - runT) / (flight + Math.max(0.4, retDur)));
-        c1N.setAttribute("transform", `translate(${lerp(c1X, bx - 3.2, u).toFixed(2)},${lerp(c1Y, by - 1.1, u).toFixed(2)})`);
-        c2N == null ? void 0 : c2N.setAttribute("transform", `translate(${lerp(c2X, bx + 3.2, u).toFixed(2)},${lerp(c2Y, by + 1.1, u).toFixed(2)})`);
+        wspPlace(c1N, lerp(c1X, bx - 3.2, u), lerp(c1Y, by - 1.1, u));
+        wspPlace(c2N, lerp(c2X, bx + 3.2, u), lerp(c2Y, by + 1.1, u));
       }
-      if (prN && t >= boomT - 0.2) prN.setAttribute("transform", `translate(${bx.toFixed(2)},${by.toFixed(2)})`);
+      if (prN && t >= boomT - 0.2) wspPlace(prN, bx, by);
       camX += (watchSideCameraX(p, bx) - camX) * 0.1;
       svg.setAttribute("viewBox", `${camX.toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
       if (t >= dur && fxN && !fxN.childElementCount) {
@@ -49393,7 +49519,7 @@ ${renderAutoRecruitLog()}`;
     const [sx2, sy2] = watchSidePoint(50, LOSW - 2 * YPU2);
     svg.innerHTML = watchFieldBase(p) + cast.map((a) => {
       const [x, y] = watchSidePoint(a.wx, a.wy);
-      return sprites ? `<g class="wp-actor wp-team-${a.team}${a.qb ? " wp-qb" : ""}" transform="translate(${x.toFixed(2)},${y.toFixed(2)})">${spriteMarkup(a)}</g>` : "";
+      return sprites ? `<g class="wp-actor wp-team-${a.team}${a.qb ? " wp-qb" : ""} wsp-still wsp-face-${a.team === "off" ? "e" : "w"}" transform="translate(${x.toFixed(2)},${y.toFixed(2)})">${spriteMarkup(a, a.team === "off" ? "e" : "w")}</g>` : "";
     }).join("") + ballMarkup(bx0, by0) + `<g id="wp-fx"></g>`;
     const ballN = svg.querySelector("#wp-ball"), fxN = svg.querySelector("#wp-fx");
     const [tx, ty] = p.made ? [gx, gy] : [sx2, sy2];
@@ -49431,7 +49557,7 @@ ${renderAutoRecruitLog()}`;
     const [cx0, cy0] = watchSidePoint(50, 31);
     const mk2 = (id, team, label, wx, wy, qb = false) => {
       const [x, y] = watchSidePoint(wx, wy);
-      return sprites ? `<g class="wp-actor wp-team-${team}${qb ? " wp-qb" : ""}" data-wpk="${id}" transform="translate(${x.toFixed(2)},${y.toFixed(2)})">${spriteMarkup({ id, team, label, qb })}</g>` : "";
+      return sprites ? `<g class="wp-actor wp-team-${team}${qb ? " wp-qb" : ""} wsp-still wsp-face-${team === "off" ? "e" : "w"}" data-wpk="${id}" transform="translate(${x.toFixed(2)},${y.toFixed(2)})">${spriteMarkup({ id, team, label, qb }, team === "off" ? "e" : "w")}</g>` : "";
     };
     let bodies = "";
     for (let i = 0; i < 5; i++) bodies += mk2("OL" + i, "off", "OL", 38 + i * 6, 31.8);
