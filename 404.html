@@ -5797,11 +5797,38 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 #watch-board.watch-in-play .wsp-carry-arm-l { animation:wsp-cradle-l .38s ease-in-out infinite; animation-delay:var(--gait,0s); }
 #watch-board.watch-in-play .wsp-carry-arm-r { animation:wsp-cradle-r .38s ease-in-out infinite; animation-delay:var(--gait,0s); }
 /* Side-profile limbs (authored facing east; the flip mirrors everything). */
-.wsp-sd-arm,.wsp-sd-carry-arm { transform-origin:18% 12%; }
+.wsp-sd-carry-arm { transform-origin:18% 12%; }
+/* Tier-3 skeleton: thigh/shin and upper-arm/forearm are nested chains, each
+   rotating about the top of its own segment. A paused 1s gait cycle is
+   scrubbed by --ph — set per-frame from the ground odometer — so every joint
+   swings in exact step with distance actually covered. */
+.wsp-sd-thigh,.wsp-sd-shin,.wsp-sd-uarm,.wsp-sd-farm { transform-box:fill-box; transform-origin:50% 5%; }
+.wsp-sd-far { opacity:.8; }
+#watch-board.watch-sprites .wsp-sd-thigh-f { animation:wsp-sdc-thigh-f 1s linear infinite paused; animation-delay:calc(var(--ph,0) * -1s); }
+#watch-board.watch-sprites .wsp-sd-thigh-b { animation:wsp-sdc-thigh-b 1s linear infinite paused; animation-delay:calc(var(--ph,0) * -1s); }
+#watch-board.watch-sprites .wsp-sd-shin-f  { animation:wsp-sdc-shin-f 1s linear infinite paused; animation-delay:calc(var(--ph,0) * -1s); }
+#watch-board.watch-sprites .wsp-sd-shin-b  { animation:wsp-sdc-shin-b 1s linear infinite paused; animation-delay:calc(var(--ph,0) * -1s); }
+#watch-board.watch-sprites .wsp-sd-uarm-f  { animation:wsp-sdc-uarm-f 1s linear infinite paused; animation-delay:calc(var(--ph,0) * -1s); }
+#watch-board.watch-sprites .wsp-sd-uarm-b  { animation:wsp-sdc-uarm-b 1s linear infinite paused; animation-delay:calc(var(--ph,0) * -1s); }
+#watch-board.watch-sprites .wsp-sd-farm-f  { animation:wsp-sdc-farm 1s linear infinite paused; animation-delay:calc(var(--ph,0) * -1s); }
+#watch-board.watch-sprites .wsp-sd-farm-b  { animation:wsp-sdc-farm 1s linear infinite paused; animation-delay:calc((var(--ph,0) + .5) * -1s); }
+#watch-board.watch-sprites .wp-actor:not(.wsp-still) .wsp-vs { animation:wsp-sdc-bob 1s linear infinite paused; animation-delay:calc(var(--ph,0) * -1s); }
+/* Standing or engaged men drop the chain to its authored stance. */
+.wsp-still .wsp-sd-thigh,.wsp-still .wsp-sd-shin,.wsp-still .wsp-sd-uarm,.wsp-still .wsp-sd-farm,
+.wp-blocking .wsp-sd-thigh,.wp-blocking .wsp-sd-shin,.wp-blocked .wsp-sd-thigh,.wp-blocked .wsp-sd-shin,
+.wp-tackled .wsp-sd-thigh,.wp-tackled .wsp-sd-shin,.wp-sacked .wsp-sd-thigh,.wp-sacked .wsp-sd-shin { animation:none !important; }
+/* One cycle = two steps. Contact at 0%/50%; swing-through knee bend between. */
+@keyframes wsp-sdc-thigh-f { 0%,100% { transform:rotate(-34deg); } 50% { transform:rotate(30deg); } }
+@keyframes wsp-sdc-thigh-b { 0%,100% { transform:rotate(30deg); } 50% { transform:rotate(-34deg); } }
+@keyframes wsp-sdc-shin-f { 0% { transform:rotate(4deg); } 40% { transform:rotate(12deg); } 60% { transform:rotate(56deg); } 85% { transform:rotate(22deg); } 100% { transform:rotate(4deg); } }
+@keyframes wsp-sdc-shin-b { 0% { transform:rotate(56deg); } 35% { transform:rotate(22deg); } 50% { transform:rotate(4deg); } 90% { transform:rotate(12deg); } 100% { transform:rotate(56deg); } }
+@keyframes wsp-sdc-uarm-f { 0%,100% { transform:rotate(28deg); } 50% { transform:rotate(-38deg); } }
+@keyframes wsp-sdc-uarm-b { 0%,100% { transform:rotate(-38deg); } 50% { transform:rotate(28deg); } }
+@keyframes wsp-sdc-farm { 0%,100% { transform:rotate(-28deg); } 50% { transform:rotate(-48deg); } }
+@keyframes wsp-sdc-bob { 0%,50%,100% { transform:translateY(0); } 25%,75% { transform:translateY(.14px); } }
 .wsp-sd-throw-arm { transform-origin:85% 92%; }
 .wsp-sd-guide-arm,.wsp-sd-block-arm,.wsp-sd-tkl-arm,.wsp-sd-stiff-arm { transform-origin:10% 50%; }
 .wsp-sd-catch-arm { transform-origin:12% 88%; }
-#watch-board.watch-in-play .wp-actor:not(.wsp-still) .wsp-sd-arm { animation:wsp-sd-pump .34s ease-in-out infinite alternate; animation-delay:var(--gait,0s); }
 #watch-board.watch-in-play .wsp-sd-carry-arm { animation:wsp-cradle-l .38s ease-in-out infinite; animation-delay:var(--gait,0s); }
 .wp-throwing .wsp-sd-guide-arm { animation:wsp-sd-guide .62s cubic-bezier(.22,.72,.32,1) both; }
 .wp-throwing .wsp-sd-throw-arm { animation:wsp-sd-throw .62s cubic-bezier(.22,.72,.32,1) both; }
@@ -5809,7 +5836,6 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 .wp-blocking .wsp-sd-block-arm,.wp-blocked .wsp-sd-block-arm { animation:wsp-sd-punch .22s ease-in-out infinite; }
 #watch-board .wp-tackling .wsp-sd-tkl-arm { animation:wsp-sd-tkl .26s cubic-bezier(.2,.7,.3,1) both; }
 #watch-board.watch-in-play .wp-moving.wp-mv-stiff .wsp-sd-stiff-arm { animation:wsp-stiff .40s ease-out both; }
-@keyframes wsp-sd-pump { from { transform:rotate(-24deg); } to { transform:rotate(26deg); } }
 @keyframes wsp-sd-guide { 0%,28% { transform:rotate(4deg); } 62% { transform:rotate(-10deg); } 100% { transform:rotate(8deg); } }
 @keyframes wsp-sd-throw { 0% { transform:rotate(-10deg); } 35% { transform:rotate(-22deg) translate(-.06px,-.06px); } 70% { transform:rotate(70deg) translate(.14px,.1px); } 100% { transform:rotate(92deg) translate(.16px,.2px); } }
 @keyframes wsp-sd-catch { 0% { transform:rotate(46deg) translate(-.2px,.6px); } 100% { transform:none; } }
@@ -6598,7 +6624,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "d0b49a3545";
+globalThis.__BUILD__ = "e622b0ec4f";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -45858,11 +45884,13 @@ ${renderAutoRecruitLog()}`;
     const poses = runPose + carryPose + blockPose + catchPose + (a.qb ? throwPose : "") + (off ? stiffPose : tacklePose) + idlePose;
     const vf = `<g class="wsp-vf"><g class="wsp-fA">${legsA}</g><g class="wsp-fB">${legsB}</g>${torso}${poses}${num}${frontHelmet}</g>`;
     const vb = `<g class="wsp-vb"><g class="wsp-fA">${legsA}</g><g class="wsp-fB">${legsB}</g>${torso}${poses}${num}${backHelmet}</g>`;
-    const sLegsA = `<path class="wsp-leg" d="M.1-1.62l.62.05.52 1.02-.1.5-.55-.06-.24-.92z"/><path class="wsp-shoe" d="M.5-.16h.68l.3.16h-1z"/><path class="wsp-leg" d="M-.08-1.6l.55.05-.42.78-.62.5-.4-.34.58-.52z"/><path class="wsp-shoe" d="M-1.2-.62l.5.3-.1.16-.56-.28z"/>`;
-    const sLegsB = `<path class="wsp-leg" d="M-.02-1.62h.6l.1 1.42-.12.2h-.52l.08-.9z"/><path class="wsp-shoe" d="M-.06-.14h.7l.3.14h-1.02z"/><path class="wsp-leg" d="M-.1-1.58l.52.08.26.5-.42.36-.5-.14v-.5z"/><path class="wsp-shoe" d="M-.4-.78l.44.2-.1.16-.46-.2z"/>`;
+    const sLeg = (side) => `<g class="wsp-sd-thigh wsp-sd-thigh-${side}${side === "b" ? " wsp-sd-far" : ""}"><path class="wsp-leg" d="M-.26-2.05h.54l.1 1.02-.1.18h-.5l-.12-1z"/><g class="wsp-sd-shin wsp-sd-shin-${side}"><path class="wsp-leg" d="M-.22-.95h.46l.1.82-.06.13h-.46l-.12-.8z"/><path class="wsp-shoe" d="M-.24-.12h.6l.36.12h-.98z"/></g></g>`;
+    const sLegs = sLeg("b") + sLeg("f");
     const sTorso = `<path class="wsp-pants" d="M-.5-2.12l1.34.04-.12.62-1.14-.03z"/><path class="wsp-jersey ${c}" d="M-.78-3.52l1.58-.08.4.62-.22.9-1.36.02-.5-.66z"/><path class="wsp-shoulder ${c}" d="M-.95-3.42q.08-.5.55-.62l1.05-.05q.5.1.6.56l-.16.42-2.04.06z"/><path class="wsp-band ${hl}" d="M-.62-2.42l1.5-.02-.1.42-1.36.02z"/><rect class="wsp-neck" x="-.14" y="-3.82" width=".52" height=".42" rx=".16"/>`;
     const sHelmet = `<circle class="wsp-helmet ${hl}" cx=".12" cy="-4.44" r=".8"/><path class="wsp-helmet-hi" d="M-.4-5q.42-.4.95-.3"/><path class="wsp-stripe-line" d="M-.62-4.98q.74-.6 1.5-.06"/><circle class="wsp-earhole" cx=".08" cy="-4.3" r=".17"/><path class="wsp-facemask" d="M.7-4.4h.58M.66-4.1h.62M1.16-4.5v.52"/>`;
-    const sRun = `<g class="wsp-pose-run"><g class="wsp-limb wsp-sd-arm"><path class="wsp-arm ${c}" d="M-.1-3.4l.6-.08.5.6-.08.55-.5.06-.3-.6z"/><circle class="wsp-skin" cx=".85" cy="-2.32" r=".3"/></g></g>`;
+    const sArm = (side) => `<g class="wsp-sd-uarm wsp-sd-uarm-${side}${side === "b" ? " wsp-sd-far" : ""}"><path class="wsp-arm ${c}" d="M-.1-3.42h.46l.08.74-.08.12h-.42l-.1-.72z"/><g class="wsp-sd-farm wsp-sd-farm-${side}"><path class="wsp-arm ${c}" d="M-.08-2.64h.42l.08.55-.05.12h-.4l-.08-.55z"/><circle class="wsp-skin" cx=".14" cy="-1.86" r=".26"/></g></g>`;
+    const sRunFar = `<g class="wsp-pose-run">${sArm("b")}</g>`;
+    const sRun = `<g class="wsp-pose-run">${sArm("f")}</g>`;
     const sCarryArm = `<g class="wsp-limb wsp-sd-carry-arm"><path class="wsp-arm ${c}" d="M-.05-3.38l.6-.06.6.5-.04.5-.6.05-.5-.5z"/><circle class="wsp-skin" cx="1" cy="-2.6" r=".28"/></g>`;
     const sCarry = `<g class="wsp-pose-carry">${sCarryArm}</g>`;
     const sBlock = `<g class="wsp-pose-block"><g class="wsp-limb wsp-sd-block-arm"><path class="wsp-arm ${c}" d="M.1-3.3l.85-.1.4.25-.06.4-1 .03z"/><circle class="wsp-skin" cx="1.4" cy="-3.05" r=".3"/></g><g class="wsp-limb wsp-sd-block-arm"><path class="wsp-arm ${c}" d="M.1-2.9l.8-.06.4.24-.08.4-.95.02z"/><circle class="wsp-skin" cx="1.32" cy="-2.62" r=".28"/></g></g>`;
@@ -45872,7 +45900,7 @@ ${renderAutoRecruitLog()}`;
     const sStiff = `<g class="wsp-pose-stiff"><g class="wsp-limb wsp-sd-stiff-arm"><path class="wsp-arm ${c}" d="M.15-3.15l1.2-.02.3.28-.12.34-1.3-.08z"/><circle class="wsp-skin" cx="1.8" cy="-2.85" r=".32"/></g>${sCarryArm}</g>`;
     const sIdle = `<g class="wsp-pose-idle"><path class="wsp-arm ${c}" d="M-.05-3.4l.55.02.12.9-.1.55-.5-.04.03-.85z"/><circle class="wsp-skin" cx=".45" cy="-1.95" r=".28"/></g>`;
     const sPoses = sRun + sCarry + sBlock + sCatch + (a.qb ? sThrow : "") + (off ? sStiff : sTackle) + sIdle;
-    const vs = `<g class="wsp-vs"><g class="wsp-fA">${sLegsA}</g><g class="wsp-fB">${sLegsB}</g>${sTorso}${sPoses}${sHelmet}</g>`;
+    const vs = `<g class="wsp-vs">${sLegs}${sRunFar}${sTorso}${sPoses}${sHelmet}</g>`;
     const flip = `<g class="wsp-flip"${face === "w" ? ' transform="scale(-1,1)"' : ""}>${vf}${vb}${vs}</g>`;
     const body = `<ellipse class="wsp-shadow" cx="0" cy="-.12" rx="1.72" ry=".38"/><g class="wsp-shell">${flip}</g>`;
     const tag = `<text class="${off ? "wo-lbl" : "wd-lbl"} wsp-tag" x="0" y="${off ? "1.9" : "-5.8"}">${a.label}</text>`;
@@ -45885,13 +45913,14 @@ ${renderAutoRecruitLog()}`;
   var WSP_TURN_V = 4.6;
   var WSP_VERT_V = 1.6;
   var WSP_STRIDE = 0.85;
+  var WSP_CYCLE = WSP_STRIDE * 2;
   var WSP_FACES = ["e", "w", "n", "s"];
   function spriteMotionTick(node, x, y) {
     if (!node) return;
     let m = node._wsm;
     if (!m) {
       const face = WSP_FACES.find((f) => node.classList.contains("wsp-face-" + f)) || "e";
-      node._wsm = { x, y, t: performance.now(), face, fwd: face, odo: 0, step: false, lean: 0, q: 0, vx: 0, vy: 0, flip: node.querySelector(".wsp-flip"), still: true };
+      node._wsm = { x, y, t: performance.now(), face, fwd: face, odo: 0, step: false, ph: 0, lean: 0, q: 0, vx: 0, vy: 0, flip: node.querySelector(".wsp-flip"), still: true };
       node.classList.add("wsp-face-" + face, "wsp-still");
       return;
     }
@@ -45933,6 +45962,11 @@ ${renderAutoRecruitLog()}`;
       if (step !== m.step) {
         m.step = step;
         node.classList.toggle("wsp-stepB", step);
+      }
+      const ph = Math.round(m.odo % WSP_CYCLE / WSP_CYCLE * 100) / 100;
+      if (ph !== m.ph) {
+        m.ph = ph;
+        node.style.setProperty("--ph", ph);
       }
     }
     const tgt = still ? 0 : m.face === "e" ? Math.min(11, v * 1.55) : m.face === "w" ? -Math.min(11, v * 1.55) : Math.max(-7, Math.min(7, m.vx * 1.2));
