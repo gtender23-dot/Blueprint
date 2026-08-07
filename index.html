@@ -6646,7 +6646,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "674a99b0ae";
+globalThis.__BUILD__ = "15a4b89e60";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -49635,6 +49635,7 @@ ${renderAutoRecruitLog()}`;
     const root = document.getElementById("watch-root");
     if (!root) return;
     const key = (_a = opts.key) != null ? _a : r;
+    const _resumeActive = !!(_watch && _watch.key === key && !_watch.paused && _watch.idx > 0);
     if (!_watch || _watch.key !== key) {
       watchStop();
       _watch = {
@@ -49733,6 +49734,7 @@ ${renderAutoRecruitLog()}`;
       watchStop();
       watchTick(true);
     });
+    if (_resumeActive) w.idx = Math.max(0, w.idx - 1);
     watchTick(true);
   }
   function watchDriveChart() {
