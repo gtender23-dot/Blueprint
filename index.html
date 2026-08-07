@@ -4926,6 +4926,8 @@ body.theme-school .data-table tr:hover td {
 .cw-name { font-size: 0.92em; font-weight: 600; }
 .cw-hint { font-weight: 400; font-size: 0.85em; opacity: 0.55; margin-left: 6px; }
 .cw-val.cw-benched { color: #c0392b; font-weight: 700; }
+.cw-explain { font-size: 0.85em; line-height: 1.45; opacity: 0.72; padding: 6px 2px 8px; border-bottom: 1px solid rgba(128,128,128,0.12); margin-bottom: 4px; }
+.cw-offsheet { display: inline-block; font-size: 0.72em; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #c0392b; border: 1px solid rgba(192,57,43,0.55); border-radius: 3px; padding: 0 4px; margin-left: 6px; vertical-align: 1px; }
 
 /* ── Watch Mode (Rung 2.5): the chalkboard broadcast ── */
 .watch-root { display: flex; flex-direction: column; gap: 8px; padding: 4px 2px 10px; }
@@ -6248,6 +6250,11 @@ body *::after {
 .cs-c-learn { align-self: start; color: var(--px-yellow, #ffd54a); font-size: 9px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
 .cs-info-btn { align-self: stretch; min-width: 0; padding: 4px 2px; color: var(--px-yellow, #ffd54a); background: var(--px-panel-2, #111827); border: 2px solid var(--px-line, #43536b); border-bottom-width: 4px; border-radius: 0; font-size: 9px; font-weight: 900; letter-spacing: .06em; cursor: pointer; writing-mode: vertical-rl; text-orientation: mixed; }
 .cs-info-btn:hover, .cs-info-btn:focus-visible { color: #07110b; background: var(--px-yellow, #ffd54a); border-color: var(--px-paper, #f4edda); outline: none; }
+/* Off-the-sheet plays: shown, not hidden — a labeled cut reads as coaching. */
+.cs-offsheet-hdr { margin: 10px 0 4px; font-size: 10px; font-weight: 900; letter-spacing: 0.08em; color: var(--text-2); opacity: 0.85; }
+.cs-concepts-out .cs-concept-tile { grid-template-columns: minmax(0, 1fr); }
+.cs-concept-dead { opacity: 0.45; cursor: default; pointer-events: none; filter: saturate(0.4); }
+.cs-c-dead-why { align-self: start; font-size: 9px; font-weight: 700; letter-spacing: 0.03em; color: #c0392b; text-transform: uppercase; line-height: 1.2; }
 .cs-play-art { display: block; width: 100%; height: auto; min-height: 70px; shape-rendering: geometricPrecision; }
 .cs-art-field { fill: #123d27; stroke: var(--px-paper, #f4edda); stroke-width: 1.4; }
 .cs-art-yard { fill: none; stroke: rgba(244,237,218,.18); stroke-width: 1; vector-effect: non-scaling-stroke; }
@@ -6624,7 +6631,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "e622b0ec4f";
+globalThis.__BUILD__ = "6297b3e418";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -6737,13 +6744,25 @@ var _CFB = (() => {
           vs: { "Cover 0": 0.07, "Cover 1": 0.06, "Cover 2-Man": 0.05, "Cover 2": -0.02, "Cover 3": -0.02, "Cover 4": -0.03, "C3 Fire Zone": -0.04 },
           exec: { QB: { AWR: 0.6, TEC: 0.4 }, WR: { SPD: 0.5, TEC: 0.5 } }
         },
+        // Snag triangle: corner over a settling snag/pivot with the flat underneath —
+        // a spacing zone-beater that finds the soft spot vs C2/C3; the pivot is the
+        // man answer. (Viewer art existed before the concept did — "Spot" in
+        // CONCEPT_ROUTES.) `routes` hints the sim's route-shape duel per receiver.
+        "Spot": {
+          depth: "short",
+          minWR: 2,
+          routes: ["sharp", "sharp", "speed", "speed"],
+          vs: { "Cover 0": 0.03, "Cover 1": 0.02, "Cover 2-Man": 0.02, "Cover 2": 0.04, "Cover 3": 0.05, "Cover 4": -0.01, "C3 Fire Zone": -0.02 },
+          exec: { QB: { AWR: 0.6, TEC: 0.4 }, WR: { TEC: 0.6, AGI: 0.4 } }
+        },
         // ── Screens (short, callable — they force the screen mechanic) ──
         "Bubble Screen": {
           depth: "short",
           minWR: 2,
           screen: "bubble",
-          // perimeter now-screen: cashes in when they blitz or press
-          vs: { "Cover 0": 0.08, "Cover 1": 0.05, "Cover 2-Man": 0.03, "Cover 2": -0.02, "Cover 3": 0.02, "Cover 4": -0.03, "C3 Fire Zone": 0.06 },
+          // perimeter now-screen: cashes in when they blitz or press. Cover 2's hard
+          // flat corner is the universal bubble-killer (spec decision: -0.06).
+          vs: { "Cover 0": 0.08, "Cover 1": 0.05, "Cover 2-Man": 0.03, "Cover 2": -0.06, "Cover 3": 0.02, "Cover 4": -0.03, "C3 Fire Zone": 0.06 },
           exec: { QB: { TEC: 0.6, AWR: 0.4 }, WR: { AGI: 0.6, SPD: 0.4 } }
         },
         "Tunnel Screen": {
@@ -6791,6 +6810,29 @@ var _CFB = (() => {
           vs: { "Cover 3": 0.06, "Cover 1": 0.03, "Cover 4": 0.02, "Cover 2": -0.03, "Cover 0": -0.02, "Cover 2-Man": -0.02, "C3 Fire Zone": -0.03 },
           exec: { QB: { AWR: 0.6, TEC: 0.4 }, WR: { SPD: 0.6, TEC: 0.4 } }
         },
+        // Three-level boundary flood off the corner route (go clears, sail/out at
+        // 12, flat under) — stretches a 3-deep zone vertically without needing
+        // motion the way Flood does. `breaks: "out"` tells the duel these routes
+        // break to the boundary, so they attack a defender leaning the other way.
+        "Sail": {
+          depth: "medium",
+          minWR: 2,
+          breaks: "out",
+          vs: { "Cover 3": 0.07, "C3 Fire Zone": 0.04, "Cover 2": 0.03, "Cover 4": -0.02, "Cover 0": -0.03, "Cover 1": -0.03, "Cover 2-Man": -0.04 },
+          exec: { QB: { AWR: 0.6, TEC: 0.4 }, WR: { TEC: 0.5, SPD: 0.5 } }
+        },
+        // Two in-cuts at different depths high-lowing the same underneath defender —
+        // the classic man/Cover-2 answer. All hard plants (`routes` all-sharp), all
+        // breaking inside (`breaks: "in"`): great when the leverage concedes the
+        // middle, walled off when a defender sits inside without help.
+        "Levels": {
+          depth: "medium",
+          minWR: 2,
+          breaks: "in",
+          routes: ["sharp", "sharp", "sharp", "speed"],
+          vs: { "Cover 0": 0.05, "Cover 1": 0.05, "Cover 2-Man": 0.04, "Cover 2": 0.03, "Cover 3": -0.02, "Cover 4": 0.02, "C3 Fire Zone": -0.03 },
+          exec: { QB: { AWR: 0.7, TEC: 0.3 }, WR: { TEC: 0.6, AGI: 0.4 } }
+        },
         // ── Shot plays (deep) ──
         "Four Verts": {
           depth: "deep",
@@ -6816,6 +6858,17 @@ var _CFB = (() => {
           minWR: 2,
           vs: { "Cover 4": 0.07, "Cover 2": 0.03, "Cover 1": 0.01, "Cover 3": -0.03, "Cover 0": -0.01, "Cover 2-Man": -0.02, "C3 Fire Zone": -0.03 },
           exec: { QB: { AWR: 0.7, TEC: 0.3 }, WR: { TEC: 0.5, SPD: 0.5 } }
+        },
+        // The called double move: sluggo (slant-and-go) outside with a seam behind
+        // it, out-and-up on the backside. `dbl: true` features the double move on
+        // the primary read — the aggressive man corner who jumps the slant is the
+        // whole point; a disciplined two-high defense doesn't bite.
+        "Sluggo Seam": {
+          depth: "deep",
+          minWR: 2,
+          dbl: true,
+          vs: { "Cover 0": 0.06, "Cover 1": 0.06, "Cover 2-Man": 0.04, "Cover 3": 0.03, "Cover 2": -0.02, "Cover 4": -0.06, "C3 Fire Zone": -0.02 },
+          exec: { QB: { TEC: 0.5, AWR: 0.5 }, WR: { SPD: 0.5, TEC: 0.5 } }
         },
         // Back-shoulder / red-zone jump ball to your designated FADE target (a WR/TE
         // mesh bucket in the depth chart). Wins on man/press, dies vs zone help.
@@ -6884,6 +6937,18 @@ var _CFB = (() => {
           vsBox: { loaded: 0.01, light: 0.02 },
           exec: { OL: { STR: 0.7, TEC: 0.3 }, QB: { STR: 0.6, AWR: 0.4 } }
         },
+        // QB Power — the first designed QB run that isn't a sneak: backside guard
+        // pulls, QB follows him downhill with an extra hat in the box (the RB is a
+        // lead blocker now, not a carrier the defense can key). `qbCarry` forces the
+        // QB as the ball carrier through the normal run resolution (pulls and all),
+        // unlike qbSneak's push-pile special case.
+        "QB Power": {
+          type: "run_inside",
+          pulls: true,
+          qbCarry: true,
+          vsBox: { loaded: 0.02, light: 0.02 },
+          exec: { OL: { STR: 0.6, TEC: 0.4 }, QB: { STR: 0.5, AGI: 0.5 } }
+        },
         // Named pointers to existing mechanics (resolver: unchanged):
         "Triple Option": { resolver: "option" },
         "Speed Option": { resolver: "option-speed" },
@@ -6932,6 +6997,19 @@ var _CFB = (() => {
             { id: "QB", pos: "QB", label: "QB", x: 0.5, y: 0.64 },
             { id: "FB", pos: "RB", label: "FB", x: 0.5, y: 0.77, role: "FB-Lead", catch: true },
             { id: "RB_H", pos: "RB", label: "HB", x: 0.5, y: 0.9, role: "RB-Power", catch: true }
+          ]
+        },
+        "Jumbo": {
+          // 1 RB, 1 FB, 3 TE, 0 WR — goal-line/short-yardage heavy (Aug 2026).
+          // Y and U are inline (on the line); W is the wing just off U's hip.
+          slots: [
+            { id: "TE_Y", pos: "TE", label: "Y", x: 0.22, y: 0.5, role: "TE-Blocking", catch: true },
+            ...OL_SLOTS,
+            { id: "TE_U", pos: "TE", label: "U", x: 0.78, y: 0.5, role: "TE-Blocking", catch: true },
+            { id: "TE_W", pos: "TE", label: "W", x: 0.86, y: 0.56, role: "TE-Receiving", catch: true },
+            { id: "QB", pos: "QB", label: "QB", x: 0.5, y: 0.62 },
+            { id: "FB", pos: "RB", label: "FB", x: 0.5, y: 0.74, role: "FB-Lead", catch: true },
+            { id: "RB_H", pos: "RB", label: "HB", x: 0.5, y: 0.87, role: "RB-Power", catch: true }
           ]
         },
         "Spread": {
@@ -7647,6 +7725,10 @@ var _CFB = (() => {
         // 2-point conversion success (when attempted)
         QB_SCRAMBLE_SCALE: 0.4,
         // steepness of the division-relative QB scramble curve
+        TTT_DEEP: 0.34,
+        // time-to-throw: deep-drop pocket-exposure tax (escalates pressure a tier), cut by QB mobility/AWR + quick game
+        TTT_SHORT: 0.2,
+        // time-to-throw: quick-game relief (de-escalates pressure a tier) so the depth reshape holds the league sack rate
         QB_RUSH_LEAN: 12,
         // QB-Rush: target SPD/AGI lean above passing baseline
         QB_RUSH_LEAN_SD: 7,
@@ -7772,7 +7854,9 @@ var _CFB = (() => {
           "Empty": 0.1,
           "Wishbone": 0.05,
           "Flexbone": 0.08,
-          "Wildcat": 0.02
+          "Wildcat": 0.02,
+          // Jumbo: under center behind three tight ends — nothing to read.
+          "Jumbo": 0.03
         },
         ROUTE_TILT: {
           "WR-Deep": 1,
@@ -8967,8 +9051,10 @@ var _CFB = (() => {
         // FB + 2 halfbacks, triple-option DNA
         "Flexbone": { RB: 2, FB: 1, TE: 0, WR: 2 },
         // B-back + 2 A-back slots, option + motion
-        "Wildcat": { RB: 2, FB: 1, TE: 2, WR: 0 }
+        "Wildcat": { RB: 2, FB: 1, TE: 2, WR: 0 },
         // direct snap to the back; QB split wide
+        "Jumbo": { RB: 1, FB: 1, TE: 3, WR: 0 }
+        // 13 heavy: three tight ends, two backs, nobody split
       };
       FORMATION_WEIGHTS = {
         "Power-I": {
@@ -9052,6 +9138,16 @@ var _CFB = (() => {
           pass_short: { QB: 0.36, TE: 0.28, RB: 0.18, OL: 0.18 },
           pass_medium: { QB: 0.42, TE: 0.3, OL: 0.16, RB: 0.12 },
           pass_deep: { QB: 0.44, TE: 0.32, OL: 0.24 }
+        },
+        // ── Jumbo (Aug 2026) ─────────────────────────────────────────────────────
+        // Everything runs through the line and the tight ends; the rare pass is a
+        // TE leak or a back out of the flat — there is no receiver to weight.
+        "Jumbo": {
+          run_inside: { OL: 0.38, RB: 0.3, FB: 0.14, TE: 0.14, QB: 0.04 },
+          run_outside: { OL: 0.34, RB: 0.28, FB: 0.12, TE: 0.14, QB: 0.12 },
+          pass_short: { QB: 0.38, TE: 0.24, OL: 0.2, RB: 0.1, FB: 0.08 },
+          pass_medium: { QB: 0.44, TE: 0.26, OL: 0.18, RB: 0.12 },
+          pass_deep: { QB: 0.42, TE: 0.34, OL: 0.24 }
         }
       };
       DEF_FRONTS = {
@@ -9125,7 +9221,10 @@ var _CFB = (() => {
         "Empty": { "4-3": 1.1, "3-4": 1.08, "Nickel": 0.97, "Dime": 0.92, "46/Bear": 1.14, "5-2": 1.18 },
         "Wishbone": { "4-3": 0.98, "3-4": 1, "Nickel": 1.12, "Dime": 1.16, "46/Bear": 0.86, "5-2": 0.83 },
         "Flexbone": { "4-3": 1, "3-4": 1.02, "Nickel": 1.09, "Dime": 1.13, "46/Bear": 0.9, "5-2": 0.87 },
-        "Wildcat": { "4-3": 0.98, "3-4": 0.99, "Nickel": 1.09, "Dime": 1.13, "46/Bear": 0.85, "5-2": 0.83 }
+        "Wildcat": { "4-3": 0.98, "3-4": 0.99, "Nickel": 1.09, "Dime": 1.13, "46/Bear": 0.85, "5-2": 0.83 },
+        // Jumbo is the heaviest set in the game: it feasts on sub packages that
+        // stay on the field and gets stonewalled by the run-wall fronts.
+        "Jumbo": { "4-3": 0.97, "3-4": 0.99, "Nickel": 1.13, "Dime": 1.18, "46/Bear": 0.84, "5-2": 0.82 }
       };
       FORMATION_SITUATIONAL = {
         "Power-I": { shortYardage: 1.14, thirdLong: 0.86, twoMinute: 0.88, redZone: 1.08, standard: 1 },
@@ -9138,7 +9237,10 @@ var _CFB = (() => {
         "Empty": { shortYardage: 0.85, thirdLong: 1.09, twoMinute: 1.1, redZone: 0.93, standard: 1 },
         "Wishbone": { shortYardage: 1.15, thirdLong: 0.82, twoMinute: 0.84, redZone: 1.09, standard: 1 },
         "Flexbone": { shortYardage: 1.1, thirdLong: 0.86, twoMinute: 0.87, redZone: 1.05, standard: 1 },
-        "Wildcat": { shortYardage: 1.16, thirdLong: 0.78, twoMinute: 0.82, redZone: 1.1, standard: 1 }
+        "Wildcat": { shortYardage: 1.16, thirdLong: 0.78, twoMinute: 0.82, redZone: 1.1, standard: 1 },
+        // Jumbo is a situational hammer, not a base offense: the best short-yardage
+        // and goal-line set on the sheet, a liability chasing points or distance.
+        "Jumbo": { shortYardage: 1.2, thirdLong: 0.72, twoMinute: 0.78, redZone: 1.14, standard: 0.97 }
       };
       PRACTICE_SECONDARY = 0.5;
       PRACTICE_TOOLS = {
@@ -9238,7 +9340,9 @@ var _CFB = (() => {
         "Empty": { passLean: 0.35, runIn: 0.4, runOut: 0.6, identity: "pass_short", label: "Empty", desc: "No backs \u2014 4 WR + TE, QB draws only" },
         "Wishbone": { passLean: -0.3, runIn: 0.65, runOut: 0.35, identity: "run_inside", label: "Wishbone", desc: "Triple option \u2014 FB + 2 HB" },
         "Flexbone": { passLean: -0.25, runIn: 0.45, runOut: 0.55, identity: "run_inside", label: "Flexbone", desc: "Option + motion \u2014 FB, 2 slotbacks" },
-        "Wildcat": { passLean: -0.35, runIn: 0.6, runOut: 0.4, identity: "run_inside", label: "Wildcat", desc: "Direct snap \u2014 QB split wide" }
+        "Wildcat": { passLean: -0.35, runIn: 0.6, runOut: 0.4, identity: "run_inside", label: "Wildcat", desc: "Direct snap \u2014 QB split wide" },
+        // ── Jumbo (Aug 2026) ───────────────────────────────────────────────────
+        "Jumbo": { passLean: -0.4, runIn: 0.8, runOut: 0.2, identity: "run_inside", label: "Jumbo", desc: "Goal line \u2014 3 TE, FB + HB, no WR" }
       };
       FORMATION_ALIAS = { "Pro Set": "Single Back" };
       aliasFormation = (id) => FORMATION_ALIAS[id] || id;
@@ -9377,16 +9481,17 @@ var _CFB = (() => {
         }
       };
       FORMATION_PLAYBOOK = {
-        "Single Back": ["Inside Zone", "Power", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Red-Zone Fade"],
-        "Power-I": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "RB Screen", "Smash", "Curl-Flat", "Y-Cross", "PA Deep Cross", "Red-Zone Fade"],
-        "Wishbone": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "RB Screen", "Curl-Flat", "Y-Cross", "PA Deep Cross", "Red-Zone Fade"],
-        "Flexbone": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Red-Zone Fade"],
-        "Wildcat": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Wildcat Power", "Slant-Flat", "Stick", "RB Screen", "Y-Cross", "PA Deep Cross", "Red-Zone Fade"],
-        "Spread": ["Inside Zone", "Power", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade"],
-        "Trips/Bunch": ["Inside Zone", "Power", "QB Sneak", "Outside Zone", "Toss", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade"],
-        "Pistol/RPO": ["Inside Zone", "Power", "Trap", "QB Sneak", "Outside Zone", "Counter", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Flood", "Dagger", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade"],
-        "Air Raid": ["Inside Zone", "QB Sneak", "Outside Zone", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade"],
-        "Empty": ["QB Sneak", "Jet Sweep", "Draw", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade"]
+        "Single Back": ["Inside Zone", "Power", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Red-Zone Fade", "Spot", "Sail", "Levels", "Sluggo Seam"],
+        "Power-I": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "RB Screen", "Smash", "Curl-Flat", "Y-Cross", "PA Deep Cross", "Red-Zone Fade", "QB Power"],
+        "Wishbone": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "RB Screen", "Curl-Flat", "Y-Cross", "PA Deep Cross", "Red-Zone Fade", "QB Power"],
+        "Flexbone": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Red-Zone Fade", "Spot", "Sail", "Levels", "Sluggo Seam", "QB Power"],
+        "Wildcat": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Wildcat Power", "Slant-Flat", "Stick", "RB Screen", "Y-Cross", "PA Deep Cross", "Red-Zone Fade", "QB Power"],
+        "Spread": ["Inside Zone", "Power", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Spot", "Sail", "Levels", "Sluggo Seam", "QB Power"],
+        "Trips/Bunch": ["Inside Zone", "Power", "QB Sneak", "Outside Zone", "Toss", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Spot", "Sail", "Levels", "Sluggo Seam"],
+        "Pistol/RPO": ["Inside Zone", "Power", "Trap", "QB Sneak", "Outside Zone", "Counter", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Flood", "Dagger", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Spot", "Sail", "Levels", "Sluggo Seam", "QB Power"],
+        "Air Raid": ["Inside Zone", "QB Sneak", "Outside Zone", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Spot", "Sail", "Levels", "Sluggo Seam"],
+        "Jumbo": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "QB Power", "Counter", "Toss", "Draw", "RB Screen", "Slant-Flat", "Stick", "Y-Cross", "PA Deep Cross", "Red-Zone Fade"],
+        "Empty": ["QB Sneak", "Jet Sweep", "Draw", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Spot", "Sail", "Levels", "Sluggo Seam", "QB Power"]
       };
     }
   });
@@ -11568,7 +11673,8 @@ var _CFB = (() => {
       const ceiling = Math.min(90, 55 + coordRatingAvg(coord) * 0.45);
       const total = usage.reduce((s, u) => s + (u.w || 0), 0) || 1;
       for (const { id, w } of usage) {
-        if (!id || coord.schemeIQ[id] == null) continue;
+        if (!id) continue;
+        if (coord.schemeIQ[id] == null) coord.schemeIQ[id] = 48;
         const gain = Math.round(6 * (w / total));
         coord.schemeIQ[id] = Math.min(ceiling, coord.schemeIQ[id] + Math.max(1, gain));
       }
@@ -17711,29 +17817,30 @@ var _CFB = (() => {
     };
     if (bucket === "passHeavy" || bucket === "pass") {
       if (wrDeepBias > 0) {
-        set(["Four Verts", "Post-Wheel", "Dagger", "Y-Cross", "Mills (Post-Dig)"], 75);
-        set(["Mesh", "Shallow Cross"], 62);
-        set(["Stick", "Curl-Flat", "PA Deep Cross"], 38);
+        set(["Four Verts", "Post-Wheel", "Dagger", "Y-Cross", "Mills (Post-Dig)", "Sluggo Seam"], 75);
+        set(["Mesh", "Shallow Cross", "Sail"], 62);
+        set(["Stick", "Curl-Flat", "PA Deep Cross", "Spot"], 38);
       } else {
-        set(["Mesh", "Shallow Cross", "Slant-Flat", "Stick"], 75);
-        set(["Smash", "Curl-Flat", "Flood"], 62);
-        set(["Four Verts", "PA Deep Cross", "Post-Wheel"], 35);
+        set(["Mesh", "Shallow Cross", "Slant-Flat", "Stick", "Spot"], 75);
+        set(["Smash", "Curl-Flat", "Flood", "Sail", "Levels"], 62);
+        set(["Four Verts", "PA Deep Cross", "Post-Wheel", "Sluggo Seam"], 35);
       }
       set(["Power", "Iso", "Trap"], 35);
       set(["Inside Zone", "Outside Zone", "Toss"], 58);
     } else if (bucket === "runHeavy" || bucket === "run") {
       set(["Power", "Inside Zone", "Counter", "Iso"], 75);
-      set(["Trap", "Toss", "Outside Zone"], 60);
+      set(["Trap", "Toss", "Outside Zone", "QB Power"], 60);
       set(["PA Deep Cross", "Y-Cross", "Smash"], 68);
       set(["Curl-Flat", "Stick", "Slant-Flat"], 55);
-      set(["Four Verts", "Mesh", "Shallow Cross", "Dagger"], 32);
+      set(["Four Verts", "Mesh", "Shallow Cross", "Dagger", "Sluggo Seam", "Levels", "Sail", "Spot"], 32);
     } else {
-      if (teStr > wrStr + 2) set(["Stick", "Y-Cross", "Flood"], 65);
-      if (qbArch === "QB-Gunslinger") set(["Four Verts", "Dagger", "Mills (Post-Dig)"], 62);
-      if (qbArch === "QB-Game-Manager") set(["Stick", "Curl-Flat", "Slant-Flat"], 62);
+      if (teStr > wrStr + 2) set(["Stick", "Y-Cross", "Flood", "Sail"], 65);
+      if (qbArch === "QB-Gunslinger") set(["Four Verts", "Dagger", "Mills (Post-Dig)", "Sluggo Seam"], 62);
+      if (qbArch === "QB-Game-Manager") set(["Stick", "Curl-Flat", "Slant-Flat", "Spot"], 62);
+      if (qbArch === "QB-Dual" || qbArch === "QB-Scrambler") set(["QB Power"], 60);
     }
     if (isOptionTeam) {
-      set(["Counter", "Toss", "Inside Zone"], 72);
+      set(["Counter", "Toss", "Inside Zone", "QB Power"], 72);
       set(["PA Deep Cross"], 80);
       set(["Mesh", "Four Verts", "Dagger", "Shallow Cross"], 22);
     }
@@ -18037,8 +18144,8 @@ var _CFB = (() => {
       init_utils();
       FORMATION_TEMPLATES = {
         runHeavy: {
-          mobile: [["Pistol/RPO", 50], ["Power-I", 30], ["Single Back", 20]],
-          pocket: [["Power-I", 45], ["Single Back", 55]],
+          mobile: [["Pistol/RPO", 50], ["Power-I", 25], ["Single Back", 15], ["Jumbo", 10]],
+          pocket: [["Power-I", 40], ["Single Back", 48], ["Jumbo", 12]],
           // Service-academy branch: a slice of run-heavy mobile-QB staffs are true
           // triple-option programs (Jul 2026, expansion five). Rolled per-school in
           // pickFormations, not a bucket of its own — option ball is a philosophy
@@ -20837,7 +20944,13 @@ var _CFB = (() => {
       if (featured && covered) {
         shareMult = 1 + (shareMult - 1) * (1 - giBail);
       }
-      return rankW * shareMult;
+      let openMult = 1;
+      if (!globalThis.__noReadConflict) {
+        const openEdge = clamp2((t.separation - 0.4) * 1.5, -0.3, 0.6);
+        const heady = clamp2((gi - 55) / 60, 0, 0.8);
+        openMult = 1 + openEdge * heady;
+      }
+      return rankW * shareMult * openMult;
     });
     const total = weights.reduce((s, w) => s + w, 0);
     let r = Math.random() * total;
@@ -21108,15 +21221,24 @@ var _CFB = (() => {
     const shapeFor = (i, passDepth, rec) => {
       if (globalThis.__noRoute) return void 0;
       const tec = rec && rec.attributes && rec.attributes.TEC != null ? rec.attributes.TEC : 50;
-      const shape = passDepth === "short" ? i % 2 === 0 ? "speed" : "sharp" : passDepth === "medium" ? i % 2 === 0 ? "sharp" : "speed" : "speed";
-      const dbl = i === 0 && tec >= 84 && passDepth === "medium" && Math.random() < 0.05;
+      const cdef = _conceptCtx == null ? void 0 : _conceptCtx.def;
+      const hint = cdef && Array.isArray(cdef.routes) ? cdef.routes[i] : null;
+      const shape = hint === "sharp" || hint === "speed" ? hint : passDepth === "short" ? i % 2 === 0 ? "speed" : "sharp" : passDepth === "medium" ? i % 2 === 0 ? "sharp" : "speed" : "speed";
+      const dbl = cdef && cdef.dbl ? i === 0 && tec >= 70 && Math.random() < 0.55 : i === 0 && tec >= 84 && passDepth === "medium" && Math.random() < 0.05;
       return { shape, dbl };
     };
     const schemeFor = (ct, i, passDepth, rec) => {
       const lev = globalThis.__noLeverage ? null : { leverage: ct === "zone" ? 0 : hasHelp ? 1 : -1, attack: 0 };
       const route = shapeFor(i, passDepth, rec);
       if (!lev && !route) return null;
-      return { leverage: lev ? lev.leverage : 0, attack: 0, route };
+      const levVal = lev ? lev.leverage : 0;
+      const brks = cdefBreaks();
+      const attack = brks !== 0 && levVal !== 0 ? brks * levVal : 0;
+      return { leverage: levVal, attack, route };
+    };
+    const cdefBreaks = () => {
+      const b = (_conceptCtx == null ? void 0 : _conceptCtx.def) == null ? void 0 : _conceptCtx.def.breaks;
+      return b === "in" ? 1 : b === "out" ? -1 : 0;
     };
     const assigned = [];
     let poolIdx = 0;
@@ -21239,7 +21361,8 @@ var _CFB = (() => {
         "Empty": 0.05,
         "Wishbone": 0.38,
         "Flexbone": 0.36,
-        "Wildcat": 0.5
+        "Wildcat": 0.5,
+        "Jumbo": 0.4
       };
       const paEff = clamp2(((_g = PA_RATE[offFormationId]) != null ? _g : 0.22) * (((_h = offPlan.paRate) != null ? _h : 100) / 100), 0, 0.65);
       const calledPA = !!(offPlan == null ? void 0 : offPlan._forcePA) || !!(offPlan == null ? void 0 : offPlan._forcePANative);
@@ -21568,11 +21691,65 @@ var _CFB = (() => {
       }
       return result;
     }
+    if (!globalThis.__noTTT && qb && !rushResult.sacked) {
+      const _tttDepth = playType === "pass_short" ? -1 : playType === "pass_deep" ? 1 : 0;
+      if (_tttDepth !== 0) {
+        const _tttMob = ((qb.attributes.SPD || 50) + (qb.attributes.AGI || 50)) / 2;
+        const _tttBuy = clamp2(((qb.attributes.AWR || 50) - 50) / 100 + (_tttMob - 50) / 100, -0.3, 0.4);
+        const _tttQuick = protId === "quick" ? 0.35 : 0;
+        const _tttR = Math.random();
+        if (_tttDepth === 1) {
+          const _tttTax = clamp2(C.TTT_DEEP * (1 - _tttBuy) - _tttQuick, 0, 0.6);
+          if (!rushResult.hurried && _tttR < _tttTax) {
+            rushResult.hurried = true;
+            if (!rushResult.pressureIds || !rushResult.pressureIds.length) {
+              const _dl = (defPersonnel.DL || [])[0] || (defPersonnel.DE || [])[0] || null;
+              rushResult.pressureIds = _dl ? [_dl] : [];
+            }
+          }
+        } else {
+          const _tttRelief = clamp2(C.TTT_SHORT + _tttQuick * 0.5, 0, 0.6);
+          if (rushResult.hurried && _tttR < _tttRelief) rushResult.hurried = false;
+        }
+      }
+    }
     if (rushResult.sacked) {
       const spyActive = defPlan.spyQB === true;
       const styleScrMult = ((defPlan == null ? void 0 : defPlan.covStyleEff) === "zone" ? 0.85 : (defPlan == null ? void 0 : defPlan.covStyleEff) === "man" ? 1.1 : 1) * ((defPlan == null ? void 0 : defPlan.optionKeyEff) === "qb" ? 0.85 : 1);
       const scrambleChance = (spyActive ? qbScrambleChance(qb) * 0.55 : qbScrambleChance(qb)) * styleScrMult;
       if (qb && Math.random() < scrambleChance) {
+        if (!globalThis.__noScrThrow && (offPersonnel.WR || []).length) {
+          const _scrAggr = _passCtx.qbAggr != null ? _passCtx.qbAggr : 50;
+          const _scrThrowP = clamp2(0.18 + ((qb.attributes.AWR || 50) - 50) / 100 * 0.3 + (_scrAggr - 50) / 100 * 0.3, 0.05, 0.5);
+          if (Math.random() < _scrThrowP) {
+            const _scrWr = (offPersonnel.WR || []).map((id) => offRoster.find((p) => p.id === id)).filter(Boolean).sort((a, b) => (b.compositeRating || 0) - (a.compositeRating || 0))[0];
+            const _scrDb = (defPersonnel.DB || []).map((id) => defRoster.find((p) => p.id === id)).filter(Boolean).sort((a, b) => (b.attributes.SPD || 0) - (a.attributes.SPD || 0))[0];
+            if (_scrWr) {
+              const _scrQb = (qb.attributes.TEC || 50) * 0.5 + (qb.attributes.AWR || 50) * 0.5;
+              const _scrCov = _scrDb ? (_scrDb.attributes.AWR || 50) * 0.5 + (_scrDb.attributes.SPD || 50) * 0.5 : 50;
+              const _scrCompP = clamp2(0.4 + (_scrQb - _scrCov) * 6e-3 + (_scrAggr - 50) / 100 * 0.05, 0.15, 0.68);
+              result.targetId = _scrWr.id;
+              result.passDepth = "deep";
+              result.isScrambleThrow = true;
+              if (Math.random() < _scrCompP) {
+                result.complete = true;
+                result.receiverId = _scrWr.id;
+                result.yards = clamp2(Math.round(randNorm(16, 7)), 4, 55);
+                result.airYds = result.yards;
+                result.yacYds = 0;
+                result.tacklerId = _scrDb ? _scrDb.id : null;
+              } else {
+                result.complete = false;
+                if (_scrDb && Math.random() < clamp2(0.05 + (_scrAggr - 50) / 100 * 0.05, 0.02, 0.12)) {
+                  result.turnover = true;
+                  result.turnoverType = "interception";
+                  result.intPickerId = _scrDb.id;
+                }
+              }
+              return result;
+            }
+          }
+        }
         const laneBase = spyActive ? 0.18 : 0.3;
         const scrambleLane = laneBase + Math.random() * 0.2;
         const sacker = ((_B = rushResult.sackerIds) == null ? void 0 : _B[0]) ? defRoster.find((p) => p.id === rushResult.sackerIds[0]) : null;
@@ -21673,8 +21850,11 @@ var _CFB = (() => {
           receiver: rbPlayers[0],
           passDepth: passDepthKey === "deep" ? "medium" : passDepthKey
         });
-      } else if (passDepthKey === "short" || passDepthKey === "medium" && Math.random() < 0.35) {
+      } else if (passDepthKey === "short") {
         receiversOnField.push({ receiverId: rbPlayers[0].id, receiver: rbPlayers[0], passDepth: "short" });
+      } else {
+        const cdKeep = globalThis.__noCheckdown ? passDepthKey === "medium" ? 0.35 : 0 : clamp2((passDepthKey === "medium" ? 0.32 : 0.16) + (((qb == null ? void 0 : qb.attributes.AWR) != null ? qb.attributes.AWR : 50) - 50) / 100 * 0.4, 0, 0.6);
+        if (Math.random() < cdKeep) receiversOnField.push({ receiverId: rbPlayers[0].id, receiver: rbPlayers[0], passDepth: "short" });
       }
     }
     if (!receiversOnField.length) {
@@ -21726,7 +21906,8 @@ var _CFB = (() => {
         "Empty": 0.3,
         "Wishbone": 0.1,
         "Flexbone": 0.45,
-        "Wildcat": 0.4
+        "Wildcat": 0.4,
+        "Jumbo": 0.06
       };
       const motionEff = clamp2(((_T = MOTION_RATE[offFormationId]) != null ? _T : 0.2) * (((_U = offPlan.motionRate) != null ? _U : 100) / 100), 0, 0.6);
       const calledMotion = !!(offPlan == null ? void 0 : offPlan._forceMotion);
@@ -22216,7 +22397,7 @@ var _CFB = (() => {
     const fbIds = offPersonnel.FB || [];
     const rbIds = offPersonnel.RB || [];
     const noBackfield = rbIds.length === 0 && fbIds.length === 0;
-    const useQBCarrier = (optionOverride == null ? void 0 : optionOverride.carrier) ? optionOverride.carrier === qb || optionOverride.carrier.position === "QB" : !!qb && (noBackfield || (gameplan == null ? void 0 : gameplan._forceQBRun) || Math.random() < qbRunChance);
+    const useQBCarrier = (optionOverride == null ? void 0 : optionOverride.carrier) ? optionOverride.carrier === qb || optionOverride.carrier.position === "QB" : !!qb && (noBackfield || (gameplan == null ? void 0 : gameplan._forceQBRun) || !!(_conceptCtx && _conceptCtx.def && _conceptCtx.def.qbCarry) || Math.random() < qbRunChance);
     let carrier;
     if (optionOverride == null ? void 0 : optionOverride.carrier) {
       carrier = optionOverride.carrier;
@@ -24957,7 +25138,9 @@ var _CFB = (() => {
         // keep was statistical; leaving that would double-count QB carries.
         "Wishbone": 0.1,
         "Flexbone": 0.1,
-        "Wildcat": 0.02
+        "Wildcat": 0.02,
+        // Jumbo: sneaks and the odd QB Power push — the QB is a hammer, not a threat.
+        "Jumbo": 0.06
       };
       OPTION_CAPABLE = { "Power-I": 0.55, "Wishbone": 0.7, "Flexbone": 0.75 };
       CALL_CATEGORIES = /* @__PURE__ */ new Set(["run_inside", "run_outside", "pass_short", "pass_medium", "pass_deep"]);
@@ -30428,7 +30611,8 @@ var _CFB = (() => {
       "Empty": 0.05,
       "Wishbone": 0.38,
       "Flexbone": 0.36,
-      "Wildcat": 0.5
+      "Wildcat": 0.5,
+      "Jumbo": 0.4
     };
     const MOTION_RATE = {
       "Trips/Bunch": 0.35,
@@ -30440,7 +30624,8 @@ var _CFB = (() => {
       "Empty": 0.3,
       "Wishbone": 0.1,
       "Flexbone": 0.45,
-      "Wildcat": 0.4
+      "Wildcat": 0.4,
+      "Jumbo": 0.06
     };
     const forms = gp.offFormations || [{ id: gp.offFormation || "Single Back", weight: 100 }];
     const tot = forms.reduce((s, f) => s + (f.weight || 0), 0) || 1;
@@ -32247,8 +32432,17 @@ var _CFB = (() => {
       ["INSIDE RUN GAME", "", Object.entries(RUN_CONCEPTS).filter(([, c]) => c.type === "run_inside")],
       ["PERIMETER RUN GAME", "", Object.entries(RUN_CONCEPTS).filter(([, c]) => c.type === "run_outside")]
     ];
+    const carriedForms = ((gp == null ? void 0 : gp.offFormations) || []).filter((f) => f && f.id && (f.weight || 0) > 0).map((f) => f.id);
+    const offSheet = (name) => {
+      if (!carriedForms.length) return false;
+      return !carriedForms.some((fid) => (FORMATION_PLAYBOOK[fid] || []).includes(name));
+    };
     return `
-  ${opts ? "" : `<div class="gp-row"><button class="gp-option gp-option-sm" id="cw-reset">Reset to balanced (all 50)</button></div>`}
+  ${opts ? "" : `<div class="gp-row"><button class="gp-option gp-option-sm" id="cw-reset">Reset to balanced (all 50)</button></div>
+  <div class="cw-explain">Weights set the mix inside each group \u2014 and <b>0 is a cut, not a low number</b>: a benched
+  play is out of the install and will never be called; the sheet renormalizes around what's left. A play also only
+  lives in the formations that carry it \u2014 drop every formation that runs it from your package and it comes off the
+  sheet no matter where the slider sits.</div>`}
   ${groups.map(([title, subT, list], gi) => {
       const gTot = list.reduce((s, [n]) => {
         var _a2;
@@ -32261,9 +32455,10 @@ var _CFB = (() => {
         var _a2;
         const w = (_a2 = cw[name]) != null ? _a2 : 50;
         const shr = Math.round(100 * w / gTot);
+        const _noForm = !opts && offSheet(name);
         return `
         <div class="cw-row">
-          <div class="cw-name">${escapeHtml(name)} <span class="cw-hint">${conceptHint(name, c)}</span></div>
+          <div class="cw-name">${escapeHtml(name)}${_noForm ? ` <span class="cw-offsheet" title="None of your carried formations run this play \u2014 it can't be called until one does.">off the sheet \u2014 no formation carries it</span>` : ""} <span class="cw-hint">${conceptHint(name, c)}</span></div>
           <div class="gp-slider-wrap">
             <span class="gp-slider-lo">bench</span>
             <input class="gp-slider" type="range" min="0" max="100" step="5" value="${w}" data-${attr}="${escapeHtml(name)}" data-${attr}grp="${gi}" />
@@ -34587,6 +34782,10 @@ var _CFB = (() => {
       Edges and disadvantages roughly cancel across the families, so calling everything evenly is
       the baseline. A concept sheet is <i>redistribution</i>, not free yards: weight it toward
       beating single-high and the team struggles against two-high.
+
+      Zero is not a low weight \u2014 it is a <b>cut</b>: the play leaves the install and the sheet
+      renormalizes around what remains. Formations bench from the other direction: a play only
+      lives in the formations that carry it.
 
       Execution scales the tilt both directions. Each concept asks specific attributes of the men
       running it: executed well it gives more than it is drawn to give, executed badly, less.`
@@ -39487,8 +39686,8 @@ var _CFB = (() => {
   };
   var UNIQUE_DEPTH_OFF = [
     { pos: "SLOT", label: "SLOT RECEIVER", role: "WR-Slot", from: ["WR", "TE", "RB"], forms: ["Spread", "Air Raid", "Pistol/RPO", "Trips/Bunch", "Empty"] },
-    { pos: "FADE", label: "FADE / JUMP-BALL", role: "WR-Fade", from: ["WR", "TE"], forms: ["Single Back", "Power-I", "Wishbone", "Flexbone", "Wildcat", "Spread", "Trips/Bunch", "Pistol/RPO", "Air Raid", "Empty"] },
-    { pos: "FB", label: "FULLBACK", role: "FB-Lead", from: ["RB", "TE"], forms: ["Power-I", "Wishbone", "Flexbone", "Wildcat"] },
+    { pos: "FADE", label: "FADE / JUMP-BALL", role: "WR-Fade", from: ["WR", "TE"], forms: ["Single Back", "Power-I", "Wishbone", "Flexbone", "Wildcat", "Spread", "Trips/Bunch", "Pistol/RPO", "Air Raid", "Empty", "Jumbo"] },
+    { pos: "FB", label: "FULLBACK", role: "FB-Lead", from: ["RB", "TE"], forms: ["Power-I", "Wishbone", "Flexbone", "Wildcat", "Jumbo"] },
     { pos: "WING", label: "WISHBONE HB", role: "RB-Power", from: ["RB", "TE"], forms: ["Wishbone"] },
     { pos: "ABACK", label: "FLEXBONE A-BACK", role: "RB-Scat", from: ["RB", "WR", "TE"], forms: ["Flexbone"] },
     { pos: "WILDCAT", label: "WILDCAT BACK", role: "RB-Power", from: ["RB", "WR", "QB"], forms: ["Wildcat"] },
@@ -44855,10 +45054,13 @@ ${renderAutoRecruitLog()}`;
     "Mills (Post-Dig)": ["post", "dig", "go", "arrow"],
     "Red-Zone Fade": ["fade", "hitch", "slant", "flat"],
     // outside = short/med back-shoulder fade
-    // extra concepts the AI/weighting may surface; harmless if unused
+    // Promoted to real concepts (Aug 2026) — the art predated the playbook entry
     "Sail": ["go", "corner", "out", "flat"],
     "Levels": ["dig", "slant", "slant", "arrow"],
-    "Spot": ["corner", "stick", "flat", "cross"]
+    "Spot": ["corner", "pivot", "flat", "cross"],
+    // snag settles/pivots under the corner
+    "Sluggo Seam": ["sluggo", "seam", "outandup", "flat"]
+    // the called double move: slant-and-go + seam, out-and-up backside
   };
   var DEPTH_ROUTES = {
     pass_short: ["slant", "quickout", "hitch", "cross"],
@@ -44904,7 +45106,11 @@ ${renderAutoRecruitLog()}`;
     // jet, so pullers/FB can lead through the near edge (not a full-width sweep).
     "Toss": { gap: 14, stretch: 0.7, pitch: true, press: 1.6, wide: true },
     // Jet: full-speed WR motion attacks the widest edge — kept clearly wider.
-    "Jet Sweep": { gap: 26, stretch: 1, press: 0.8, wide: true }
+    "Jet Sweep": { gap: 26, stretch: 1, press: 0.8, wide: true },
+    // QB Power: backside guard pulls, QB follows him downhill.
+    "QB Power": { gap: 7, pull: "lead", press: 2.2, wide: false },
+    // QB Sneak: straight into the center's push — no lateral press at all.
+    "QB Sneak": { gap: 2, press: 3.5, wide: false }
   };
   var RUN_ALIAS = { "Wildcat Power": "Power", "Triple Option": "Inside Zone", "Speed Option": "Outside Zone" };
   function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
@@ -44978,7 +45184,7 @@ ${renderAutoRecruitLog()}`;
       const actual = p.coverage ? shellOf(p.coverage) : null;
       const shown = p.shownCoverage ? shellOf(p.shownCoverage) : null;
       const safeties = defs.filter((d) => d.slot.pos === "S");
-      if (actual != null) safeties.forEach((s, i) => {
+      if (actual != null) safeties.slice(0, 2).forEach((s, i) => {
         const from = shown != null && shown !== actual ? (shown === 2 ? SHELL2 : SHELL1)[i] : (actual === 2 ? SHELL2 : SHELL1)[i];
         const to = (actual === 2 ? SHELL2 : SHELL1)[i];
         s.x = from[0];
@@ -48334,6 +48540,10 @@ ${renderAutoRecruitLog()}`;
     "PA Deep Cross": ["M24 46 L24 20 L46 12 L82 17", "M78 46 L78 9"],
     "Mills (Post-Dig)": ["M30 46 L30 22 L50 9", "M72 46 L72 22 L45 22"],
     "Red-Zone Fade": ["M82 46 L90 30 L88 12"],
+    "Spot": ["M78 46 L78 30 L68 14", "M62 46 L58 36 L68 33", "M88 46 L96 40"],
+    "Sail": ["M18 46 L18 10", "M46 46 L46 28 L20 16", "M70 46 L60 42 L36 40"],
+    "Levels": ["M20 46 L20 24 L52 24", "M74 46 L70 36 L48 32", "M88 46 L84 40 L66 38"],
+    "Sluggo Seam": ["M16 46 L24 38 L18 32 L14 10", "M42 46 L42 10", "M86 46 L86 34 L94 30 L92 12"],
     "Inside Zone": ["M50 49 L50 17"],
     "Power": ["M48 49 L37 38 L55 17"],
     "Iso": ["M50 49 L50 17"],
@@ -48345,6 +48555,7 @@ ${renderAutoRecruitLog()}`;
     "Triple Option": ["M50 49 L50 34 L70 34 L89 18", "M50 49 L39 34 L28 18"],
     "Speed Option": ["M50 49 L69 39 L90 19"],
     "Jet Sweep": ["M18 43 L50 43 L72 34 L91 20"],
+    "QB Power": ["M50 51 L41 40 L57 18"],
     "Draw": ["M50 49 L50 38 L55 28 L50 17"],
     "Wildcat Power": ["M50 49 L39 35 L62 17"]
   };
@@ -48381,6 +48592,11 @@ ${renderAutoRecruitLog()}`;
     "Y-Cross": { attacks: "Man and single-high looks with a fast route across the field.", risk: "It asks protection to hold while the crosser clears traffic.", best: "An accurate QB and a fast tight end." },
     "Dagger": { attacks: "Middle-field zones: a vertical clears space for the deep dig.", risk: "The dig can be jumped if the QB is late or pressured.", best: "Solid protection and a fast, precise receiver." },
     "Mesh": { attacks: "Man coverage with two shallow crossers that create traffic.", risk: "Zone defenders can sit underneath and erase the easy yards.", best: "Quick decisions and agile, technical receivers." },
+    "Spot": { attacks: "Soft zone with a spacing triangle: corner over the snag with the flat underneath.", risk: "A physical flat defender can blow up the triangle's easy answer.", best: "A quick-eyed QB and a receiver who settles in the window." },
+    "Sail": { attacks: "Three-deep zone by flooding one sideline at three depths.", risk: "Man coverage carries every route and the boundary throws get tight.", best: "An aware QB who works high to low with patience." },
+    "Levels": { attacks: "Man and Cover 2 with two in-cuts high-lowing the same defender.", risk: "An inside-leverage wall or a lurking robber sits right where the digs break.", best: "Hard plants at the break \u2014 technique wins these routes." },
+    "Sluggo Seam": { attacks: "Aggressive man corners: sell the slant, then go over the top.", risk: "A disciplined two-high defense doesn't bite and the QB holds the ball.", best: "A crafty receiver whose first move looks like a called slant." },
+    "QB Power": { attacks: "Defenses that key the back \u2014 the QB adds a hat the box didn't count.", risk: "Your QB takes real hits in the interior.", best: "A strong, agile QB behind a pulling guard who clears the lane." },
     "Four Verts": { attacks: "Single-high and Cover 3 by stressing every deep seam.", risk: "A long-developing call against pressure or deep quarters.", best: "Receiver speed and a QB who can place the deep ball." },
     "Inside Zone": { attacks: "Light boxes and over-pursuing fronts with a one-cut run.", risk: "A loaded box can close the interior before the cut appears.", best: "Technical linemen and a patient, agile back." },
     "Outside Zone": { attacks: "Light boxes by stretching the front horizontally.", risk: "Fast edge defenders can force the run backward.", best: "Agile linemen and a back with vision and speed." },
@@ -48488,6 +48704,24 @@ ${renderAutoRecruitLog()}`;
         return true;
       });
     };
+    const conceptsOffSheet = (grp) => {
+      var _a2, _b2;
+      const names = ((_a2 = ctx2.conceptsByGroup) == null ? void 0 : _a2[grp]) || [];
+      const outs = [];
+      for (const nm of names) {
+        if (weights && ((_b2 = weights[nm]) != null ? _b2 : 50) <= 0) {
+          outs.push({ nm, why: "benched in your gameplan" });
+          continue;
+        }
+        if (_activePlaybook.size && !_activePlaybook.has(nm)) {
+          outs.push({ nm, why: state.ui.callFormation ? `${state.ui.callFormation} doesn't carry it` : "no carried formation runs it" });
+          continue;
+        }
+        const c = PASS_CONCEPTS[nm];
+        if (c && c.minWR && _wrCount < c.minWR) outs.push({ nm, why: `needs ${c.minWR} receivers \u2014 this package has ${_wrCount}` });
+      }
+      return outs;
+    };
     const _paOn = !!state.ui.callPA;
     const _rpoOn = !!state.ui.callRPO;
     const _qbRunOn = !!state.ui.callQBRun;
@@ -48519,6 +48753,12 @@ ${renderAutoRecruitLog()}`;
           <button class="cs-concept cs-surprise" data-cs-concept="__surprise" data-cs-cat="${_drillCat.cat}"><span class="cs-surprise-die">\u{1F3B2}</span><span>Surprise me</span></button>
           ${list.map((nm) => `<div class="cs-concept-tile"><button class="cs-concept cs-concept-card" data-cs-callconcept="${escapeHtml(nm)}" aria-label="Call ${escapeHtml(nm)}">${conceptPlayGraphic(nm)}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-learn">Call play \u2192</span></button><button class="cs-info-btn" data-cs-preview="${escapeHtml(nm)}" aria-label="Learn about ${escapeHtml(nm)}">INFO</button></div>`).join("") || `<div class="muted" style="padding:6px">No plays fit ${state.ui.callFormation ? "this formation" : "your carried formations"} \u2014 try Surprise me.</div>`}
         </div>
+        ${(() => {
+        const outs = conceptsOffSheet(_drillCat.grp);
+        if (!outs.length) return "";
+        return `<div class="cs-offsheet-hdr">OFF THE SHEET</div>
+        <div class="cs-concepts cs-concepts-out">${outs.map(({ nm, why }) => `<div class="cs-concept-tile cs-concept-out"><div class="cs-concept cs-concept-card cs-concept-dead" aria-label="${escapeHtml(nm)} unavailable: ${escapeHtml(why)}">${conceptPlayGraphic(nm)}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-dead-why">${escapeHtml(why)}</span></div></div>`).join("")}</div>`;
+      })()}
       </div>`;
     }
     const _carried = (gp == null ? void 0 : gp.offFormations) || [];
