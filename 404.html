@@ -6250,6 +6250,21 @@ body *::after {
 .cs-c-learn { align-self: start; color: var(--px-yellow, #ffd54a); font-size: 9px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
 .cs-info-btn { align-self: stretch; min-width: 0; padding: 4px 2px; color: var(--px-yellow, #ffd54a); background: var(--px-panel-2, #111827); border: 2px solid var(--px-line, #43536b); border-bottom-width: 4px; border-radius: 0; font-size: 9px; font-weight: 900; letter-spacing: .06em; cursor: pointer; writing-mode: vertical-rl; text-orientation: mixed; }
 .cs-info-btn:hover, .cs-info-btn:focus-visible { color: #07110b; background: var(--px-yellow, #ffd54a); border-color: var(--px-paper, #f4edda); outline: none; }
+/* F1 — the defensive headset panel */
+.dc-row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 5px 0; border-bottom: 1px solid rgba(128,128,128,0.12); }
+.dc-row-label { font-size: 10px; font-weight: 900; letter-spacing: 0.06em; min-width: 76px; color: var(--text-2); }
+.dc-plan { font-size: 10px; padding: 3px 7px; border: 1px dashed var(--px-line, #43536b); color: var(--text-2); cursor: pointer; }
+.dc-plan.active { color: var(--px-yellow, #ffd54a); border-color: var(--px-yellow, #ffd54a); }
+.dc-chip { font-size: 11px; font-weight: 700; padding: 4px 8px; background: var(--px-panel-2, #111827); color: var(--text-0); border: 2px solid var(--px-line, #43536b); border-bottom-width: 3px; cursor: pointer; border-radius: 0; }
+.dc-chip.active { background: var(--px-yellow, #ffd54a); color: #07110b; border-color: var(--px-paper, #f4edda); }
+.dc-footer { flex-wrap: wrap; gap: 6px; }
+.dc-head-tag { color: #7fd1ff; }
+/* F2 — check-with-me cards on the gameplan defense tab */
+.chk-card { border: 1px solid rgba(128,128,128,0.18); padding: 8px; margin-bottom: 8px; }
+.chk-card.chk-live { border-color: rgba(127,209,255,0.5); }
+.chk-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 3px 0; }
+.chk-lbl { font-size: 10px; font-weight: 800; letter-spacing: 0.05em; min-width: 64px; color: var(--text-2); text-transform: uppercase; }
+
 /* Off-the-sheet plays: shown, not hidden — a labeled cut reads as coaching. */
 .cs-offsheet-hdr { margin: 10px 0 4px; font-size: 10px; font-weight: 900; letter-spacing: 0.08em; color: var(--text-2); opacity: 0.85; }
 .cs-concepts-out .cs-concept-tile { grid-template-columns: minmax(0, 1fr); }
@@ -6631,7 +6646,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "6297b3e418";
+globalThis.__BUILD__ = "439bac3364";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -12884,6 +12899,10 @@ var _CFB = (() => {
       init_constants();
       init_utils();
       SITUATION_KEYS = [
+        // F3 (Aug 2026): the opening script. Never returned by resolveSituation —
+        // the sim maps the first two drives of the game onto this cell (emergency
+        // situations still win). No cell = the key never fires.
+        "openers",
         "goal_line",
         "backed_up",
         "two_min_trail",
@@ -12897,6 +12916,7 @@ var _CFB = (() => {
         "base"
       ];
       SITUATION_LABELS = {
+        openers: "Openers (Drives 1\u20132)",
         goal_line: "Goal Line",
         backed_up: "Backed Up (own 5)",
         two_min_trail: "2-Minute, Trailing",
@@ -18004,7 +18024,15 @@ var _CFB = (() => {
       subPhilosophy: cbStr + sStr > lbStr * 2 + 4 ? "match" : Math.random() < 0.2 ? "base" : "auto",
       puntDef: agg > 0.7 ? "block" : agg < 0.3 ? "safe" : "balanced",
       protEmphasis: olStr < 45 ? randInt3(58, 70) : randInt3(42, 55),
-      qbAggr: qbArch === "QB-Gunslinger" ? randInt3(62, 78) : qbArch === "QB-Game-Manager" ? randInt3(28, 42) : randInt3(44, 56)
+      qbAggr: qbArch === "QB-Gunslinger" ? randInt3(62, 78) : qbArch === "QB-Game-Manager" ? randInt3(28, 42) : randInt3(44, 56),
+      // F2 (check-with-me, Aug 2026): the light default check table every real
+      // DC carries — box math vs the extremes, edge set vs the wildcat. Small,
+      // football-obvious, and symmetric with what a human coach can now author.
+      formChecks: {
+        empty: { runCommit: -8 },
+        heavy: { runCommit: 8 },
+        wildcat: { edgePlay: "contain" }
+      }
     }, optionRate != null ? { optionRate, optionMix, pitchAggr } : {}), {
       // Phase 2 (Jul 2026): AI coaches now carry archetype situational matrices
       // — a run team hammers its heavy package on the goal line and 3rd & short,
@@ -20615,6 +20643,34 @@ var _CFB = (() => {
   function isKeyDownSituation(sit) {
     return sit.down >= 3 || sit.fieldPos >= 80 || sit.clock <= 120;
   }
+  function offSitWithOpeners(resolved, offPlan, gameState) {
+    var _a;
+    const cell = (_a = offPlan == null ? void 0 : offPlan.situations) == null ? void 0 : _a.openers;
+    if (!cell || !Object.keys(cell).length) return resolved;
+    if (((gameState == null ? void 0 : gameState._offDriveNum) || 99) > 2) return resolved;
+    return OPENERS_YIELDS.has(resolved) ? resolved : "openers";
+  }
+  function applyDefCall(defEff, o, defSchool) {
+    var _a, _b, _c;
+    if (!o) return;
+    if (o.front) defEff.defFront = o.front;
+    if (o.covShell) defEff.covShell = o.covShell;
+    if (o.covStyle) defEff.covStyle = o.covStyle;
+    if (o.edgePlay) defEff.edgePlay = o.edgePlay;
+    if (o.pressureIdentity) defEff.pressureIdentity = o.pressureIdentity === "auto" ? null : o.pressureIdentity;
+    if (o.aggression) {
+      defEff.defAggression = o.aggression;
+      defEff.blitzPct = clamp2(((_a = C.AGGRESSION.rate[o.aggression]) != null ? _a : 20) + ((_c = (_b = defSchool == null ? void 0 : defSchool.weeklyPlan) == null ? void 0 : _b.blitzShift) != null ? _c : 0), 0, 75);
+    }
+    if (o.runCommit != null) defEff.runCommit = clamp2(o.runCommit, -25, 25);
+  }
+  function formationCheckClass(fid) {
+    if (fid === "Empty") return "empty";
+    if (fid === "Wildcat") return "wildcat";
+    if (fid === "Spread" || fid === "Air Raid" || fid === "Trips/Bunch" || fid === "Pistol/RPO") return "spread";
+    if (fid === "Power-I" || fid === "Wishbone" || fid === "Flexbone" || fid === "Jumbo") return "heavy";
+    return null;
+  }
   function coverageFamily(shell, style, sAwr) {
     const sh = shell === "balanced" ? Math.random() < 0.55 ? "single" : "two" : shell;
     const st = style === "balanced" ? Math.random() < 0.5 ? "man" : "zone" : style;
@@ -21224,7 +21280,7 @@ var _CFB = (() => {
       const cdef = _conceptCtx == null ? void 0 : _conceptCtx.def;
       const hint = cdef && Array.isArray(cdef.routes) ? cdef.routes[i] : null;
       const shape = hint === "sharp" || hint === "speed" ? hint : passDepth === "short" ? i % 2 === 0 ? "speed" : "sharp" : passDepth === "medium" ? i % 2 === 0 ? "sharp" : "speed" : "speed";
-      const dbl = cdef && cdef.dbl ? i === 0 && tec >= 70 && Math.random() < 0.55 : i === 0 && tec >= 84 && passDepth === "medium" && Math.random() < 0.05;
+      const dbl = cdef && cdef.dbl ? i === 0 : i === 0 && tec >= 84 && passDepth === "medium" && Math.random() < 0.05;
       return { shape, dbl };
     };
     const schemeFor = (ct, i, passDepth, rec) => {
@@ -21285,6 +21341,9 @@ var _CFB = (() => {
         // Fix B/D: the individuated route's shape rides along. A medium "sharp"
         // cut is the classic in-breaker (dig/comeback) a two-high robber jumps.
         routeShape: rvScheme && rvScheme.route ? rvScheme.route.shape : null,
+        // Capstone P1 (Aug 2026): the double-move rides along too — pure
+        // recording, so the trace (and the viewer) can show the sluggo that won.
+        routeDbl: !!(rvScheme && rvScheme.route && rvScheme.route.dbl),
         breakIn: !!(rvScheme && rvScheme.route && rvScheme.route.shape === "sharp" && receivers[i].passDepth === "medium"),
         // Rung 3: a zone defender is charged with a LANDMARK, a man defender
         // with a MAN — the drive log's credit/blame speaks this vocabulary.
@@ -22003,6 +22062,9 @@ var _CFB = (() => {
         bracketed: c.bracketed || c.locked || false,
         passDepth: c.passDepth,
         breakIn: c.breakIn || false,
+        routeShape: c.routeShape || null,
+        routeDbl: c.routeDbl || false,
+        voided: c.voided || false,
         landmark: (_a2 = c.landmark) != null ? _a2 : null,
         // Per-slot share (field assignments) takes priority; else legacy bucket.
         // Fix F: a correct motion read steers the QB to the uncovered man — lift
@@ -22099,6 +22161,14 @@ var _CFB = (() => {
       }
     }
     const passKey = Math.max(0, -(defPlan.runCommitEff || 0));
+    result.trace = {
+      sep: Math.round(rhythmSep * 100) / 100,
+      shape: chosen.routeShape || null,
+      dbl: chosen.routeDbl ? 1 : 0,
+      vd: chosen.voided ? 1 : 0,
+      ct: chosen.coverageType || null,
+      rob: robber ? robber.id : null
+    };
     const catchResult = catchResolution(rhythmSep, qb, coveringDef, passDepthKey, hurried, receiverObj, chosen.bracketed, forced, robber || helper, passKey, !!robber);
     if (catchResult.contested != null) result.contested = catchResult.contested;
     if (!catchResult.complete) {
@@ -22934,6 +23004,7 @@ var _CFB = (() => {
     const plays = R ? R.plays : [];
     let forcedFourth = R ? R.decision || null : null;
     let forcedCall = R ? R.call || null : null;
+    let forcedDefCall = R ? R.defCall || null : null;
     let fourthDecided = R ? !!R.fourthDecided : false;
     let fakeSurprise = false;
     let _spikedThisDrive = false;
@@ -23216,13 +23287,13 @@ var _CFB = (() => {
           score: __spreadValues2({}, gameState.score)
         };
         if (opts.askCall(sit) === "ASK") {
-          const askSit = resolveSituation({
+          const askSit = offSitWithOpeners(resolveSituation({
             down,
             distance,
             fieldPos,
             margin: gameState.score.off - gameState.score.def,
             clock: gameState.clock
-          });
+          }), offPlan, gameState);
           const askEff = getEffectivePlan(offPlan, offSchool == null ? void 0 : offSchool.weeklyPlan, askSit);
           const formations = (askEff.offFormations || []).filter((f) => {
             var _a2;
@@ -23243,6 +23314,50 @@ var _CFB = (() => {
               conceptsByGroup: conceptGroups(),
               // the sheet's ≈% follow the SITUATION (wizard grid)
               conceptWeights: (_j = askEff.conceptWeights) != null ? _j : null
+            })
+          } };
+        }
+      }
+      if (opts.askDefCall && !forcedDefCall && !forcedCall) {
+        const sit = {
+          down,
+          distance,
+          fieldPos,
+          clock: gameState.clock,
+          half: gameState.half,
+          score: __spreadValues2({}, gameState.score)
+        };
+        if (opts.askDefCall(sit) === "ASK") {
+          const askSit = resolveSituation({
+            down,
+            distance,
+            fieldPos,
+            margin: gameState.score.def - gameState.score.off,
+            clock: gameState.clock
+          });
+          const askEff = getEffectivePlan(defPlan, defSchool == null ? void 0 : defSchool.weeklyPlan, askSit);
+          return { pending: {
+            kind: "defcall",
+            fieldPos,
+            down,
+            distance,
+            plays,
+            pen,
+            audiblesUsed,
+            fourthDecided,
+            clock: gameState.clock,
+            sit: __spreadProps2(__spreadValues2({}, sit), {
+              // the standing call, so the panel shows what "ride the plan" means
+              standing: {
+                defFront: askEff.defFront,
+                baseFront: defPlan.defBaseFront || "4-3",
+                defAggression: askEff.defAggression,
+                covShell: askEff.covShell,
+                covStyle: askEff.covStyle,
+                pressureIdentity: askEff.pressureIdentity,
+                edgePlay: askEff.edgePlay,
+                runCommit: askEff.runCommit
+              }
             })
           } };
         }
@@ -23349,13 +23464,14 @@ var _CFB = (() => {
           }
         }
       }
-      const offSit = resolveSituation({
+      const _offSitRaw = resolveSituation({
         down,
         distance,
         fieldPos,
         margin: gameState.score.off - gameState.score.def,
         clock: gameState.clock
       });
+      const offSit = offSitWithOpeners(_offSitRaw, offPlan, gameState);
       const defSit = resolveSituation({
         // The field zone is a property of where the BALL is, shared by both sides:
         // 'goal_line' = ball at the goal the offense attacks AND the defense protects.
@@ -23368,6 +23484,7 @@ var _CFB = (() => {
       });
       const offEff = getEffectivePlan(offPlan, offSchool == null ? void 0 : offSchool.weeklyPlan, offSit);
       const defEff = getEffectivePlan(defPlan, defSchool == null ? void 0 : defSchool.weeklyPlan, defSit);
+      if (forcedDefCall && !forcedDefCall._ride) applyDefCall(defEff, forcedDefCall, defSchool);
       for (const [plan, eff] of [[offPlan, offEff], [defPlan, defEff]]) {
         const np = plan._nextPlay;
         if (!np) continue;
@@ -23439,6 +23556,27 @@ var _CFB = (() => {
       const _namedPlay = forcedCall && forcedCall.concept && forcedCall.concept !== "sheet" && FORMATION_PLAYBOOK && Object.values(FORMATION_PLAYBOOK).some((l) => l.includes(forcedCall.concept)) ? forcedCall.concept : null;
       const _formEligible = _namedPlay ? ((id) => (FORMATION_PLAYBOOK[id] || []).includes(_namedPlay)) : null;
       const offFormationId = (forcedCall == null ? void 0 : forcedCall.formationId) && FORMATION_PACKAGES[forcedCall.formationId] ? forcedCall.formationId : aliasFormation(rollFormation(offEff.offFormations, _formEligible) || offPlan.offFormation || "Single Back");
+      if ((!forcedDefCall || forcedDefCall._ride) && defPlan.formChecks) {
+        const _chk = defPlan.formChecks[formationCheckClass(offFormationId)];
+        if (_chk) {
+          applyDefCall(defEff, {
+            front: _chk.defFront && _chk.defFront !== "auto" ? _chk.defFront : null,
+            covShell: _chk.covShell || null,
+            covStyle: _chk.covStyle || null,
+            edgePlay: _chk.edgePlay || null,
+            pressureIdentity: _chk.pressureIdentity || null,
+            aggression: _chk.defAggression || null,
+            runCommit: _chk.runCommit != null ? clamp2(defEff.runCommit + _chk.runCommit, -25, 25) : null
+          }, defSchool);
+          defPlanEff.blitzPct = defEff.blitzPct;
+          defPlanEff.defAggrEff = defEff.defAggression;
+          defPlanEff.pressIdentityEff = defEff.pressureIdentity;
+          defPlanEff.runCommitEff = defEff.runCommit;
+          defPlanEff.edgePlayEff = defEff.edgePlay;
+          defPlanEff.covShellEff = defEff.covShell;
+          defPlanEff.covStyleEff = defEff.covStyle;
+        }
+      }
       const defFrontId = defEff.defFront !== "auto" ? defEff.defFront : selectDefFront(
         defPlan.defBaseFront || "4-3",
         down,
@@ -23884,7 +24022,17 @@ var _CFB = (() => {
         playResult.coachCall = true;
         forcedCall = null;
       }
+      if (forcedDefCall) {
+        if (!forcedDefCall._ride) playResult.defCoachCall = true;
+        forcedDefCall = null;
+      }
       const _carrierSlotId = playResult.rusherId && (offField == null ? void 0 : offField.bySlot) ? Object.keys(offField.bySlot).find((sid) => offField.bySlot[sid] === playResult.rusherId) || null : null;
+      const _targetSlotId = playResult.targetId && (offField == null ? void 0 : offField.bySlot) ? Object.keys(offField.bySlot).find((sid) => offField.bySlot[sid] === playResult.targetId) || null : null;
+      if (playResult.trace) {
+        const _covId = playResult.targetId && playResult.covAssign ? (playResult.covAssign.find((c) => c.r === playResult.targetId) || {}).d || null : null;
+        const _covP = _covId ? defRoster.find((pp) => pp.id === _covId) : null;
+        playResult.trace.covPos = _covP ? _covP.position : null;
+      }
       plays.push(__spreadProps2(__spreadValues2({}, playResult), {
         down,
         distance,
@@ -23892,6 +24040,7 @@ var _CFB = (() => {
         offFormation: offFormationId,
         defFront: defFrontId,
         carrierSlotId: _carrierSlotId,
+        targetSlotId: _targetSlotId,
         // Arm talent stamp (recording only): the viewer reads this for
         // ball-flight zip/arc. Never feeds back into any outcome.
         qbArm: (() => {
@@ -24236,11 +24385,14 @@ var _CFB = (() => {
       possession = resume.possession;
       fieldPos = resume.fieldPos;
       driveCount = resume.driveCount;
-      resumeDrive = __spreadProps2(__spreadValues2({}, resume.drive), { decision: resume.decision, call: resume.call });
+      resumeDrive = __spreadProps2(__spreadValues2({}, resume.drive), { decision: resume.decision, call: resume.call, defCall: resume.defCall });
     }
+    if (!resume && half === 1) token._dnums = { home: 0, away: 0 };
+    if (!token._dnums) token._dnums = { home: 99, away: 99 };
     while ((clock > 0 || resumeDrive) && driveCount < 20) {
       activateControlledSide(token, possession);
       const controlled = tokenControlsSide(token, possession);
+      if (!resumeDrive) token._dnums[possession] = (token._dnums[possession] || 0) + 1;
       const offense = possession === "home" ? homeTeam : awayTeam;
       const defense = possession === "home" ? awayTeam : homeTeam;
       const gameState = {
@@ -24255,7 +24407,8 @@ var _CFB = (() => {
         timeouts: token.timeouts,
         offSide: possession,
         defSide: possession === "home" ? "away" : "home",
-        playerSide: token.playerSide
+        playerSide: token.playerSide,
+        _offDriveNum: token._dnums[possession] || 99
       };
       const skipHolds = (sit) => {
         var _a2;
@@ -24273,12 +24426,14 @@ var _CFB = (() => {
       };
       const ask = token.askFourth && controlled ? (sit) => skipHolds(sit) ? null : token.askFourth(sit) : null;
       const askCall = token.callMode && token.callMode !== "off" && controlled ? (sit) => skipHolds(sit) ? null : token.callMode === "all" ? "ASK" : token.callMode === "keydowns" && isKeyDownSituation(sit) ? "ASK" : null : null;
+      const controlledDef = tokenControlsSide(token, possession === "home" ? "away" : "home");
+      const askDefCall = token.callMode && token.callMode !== "off" && controlledDef && !controlled ? (sit) => skipHolds(sit) ? null : isKeyDownSituation(sit) ? "ASK" : null : null;
       const driveResult = simulateDrive(
         offense,
         defense,
         gameState,
         log,
-        { ask, askCall, resume: resumeDrive }
+        { ask, askCall, askDefCall, resume: resumeDrive }
       );
       resumeDrive = null;
       if (driveResult.pending) {
@@ -24705,15 +24860,17 @@ var _CFB = (() => {
     let resumeDrive = null;
     if (resume) {
       gameState.clock = resume.clock;
-      resumeDrive = __spreadProps2(__spreadValues2({}, resume.drive), { decision: resume.decision, call: resume.call });
+      resumeDrive = __spreadProps2(__spreadValues2({}, resume.drive), { decision: resume.decision, call: resume.call, defCall: resume.defCall });
     }
     const otSide = otIsHome ? "home" : "away";
     activateControlledSide(token, otSide);
     gameState.playerSide = token.playerSide;
     const mine = tokenControlsSide(token, otSide);
+    const mineDef = tokenControlsSide(token, otSide === "home" ? "away" : "home");
     const ask = token.askFourth && mine ? token.askFourth : null;
     const askCall = token.callMode && token.callMode !== "off" && mine ? (sit) => token.callMode === "all" ? "ASK" : token.callMode === "keydowns" && isKeyDownSituation(sit) ? "ASK" : null : null;
-    const otDrive = simulateDrive(otOffense, otDefense, gameState, log, { ask, askCall, resume: resumeDrive });
+    const askDefCall = token.callMode && token.callMode !== "off" && mineDef && !mine ? (sit) => isKeyDownSituation(sit) ? "ASK" : null : null;
+    const otDrive = simulateDrive(otOffense, otDefense, gameState, log, { ask, askCall, askDefCall, resume: resumeDrive });
     if (otDrive.pending) {
       token.pending = {
         kind: otDrive.pending.kind || "fourth",
@@ -24761,10 +24918,10 @@ var _CFB = (() => {
     return runToken(token);
   }
   function resumeFromCall(token, call) {
-    if (!(token == null ? void 0 : token.pending) || token.pending.kind !== "playcall") return token;
+    if (!(token == null ? void 0 : token.pending) || token.pending.kind !== "playcall" && token.pending.kind !== "defcall") return token;
     const p = token.pending;
     token.pending = null;
-    token._resume = __spreadProps2(__spreadValues2({}, p), { call: call || { concept: "sheet" } });
+    token._resume = p.kind === "defcall" ? __spreadProps2(__spreadValues2({}, p), { defCall: call && call._def ? call : { _ride: true } }) : __spreadProps2(__spreadValues2({}, p), { call: call || { concept: "sheet" } });
     token.stage = p.half === 3 ? "ot" : p.half;
     return runToken(token);
   }
@@ -25102,7 +25259,7 @@ var _CFB = (() => {
       twoPtMade: 0
     };
   }
-  var QB_RUN_BASE, OPTION_CAPABLE, CALL_CATEGORIES, SPEED_OPTION, JET_CAPABLE, DRAW_DEFAULT, JET_SLOTS, _passCtx, _tkStyle, _optKey, _conceptCtx, FATIGUE_PHYSICAL, REAL_SLOTS, _rosterByIdCache, _penaltyScale, TYPE_BASELINE, DIFFICULTY_EDGE;
+  var OPENERS_YIELDS, QB_RUN_BASE, OPTION_CAPABLE, CALL_CATEGORIES, SPEED_OPTION, JET_CAPABLE, DRAW_DEFAULT, JET_SLOTS, _passCtx, _tkStyle, _optKey, _conceptCtx, FATIGUE_PHYSICAL, REAL_SLOTS, _rosterByIdCache, _penaltyScale, TYPE_BASELINE, DIFFICULTY_EDGE;
   var init_sim = __esm({
     "js/engine/sim.js"() {
       init_spread();
@@ -25119,6 +25276,7 @@ var _CFB = (() => {
       init_staff();
       init_yacgeo();
       init_utils();
+      OPENERS_YIELDS = /* @__PURE__ */ new Set(["goal_line", "backed_up", "two_min_trail", "four_min_lead", "red_zone"]);
       QB_RUN_BASE = {
         "Power-I": 0.04,
         "Air Raid": 0.08,
@@ -27104,7 +27262,7 @@ var _CFB = (() => {
   function resumeFromPlayCall(state2, call) {
     const pending2 = state2.pendingHalftime;
     const token = pending2 == null ? void 0 : pending2.token;
-    if (!(token == null ? void 0 : token.pending) || token.pending.kind !== "playcall") return [];
+    if (!(token == null ? void 0 : token.pending) || token.pending.kind !== "playcall" && token.pending.kind !== "defcall") return [];
     resumeFromCall(token, call);
     return continueSteppedGame(state2, pending2);
   }
@@ -29331,6 +29489,7 @@ var _CFB = (() => {
     state.ui.callRPO = false;
     state.ui.callQBRun = false;
     state.ui.callTimeout = false;
+    state.ui.defCall = null;
     state.ui.callSTOpen = false;
     state.ui.callDrill = null;
     state.ui.showCallSheet = false;
@@ -29458,6 +29617,7 @@ var _CFB = (() => {
     state.ui.callRPO = false;
     state.ui.callQBRun = false;
     state.ui.callTimeout = false;
+    state.ui.defCall = null;
     state.ui.callSTOpen = false;
     state.ui.callDrill = null;
     state.ui.showCallSheet = false;
@@ -29755,6 +29915,7 @@ var _CFB = (() => {
     state.ui.callRPO = false;
     state.ui.callQBRun = false;
     state.ui.callTimeout = false;
+    state.ui.defCall = null;
     state.ui.callDrill = null;
     state.ui.callSTOpen = false;
     state._callModeToday = null;
@@ -31264,7 +31425,7 @@ var _CFB = (() => {
         <div class="gameplan-group">
 
           <div class="rec-tabs gp-subtabs">
-            ${[["front", "Front"], ["coverage", "Coverage"], ["pressure", "Pressure"]].map(([id, lbl]) => `
+            ${[["front", "Front"], ["coverage", "Coverage"], ["pressure", "Pressure"], ["checks", "Checks"]].map(([id, lbl]) => `
               <button class="rec-tab${defSubTab === id ? " active" : ""}" data-defsub="${id}">${lbl}</button>`).join("")}
           </div>
 
@@ -31408,6 +31569,8 @@ var _CFB = (() => {
             <div class="gp-tip tip-info">\u25B8 Only matters when Coverage Scheme is Lock or Bracket. AUTO shadows their most dangerous receiver. THEIR TE erases the security blanket; THEIR SLOT takes away the inside quick game. HOT MAN reads the game as it happens \u2014 whoever they've fed most today gets the extra body from that point on.</div>
           </div>
           </details>`}
+
+          ${defSubTab !== "checks" ? "" : renderFormChecksSection(gp)}
 
           ${defSubTab !== "pressure" ? "" : `
           <details class="gp-section" open>
@@ -31680,6 +31843,40 @@ var _CFB = (() => {
         rerender();
       });
     });
+    root.querySelectorAll("[data-chk-class]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const cls = btn.dataset.chkClass, field = btn.dataset.chkField, val = btn.dataset.chkVal;
+        const checks = gp.formChecks || (gp.formChecks = {});
+        const cell = checks[cls] || (checks[cls] = {});
+        const v = field === "runCommit" ? parseInt(val, 10) : val;
+        if (field === "runCommit" ? cell[field] === v : cell[field] === v) delete cell[field];
+        else cell[field] = v;
+        if (!Object.keys(cell).length) delete checks[cls];
+        if (!Object.keys(checks).length) delete gp.formChecks;
+        rerender();
+      });
+    });
+    root.querySelectorAll("[data-chk-clear]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const checks = gp.formChecks || {};
+        const cell = checks[btn.dataset.chkClear || btn.dataset.chkClass];
+        if (cell) {
+          delete cell[btn.dataset.chkField];
+          if (!Object.keys(cell).length) delete checks[btn.dataset.chkClear];
+          if (!Object.keys(checks).length) delete gp.formChecks;
+        }
+        rerender();
+      });
+    });
+    root.querySelectorAll("[data-chk-reset]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (gp.formChecks) {
+          delete gp.formChecks[btn.dataset.chkReset];
+          if (!Object.keys(gp.formChecks).length) delete gp.formChecks;
+        }
+        rerender();
+      });
+    });
     (_l = root.querySelector("#wildcat-pass")) == null ? void 0 : _l.addEventListener("input", (e) => {
       gp.wildcatPassRate = parseInt(e.target.value);
       const el = root.querySelector("#wildcat-pass-val");
@@ -31737,6 +31934,31 @@ var _CFB = (() => {
     const c = sits[key];
     return !!c && Object.keys(c).length > 0;
   }
+  function renderFormChecksSection(gp) {
+    const checks = gp.formChecks || {};
+    return `
+          <details class="gp-section" open>
+          <summary class="gp-section-hdr">CHECK-WITH-ME <span class="gp-section-sub">calls keyed on their personnel</span></summary>
+          <div class="gp-tip tip-info">\u25B8 The situation cells key on down-and-distance; a real call sheet also keys on PERSONNEL \u2014 "vs Empty, bring the house." When the offense breaks the huddle in a class below, your check overlays the standing call for that snap. Anything left inherit rides the plan. Over-check at your peril: motion and the jet game punish a defense that declares off the first look.</div>
+          ${CHK_CLASSES.map(([cls, label, desc]) => {
+      const cell = checks[cls] || {};
+      const has = Object.keys(cell).length > 0;
+      return `
+          <div class="gp-row chk-card${has ? " chk-live" : ""}">
+            <label class="gp-label">${label} <span class="gp-hint">(${desc})</span>${has ? ` <button class="sit-mini-btn" data-chk-reset="${cls}">Reset \u2014 no check</button>` : ""}</label>
+            ${CHK_FIELDS.map(([field, flbl, opts]) => {
+        const cur = field === "runCommit" ? cell[field] != null ? String(cell[field]) : null : cell[field] || null;
+        return `
+            <div class="chk-row">
+              <span class="chk-lbl">${flbl}</span>
+              <button class="dc-plan${cur == null ? " active" : ""}" data-chk-clear="${cls}" data-chk-field="${field}">inherit</button>
+              ${opts.map(([v, ol]) => `<button class="dc-chip${cur === v ? " active" : ""}" data-chk-class="${cls}" data-chk-field="${field}" data-chk-val="${v}">${ol}</button>`).join("")}
+            </div>`;
+      }).join("")}
+          </div>`;
+    }).join("")}
+          </details>`;
+  }
   function renderSituationsSection(gp, openKey = openSitKey) {
     const sits = gp.situations || {};
     const customCount = SITUATION_KEYS.filter((k) => cellIsCustom(sits, k)).length;
@@ -31789,12 +32011,12 @@ var _CFB = (() => {
   <div class="sit-panel-title">${SITUATION_LABELS[key]} <span class="muted">\u2014 ${SIT_DESCS[key]}</span></div>
   <div class="gp-tip tip-info">${SIT_TIPS[key]}</div>
 
-  <div class="rec-tabs gp-subtabs">
+  ${key === "openers" ? "" : `<div class="rec-tabs gp-subtabs">
     ${[["offense", "Offense"], ["defense", "Defense"]].map(([id, lbl]) => `
       <button class="rec-tab${sitSide === id ? " active" : ""}" data-sitside="${id}">${lbl}</button>`).join("")}
-  </div>
+  </div>`}
 
-  ${sitSide !== "offense" ? "" : `
+  ${sitSide !== "offense" && key !== "openers" ? "" : `
   <div class="sit-panel-col-title">OFFENSE</div>
 
   ${group(
@@ -31965,7 +32187,7 @@ var _CFB = (() => {
     )}
   `}
 
-  ${sitSide !== "defense" ? "" : `
+  ${sitSide !== "defense" || key === "openers" ? "" : `
   <div class="sit-panel-col-title">DEFENSE</div>
 
   ${group(
@@ -32471,7 +32693,7 @@ var _CFB = (() => {
     }).join("")}
 `;
   }
-  var gameplanSection, offSubTab, defSubTab, sitSide, openSitKey, SIT_DESCS, SIT_NUDGE, SIT_TIPS, PIN_FRONTS, COV_OPTIONS, ALL_FORMATIONS, DEF_FRONTS2, DEF_FRONT_DESCS, DEF_FRONT_NEEDS, SIMPLE_DIALS, SIMPLE_SITS;
+  var CHK_CLASSES, CHK_FIELDS, gameplanSection, offSubTab, defSubTab, sitSide, openSitKey, SIT_DESCS, SIT_NUDGE, SIT_TIPS, PIN_FRONTS, COV_OPTIONS, ALL_FORMATIONS, DEF_FRONTS2, DEF_FRONT_DESCS, DEF_FRONT_NEEDS, SIMPLE_DIALS, SIMPLE_SITS;
   var init_gameplan = __esm({
     "js/ui/views/gameplan.js"() {
       init_spread();
@@ -32483,12 +32705,27 @@ var _CFB = (() => {
       init_state();
       init_tips();
       init_utils();
+      CHK_CLASSES = [
+        ["empty", "VS EMPTY", "no backs \u2014 4-5 wide, QB alone"],
+        ["spread", "VS SPREAD", "3+ receivers \u2014 Spread, Air Raid, Trips, Pistol"],
+        ["heavy", "VS HEAVY", "2-back / multi-TE \u2014 Power-I, 'bone, Flexbone, Jumbo"],
+        ["wildcat", "VS WILDCAT", "direct snap \u2014 QB split wide"]
+      ];
+      CHK_FIELDS = [
+        ["defFront", "Front", [["4-3", "4-3"], ["3-4", "3-4"], ["Nickel", "Nickel"], ["Dime", "Dime"], ["46/Bear", "46/Bear"], ["5-2", "5-2"]]],
+        ["defAggression", "Pressure", [["bend", "Bend"], ["selective", "Selective"], ["balanced", "Balanced"], ["attacking", "Attacking"], ["house", "House"]]],
+        ["covShell", "Shell", [["single", "Single"], ["two", "Two-high"]]],
+        ["covStyle", "Style", [["man", "Man"], ["zone", "Zone"]]],
+        ["edgePlay", "Edge", [["contain", "Set it"], ["crash", "Crash"]]],
+        ["runCommit", "Box", [["-8", "Lighten \u22128"], ["8", "Commit +8"]]]
+      ];
       gameplanSection = "offense";
       offSubTab = "package";
       defSubTab = "front";
       sitSide = "offense";
       openSitKey = null;
       SIT_DESCS = {
+        openers: "Your scripted first two drives of the game",
         goal_line: "Ball inside the 5 \u2014 score or stop",
         backed_up: "Ball inside the offense's own 5",
         two_min_trail: "Under 5:00 in the half, down 11+",
@@ -32508,6 +32745,7 @@ var _CFB = (() => {
         four_min_lead: "calls \u221225% pass (milks it) here"
       };
       SIT_TIPS = {
+        openers: "\u25B8 The opening script: coaches script the first drives to probe the defense and bank tendency capital before the chess match starts. This cell owns every ordinary snap of your first TWO drives, then hands the game back to the normal sheet. Goal line, backed up, the clock cells and the red zone still take over \u2014 nobody stays on the script at the goal line. Offense only; leave it AUTO and it never fires.",
         goal_line: "\u25B8 Governs every snap inside the 5 for BOTH sides of your plan \u2014 punching it in on offense, and goal-line defense when they're knocking. A Power-I pin with a QB-keep dial is the classic offensive build; 46/Bear + run commit the defensive one.",
         backed_up: "\u25B8 Offense: pinned at your own goal line \u2014 safe calls protect against the safety. Defense: you have THEM pinned \u2014 this cell is your chance to hunt a safety or a short field.",
         two_min_trail: "\u25B8 Desperation time. AUTO already airs it out; take over to pin your best passing package and shift depth toward deep shots.",
@@ -45067,6 +45305,27 @@ ${renderAutoRecruitLog()}`;
     pass_medium: ["curl", "dig", "out", "comeback"],
     pass_deep: ["go", "post", "corner", "seam"]
   };
+  var DBL_SHAPE = {
+    slant: "sluggo",
+    cross: "sluggo",
+    go: "sluggo",
+    seam: "sluggo",
+    curl: "sluggo",
+    hitch: "sluggo",
+    deepcross: "sluggo",
+    post: "postcorner",
+    corner: "postcorner",
+    dig: "postcorner",
+    out: "outandup",
+    quickout: "outandup",
+    comeback: "outandup",
+    flat: "outandup",
+    arrow: "outandup",
+    fade: "outandup",
+    deepfade: "outandup",
+    wheel: "outandup",
+    stick: "whip"
+  };
   function routeWaypoints(shape, x0, y0, mid) {
     return (SHAPES[shape] || SHAPES.hitch).map((wp) => [clamp6(x0 + wp.w * mid, 2, 98), clamp6(y0 - wp.d * YPU, 2.5, 59)]);
   }
@@ -45192,7 +45451,7 @@ ${renderAutoRecruitLog()}`;
         s.home = to;
       });
     }
-    let carrier = null, dur, ballPlan, throwCue = null;
+    let carrier = null, dur, ballPlan, throwCue = null, _covActorId = null;
     const schedSp = (a, pt, tNow, tDue, base) => clamp6(
       Math.hypot(pt[0] - a.x, pt[1] - a.y) / Math.max(0.15, tDue - tNow),
       base * 0.55,
@@ -45259,7 +45518,7 @@ ${renderAutoRecruitLog()}`;
         if (fz) fz.behave = (t2) => t2 < PRESNAP - 0.1 ? null : [fz.slot.bx, 21, 5.5];
       }
     };
-    const wireCoverage = (catchers, breakAt, breakTo) => {
+    const wireCoverage = (catchers, breakAt, breakTo, traceOpts = null) => {
       const man = MAN_FAMS.includes(p.coverage);
       const rank = { DB: 0, LB: 1, S: 2 };
       const covPool = defs.filter((d) => !d.behave && d.grp !== "DL").sort((a2, b2) => {
@@ -45293,7 +45552,11 @@ ${renderAutoRecruitLog()}`;
             best.y = LOS - 1.6;
             jamCues.push({ id: best.id, start: PRESNAP, end: PRESNAP + 0.42 });
           }
-          best.behave = (t2) => t2 < PRESNAP ? null : press && t2 < PRESNAP + 0.35 ? [wr.x, wr.y - 0.5, 4.4] : breakAt != null && t2 >= breakAt ? [breakTo()[0], breakTo()[1], best.speed] : [wr.x, wr.y - 1.8, best.speed * 0.97];
+          const _isTgt = traceOpts && c.id === traceOpts.tgtId;
+          const _cush = _isTgt ? clamp6(0.5 + traceOpts.sep * 4.2, 0.6, 3.8) : 1.8;
+          if (_isTgt) _covActorId = best.id;
+          const _breakPt = _isTgt && traceOpts.tgtPt ? () => traceOpts.tgtPt : breakTo;
+          best.behave = (t2) => t2 < PRESNAP ? null : press && t2 < PRESNAP + 0.35 ? [wr.x, wr.y - 0.5, 4.4] : breakAt != null && t2 >= breakAt ? [_breakPt()[0], _breakPt()[1], best.speed] : [wr.x, wr.y - _cush, best.speed * 0.97];
         }
       }
       for (const d of covPool) {
@@ -45377,7 +45640,9 @@ ${renderAutoRecruitLog()}`;
       const _slotish = catchers.filter((s) => s.pos === "SLOT");
       const _outside = [...catchers].sort((a, b) => Math.abs(b.bx - 50) - Math.abs(a.bx - 50));
       const _fadeConcept = /Red-Zone Fade/i.test(_cn);
-      const tgtSlot = !screen ? _fadeConcept && _outside.length ? _outside[0] : catchers.length ? catchers.reduce((a, b) => Math.abs(b.bx - side) < Math.abs(a.bx - side) ? b : a) : backs[0] : screenKind === "rb" ? backs[0] || catchers[0] : screenKind === "tunnel" ? _outside[0] || catchers[0] || backs[0] : _slotish[0] || catchers.find((s) => Math.abs(s.bx - 50) < 35) || catchers[0] || backs[0];
+      const tr = p.trace || null;
+      const _traceTgt = p.targetSlotId ? [...catchers, ...backs].find((s) => s.id === p.targetSlotId) || null : null;
+      const tgtSlot = _traceTgt || (!screen ? _fadeConcept && _outside.length ? _outside[0] : catchers.length ? catchers.reduce((a, b) => Math.abs(b.bx - side) < Math.abs(a.bx - side) ? b : a) : backs[0] : screenKind === "rb" ? backs[0] || catchers[0] : screenKind === "tunnel" ? _outside[0] || catchers[0] || backs[0] : _slotish[0] || catchers.find((s) => Math.abs(s.bx - 50) < 35) || catchers[0] || backs[0]);
       const typAir = t === "pass_deep" ? 27 : t === "pass_medium" ? 15 : 6;
       const air = screen ? -1.5 : p.complete && !p.turnover ? clamp6(((_h = p.yards) != null ? _h : 2) * 0.6, 2, typAir) : typAir;
       const _tbx = (_i = tgtSlot == null ? void 0 : tgtSlot.bx) != null ? _i : 50;
@@ -45429,7 +45694,8 @@ ${renderAutoRecruitLog()}`;
       ordered.forEach((s, i) => {
         const mid = s.bx <= 50 ? 1 : -1;
         const isScreenTgt = screen && s === tgtSlot && screenShape;
-        const shape = isScreenTgt ? screenShape : shapes[i % shapes.length];
+        const shape0 = isScreenTgt ? screenShape : shapes[i % shapes.length];
+        const shape = s === tgtSlot && tr && tr.dbl && DBL_SHAPE[shape0] ? DBL_SHAPE[shape0] : shape0;
         const wps = routeWaypoints(shape, s.bx, s.by, mid);
         const base = waypointBehavior(wps, A[s.id].speed, PRESNAP);
         A[s.id].behave = s === tgtSlot && (!screen || screenShape) ? (t2, w2, a2) => t2 < PRESNAP ? null : t2 >= tCatch && p.complete && !p.turnover ? [catchPt[0], endY, schedSp(a2, [catchPt[0], endY], t2, tEnd, a2.speed)] : t2 >= (isScreenTgt ? throwAt : throwAt * 0.9) ? [catchPt[0], catchPt[1], a2.speed] : base(t2, w2, a2) : base;
@@ -45462,7 +45728,25 @@ ${renderAutoRecruitLog()}`;
         }
       }
       const ballAt = () => bl.x != null ? [bl.x, bl.y] : catchPt;
-      wireCoverage(screen ? [] : catchers, screen ? tCatch : throwAt + flight * 0.5, () => ballAt());
+      wireCoverage(screen ? [] : catchers, screen ? tCatch : throwAt + flight * 0.5, () => ballAt(), tr && tgtSlot && !screen ? { tgtId: tgtSlot.id, sep: tr.sep != null ? tr.sep : 0.45, tgtPt: catchPt } : null);
+      if (tr && tgtSlot && !screen && !_covActorId) {
+        const _zp = (p.covSlots || []).find((cs) => cs.r === tgtSlot.id);
+        if (_zp) {
+          const _zd = defs.find((d2) => d2.id === "D_" + _zp.d);
+          if (_zd) {
+            _covActorId = _zd.id;
+            const _prevZ = _zd.behave;
+            _zd.behave = (t2, w2, a2) => t2 < throwAt ? _prevZ ? _prevZ(t2, w2, a2) : null : [catchPt[0], catchPt[1], a2.speed];
+          }
+        }
+      }
+      if (tr && tr.rob && tgtSlot && !screen) {
+        const robD = defs.filter((d2) => d2.grp === "S" && d2.id !== _covActorId).sort((a2, b2) => Math.abs(a2.slot.bx - tgtSlot.bx) - Math.abs(b2.slot.bx - tgtSlot.bx))[0] || null;
+        if (robD) {
+          const _prevRob = robD.behave;
+          robD.behave = (t2, w2, a2) => t2 < throwAt ? _prevRob ? _prevRob(t2, w2, a2) : null : t2 < tCatch + 0.35 ? [catchPt[0], catchPt[1] - 1.2, a2.speed] : _prevRob ? _prevRob(t2, w2, a2) : null;
+        }
+      }
       if (screen) {
         if (screenKind === "bubble") {
           const sameSide = catchers.filter((s) => s !== tgtSlot && s.bx <= 50 === _tbx <= 50);
@@ -46037,6 +46321,10 @@ ${renderAutoRecruitLog()}`;
       }),
       ball,
       blocks,
+      // Capstone P1: which def actor is the recorded cover man (null when the
+      // play had no trace) — lets the UI highlight the real matchup someday and
+      // lets the probe verify the cushion against the sim's separation.
+      covId: _covActorId,
       throwCue,
       tackleCue,
       moveCue,
@@ -48135,6 +48423,26 @@ ${renderAutoRecruitLog()}`;
       state.ui.callConceptPreview = null;
       answerPlayCall(_decorateCall({ concept: nm }));
     }));
+    document.querySelectorAll("[data-dc-field]").forEach((b) => b.addEventListener("click", () => {
+      const f = b.dataset.dcField, v = b.dataset.dcVal;
+      const sel = state.ui.defCall || (state.ui.defCall = {});
+      if (sel[f] === v) delete sel[f];
+      else sel[f] = v;
+      rerender();
+    }));
+    document.querySelectorAll("[data-dc-clear]").forEach((b) => b.addEventListener("click", () => {
+      const sel = state.ui.defCall || {};
+      delete sel[b.dataset.dcClear];
+      rerender();
+    }));
+    (document.getElementById("dc-send") || {}).onclick = () => {
+      if (!callTapOk()) return;
+      const sel = state.ui.defCall || {};
+      answerPlayCall(Object.keys(sel).length ? __spreadProps2(__spreadValues2({}, sel), { _def: true }) : { concept: "sheet" });
+    };
+    (document.getElementById("dc-ride") || {}).onclick = () => {
+      if (callTapOk()) answerPlayCall({ concept: "sheet" });
+    };
     (_F = document.getElementById("cs-sheet-call")) == null ? void 0 : _F.addEventListener("click", () => {
       if (callTapOk()) answerPlayCall({ concept: "sheet" });
     });
@@ -48642,10 +48950,67 @@ ${renderAutoRecruitLog()}`;
   <button class="btn primary cs-call-play" data-cs-callconcept="${escapeHtml(name)}">CALL THIS PLAY \u2192</button>
 </div>`;
   }
+  var DEF_CALL_ROWS = [
+    ["front", "FRONT", [["4-3", "4-3"], ["3-4", "3-4"], ["Nickel", "Nickel"], ["Dime", "Dime"], ["46/Bear", "46/Bear"], ["5-2", "5-2"]]],
+    ["aggression", "PRESSURE", [["bend", "Bend"], ["selective", "Selective"], ["balanced", "Balanced"], ["attacking", "Attacking"], ["house", "House"]]],
+    ["covShell", "SHELL", [["single", "Single-high"], ["two", "Two-high"]]],
+    ["covStyle", "STYLE", [["man", "Man"], ["zone", "Zone"]]],
+    ["edgePlay", "EDGE", [["contain", "Set it"], ["crash", "Crash"]]],
+    ["pressureIdentity", "HEAT SHAPE", [["fireZone", "Fire Zone"], ["secondLevel", "2nd Level"], ["secondaryHeat", "DB Heat"], ["theHouse", "The House"]]]
+  ];
+  function defCallPanelHtml() {
+    var _a, _b, _c;
+    const token = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
+    const p = token == null ? void 0 : token.pending;
+    if (!p || p.kind !== "defcall") return "";
+    const d = p.drive;
+    const s = d.sit || {};
+    const standing = s.standing || {};
+    const sel = state.ui.defCall || {};
+    const qSecs = p.half === 3 ? d.clock : d.clock > 900 ? d.clock - 900 : d.clock;
+    const mm = Math.floor(qSecs / 60), ss = String(qSecs % 60).padStart(2, "0");
+    const qtr = p.half === 3 ? "OT" : d.clock > 900 ? p.half === 1 ? "Q1" : "Q3" : p.half === 1 ? "Q2" : "Q4";
+    const spot = d.fieldPos >= 50 ? `opp ${100 - d.fieldPos}` : `own ${d.fieldPos}`;
+    const goal = d.fieldPos + d.distance >= 100;
+    const downTxt = `${["1st", "2nd", "3rd", "4th"][d.down - 1] || `${d.down}th`} &amp; ${goal ? "Goal" : d.distance}`;
+    const us = ((_b = s.score) == null ? void 0 : _b.def) != null ? s.score.def : 0, them = ((_c = s.score) == null ? void 0 : _c.off) != null ? s.score.off : 0;
+    const planLabel = {
+      front: standing.defFront && standing.defFront !== "auto" ? standing.defFront : `Auto (${escapeHtml(standing.baseFront || "4-3")} base)`,
+      aggression: standing.defAggression || "balanced",
+      covShell: standing.covShell || "balanced",
+      covStyle: standing.covStyle || "balanced",
+      edgePlay: standing.edgePlay || "balanced",
+      pressureIdentity: standing.pressureIdentity || "front's signature"
+    };
+    const nSel = Object.keys(sel).length;
+    const rows = DEF_CALL_ROWS.map(([field, label, opts]) => `
+    <div class="dc-row">
+      <span class="dc-row-label">${label}</span>
+      <span class="dc-plan${sel[field] ? "" : " active"}" data-dc-clear="${field}" title="Tap to ride the plan for this dial">plan: ${escapeHtml(String(planLabel[field]))}</span>
+      ${opts.map(([v, lbl]) => `<button class="dc-chip${sel[field] === v ? " active" : ""}" data-dc-field="${field}" data-dc-val="${escapeHtml(v)}">${escapeHtml(lbl)}</button>`).join("")}
+    </div>`).join("");
+    return `
+  <div class="cs-panel dc-panel">
+    <div class="cs-head">
+      <span class="cs-head-tag dc-head-tag">\u{1F6E1} YOUR DEFENSE</span>
+      <span class="cs-head-sit">${downTxt} \xB7 ${spot} \xB7 ${qtr} ${mm}:${ss}</span>
+      <span class="cs-head-score">US ${us} \u2014 ${them} THEM</span>
+    </div>
+    <p class="cs-diagram-hint">They're breaking the huddle. Pin any dial for THIS SNAP ONLY \u2014 anything you don't touch rides your standing plan.</p>
+    ${rows}
+    <div class="cs-footer dc-footer">
+      <button class="btn primary dc-send" id="dc-send">${nSel ? `\u{1F6E1} SEND IT (${nSel} call${nSel > 1 ? "s" : ""})` : "\u{1F6E1} RIDE THE PLAN \u2192"}</button>
+      <button class="btn-secondary" id="dc-ride">Ride the plan \u2192</button>
+      <button class="btn-secondary" id="cs-mode-keydowns" title="Only stop me on key downs">\u23E9 Key downs only</button>
+      <button class="btn-secondary" id="cs-mode-off" title="Put the game plan on the headset">\u{1F4FB} Auto-run rest</button>
+    </div>
+  </div>`;
+  }
   function callSheetPanelHtml() {
     var _a, _b, _c, _d, _e, _f, _g;
     if (!((_b = (_a = state.pendingHalftime) == null ? void 0 : _a.token) == null ? void 0 : _b.pending)) return "";
     const token = state.pendingHalftime.token;
+    if (token.pending.kind === "defcall") return defCallPanelHtml();
     const ctx2 = callContext(token);
     if (!ctx2) return "";
     const playerSchool = getPlayerSchool();
