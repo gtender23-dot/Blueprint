@@ -6646,7 +6646,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "439bac3364";
+globalThis.__BUILD__ = "674a99b0ae";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -7744,6 +7744,27 @@ var _CFB = (() => {
         // time-to-throw: deep-drop pocket-exposure tax (escalates pressure a tier), cut by QB mobility/AWR + quick game
         TTT_SHORT: 0.2,
         // time-to-throw: quick-game relief (de-escalates pressure a tier) so the depth reshape holds the league sack rate
+        // ── Fix B prototype (AWR-gated coverage sack / throwaway) ──
+        // Fires when the read collapses under pressure (nobody above minSep and the QB is
+        // hurried — the would-be hold/sack). High-AWR throws it away; low-AWR forces it.
+        COVSACK_AWR_PIVOT: 70,
+        // AWR at which the throwaway probability is 50%; higher AWR = more likely to throw it away
+        COVSACK_AWR_SCALE: 0.022,
+        // throwaway-prob slope per AWR point above/below the pivot
+        COVSACK_FORCE_SACK: 0.15,
+        // of the low-AWR force branch: fraction that becomes an actual coverage sack (small residual)
+        COVSACK_FORCE_SHORT: 0.6,
+        // of the low-AWR force branch: fraction re-aimed at the checkdown/shortest outlet (safe completion);
+        // the remainder (1 - SACK - SHORT) is a forced throw into coverage (can be intercepted)
+        COVSACK_COVERED_SEP: 0.46,
+        // "the field is covered": the most-open receiver's separation is below this. The sim's
+        // separations sit higher than the qbRead minSep (0.28), which literally never collapses,
+        // so this tunable defines the covered-under-pressure trigger instead.
+        COVSACK_SCRAMBLE_MULT: 0.8,
+        // dual-threat escape: a mobile QB flushed onto a covered field takes off rather than
+        // eating the coverage sack. Escape prob = qbScrambleChance(qb) * this (a second,
+        // covered-conditioned scramble look). 0 disables the escape; mobility-scaled, so a
+        // statue almost never uses it.
         QB_RUSH_LEAN: 12,
         // QB-Rush: target SPD/AGI lean above passing baseline
         QB_RUSH_LEAN_SD: 7,
@@ -12766,6 +12787,8 @@ var _CFB = (() => {
   function exportString(state2) {
     const snapshot = JSON.parse(JSON.stringify(state2, saveDietReplacer));
     dietSnapshot(snapshot);
+    if (snapshot.pendingHalftime) delete snapshot.pendingHalftime;
+    if (snapshot.ui && snapshot.ui.pendingKickoff) delete snapshot.ui.pendingKickoff;
     snapshot._saveVersion = SAVE_VERSION;
     return JSON.stringify({ version: "1.0", timestamp: Date.now(), state: snapshot });
   }
@@ -12842,6 +12865,10 @@ var _CFB = (() => {
       // defense is scheme-committed to taking away. Weekly game-planning
       // outranks the base dial — this is a set-it-on-Tuesday call.
       optionKey: (_y = (_x = (_w = weeklyPlan == null ? void 0 : weeklyPlan.optionKey) != null ? _w : cell.optionKey) != null ? _x : gameplan.optionKey) != null ? _y : "balanced",
+      // P1 controls (Aug 2026): the robber call and the zone teaching style,
+      // cell-overridable like every coverage dial. Defaults = today's game.
+      robberCall: cell.robberCall != null ? cell.robberCall : gameplan.robberCall != null ? gameplan.robberCall : "auto",
+      zoneStyle: cell.zoneStyle != null ? cell.zoneStyle : gameplan.zoneStyle != null ? gameplan.zoneStyle : "balanced",
       // Edge discipline (controls pass): contain sets the edge vs jets/screens/
       // sweeps at the cost of a hotter pocket; crash pins its ears back.
       edgePlay: (_B = (_A = (_z = weeklyPlan == null ? void 0 : weeklyPlan.edgePlay) != null ? _z : cell.edgePlay) != null ? _A : gameplan.edgePlay) != null ? _B : "balanced",
@@ -14398,7 +14425,7 @@ var _CFB = (() => {
     }
   }
   function applyAIWeeklySpend(schools, recruits, playerBoard, playerSchoolId, day) {
-    const weeksLeft = Math.max(1, 19 - day + 1);
+    const weeksLeft = Math.max(1, C.RECRUITING_LOCK_DAY - day + 1);
     const recruitById = new Map(recruits.map((r) => [r.id, r]));
     const playerEntryByRecruit = new Map((playerBoard || []).map((e) => [e.recruitId, e]));
     for (const school of schools || []) {
@@ -14410,7 +14437,7 @@ var _CFB = (() => {
       const openSlots = Math.max(0, ai.slots - (ai.filled || 0));
       const timePressure = Math.min(1, (C.AI_ENDGAME_WEEKS - weeksLeft + 1) / C.AI_ENDGAME_WEEKS);
       const urgency = openSlots > 0 ? Math.max(0, timePressure) : 0;
-      const aggroWallet = C.AI_AGGRO_WALLET_MIN + (aggro - C.AI_AGGRO_WALLET_MIN) * 1;
+      const aggroWallet = Math.max(C.AI_AGGRO_WALLET_MIN, aggro);
       const pacedWallet = coach.budget / weeksLeft * C.AI_SPEND_AGGRO * aggroWallet * _recDiffMult;
       const wallet = Math.min(coach.budget, pacedWallet + (coach.budget - pacedWallet) * urgency * C.AI_ENDGAME_SPEND);
       if (wallet < 1) continue;
@@ -18020,6 +18047,12 @@ var _CFB = (() => {
       // and the punt rush follow the coach's aggression, sub philosophy leans
       // MATCH when the DB room is deep.
       pressLevel: cbStr > 52 && agg > 0.55 ? "press" : agg < 0.3 ? "off" : "balanced",
+      // P1 controls (Aug 2026): the safety's leash follows ball-hawk talent, the
+      // zone teaching follows how smart the back seven actually is, and a weak
+      // line buys the edge some chip help. Mild rolls — most staffs stay auto.
+      robberCall: sStr > 54 && agg > 0.5 && Math.random() < 0.25 ? "rob" : agg < 0.28 && Math.random() < 0.2 ? "overtop" : "auto",
+      zoneStyle: sStr > 53 && cbStr > 51 ? Math.random() < 0.35 ? "match" : "balanced" : sStr < 46 && Math.random() < 0.25 ? "spot" : "balanced",
+      chipHelp: olStr < 46 && Math.random() < 0.45 ? "chip" : "auto",
       tackleStyle: agg > 0.65 ? "strip" : agg < 0.35 ? "wrap" : "balanced",
       subPhilosophy: cbStr + sStr > lbStr * 2 + 4 ? "match" : Math.random() < 0.2 ? "base" : "auto",
       puntDef: agg > 0.7 ? "block" : agg < 0.3 ? "safe" : "balanced",
@@ -18095,6 +18128,10 @@ var _CFB = (() => {
     if (shift !== 0) shift += randInt3(-2, 2);
     wp.runCommitShift = clamp2(Math.round(shift * IQ.mult), -18, 18);
     const agg = (_f = (_e = (_d = school.coach) == null ? void 0 : _d.personality) == null ? void 0 : _e.aggression) != null ? _f : 0.5;
+    {
+      const _pGap = ((opponent == null ? void 0 : opponent.prestige) || 1) - ((school == null ? void 0 : school.prestige) || 1);
+      school.gameplan.surpriseOnside = _pGap >= 2 && agg > 0.62 && Math.random() < 0.15 ? "arm" : "never";
+    }
     if (lean >= 0.65 && agg > 0.6) wp.blitzShift = Math.round(8 * IQ.mult);
     const oppOptShare = (((_g = opponent == null ? void 0 : opponent.gameplan) == null ? void 0 : _g.offFormations) || []).filter((f) => f.id === "Wishbone" || f.id === "Flexbone").reduce((s, f) => s + (f.weight || 0), 0);
     if (oppOptShare >= 25) {
@@ -19221,14 +19258,17 @@ var _CFB = (() => {
       // 5-tech DEs, NT, edge OLBs, 2 ILB
       "Nickel": { DE: 2, DT: 2, OLB: 1, LB: 1, CB: 3, S: 2 },
       "Dime": { DE: 2, DT: 2, OLB: 0, LB: 1, CB: 3, S: 3 },
-      "46/Bear": { DE: 2, DT: 2, OLB: 2, LB: 1, CB: 2, S: 1 }
+      "46/Bear": { DE: 2, DT: 2, OLB: 2, LB: 1, CB: 2, S: 1 },
+      // Five-man wall + two inside backers (matches FRONT_ROLES["5-2"] / DEF_FRONT_WEIGHTS 5-2)
+      "5-2": { DE: 2, DT: 3, OLB: 0, LB: 2, CB: 2, S: 2 }
     };
     const RUSH_SLOTS = {
       "4-3": ["DE", "DT"],
       "3-4": ["DE", "DT", "OLB"],
       "Nickel": ["DE", "DT"],
       "Dime": ["DE", "DT"],
-      "46/Bear": ["DE", "DT"]
+      "46/Bear": ["DE", "DT"],
+      "5-2": ["DE", "DT"]
     };
     const counts = FRONT_COUNTS[frontId] || FRONT_COUNTS["4-3"];
     const used = /* @__PURE__ */ new Set();
@@ -19830,7 +19870,7 @@ var _CFB = (() => {
         ch: chasers.map((c) => [+c.x.toFixed(1), +c.y.toFixed(1), c.burned > 0 ? "B" : c.grp])
       });
       if (Math.abs(car.x) > 12.5) break;
-      if (!clearedDeep && car.y > 6 && (t * 10 & 1) === 0 && !chasers.some((c) => c.burned <= 0 && c.y > car.y - 1 && (c.x - car.x) * (c.x - car.x) + (c.y - car.y) * (c.y - car.y) < 64)) clearedDeep = true;
+      if (!clearedDeep && car.y > 6 && (Math.round(t * 10) & 1) === 0 && !chasers.some((c) => c.burned <= 0 && c.y > car.y - 1 && (c.x - car.x) * (c.x - car.x) + (c.y - car.y) * (c.y - car.y) < 64)) clearedDeep = true;
       if (cavalry === "done" && car.y > 4 && chasers.every((c) => c.burned > 0 || c.y < car.y - 2.5 && c.top < car.top + 0.2)) {
         clearedDeep = true;
         car.y = Math.min(MAX_Y2, car.y + 22 + Math.random() * 26);
@@ -20457,7 +20497,7 @@ var _CFB = (() => {
         const gx = car.x - d.x, gy = car.y - d.y;
         const gap0 = Math.hypot(gx, gy) || 1e-6;
         const rawClose = -(((car.vx - d.vx) * gx + (car.vy - d.vy) * gy) / gap0);
-        const behind = gy < -0.5;
+        const behind = gy > 0.5;
         const closing = behind ? Math.max(-3, rawClose) : Math.max(2, rawClose);
         const lead = Math.min(0.6, gap0 / Math.max(0.5, closing));
         if (d.backstop && gap0 > 3.5) driveTo(d, car.x + car.vx * 0.15, d.y - 1.2, TICK);
@@ -20497,7 +20537,7 @@ var _CFB = (() => {
     const yacYds = Math.max(0, Math.min(MAX_Y, Math.round(car.y)));
     return {
       yacYds,
-      tacklerId: (_i = (_h = (_g = tackler == null ? void 0 : tackler.ref) == null ? void 0 : _g.id) != null ? _h : coveringDef == null ? void 0 : coveringDef.id) != null ? _i : null,
+      tacklerId: (_h = (_g = tackler == null ? void 0 : tackler.ref) == null ? void 0 : _g.id) != null ? _h : null,
       assistId: (_k = (_j = assist == null ? void 0 : assist.ref) == null ? void 0 : _j.id) != null ? _k : null
     };
   }
@@ -20658,6 +20698,8 @@ var _CFB = (() => {
     if (o.covStyle) defEff.covStyle = o.covStyle;
     if (o.edgePlay) defEff.edgePlay = o.edgePlay;
     if (o.pressureIdentity) defEff.pressureIdentity = o.pressureIdentity === "auto" ? null : o.pressureIdentity;
+    if (o.robberCall) defEff.robberCall = o.robberCall;
+    if (o.zoneStyle) defEff.zoneStyle = o.zoneStyle;
     if (o.aggression) {
       defEff.defAggression = o.aggression;
       defEff.blitzPct = clamp2(((_a = C.AGGRESSION.rate[o.aggression]) != null ? _a : 20) + ((_c = (_b = defSchool == null ? void 0 : defSchool.weeklyPlan) == null ? void 0 : _b.blitzShift) != null ? _c : 0), 0, 75);
@@ -20811,9 +20853,10 @@ var _CFB = (() => {
     if (scheme && scheme.chip && penetrators.length > 0 && !globalThis.__noChip) {
       const chipper = scheme.chip;
       const edgePens = penetrators.filter((p) => speedRushIds.has(p.id));
-      const target = (edgePens.length > 0 ? edgePens : penetrators)[0];
+      const _pool = edgePens.length > 0 ? edgePens : penetrators;
+      const target = scheme.chipCalled ? _pool.slice().sort((a2, b2) => (b2.compositeRating || 0) - (a2.compositeRating || 0))[0] : _pool[0];
       if (target) {
-        const bump = clamp2(C.CHIP_BASE + ((((_a = chipper.STR) != null ? _a : 50) + (chipper.AWR != null ? chipper.AWR : 50)) / 2 - 50) * C.CHIP_SKILL - (target.attributes.PWR - 50) * C.CHIP_VS_PWR, 0, C.CHIP_CAP);
+        const bump = clamp2((C.CHIP_BASE + ((((_a = chipper.STR) != null ? _a : 50) + (chipper.AWR != null ? chipper.AWR : 50)) / 2 - 50) * C.CHIP_SKILL - (target.attributes.PWR - 50) * C.CHIP_VS_PWR) * (scheme.chipCalled ? 1.35 : 1), 0, C.CHIP_CAP);
         if (Math.random() < bump) {
           const idx = penetrators.indexOf(target);
           if (idx >= 0) penetrators.splice(idx, 1);
@@ -20984,7 +21027,8 @@ var _CFB = (() => {
     const minSep = 0.28;
     const pool = pressureLevel === 1 ? sorted.slice(0, 2) : sorted;
     const eligible = pool.filter((t) => t.separation > minSep);
-    if (eligible.length === 0) eligible.push(sorted[0]);
+    const readCollapsed = eligible.length === 0;
+    if (readCollapsed) eligible.push(sorted[0]);
     const giBail = clamp2((qb.attributes.AWR - 55) / 50 + motionReadEdge, 0.1, 0.92);
     const shareValsN = eligible.map((t) => {
       var _a;
@@ -21019,6 +21063,8 @@ var _CFB = (() => {
       }
     }
     pick2._firstRead = pick2 === sorted[0];
+    pick2._readCollapsed = readCollapsed;
+    pick2._bestSep = sorted[0].separation;
     return pick2;
   }
   function catchResolution(sep, qb, defender, passDepth, hurried, receiver, bracketed = false, forced = false, helper = null, passKey = 0, robber = false) {
@@ -21330,12 +21376,26 @@ var _CFB = (() => {
       } else if (i < 2 && helpBoost > 0) {
         sep = clamp2(sep - helpBoost, 0, 1);
       }
+      let busted = false;
+      if (effType === "zone" && (coverEntry == null ? void 0 : coverEntry.player)) {
+        const _zs = (_passCtx == null ? void 0 : _passCtx.zoneStyle) || "balanced";
+        if (_zs === "spot" && receivers[i].passDepth === "short") {
+          sep = clamp2(sep - 0.02, 0, 1);
+        } else if (_zs === "match") {
+          const _dIQ = (coverEntry.player.attributes.AWR != null ? coverEntry.player.attributes.AWR : 50) * 0.7 + (coverEntry.player.attributes.TEC != null ? coverEntry.player.attributes.TEC : 50) * 0.3;
+          if (_dIQ < 50 && Math.random() < (50 - _dIQ) * 8e-3) {
+            sep = clamp2(sep + 0.22, 0, 1);
+            busted = true;
+          }
+        }
+      }
       assigned.push({
         receiverId,
         receiver,
         defender: (_g = coverEntry == null ? void 0 : coverEntry.player) != null ? _g : null,
         coverageType: effType,
         separation: sep,
+        busted,
         bracketed,
         passDepth: receivers[i].passDepth,
         // Fix B/D: the individuated route's shape rides along. A medium "sharp"
@@ -21360,10 +21420,11 @@ var _CFB = (() => {
         const grp = byLandmark[key];
         if (grp.length < 3) continue;
         const overload = grp.length - 1;
+        const _zsV = (_passCtx == null ? void 0 : _passCtx.zoneStyle) === "match" ? 0.55 : (_passCtx == null ? void 0 : _passCtx.zoneStyle) === "spot" ? 1.45 : 1;
         for (const a of grp) {
           const dAwr = a.defender.attributes.AWR != null ? a.defender.attributes.AWR : 50;
           const awrSqueeze = Math.max(0.25, 1 - Math.max(0, dAwr - 50) * 0.013);
-          const voidGain = Math.min(0.14, overload * 0.05) * awrSqueeze;
+          const voidGain = Math.min(0.14, overload * 0.05) * awrSqueeze * _zsV;
           a.separation = clamp2(a.separation + voidGain, 0, 1);
           a.voided = true;
         }
@@ -21401,6 +21462,9 @@ var _CFB = (() => {
       covStyle: (_c = (_b = defPlan == null ? void 0 : defPlan.covStyleEff) != null ? _b : defPlan == null ? void 0 : defPlan.covStyle) != null ? _c : "balanced",
       pressLevel: (_e = (_d = defPlan == null ? void 0 : defPlan.pressLevelEff) != null ? _d : defPlan == null ? void 0 : defPlan.pressLevel) != null ? _e : "balanced",
       qbAggr: (_f = offPlan == null ? void 0 : offPlan.qbAggr) != null ? _f : 50,
+      // P1-3 (zone teaching style): spot-drop / balanced / match — threads into
+      // the coverage duel's void + bust mechanics. Balanced = today exactly.
+      zoneStyle: (defPlan == null ? void 0 : defPlan.zoneStyleEff) || (defPlan == null ? void 0 : defPlan.zoneStyle) || "balanced",
       dnaAir: (offPlan == null ? void 0 : offPlan._dnaAir) || 0,
       dnaBallSec: (offPlan == null ? void 0 : offPlan._dnaBallSec) || 0,
       dnaBallHawk: (defPlan == null ? void 0 : defPlan._dnaBallHawk) || 0
@@ -21605,8 +21669,9 @@ var _CFB = (() => {
     })();
     const protFactor = protectionFactor({ protId, identity: result.blitzFired ? result.pressCall || null : null, playType, blitzFired: result.blitzFired === true, centerAwr: _cAwr });
     const chipAttrs = rbReleased && (protId === "halfSlide" || protId === "bob") && rbPlayers.length > 0 ? rbPlayers[0].attributes : null;
+    const chipCalled = (offPlan == null ? void 0 : offPlan.chipHelp) === "chip" && !!chipAttrs;
     const sigAdj = result.blitzFired ? result.sigPress ? C.PRESS_SIG_BONUS : -C.PRESS_SIG_DOCK : 0;
-    const rushResult = resolvePassRush(passRushers, blockers, blitzPct, defContextBoost, clamp2(((_p = defPlan.blitzDesign) != null ? _p : 50) + fzBonus + sigAdj, 0, 100), defPlan._dnaPressure || 0, ((offPlan == null ? void 0 : offPlan._h2Protect) ? 1 - offPlan._h2Protect.eff : 1) * edgeRushMult * protFactor, paBite, Math.max(0, -(defPlan.runCommitEff || 0)), { olAwr: _cAwr, protId, chip: chipAttrs });
+    const rushResult = resolvePassRush(passRushers, blockers, blitzPct, defContextBoost, clamp2(((_p = defPlan.blitzDesign) != null ? _p : 50) + fzBonus + sigAdj, 0, 100), defPlan._dnaPressure || 0, ((offPlan == null ? void 0 : offPlan._h2Protect) ? 1 - offPlan._h2Protect.eff : 1) * edgeRushMult * protFactor, paBite, Math.max(0, -(defPlan.runCommitEff || 0)), { olAwr: _cAwr, protId, chip: chipAttrs, chipCalled });
     if (!isScreen && !rushResult.sacked) {
       const depthMult = playType === "pass_short" ? C.BAT_SHORT_MULT : playType === "pass_deep" ? C.BAT_DEEP_MULT : 1;
       let batter = null;
@@ -21635,8 +21700,8 @@ var _CFB = (() => {
           const picker2 = pool[Math.floor(Math.random() * pool.length)];
           if (picker2) {
             result.turnover = true;
-            result.turnoverType = "INT";
-            result.intById = picker2.id;
+            result.turnoverType = "interception";
+            result.intPickerId = picker2.id;
           }
         }
         return result;
@@ -21742,8 +21807,8 @@ var _CFB = (() => {
         result.passDepth = "deep";
         if (cover && cbScore > fadeFit(target) + 12 && Math.random() < 0.06) {
           result.turnover = true;
-          result.turnoverType = "INT";
-          result.intById = cover.id;
+          result.turnoverType = "interception";
+          result.intPickerId = cover.id;
         } else if (cover) {
           result.pbuId = cover.id;
         }
@@ -21880,7 +21945,7 @@ var _CFB = (() => {
     let hurried = rushResult.hurried;
     if (rushResult.hurried && ((_E = rushResult.pressureIds) == null ? void 0 : _E.length)) result.pressureIds = rushResult.pressureIds.slice(0, 2);
     result.hurried = hurried;
-    const passDepthKey = playType === "pass_short" ? "short" : playType === "pass_medium" ? "medium" : "deep";
+    let passDepthKey = playType === "pass_short" ? "short" : playType === "pass_medium" ? "medium" : "deep";
     const covStyleLive = (_G = (_F = defPlan == null ? void 0 : defPlan.covStyleEff) != null ? _F : defPlan == null ? void 0 : defPlan.covStyle) != null ? _G : "balanced";
     const isZoneHeavy = covStyleLive === "zone" ? true : covStyleLive === "man" ? false : ["Nickel", "Dime", "3-4"].includes(frontId);
     const DEPTHS = ["short", "medium", "deep"];
@@ -21904,7 +21969,8 @@ var _CFB = (() => {
     }
     if (rbPlayers.length > 0) {
       if (rbReleased) {
-        receiversOnField.push({
+        const _chipBusy = (offPlan == null ? void 0 : offPlan.chipHelp) === "chip" && (protId === "halfSlide" || protId === "bob") && Math.random() < 0.45;
+        if (!_chipBusy) receiversOnField.push({
           receiverId: rbPlayers[0].id,
           receiver: rbPlayers[0],
           passDepth: passDepthKey === "deep" ? "medium" : passDepthKey
@@ -21912,7 +21978,8 @@ var _CFB = (() => {
       } else if (passDepthKey === "short") {
         receiversOnField.push({ receiverId: rbPlayers[0].id, receiver: rbPlayers[0], passDepth: "short" });
       } else {
-        const cdKeep = globalThis.__noCheckdown ? passDepthKey === "medium" ? 0.35 : 0 : clamp2((passDepthKey === "medium" ? 0.32 : 0.16) + (((qb == null ? void 0 : qb.attributes.AWR) != null ? qb.attributes.AWR : 50) - 50) / 100 * 0.4, 0, 0.6);
+        const _cdAggr = 1 + (50 - ((_passCtx == null ? void 0 : _passCtx.qbAggr) != null ? _passCtx.qbAggr : 50)) / 50 * 0.35;
+        const cdKeep = globalThis.__noCheckdown ? passDepthKey === "medium" ? 0.35 : 0 : clamp2(((passDepthKey === "medium" ? 0.32 : 0.16) + (((qb == null ? void 0 : qb.attributes.AWR) != null ? qb.attributes.AWR : 50) - 50) / 100 * 0.4) * _cdAggr, 0, 0.6);
         if (Math.random() < cdKeep) receiversOnField.push({ receiverId: rbPlayers[0].id, receiver: rbPlayers[0], passDepth: "short" });
       }
     }
@@ -22065,6 +22132,7 @@ var _CFB = (() => {
         routeShape: c.routeShape || null,
         routeDbl: c.routeDbl || false,
         voided: c.voided || false,
+        busted: c.busted || false,
         landmark: (_a2 = c.landmark) != null ? _a2 : null,
         // Per-slot share (field assignments) takes priority; else legacy bucket.
         // Fix F: a correct motion read steers the QB to the uncovered man — lift
@@ -22115,9 +22183,76 @@ var _CFB = (() => {
         }
       }
     }
-    const chosen = qbRead(targets, hotThrow ? 0 : pressureLevel, qb, motionReadEdge);
+    let chosen = qbRead(targets, hotThrow ? 0 : pressureLevel, qb, motionReadEdge);
     if (!chosen) {
       return result;
+    }
+    let covSackForce = false;
+    const _covCovered = chosen._bestSep != null ? chosen._bestSep < C.COVSACK_COVERED_SEP : chosen._readCollapsed;
+    if (!globalThis.__noCovSack && qb && hurried && _covCovered && !hotThrow) {
+      const _escSpy = defPlan.spyQB === true;
+      const _escStyle = ((defPlan == null ? void 0 : defPlan.covStyleEff) === "zone" ? 0.85 : (defPlan == null ? void 0 : defPlan.covStyleEff) === "man" ? 1.1 : 1) * ((defPlan == null ? void 0 : defPlan.optionKeyEff) === "qb" ? 0.85 : 1);
+      const _escChance = qbScrambleChance(qb) * C.COVSACK_SCRAMBLE_MULT * _escStyle * (_escSpy ? 0.5 : 1);
+      if (Math.random() < _escChance) {
+        const _escLane = (_escSpy ? 0.2 : 0.32) + Math.random() * 0.2;
+        const _escLbBox = (defPersonnel.LB || []).slice(0, Math.ceil((defPersonnel.LB || []).length / 2));
+        const _escSecond = _escLbBox.map((id) => defRoster.find((p) => p.id === id)).filter(Boolean);
+        const _escDeep = (defPersonnel.DB || []).slice(0, 3).map((id) => defRoster.find((p) => p.id === id)).filter(Boolean);
+        const _escDL = (defPersonnel.DL || []).map((id) => defRoster.find((p) => p.id === id)).filter(Boolean);
+        const _escOut = runOutcome(qb, _escLane, null, _escSecond, _escDeep, contextBoost, _escDL);
+        const _escContact = qbContactResult(qb, _escOut);
+        result.type = "run_scramble";
+        result.yards = _escContact.yards;
+        result.rusherId = qb.id;
+        result.tacklerId = _escOut.tacklerId;
+        result.assistId = _escOut.assistId;
+        result.tflId = _escOut.tflId;
+        result.brokenById = _escOut.brokenById;
+        result.brokenByCarrier = _escOut.brokenById ? qb.id : null;
+        result.breakaway = _escOut.breakaway || false;
+        result.isScramble = true;
+        result.covScramble = true;
+        result.qbSlid = _escContact.slid === true;
+        result.qbInjured = _escContact.qbInjured;
+        result.qbInjuryGames = _escContact.injuryGamesOut;
+        return result;
+      }
+      const _awr = qb.attributes.AWR != null ? qb.attributes.AWR : 50;
+      const _throwAwayP = clamp2(0.5 + (_awr - C.COVSACK_AWR_PIVOT) * C.COVSACK_AWR_SCALE, 0.05, 0.95);
+      if (Math.random() < _throwAwayP) {
+        result.complete = false;
+        result.passDepth = passDepthKey;
+        result.throwAway = true;
+        result.targetId = chosen.receiverId;
+        result.throwerId = (_aa = qb == null ? void 0 : qb.id) != null ? _aa : null;
+        return result;
+      }
+      const _fr = Math.random();
+      if (_fr < C.COVSACK_FORCE_SACK) {
+        result.sack = true;
+        result.coverageSack = true;
+        result.yards = -Math.max(2, Math.round(randNorm(6, 2)));
+        const _csk = rushResult.pressureIds && rushResult.pressureIds[0] || (defPersonnel.DL || [])[0] || (defPersonnel.DE || [])[0] || null;
+        result.sackerId = _csk;
+        result.pressureIds = _csk ? [_csk] : [];
+        result.throwerId = (_aa = qb == null ? void 0 : qb.id) != null ? _aa : null;
+        return result;
+      } else if (_fr < C.COVSACK_FORCE_SACK + C.COVSACK_FORCE_SHORT) {
+        const _rank = (t) => DEPTHS.indexOf(t.passDepth || passDepthKey);
+        const _cd = targets.filter((t) => {
+          var _r2;
+          return ((_r2 = t.receiver) == null ? void 0 : _r2.position) === "RB";
+        }).sort((a, b) => b.separation - a.separation)[0] || targets.slice().sort((a, b) => _rank(a) - _rank(b) || b.separation - a.separation)[0];
+        if (_cd) {
+          chosen = _cd;
+          passDepthKey = "short";
+          result.forcedCheckdown = true;
+        } else {
+          covSackForce = true;
+        }
+      } else {
+        covSackForce = true;
+      }
     }
     if (result.blitzFired) result.hotThrow = hotThrow;
     result.targetId = chosen.receiverId;
@@ -22128,7 +22263,7 @@ var _CFB = (() => {
     const sep = chosen.separation;
     const avgShare = 15;
     const chosenShare = (_$ = chosen.shareWeight) != null ? _$ : avgShare;
-    const forced = chosenShare > avgShare * 1.6 && (chosen.bracketed || chosen.separation < 0.4);
+    const forced = covSackForce && !result.forcedCheckdown || chosenShare > avgShare * 1.6 && (chosen.bracketed || chosen.separation < 0.4);
     const dropProb = clamp2(C.DROP_BASE - receiverObj.attributes.HND * C.DROP_HND_SCALE, 0.015, 0.08);
     let helper = null;
     if (passDepthKey !== "short" && defPersonnel) {
@@ -22146,13 +22281,14 @@ var _CFB = (() => {
     }
     const inRhythm = !hurried && chosen._firstRead && !offPlan._fooled;
     let rhythmSep = inRhythm ? clamp2(sep + (qb.attributes.TEC - 50) * 12e-4, 0, 1) : sep;
+    const robCall = (defPlan == null ? void 0 : defPlan.robberCallEff) || "auto";
     let robber = null;
-    if (!globalThis.__noRobber && (defPlan == null ? void 0 : defPlan.covShellEff) === "two" && chosen.breakIn && helper) {
-      const twoVert = targets.some((t) => t !== chosen && (t.passDepth === "deep" || t.passDepth === "medium" && t.routeShape === "speed"));
+    if (!globalThis.__noRobber && robCall !== "overtop" && (defPlan == null ? void 0 : defPlan.covShellEff) === "two" && chosen.breakIn && helper) {
+      const twoVert = robCall === "rob" || targets.some((t) => t !== chosen && (t.passDepth === "deep" || t.passDepth === "medium" && t.routeShape === "speed"));
       if (twoVert) {
         const rob = helper.attributes.AWR * 0.6 + helper.attributes.SPD * 0.4;
         const lookoff = (qb.attributes.AWR - 50) * 0.5;
-        const robStrength = clamp2((rob - 55 - lookoff) / 100, 0, 0.5);
+        const robStrength = clamp2((rob - 55 - lookoff) / 100 * (robCall === "rob" ? 1.6 : 1), 0, 0.5);
         if (robStrength > 0.02) {
           robber = helper;
           rhythmSep = clamp2(rhythmSep - robStrength * 0.18, 0, 1);
@@ -22160,12 +22296,18 @@ var _CFB = (() => {
         }
       }
     }
+    if ((defPlan == null ? void 0 : defPlan.covShellEff) === "two" && chosen.passDepth === "deep") {
+      if (robCall === "rob") rhythmSep = clamp2(rhythmSep + 0.06, 0, 1);
+      else if (robCall === "overtop") rhythmSep = clamp2(rhythmSep - 0.03, 0, 1);
+    }
     const passKey = Math.max(0, -(defPlan.runCommitEff || 0));
     result.trace = {
       sep: Math.round(rhythmSep * 100) / 100,
+      dep: chosen.passDepth || null,
       shape: chosen.routeShape || null,
       dbl: chosen.routeDbl ? 1 : 0,
       vd: chosen.voided ? 1 : 0,
+      bust: chosen.busted ? 1 : 0,
       ct: chosen.coverageType || null,
       rob: robber ? robber.id : null
     };
@@ -22837,6 +22979,10 @@ var _CFB = (() => {
     if (r < dS + dM) return "pass_medium";
     return "pass_deep";
   }
+  function fgLateStretch(scoreMargin, secsLeft) {
+    const needy = scoreMargin < 0 && scoreMargin >= -3;
+    return needy && secsLeft <= 150 ? C.FG_LATE_STRETCH : needy && secsLeft <= 300 ? Math.round(C.FG_LATE_STRETCH / 2) : 0;
+  }
   function attemptFG(kRoster, depth, kickDistance, dnaSpecialGrade = 0) {
     const kId = (depth["K"] || [])[0];
     const k = kId ? kRoster.find((p) => p.id === kId) : null;
@@ -23084,8 +23230,7 @@ var _CFB = (() => {
         const fourthApproach = ((_a = offSchool == null ? void 0 : offSchool.weeklyPlan) == null ? void 0 : _a.fourthDown) || offPlan.fourthDown || "Moderate";
         const secsLeft = gameState.half >= 2 ? gameState.clock : 9999;
         const scoreMargin = gameState.score.off - gameState.score.def;
-        const _fgTrailNeedy = scoreMargin < 0 && scoreMargin >= -3;
-        const _fgStretch = _fgTrailNeedy && secsLeft <= 150 ? C.FG_LATE_STRETCH : _fgTrailNeedy && secsLeft <= 300 ? Math.round(C.FG_LATE_STRETCH / 2) : 0;
+        const _fgStretch = fgLateStretch(scoreMargin, secsLeft);
         const maxFG = (offPlan.maxFGDist || 42) + _fgStretch + 17;
         const canFG = fgKickDist <= maxFG && fieldPos >= 55;
         let decision;
@@ -23356,6 +23501,7 @@ var _CFB = (() => {
                 covStyle: askEff.covStyle,
                 pressureIdentity: askEff.pressureIdentity,
                 edgePlay: askEff.edgePlay,
+                robberCall: askEff.robberCall,
                 runCommit: askEff.runCommit
               }
             })
@@ -23540,6 +23686,10 @@ var _CFB = (() => {
         // man/balanced/zone
         pressLevelEff: defEff.pressLevel,
         // press/balanced/off cushion
+        robberCallEff: defEff.robberCall,
+        // P1-2: auto / rob / overtop
+        zoneStyleEff: defEff.zoneStyle,
+        // P1-3: spot / balanced / match
         bracketWhoEff: defEff.bracketWho,
         // auto/te1/slot/hot
         // DC Blitz Design (Phase 3): disguise quality. 50 is
@@ -24557,9 +24707,13 @@ var _CFB = (() => {
           const margin = kScore - oScore;
           const secsLeft = half >= 2 ? clock : 9999;
           const wantOnside = margin < 0 && secsLeft <= 180;
-          if (wantOnside) {
+          const _koGP = scoringTeam === "home" ? token.homeGP : token.awayGP;
+          if (!token._surpriseUsed) token._surpriseUsed = { home: false, away: false };
+          const wantSurprise = !wantOnside && (_koGP == null ? void 0 : _koGP.surpriseOnside) === "arm" && !token._surpriseUsed[scoringTeam];
+          if (wantOnside || wantSurprise) {
+            if (wantSurprise) token._surpriseUsed[scoringTeam] = true;
             const _koSchool = scoringTeam === "home" ? homeSchool : awaySchool;
-            const onside = onsideResult(false, ((_koSchool == null ? void 0 : _koSchool._dnaGrades) == null ? void 0 : _koSchool._dnaGrades.specialTeams) || 0);
+            const onside = onsideResult(wantSurprise, ((_koSchool == null ? void 0 : _koSchool._dnaGrades) == null ? void 0 : _koSchool._dnaGrades.specialTeams) || 0);
             pendingKickoff = [{
               type: "kickoff",
               onside: true,
@@ -24573,11 +24727,11 @@ var _CFB = (() => {
             if (onside.recovered) {
               possession = scoringTeam;
               fieldPos = onside.fieldPos;
-              log.push(`ONSIDE KICK RECOVERED \u2014 ${(scoringTeam === "home" ? homeSchool : awaySchool).name} keeps it!`);
+              log.push(`${wantSurprise ? "SURPRISE ONSIDE KICK RECOVERED" : "ONSIDE KICK RECOVERED"} \u2014 ${(scoringTeam === "home" ? homeSchool : awaySchool).name} keeps it!`);
             } else {
               possession = scoringTeam === "home" ? "away" : "home";
               fieldPos = onside.fieldPos;
-              log.push(`Onside kick failed \u2014 ${(possession === "home" ? homeSchool : awaySchool).name} recovers`);
+              log.push(`${wantSurprise ? "Surprise onside kick fails" : "Onside kick failed"} \u2014 ${(possession === "home" ? homeSchool : awaySchool).name} recovers`);
             }
           } else {
             const receivingTeam = scoringTeam === "home" ? "away" : "home";
@@ -26541,7 +26695,7 @@ var _CFB = (() => {
         logAdds.push({ name: `${((_c = r.name) == null ? void 0 : _c.first) || ""} ${((_d = r.name) == null ? void 0 : _d.last) || ""}`.trim(), pos });
       }
     }
-    const remainingDays = Math.max(1, 19 - day + 1);
+    const remainingDays = Math.max(1, C.RECRUITING_LOCK_DAY - day + 1);
     const perDay = (coach.budget || 0) / remainingDays;
     const contactFrac = aggr === "aggressive" ? 0.7 : aggr === "conservative" ? 0.45 : 0.58;
     const dailyCap = perDay * 0.45;
@@ -30454,6 +30608,17 @@ var _CFB = (() => {
           </div>
 
           <div class="gp-row">
+            <label class="gp-label">Surprise Onside <span class="gp-hint">(steal a possession)</span></label>
+            <div class="gp-options">
+              ${[["never", "Never"], ["arm", "Armed \u2014 once per game"]].map(([val, lbl]) => `
+                <button class="gp-option gp-option-sm${(gp.surpriseOnside || "never") === val ? " active" : ""}"
+                        data-gp-set="surpriseOnside" data-gp-val="${val}">${lbl}</button>
+              `).join("")}
+            </div>
+            <div class="gp-tip tip-info">\u25B8 ARMED springs one onside kick per game on a kickoff nobody's set for \u2014 no hands team on the field, so it comes back at a real rate instead of desperation odds. The price is the field you give up when it doesn't, and once it's on film the surprise is spent \u2014 the dial stays armed week to week, but each game only gets the one. Desperation-time onsides still happen on their own.</div>
+          </div>
+
+          <div class="gp-row">
             <label class="gp-label">PAT Approach <span class="gp-hint">(after touchdowns)</span></label>
             <div class="gp-options">
               ${[["kick", "Kick It"], ["chart", "By the Chart"], ["aggressive", "Aggressive"]].map(([val, lbl]) => `
@@ -31134,6 +31299,17 @@ var _CFB = (() => {
           </div>` : ""}
 
           <div class="gp-row">
+            <label class="gp-label">Chip Help <span class="gp-hint">(the back bumps the edge)</span></label>
+            <div class="gp-options">
+              ${[["auto", "Auto"], ["chip", "Chip the edge"]].map(([val, lbl]) => `
+                <button class="gp-option gp-option-sm${(gp.chipHelp || "auto") === val ? " active" : ""}"
+                        data-gp-set="chipHelp" data-gp-val="${val}">${lbl}</button>
+              `).join("")}
+            </div>
+            <div class="gp-tip tip-info">\u25B8 CHIP THE EDGE designs the bump: on the middle protections your releasing back hunts their best rusher and lands the chip more often. The bill: a back busy chipping is a late, rare checkdown \u2014 your outlet thins exactly when the heat is on. Auto keeps today's bump-on-the-way-out.</div>
+          </div>
+
+          <div class="gp-row">
             <label class="gp-label">Protection Emphasis <span class="gp-hint">(routes vs blockers)</span></label>
             <div class="gp-slider-wrap">
               <span class="gp-slider-lo">Max Routes</span>
@@ -31513,6 +31689,28 @@ var _CFB = (() => {
           ${defSubTab !== "coverage" ? "" : `
           <details class="gp-section" open>
           <summary class="gp-section-hdr">COVERAGE <span class="gp-section-sub">shells &amp; eyes</span></summary>
+
+          <div class="gp-row">
+            <label class="gp-label">Robber Call <span class="gp-hint">(the two-high safety's leash)</span></label>
+            <div class="gp-options">
+              ${[["auto", "Auto"], ["rob", "Rob the middle"], ["overtop", "Stay over top"]].map(([val, lbl]) => `
+                <button class="gp-option gp-option-sm${(gp.robberCall || "auto") === val ? " active" : ""}"
+                        data-gp-set="robberCall" data-gp-val="${val}">${lbl}</button>
+              `).join("")}
+            </div>
+            <div class="gp-tip tip-info">\u25B8 Two-high shells only. ROB THE MIDDLE turns the safety's read loose \u2014 he undercuts the in-breakers harder and jumps more throws \u2014 but a helper cheating downhill isn't capping the deep shot, and the post over his head knows it. STAY OVER TOP glues the lid on: no robber, ever, and a little less grass deep. AUTO lets his eyes make the call. Also callable per-snap from the defensive headset.</div>
+          </div>
+
+          <div class="gp-row">
+            <label class="gp-label">Zone Teaching <span class="gp-hint">(spot-drop vs match)</span></label>
+            <div class="gp-options">
+              ${[["spot", "Spot-drop"], ["balanced", "Balanced"], ["match", "Match"]].map(([val, lbl]) => `
+                <button class="gp-option gp-option-sm${(gp.zoneStyle || "balanced") === val ? " active" : ""}"
+                        data-gp-set="zoneStyle" data-gp-val="${val}">${lbl}</button>
+              `).join("")}
+            </div>
+            <div class="gp-tip tip-info">\u25B8 How your zones are coached. MATCH travels with routes \u2014 floods and high-lows find far less grass \u2014 but it asks for smart, technical defenders: a man without the head for it loses his route mid-pattern and the bust is a chunk play. SPOT-DROP sits in the throwing lanes \u2014 a touch stingier underneath and it never busts \u2014 but a flood outnumbers grass every time. BALANCED splits the difference; it's the pre-dial game.</div>
+          </div>
 
           <div class="gp-row">
             <label class="gp-label">Coverage Scheme</label>
@@ -34661,7 +34859,7 @@ var _CFB = (() => {
       if (!who) return null;
       return p.turnover ? `${who} bats it at the line \u2014 and it's picked off.` : `${who} gets a hand up and swats it down at the line.`;
     }
-    if (p.turnover && p.turnoverType === "INT") {
+    if (p.turnover && p.turnoverType === "interception") {
       const pick2 = n(p.intPickerId || p.intById), thrower = n(p.throwerId);
       if (!pick2) return null;
       return thrower ? `${pick2} reads ${thrower} and takes it away.` : `${pick2} picks it off.`;
@@ -45636,7 +45834,7 @@ ${renderAutoRecruitLog()}`;
       const side = seedId ? seedId.split("").reduce((s2, c) => s2 + c.charCodeAt(0), 0) % 2 ? 76 : 24 : 50;
       const screen = !!p.isScreen;
       const _cn = String(p.concept || "");
-      const screenKind = !screen ? null : /Bubble/i.test(_cn) ? "bubble" : /Tunnel/i.test(_cn) ? "tunnel" : /RB Screen/i.test(_cn) ? "rb" : backs.length && !catchers.length ? "rb" : String(p.targetId || "") && backs.some((b) => b.id && String(p.targetId).length) ? "bubble" : "bubble";
+      const screenKind = !screen ? null : /Bubble/i.test(_cn) ? "bubble" : /Tunnel/i.test(_cn) ? "tunnel" : /RB Screen/i.test(_cn) ? "rb" : backs.length && !catchers.length ? "rb" : backs.some((b) => String(b.id) === String(p.targetId)) ? "rb" : "bubble";
       const _slotish = catchers.filter((s) => s.pos === "SLOT");
       const _outside = [...catchers].sort((a, b) => Math.abs(b.bx - 50) - Math.abs(a.bx - 50));
       const _fadeConcept = /Red-Zone Fade/i.test(_cn);
@@ -48956,6 +49154,7 @@ ${renderAutoRecruitLog()}`;
     ["covShell", "SHELL", [["single", "Single-high"], ["two", "Two-high"]]],
     ["covStyle", "STYLE", [["man", "Man"], ["zone", "Zone"]]],
     ["edgePlay", "EDGE", [["contain", "Set it"], ["crash", "Crash"]]],
+    ["robberCall", "ROBBER", [["rob", "Rob the middle"], ["overtop", "Stay over top"]]],
     ["pressureIdentity", "HEAT SHAPE", [["fireZone", "Fire Zone"], ["secondLevel", "2nd Level"], ["secondaryHeat", "DB Heat"], ["theHouse", "The House"]]]
   ];
   function defCallPanelHtml() {
@@ -48980,6 +49179,7 @@ ${renderAutoRecruitLog()}`;
       covShell: standing.covShell || "balanced",
       covStyle: standing.covStyle || "balanced",
       edgePlay: standing.edgePlay || "balanced",
+      robberCall: standing.robberCall || "auto",
       pressureIdentity: standing.pressureIdentity || "front's signature"
     };
     const nSel = Object.keys(sel).length;
