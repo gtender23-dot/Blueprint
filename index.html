@@ -6794,7 +6794,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "a293f46e19";
+globalThis.__BUILD__ = "b8c2db1a1b";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -9134,6 +9134,55 @@ var _CFB = (() => {
         // ...and the dock for asking a front to run someone else's blitz
         FZ_DROP_RATE: 0.8,
         // non-3-4 fire zone: odds the shown rusher actually bails
+        // ── PASS 4 (Aug 2026): pressure flavors — call ingredients only ────────────
+        // pressLook ("mug"/"amoeba") and dogGame ("green"/"cross") ride defCalls
+        // payloads through applyDefCall→syncDefEff→pickDefCall. Kill-switch:
+        // globalThis.__noPressFlavors. Every term below is a perturbation on an
+        // existing lever — no new rush engine. Gates: mug/greendog/crossdog/amoeba
+        // probes + pass4_band_ab.
+        PRESS_FLAVOR: {
+          // Double-A mug: fired = interior heat (A-gap dogs harder to pick up, the
+          // center's half-slide points are spent on the mug); bailed = the bluff
+          // bodies sink into the low hole; the show fights the hot read all snap.
+          mugPickupDock: 0.15,
+          mugCawrMute: 0.5,
+          // center AWR pulled this fraction toward 50 on fired mugs
+          mugHotDisg: 0.08,
+          mugDisguise: 0.08,
+          mugBailSqueeze: 0.06,
+          // −sep on the most-open short/med target when the mug bails (half on #2)
+          mugRunIn: 1.03,
+          mugRunOut: 0.97,
+          // Green dog (refit, owner call): man coverage + the back stays in ⇒ his
+          // defender converts, late — the protection never counted him, but a late
+          // dog is picked up a shade less often than a called blitzer... he IS the
+          // free man more often (dock multiplies pickup odds DOWN).
+          dogLatePickup: 0.75,
+          // Cross-dog: the two-backer pick game aimed at the center. CREEPER-shaped
+          // free-runner odds; BOB's man-rules are what the pick attacks, Quick beats
+          // it with the ball out. Failed pick = both crossers absorbed in the wash.
+          crossBase: 0.1,
+          crossDesign: 3e-3,
+          crossAwr: 35e-4,
+          crossCap: 0.3,
+          crossBob: 1.3,
+          crossQuick: 0.55,
+          crossMaxProt: 0.8,
+          crossAbsorb: 0.35,
+          // block-rep context shift (blocker-favoring, ALIGN_EDGE scale) on both
+          // crossers when the center passes the game off — absorbed in the wash
+          crossCheckdown: 0.05,
+          // the wash has no underneath rally: checkdown +sep vs a run cross
+          // Amoeba: nobody's hand down. Pure presentation — disguise way up, the
+          // QB's box read and hot ID degraded; the price is a standing front (run
+          // softness, slower fire-off on unfired snaps).
+          amoebaDisguise: 0.2,
+          amoebaDisguiseCap: 0.6,
+          amoebaSeeIt: 0.5,
+          amoebaHot: 0.12,
+          amoebaUnfiredPocket: 0.94,
+          amoebaRunSoft: 0.95
+        },
         // Protection identity (§16.2) — the offense's mirror. halfSlide = the modern
         // default = the pre-W4 engine. Factors multiply protectMult (sack/pressure
         // odds): >1 = the pocket is worse, <1 = better. tilt applies only on FIRED
@@ -18946,10 +18995,20 @@ var _CFB = (() => {
       else if (sStr >= 52) defCalls[covName].covFamily = "Cover 6";
       defCalls.Victory = { covShell: "two", covStyle: "zone", covFamily: "Prevent", aggression: "bend" };
     }
+    const flav = !globalThis.__noPressFlavors;
+    let psycho = false;
+    if (flav) {
+      if (agg > 0.6) defCalls[heatName].pressLook = "mug";
+      else if (agg > 0.35 && lbStr >= sStr) defCalls[heatName].dogGame = "cross";
+      if (agg > 0.7) {
+        psycho = true;
+        defCalls.Psycho = { pressLook: "amoeba", aggression: "attacking" };
+      }
+    }
     const heatLong = clamp2(30 + Math.round(agg * 40) + randInt3(-5, 5), 15, 75);
     const heatMed = clamp2(15 + Math.round(agg * 30) + randInt3(-5, 5), 10, 55);
     return { defCalls, callSheet: __spreadValues2({
-      third_long: { any: [[heatName, heatLong], [covName, 100 - heatLong]] },
+      third_long: { any: psycho ? [[heatName, heatLong], ["Psycho", 20], [covName, Math.max(10, 100 - heatLong - 20)]] : [[heatName, heatLong], [covName, 100 - heatLong]] },
       third_medium: { any: [[heatName, heatMed], [covName, 100 - heatMed]] }
     }, fams ? { four_min_lead: { any: [["Victory", 60], [covName, 40]] } } : {}) };
   }
@@ -20586,6 +20645,7 @@ var _CFB = (() => {
       let shed;
       if (rep.blitzer) {
         shed = D.SHED_FREE - D.SHED_FREE * designPull + randNorm2(0, D.SHED_JIT);
+        if (rep.mug) shed -= D.MUG_SHED;
       } else {
         const margin = rep.b ? rPow(a) - bPow(rep.b) : 12;
         shed = D.SHED_BASE - margin * D.SHED_SLOPE - (rep.power ? D.POWER_FLUSH : 0) + randNorm2(0, D.SHED_JIT);
@@ -20644,8 +20704,12 @@ var _CFB = (() => {
         // ...but the fake freezes the read: −hurry (frozen ×(1−pa·0.28))
         KEY_HURRY: 0.011,
         // pass-key ears-pinned: +hurry reach (frozen ×(1+passKey·0.012))
-        DESIGN_FREE: 0.45
+        DESIGN_FREE: 0.45,
         // blitz design pulls the free rusher's shed earlier (schemed pressure)
+        MUG_SHED: 0.5
+        // PASS 4: shed discount for a FREE mugged A-gap dog — he lined up in the
+        // gap at the LOS; the pickup dock upstream makes more of them free, this
+        // makes the free one dangerous. Gated by mug snaps only (rep.mug).
       };
       clamp3 = (x, lo, hi) => x < lo ? lo : x > hi ? hi : x;
       rPow = (a) => {
@@ -21289,6 +21353,10 @@ var _CFB = (() => {
       if (o.rotation) defEff.rotation = o.rotation;
       if (o.rush3) defEff.rush3 = true;
     }
+    if (!globalThis.__noPressFlavors) {
+      if (o.pressLook === "mug" || o.pressLook === "amoeba") defEff.pressLook = o.pressLook;
+      if (o.dogGame === "green" || o.dogGame === "cross") defEff.dogGame = o.dogGame;
+    }
   }
   function syncDefEff(defPlanEff, defEff) {
     defPlanEff.blitzPct = defEff.blitzPct;
@@ -21307,6 +21375,8 @@ var _CFB = (() => {
     defPlanEff.covFamilyEff = defEff.covFamily;
     defPlanEff.rotationEff = defEff.rotation;
     defPlanEff.rush3Eff = defEff.rush3;
+    defPlanEff.pressLookEff = defEff.pressLook;
+    defPlanEff.dogGameEff = defEff.dogGame;
   }
   function pickDefCall(gp, sitKey, persClass) {
     if (globalThis.__noDefCalls) return null;
@@ -21340,7 +21410,10 @@ var _CFB = (() => {
       // PASS 3 ingredients (sparse — absent on every pre-Pass-3 call).
       covFamily: c.covFamily || null,
       rotation: c.rotation || null,
-      rush3: c.rush3 ? true : null
+      rush3: c.rush3 ? true : null,
+      // PASS 4 ingredients (sparse — absent on every pre-Pass-4 call).
+      pressLook: c.pressLook || null,
+      dogGame: c.dogGame || null
     } };
   }
   function formationCheckClass(fid) {
@@ -21409,16 +21482,24 @@ var _CFB = (() => {
     if (!rushers.length) return result;
     const availBlockers = [...blockers];
     const reps = [];
-    for (const { player: rusher, role, blitzer } of rushers) {
+    for (const { player: rusher, role, blitzer, late } of rushers) {
       const edgeAlign = /^(DE|OLB)/.test(role) || role === "LB-Edge";
       const speedRush = edgeAlign && role !== "DE-Power";
       const powerPass = role === "DE-Power";
       if (blitzer) {
         const freeBlockers = availBlockers.length;
-        const pickupProb = freeBlockers > 0 ? Math.min(0.35 + (freeBlockers - 1) * 0.12, 0.68) : 0;
+        let pickupProb = freeBlockers > 0 ? Math.min(0.35 + (freeBlockers - 1) * 0.12, 0.68) : 0;
+        let mugDog = false;
+        if (!globalThis.__noPressFlavors) {
+          if ((scheme == null ? void 0 : scheme.mug) && /^(LB|OLB)/.test(role || "")) {
+            mugDog = true;
+            pickupProb = Math.max(0, pickupProb - C.PRESS_FLAVOR.mugPickupDock);
+          }
+          if (late) pickupProb *= C.PRESS_FLAVOR.dogLatePickup;
+        }
         const pickedUp = Math.random() < pickupProb;
         const blocker2 = pickedUp ? availBlockers.splice(availBlockers.length - 1, 1)[0] : null;
-        reps.push({ rusher, blocker: blocker2, isEdge: edgeAlign, speedRush, powerPass, blitzer: !pickedUp });
+        reps.push({ rusher, blocker: blocker2, isEdge: edgeAlign, speedRush, powerPass, blitzer: !pickedUp, mugDog });
         continue;
       }
       const blockerIdx = edgeAlign ? availBlockers.length > 0 ? 0 : -1 : Math.floor(availBlockers.length / 2);
@@ -21427,6 +21508,24 @@ var _CFB = (() => {
         1
       )[0] || null;
       reps.push({ rusher, blocker, isEdge: edgeAlign, speedRush, powerPass, blitzer: false });
+    }
+    if (scheme && scheme.game === "cross" && Array.isArray(scheme.crossIds) && !globalThis.__noPressFlavors) {
+      const crossReps = reps.filter((rp) => rp.blitzer && scheme.crossIds.includes(rp.rusher.id));
+      if (crossReps.length >= 2) {
+        const pf = C.PRESS_FLAVOR;
+        const protId2 = scheme.protId || "halfSlide";
+        const redirect2 = protId2 === "bob" ? pf.crossBob : protId2 === "quick" ? pf.crossQuick : protId2 === "maxProtect" ? pf.crossMaxProt : 1;
+        const olAwr2 = scheme.olAwr != null ? scheme.olAwr : 50;
+        const pickP = clamp2((pf.crossBase + (blitzDesign - 50) * pf.crossDesign - (olAwr2 - 50) * pf.crossAwr) * redirect2, 0, pf.crossCap);
+        if (Math.random() < pickP) {
+          const grade = (p) => (p.attributes.SPD + p.attributes.PWR) / 2;
+          const best = crossReps.reduce((a, b) => grade(a.rusher) >= grade(b.rusher) ? a : b);
+          if (best.blocker) best.blocker = null;
+          result.crossFree = true;
+        } else {
+          for (const rp of crossReps) rp.crossDock = pf.crossAbsorb;
+        }
+      }
     }
     if (scheme && !reps.some((rp) => rp.blitzer) && !globalThis.__noAlign) {
       const olAwr2 = scheme.olAwr != null ? scheme.olAwr : 50;
@@ -21479,7 +21578,7 @@ var _CFB = (() => {
         if (blitzer) freeBlitzerIds.add(rusher.id);
         continue;
       }
-      const held = blockRep(blocker, rusher, speedRush, -defContextBoost + (rp.alignEdge || 0), powerPass, true);
+      const held = blockRep(blocker, rusher, speedRush, -defContextBoost + (rp.alignEdge || 0) + (rp.crossDock || 0), powerPass, true);
       if (held) blockerHolds++;
       else {
         penetrators.push(rusher);
@@ -21524,7 +21623,11 @@ var _CFB = (() => {
             power: rp.powerPass,
             pos: rp.rusher.position,
             r: rp.rusher.attributes,
-            b: rp.blocker ? rp.blocker.attributes : null
+            b: rp.blocker ? rp.blocker.attributes : null,
+            // PASS 4: a free MUG dog started the snap standing IN the A-gap —
+            // no distance to make up, the snap count timed (shed discount in
+            // the pocket geometry; SHED_FREE's hot-throw logic still applies).
+            mug: rp.mugDog === true
           })),
           protectMult,
           blitzDesign,
@@ -22187,6 +22290,11 @@ var _CFB = (() => {
       formTell = 1 + (formTell - 1) * _dcRead * _sig;
     }
     const rush3Call = !globalThis.__noCovFamilies && defPlan.rush3Eff === true;
+    const _pf = !globalThis.__noPressFlavors;
+    const _pfC = C.PRESS_FLAVOR;
+    const mugCall = _pf && defPlan.pressLookEff === "mug" && !rush3Call;
+    const amoebaCall = _pf && defPlan.pressLookEff === "amoeba" && !rush3Call;
+    const crossCall = _pf && defPlan.dogGameEff === "cross" && !rush3Call;
     const blitzPct = rush3Call ? 0 : clamp2(pressureCallRate({ stop: aggrStop, lev: defPlan._defLev || "neutral", design: defPlan.blitzDesign, rate: defPlan.blitzPct }) * formTell, 0, C.AGGRESSION.capRate);
     if (Math.random() < blitzPct) {
       result.blitzFired = true;
@@ -22246,12 +22354,31 @@ var _CFB = (() => {
         }
       }
       if (spec.zero) result.zeroBehind = true;
+      if (crossCall) {
+        const _dogF = (r) => r.blitzer && /^(LB|OLB)/.test(r.role || "");
+        let lbDogs = passRushers.filter(_dogF);
+        if (lbDogs.length === 1) {
+          const blitzN = passRushers.filter((r) => r.blitzer).length;
+          if (coverBodies - blitzN > C.AGGRESSION.minCoverBodies) {
+            send(pick2(lbIds, lbGrade));
+            lbDogs = passRushers.filter(_dogF);
+          }
+        }
+        if (lbDogs.length >= 2) {
+          result.crossDog = true;
+          result._crossIds = [lbDogs[0].player.id, lbDogs[1].player.id];
+        }
+      }
     }
     if (result.blitzFired && !passRushers.some((r) => r.blitzer) && droppedIds.length === 0) {
       result.blitzFired = false;
       delete result.pressCall;
       delete result.zeroBehind;
+      delete result.crossDog;
+      delete result._crossIds;
     }
+    if (mugCall) result.mug = result.blitzFired ? "fired" : "bail";
+    if (amoebaCall) result.amoeba = true;
     result.rushN = passRushers.length;
     if (result.blitzFired) result.sigPress = sigMatch;
     if (result.blitzFired && blitzerDbId) result.dbHeat = true;
@@ -22274,7 +22401,26 @@ var _CFB = (() => {
     const rbReleased = rbPlayers.length > 0 && (protId === "maxProtect" ? false : protId === "quick" ? Math.random() < _protC.quickRelease : protId === "bob" ? Math.random() < _protC.bobRelease : _rbPE < 50 && Math.random() < (50 - _rbPE) / 50);
     if (rbPlayers.length > 0 && !rbReleased) blockers.push(rbPlayers[0]);
     result.rbKeptIn = rbPlayers.length > 0 && !rbReleased;
-    if (defPlan.greenDog && rbPlayers.length > 0) {
+    const greenDogOn = _pf && (defPlan.dogGameEff === "green" || defPlan.greenDog === true);
+    if (greenDogOn && rbPlayers.length > 0 && !rbReleased) {
+      const _fam = _conceptCtx == null ? void 0 : _conceptCtx.fam;
+      const manCov = _fam ? _fam === "Cover 1" || _fam === "Cover 0" || _fam === "Cover 2-Man" : defPlan.covStyleEff === "man";
+      if (manCov) {
+        const lbRusher = passRushers.find((r) => !r.blitzer && (r.role === "LB-Thumper" || r.role === "LB-Cover" || r.role === "LB-Hybrid"));
+        if (lbRusher) {
+          lbRusher.blitzer = true;
+          lbRusher.late = true;
+          result.greenDog = true;
+        } else {
+          const lbId = (defPersonnel.LB || [])[0];
+          const p = lbId ? defRoster.find((pl) => pl.id === lbId) : null;
+          if (p && !passRushers.some((r) => r.player.id === p.id)) {
+            passRushers.push({ player: p, role: "LB-Thumper", blitzer: true, late: true });
+            result.greenDog = true;
+          }
+        }
+      }
+    } else if (!_pf && defPlan.greenDog && rbPlayers.length > 0) {
       const rbBlocking = rbPlayers.filter((rb) => rb._gameArch === "RB-Power" || rb._gameArch === "RB-Workhorse" || Math.random() < 0.4).length;
       if (rbBlocking > 0) {
         const lbRusher = passRushers.find((r) => !r.blitzer && (r.role === "LB-Thumper" || r.role === "LB-Cover" || r.role === "LB-Hybrid"));
@@ -22327,11 +22473,14 @@ var _CFB = (() => {
       const cpl = cid ? offRoster.find((p) => p.id === cid) : null;
       return (_a2 = cpl == null ? void 0 : cpl.attributes.AWR) != null ? _a2 : 50;
     })();
-    const protFactor = protectionFactor({ protId, identity: result.blitzFired ? result.pressCall || null : null, playType, blitzFired: result.blitzFired === true, centerAwr: _cAwr });
+    const _cAwrEff = mugCall && result.blitzFired ? 50 + (_cAwr - 50) * _pfC.mugCawrMute : _cAwr;
+    const protFactor = protectionFactor({ protId, identity: result.blitzFired ? result.pressCall || null : null, playType, blitzFired: result.blitzFired === true, centerAwr: _cAwrEff });
     const chipAttrs = rbReleased && (protId === "halfSlide" || protId === "bob") && rbPlayers.length > 0 ? rbPlayers[0].attributes : null;
     const chipCalled = (offPlan == null ? void 0 : offPlan.chipHelp) === "chip" && !!chipAttrs;
     const sigAdj = result.blitzFired ? result.sigPress ? C.PRESS_SIG_BONUS : -C.PRESS_SIG_DOCK : 0;
-    const rushResult = resolvePassRush(passRushers, blockers, blitzPct, defContextBoost, clamp2(((_p = defPlan.blitzDesign) != null ? _p : 50) + fzBonus + sigAdj, 0, 100), defPlan._dnaPressure || 0, ((offPlan == null ? void 0 : offPlan._h2Protect) ? 1 - offPlan._h2Protect.eff : 1) * edgeRushMult * protFactor, paBite, Math.max(0, -(defPlan.runCommitEff || 0)), { olAwr: _cAwr, protId, chip: chipAttrs, chipCalled });
+    const _amoebaPocket = amoebaCall && !result.blitzFired ? _pfC.amoebaUnfiredPocket : 1;
+    const rushResult = resolvePassRush(passRushers, blockers, blitzPct, defContextBoost, clamp2(((_p = defPlan.blitzDesign) != null ? _p : 50) + fzBonus + sigAdj, 0, 100), defPlan._dnaPressure || 0, ((offPlan == null ? void 0 : offPlan._h2Protect) ? 1 - offPlan._h2Protect.eff : 1) * edgeRushMult * protFactor * _amoebaPocket, paBite, Math.max(0, -(defPlan.runCommitEff || 0)), { olAwr: _cAwrEff, protId, chip: chipAttrs, chipCalled, mug: result.mug === "fired", game: result.crossDog ? "cross" : null, crossIds: result._crossIds || null });
+    if (rushResult.crossFree) result.crossFree = true;
     if (!isScreen && !rushResult.sacked) {
       const depthMult = playType === "pass_short" ? C.BAT_SHORT_MULT : playType === "pass_deep" ? C.BAT_DEEP_MULT : 1;
       let batter = null;
@@ -22885,6 +23034,15 @@ var _CFB = (() => {
         if (second) second.separation = clamp2(second.separation + 0.12 * disguise * dnaPressureCov, 0, 1);
       }
     }
+    if (result.mug === "bail" && targets.length > 0) {
+      const low = targets.filter((t) => t.passDepth === "short" || t.passDepth === "medium").sort((a, b) => b.separation - a.separation);
+      if (low[0]) low[0].separation = clamp2(low[0].separation - _pfC.mugBailSqueeze, 0, 1);
+      if (low[1]) low[1].separation = clamp2(low[1].separation - _pfC.mugBailSqueeze / 2, 0, 1);
+    }
+    if (result.crossDog && targets.length > 0) {
+      const shorts = targets.filter((t) => t.passDepth === "short").sort((a, b) => b.separation - a.separation);
+      if (shorts[0]) shorts[0].separation = clamp2(shorts[0].separation + _pfC.crossCheckdown, 0, 1);
+    }
     if ((defPlan == null ? void 0 : defPlan._h2Shadow) && targets.length > 0) {
       for (const t of targets) {
         if (((__ = t.receiver) == null ? void 0 : __.id) === defPlan._h2Shadow.id) t.separation = clamp2(t.separation - defPlan._h2Shadow.eff, 0, 1);
@@ -22894,7 +23052,7 @@ var _CFB = (() => {
     if (result.blitzFired && targets.length > 0 && qb) {
       const _qbHot = ((qb.attributes.AWR || 50) * 0.6 + (qb.attributes.TEC || 50) * 0.4 - 50) / 50;
       const _quick = protId === "quick" ? 0.18 : protId === "bob" ? 0.06 : 0;
-      const _disg = (((defPlan == null ? void 0 : defPlan.blitzDesign) != null ? defPlan.blitzDesign : 50) - 50) / 200;
+      const _disg = (((defPlan == null ? void 0 : defPlan.blitzDesign) != null ? defPlan.blitzDesign : 50) - 50) / 200 + (mugCall ? _pfC.mugHotDisg : amoebaCall ? _pfC.amoebaHot : 0);
       const hotChance = clamp2(0.3 + _qbHot * 0.42 + _quick - _disg, 0.05, 0.85);
       if (Math.random() < hotChance) {
         hotThrow = true;
@@ -24438,6 +24596,7 @@ var _CFB = (() => {
         _dnaPressure: ((_z = defSchool == null ? void 0 : defSchool._dnaGrades) == null ? void 0 : _z.pressure) || 0,
         _dnaBallHawk: ((defSchool == null ? void 0 : defSchool._dnaGrades) == null ? void 0 : defSchool._dnaGrades.ballHawk) || 0
       });
+      syncDefEff(defPlanEff, defEff);
       if (offPlanEff.protIdentityEff === "quick" && offPlanEff.passDepth) {
         const d0 = offPlanEff.passDepth;
         const shift = Math.round((d0.deep || 0) * C.PROT_IDENTITY.quickDeepShift);
@@ -24595,8 +24754,9 @@ var _CFB = (() => {
       };
       const oppMemPre = seenMemory(defCtx);
       let shownFam = covFam, fooled = false;
+      const _pfLook = !globalThis.__noPressFlavors && defEff.pressLook ? defEff.pressLook : null;
       if ((playType.startsWith("pass") || playType.startsWith("run")) && qb0) {
-        const pDisguise = clamp2(0.1 + (((_L = defPlanEff.blitzDesign) != null ? _L : 50) - 50) * 4e-3 + (sAwr0 - 50) * 2e-3 + Math.min(0.1, (oppMemPre.audibles || 0) * 0.012), 0.04, 0.45);
+        const pDisguise = clamp2(0.1 + (((_L = defPlanEff.blitzDesign) != null ? _L : 50) - 50) * 4e-3 + (sAwr0 - 50) * 2e-3 + Math.min(0.1, (oppMemPre.audibles || 0) * 0.012) + (_pfLook === "mug" ? C.PRESS_FLAVOR.mugDisguise : _pfLook === "amoeba" ? C.PRESS_FLAVOR.amoebaDisguise : 0), 0.04, _pfLook === "amoeba" ? C.PRESS_FLAVOR.amoebaDisguiseCap : 0.45);
         if (Math.random() < pDisguise) {
           shownFam = (_M = DISGUISE_SHOW[covFam]) != null ? _M : covFam;
           const craft = ((_N = defPlanEff.blitzDesign) != null ? _N : 50) * 0.5 + sAwr0 * 0.5;
@@ -24609,7 +24769,7 @@ var _CFB = (() => {
       if (qb0 && losFree !== "never" && !familyPinned) {
         const shellSeen = fooled && defEff.covShell !== "balanced" && defEff.covShell != null ? ["Cover 2", "Cover 4", "Cover 2-Man", "Cover 6", "Tampa 2", "Prevent"].includes(shownFam) ? -1 : 1 : defEff.covShell === "single" ? 1 : defEff.covShell === "two" ? -1 : 0;
         const boxScore = shellSeen + (defEff.runCommit || 0) / 12;
-        const seeIt = clamp2((((_Q = qb0.attributes.AWR) != null ? _Q : 50) - 55) * 8e-3 * (losFree === "free" ? 1.5 : 1), 0, 0.25);
+        const seeIt = clamp2((((_Q = qb0.attributes.AWR) != null ? _Q : 50) - 55) * 8e-3 * (losFree === "free" ? 1.5 : 1), 0, 0.25) * (_pfLook === "amoeba" ? C.PRESS_FLAVOR.amoebaSeeIt : 1);
         if ((playType === "run_inside" || playType === "run_outside") && boxScore >= 1 && Math.random() < seeIt) {
           playType = "pass_short";
           killCall = "toPass";
@@ -24691,7 +24851,8 @@ var _CFB = (() => {
       const offUnit = baseOffUnit * (1 + concept.mod) * (fakeSurprise ? 1.1 : 1) * h2Counter * coordIqMod(offSchool, "off", offFormationId) * (2 - coordIqMod(defSchool, "def", defFrontId)) * getMatchupEdge(offFormationId, defFrontId) * getSituationalMod(offFormationId, down, distance, gameState.clock, fieldPos) * shortYardagePower(playType, distance, offPersonnel, offRoster) * (1 + (((_ba = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : _ba.groundPound) || 0) * 8e-3) * (down === 4 ? 1 + (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.riverboat) || 0) * 0.01 : 1) * (offense.isHome ? C.HOME_EDGE : 1 - (1 - (2 - C.HOME_EDGE)) * (1 - (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.roadWarrior) || 0) * 0.08)) * ((_ca = offense.form) != null ? _ca : 1) * (2 - ((_da = defense.form) != null ? _da : 1)) * ((_ea = offense.execMult) != null ? _ea : 1) * (2 - ((_fa = defense.execMult) != null ? _fa : 1)) + ((offPlan == null ? void 0 : offPlan._h2OffLean) ? offPlan._h2OffLean.eff * C.K_CONTEXT : 0);
       const rcDef = defEff.runCommit || 0;
       const rotRunMult = !globalThis.__noCovFamilies && defEff.rotation && (covFam === "Cover 3" || covFam === "C3 Fire Zone") ? defEff.rotation === "sky" ? playType === "run_outside" ? 1.04 : 1 : defEff.rotation === "cloud" ? playType === "run_outside" ? 1.02 : 1 : defEff.rotation === "buzz" ? playType === "run_inside" ? 1.02 : 1 : 1 : 1;
-      const shellRunMult = (playType === "run_inside" || playType === "run_outside" ? defEff.covShell === "single" ? 1.04 : defEff.covShell === "two" ? 0.95 : 1 : 1) * rotRunMult;
+      const flavRunMult = _pfLook && (playType === "run_inside" || playType === "run_outside") ? _pfLook === "mug" ? playType === "run_inside" ? C.PRESS_FLAVOR.mugRunIn : C.PRESS_FLAVOR.mugRunOut : C.PRESS_FLAVOR.amoebaRunSoft : 1;
+      const shellRunMult = (playType === "run_inside" || playType === "run_outside" ? defEff.covShell === "single" ? 1.04 : defEff.covShell === "two" ? 0.95 : 1 : 1) * rotRunMult * flavRunMult;
       const edgeRunMult = defEff.edgePlay === "contain" ? playType === "run_outside" ? 1.04 : playType === "run_inside" ? 0.98 : 1 : defEff.edgePlay === "crash" ? playType === "run_outside" ? 0.96 : playType === "run_inside" ? 1.02 : 1 : 1;
       const oppMem = seenMemory(defCtx);
       _tkStyle = (_ha = (_ga = defEff.tackleStyle) != null ? _ga : defPlan.tackleStyle) != null ? _ha : "balanced";
@@ -34186,7 +34347,13 @@ var _CFB = (() => {
         // bundles Rush 3 by itself (owner call).
         ["covFamily", "Coverage", [["Cover 6", "Cover 6"], ["Tampa 2", "Tampa 2"], ["Cover 2-Man", "2-Man"], ["Prevent", "Prevent"]]],
         ["rotation", "Rotation", [["sky", "Sky"], ["cloud", "Cloud"], ["buzz", "Buzz"]]],
-        ["rush3", "Rush", [["true", "Rush 3 / Drop 8"]]]
+        ["rush3", "Rush", [["true", "Rush 3 / Drop 8"]]],
+        // PASS 4: pressure-flavor ingredients — call-only, never standing dials.
+        // Look = the pre-snap presentation (mug: both A-gaps walked up and shown;
+        // amoeba: nobody's hand down). Dog = the interior rule (green: man-your-man
+        // converts when the back stays in; cross: the two-backer pick game).
+        ["pressLook", "Look", [["mug", "Double-A Mug"], ["amoeba", "Amoeba"]]],
+        ["dogGame", "Dog", [["green", "Green Dog"], ["cross", "Cross Dog"]]]
       ];
       PERS_COLS = [
         ["any", "ANY", "every look this row doesn't name"],
@@ -50203,6 +50370,8 @@ ${renderAutoRecruitLog()}`;
       if (call.covFamily != null) sel.covFamily = String(call.covFamily);
       if (call.rotation != null) sel.rotation = String(call.rotation);
       if (call.rush3) sel.rush3 = true;
+      if (call.pressLook != null) sel.pressLook = String(call.pressLook);
+      if (call.dogGame != null) sel.dogGame = String(call.dogGame);
       if (call.runCommit != null) {
         const standingRC = ((_f2 = (_e2 = (_d2 = (_c3 = (_b3 = (_a3 = state.pendingHalftime) == null ? void 0 : _a3.token) == null ? void 0 : _b3.pending) == null ? void 0 : _c3.drive) == null ? void 0 : _d2.sit) == null ? void 0 : _e2.standing) == null ? void 0 : _f2.runCommit) || 0;
         sel.runCommit = String(call.runCommit - standingRC);
@@ -50217,6 +50386,10 @@ ${renderAutoRecruitLog()}`;
       if (sel[f] === v) delete sel[f];
       else sel[f] = v;
       if ((f === "covShell" || f === "covStyle") && sel.covFamily != null) delete sel.covFamily;
+      if (f === "pressureIdentity" && (sel.pressLook != null || sel.dogGame != null)) {
+        delete sel.pressLook;
+        delete sel.dogGame;
+      }
       rerender();
     }));
     document.querySelectorAll("[data-dc-clear]").forEach((b) => b.addEventListener("click", () => {
@@ -50813,10 +50986,14 @@ ${renderAutoRecruitLog()}`;
       const cur = state.ui.defCallName || null;
       const curSel = state.ui.defCall || {};
       const ROT_LBL = { sky: "Sky", cloud: "Cloud", buzz: "Buzz" };
+      const LOOK_LBL = { mug: "Double-A Mug", amoeba: "Amoeba" };
+      const DOG_LBL = { green: "Green Dog", cross: "Cross Dog" };
       const ing = [
         curSel.covFamily ? `\u2601 ${curSel.covFamily === "Cover 2-Man" ? "2-Man" : curSel.covFamily}` : null,
         curSel.rotation ? `\u21BA ${ROT_LBL[curSel.rotation] || curSel.rotation}` : null,
-        curSel.rush3 ? "\u2602 Rush 3 / Drop 8" : null
+        curSel.rush3 ? "\u2602 Rush 3 / Drop 8" : null,
+        curSel.pressLook ? `\u26A1 ${LOOK_LBL[curSel.pressLook] || curSel.pressLook}` : null,
+        curSel.dogGame ? `\u{1F415} ${DOG_LBL[curSel.dogGame] || curSel.dogGame}` : null
       ].filter(Boolean);
       return `
     <div class="dc-row">
