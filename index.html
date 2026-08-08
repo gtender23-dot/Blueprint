@@ -5761,6 +5761,12 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 .wsp-pose-carry,.wsp-pose-block,.wsp-pose-throw { display:none; }
 .wp-team-off.wp-near-ball .wsp-pose-run { display:none; }
 .wp-team-off.wp-near-ball .wsp-pose-carry { display:block; }
+/* Turnover returns: the defender riding the ball cradles it too (app.js only
+   grants defenders near-ball on turnover plays). */
+.wp-team-def.wp-near-ball .wsp-pose-run { display:none; }
+.wp-team-def.wp-near-ball .wsp-pose-carry { display:block; }
+/* A tackler never keeps his block-punch arms up — four-armed sprite otherwise. */
+.wp-tackling .wsp-pose-block { display:none; }
 .wp-blocking .wsp-pose-run,.wp-blocking .wsp-pose-carry,.wp-blocked .wsp-pose-run,.wp-blocked .wsp-pose-carry { display:none; }
 .wp-blocking .wsp-pose-block,.wp-blocked .wsp-pose-block { display:block; }
 .wp-throwing .wsp-pose-run,.wp-throwing .wsp-pose-carry,.wp-throwing .wsp-pose-block { display:none; }
@@ -5818,7 +5824,8 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 /* Standing or engaged men drop the chain to its authored stance. */
 .wsp-still .wsp-sd-thigh,.wsp-still .wsp-sd-shin,.wsp-still .wsp-sd-uarm,.wsp-still .wsp-sd-farm,
 .wp-blocking .wsp-sd-thigh,.wp-blocking .wsp-sd-shin,.wp-blocked .wsp-sd-thigh,.wp-blocked .wsp-sd-shin,
-.wp-tackled .wsp-sd-thigh,.wp-tackled .wsp-sd-shin,.wp-sacked .wsp-sd-thigh,.wp-sacked .wsp-sd-shin { animation:none !important; }
+.wp-tackled .wsp-sd-thigh,.wp-tackled .wsp-sd-shin,.wp-sacked .wsp-sd-thigh,.wp-sacked .wsp-sd-shin,
+.wp-tackled .wsp-sd-uarm,.wp-tackled .wsp-sd-farm,.wp-sacked .wsp-sd-uarm,.wp-sacked .wsp-sd-farm { animation:none !important; }
 /* One cycle = two steps. Contact at 0%/50%; swing-through knee bend between. */
 @keyframes wsp-sdc-thigh-f { 0%,100% { transform:rotate(-34deg); } 50% { transform:rotate(30deg); } }
 @keyframes wsp-sdc-thigh-b { 0%,100% { transform:rotate(30deg); } 50% { transform:rotate(-34deg); } }
@@ -5897,6 +5904,9 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 /* The wrapped carrier gives a short recoil; a sacked QB is taken to the turf. */
 #watch-board.watch-in-play .wp-tackled .wsp-shell { animation:wsp-tackled .34s ease-out both !important; }
 .wp-sacked .wsp-pose-run,.wp-sacked .wsp-pose-carry,.wp-sacked .wsp-pose-throw,.wp-sacked .wsp-pose-block { display:none; }
+.wp-sacked .wsp-pose-idle { display:block; }
+.wp-tackled .wsp-pose-run,.wp-tackled .wsp-pose-carry { display:none; }
+.wp-tackled .wsp-pose-idle { display:block; }
 #watch-board.watch-in-play .wp-sacked .wsp-shell { animation:wsp-sacked .42s cubic-bezier(.3,.7,.4,1) both !important; }
 @keyframes wsp-tkl-l { 0% { transform:rotate(-24deg) translate(.5px,.3px); } 100% { transform:rotate(-6deg) translate(-.2px,.1px); } }
 @keyframes wsp-tkl-r { 0% { transform:rotate(24deg) translate(-.5px,.3px); } 100% { transform:rotate(6deg) translate(.2px,.1px); } }
@@ -6259,6 +6269,14 @@ body *::after {
 .dc-chip.active { background: var(--px-yellow, #ffd54a); color: #07110b; border-color: var(--px-paper, #f4edda); }
 .dc-footer { flex-wrap: wrap; gap: 6px; }
 .dc-head-tag { color: #7fd1ff; }
+/* The defensive call panel header renders like the offensive cs-strip instead of
+   bare inline text (cs-head/cs-head-sit/cs-head-score had no rules at all). */
+.cs-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;
+  padding: 6px 8px; margin-bottom: 6px; background: var(--px-black, #0b0f16); border: 2px solid var(--px-line, #43536b);
+  box-shadow: inset 3px 3px 0 #000; font-size: 11px; }
+.cs-head-tag { font-weight: 800; letter-spacing: 0.05em; }
+.cs-head-sit { color: var(--text-2, #9aa7bd); }
+.cs-head-score { font-weight: 700; color: var(--px-yellow, #ffd54a); }
 /* F2 — check-with-me cards on the gameplan defense tab */
 .chk-card { border: 1px solid rgba(128,128,128,0.18); padding: 8px; margin-bottom: 8px; }
 .chk-card.chk-live { border-color: rgba(127,209,255,0.5); }
@@ -6776,7 +6794,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "29f4fc10f2";
+globalThis.__BUILD__ = "a293f46e19";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -6860,7 +6878,7 @@ var _CFB = (() => {
   });
 
   // js/concepts.js
-  var PASS_CONCEPTS, RUN_CONCEPTS;
+  var PASS_CONCEPTS, RUN_CONCEPTS, TAMPA_SEAM, TAMPA_HOOK;
   var init_concepts = __esm({
     "js/concepts.js"() {
       PASS_CONCEPTS = {
@@ -7101,6 +7119,18 @@ var _CFB = (() => {
         "Draw": { resolver: "draw" },
         "Wildcat Power": { resolver: "wildcat" }
       };
+      TAMPA_SEAM = /* @__PURE__ */ new Set(["Four Verts", "Dagger", "PA Deep Cross", "Mills (Post-Dig)", "Sluggo Seam", "Y-Cross"]);
+      TAMPA_HOOK = /* @__PURE__ */ new Set(["Mesh", "Shallow Cross", "Stick", "Spot", "Levels"]);
+      for (const [nm, c] of Object.entries(PASS_CONCEPTS)) {
+        if (!c.vs) continue;
+        const v = c.vs;
+        const r2 = (x) => Math.round(x * 100) / 100;
+        const c2 = v["Cover 2"] != null ? v["Cover 2"] : 0;
+        const c4 = v["Cover 4"] != null ? v["Cover 4"] : 0;
+        if (v["Cover 6"] == null) v["Cover 6"] = r2((c2 + c4) / 2);
+        if (v["Tampa 2"] == null) v["Tampa 2"] = r2(c2 + (TAMPA_SEAM.has(nm) ? -0.05 : 0) + (TAMPA_HOOK.has(nm) ? 0.03 : 0));
+        if (v["Prevent"] == null) v["Prevent"] = c.depth === "deep" ? -0.1 : c.depth === "medium" ? 0.02 : 0.06;
+      }
     }
   });
 
@@ -7322,9 +7352,9 @@ var _CFB = (() => {
             { id: "S_SS", pos: "S", label: "SS", x: 0.64, y: 0.1, role: "S-Strong" },
             { id: "CB_L", pos: "CB", label: "CB", x: 0.06, y: 0.2, role: "CB-Press" },
             { id: "CB_R", pos: "CB", label: "CB", x: 0.94, y: 0.2, role: "CB-Press" },
-            { id: "NB", pos: "CB", label: "NB", x: 0.76, y: 0.28, role: "CB-Nickel" },
-            { id: "OLB_W", pos: "OLB", label: "WILL", x: 0.38, y: 0.44, role: "OLB-Cover" },
-            { id: "LB_M", pos: "LB", label: "MIKE", x: 0.56, y: 0.44, role: "LB-Cover" },
+            { id: "NB", pos: "CB", label: "NB", x: 0.76, y: 0.28, role: "CB-Nickel", mesh: "NB" },
+            { id: "OLB_W", pos: "OLB", label: "WILL", x: 0.38, y: 0.44, role: "OLB-Cover", mesh: "STACKER" },
+            { id: "LB_M", pos: "LB", label: "MIKE", x: 0.56, y: 0.44, role: "LB-Cover", mesh: "STACKER" },
             { id: "DE_L", pos: "DE", label: "LE", x: 0.22, y: 0.72, role: "DE-Speed" },
             { id: "DT_1", pos: "DT", label: "DT", x: 0.42, y: 0.74, role: "DT-3tech" },
             { id: "DT_2", pos: "DT", label: "DT", x: 0.58, y: 0.74, role: "DT-Quick" },
@@ -7336,11 +7366,11 @@ var _CFB = (() => {
           slots: [
             { id: "S_FS", pos: "S", label: "FS", x: 0.3, y: 0.05, role: "S-Free" },
             { id: "S_SS", pos: "S", label: "SS", x: 0.7, y: 0.05, role: "S-Strong" },
-            { id: "S_D", pos: "S", label: "DB", x: 0.5, y: 0.12, role: "S-Ball" },
+            { id: "S_D", pos: "S", label: "DB", x: 0.5, y: 0.12, role: "S-Ball", mesh: "SPACE" },
             { id: "CB_L", pos: "CB", label: "CB", x: 0.06, y: 0.2, role: "CB-Press" },
             { id: "CB_R", pos: "CB", label: "CB", x: 0.94, y: 0.2, role: "CB-Press" },
-            { id: "NB", pos: "CB", label: "NB", x: 0.74, y: 0.28, role: "CB-Nickel" },
-            { id: "LB_M", pos: "LB", label: "MIKE", x: 0.5, y: 0.44, role: "LB-Cover" },
+            { id: "NB", pos: "CB", label: "NB", x: 0.74, y: 0.28, role: "CB-Nickel", mesh: "NB" },
+            { id: "LB_M", pos: "LB", label: "MIKE", x: 0.5, y: 0.44, role: "LB-Cover", mesh: "STACKER" },
             { id: "DE_L", pos: "DE", label: "LE", x: 0.22, y: 0.72, role: "DE-Speed" },
             { id: "DT_1", pos: "DT", label: "DT", x: 0.42, y: 0.74, role: "DT-Quick" },
             { id: "DT_2", pos: "DT", label: "DT", x: 0.58, y: 0.74, role: "DT-Quick" },
@@ -7354,9 +7384,9 @@ var _CFB = (() => {
             { id: "CB_L", pos: "CB", label: "CB", x: 0.06, y: 0.22, role: "CB-Press" },
             { id: "CB_R", pos: "CB", label: "CB", x: 0.94, y: 0.22, role: "CB-Press" },
             { id: "S_SS", pos: "S", label: "SS", x: 0.7, y: 0.38, role: "S-Strong" },
-            { id: "OLB_J", pos: "OLB", label: "JACK", x: 0.16, y: 0.5, role: "OLB-Blitz" },
-            { id: "LB_M", pos: "LB", label: "MIKE", x: 0.46, y: 0.42, role: "LB-Thumper" },
-            { id: "OLB_C", pos: "OLB", label: "CHAR", x: 0.84, y: 0.55, role: "OLB-Blitz" },
+            { id: "OLB_J", pos: "OLB", label: "JACK", x: 0.16, y: 0.5, role: "OLB-Blitz", mesh: "OVERHANG" },
+            { id: "LB_M", pos: "LB", label: "MIKE", x: 0.46, y: 0.42, role: "LB-Thumper", mesh: "STACKER" },
+            { id: "OLB_C", pos: "OLB", label: "CHAR", x: 0.84, y: 0.55, role: "OLB-Blitz", mesh: "OVERHANG" },
             { id: "DE_L", pos: "DE", label: "DE", x: 0.3, y: 0.73, role: "DE-Power" },
             { id: "DT_N", pos: "DT", label: "NT", x: 0.5, y: 0.75, role: "DT-NT" },
             { id: "DT_3", pos: "DT", label: "DT", x: 0.6, y: 0.74, role: "DT-3tech" },
@@ -7370,13 +7400,100 @@ var _CFB = (() => {
             { id: "S_SS", pos: "S", label: "SS", x: 0.62, y: 0.1, role: "S-Strong" },
             { id: "CB_L", pos: "CB", label: "CB", x: 0.06, y: 0.2, role: "CB-Press" },
             { id: "CB_R", pos: "CB", label: "CB", x: 0.94, y: 0.2, role: "CB-Press" },
-            { id: "LB_I1", pos: "LB", label: "ILB", x: 0.42, y: 0.46, role: "LB-Thumper" },
-            { id: "LB_I2", pos: "LB", label: "ILB", x: 0.58, y: 0.46, role: "LB-Hybrid" },
+            { id: "LB_I1", pos: "LB", label: "ILB", x: 0.42, y: 0.46, role: "LB-Thumper", mesh: "STACKER" },
+            { id: "LB_I2", pos: "LB", label: "ILB", x: 0.58, y: 0.46, role: "LB-Hybrid", mesh: "STACKER" },
             { id: "DE_L", pos: "DE", label: "DE", x: 0.24, y: 0.72, role: "DE-Power" },
             { id: "DT_L", pos: "DT", label: "DT", x: 0.4, y: 0.74, role: "DT-3tech" },
             { id: "DT_N", pos: "DT", label: "NT", x: 0.5, y: 0.755, role: "DT-NT" },
             { id: "DT_R", pos: "DT", label: "DT", x: 0.6, y: 0.74, role: "DT-3tech" },
             { id: "DE_R", pos: "DE", label: "DE", x: 0.76, y: 0.72, role: "DE-Power" }
+          ]
+        },
+        "3-3-5": {
+          // The odd stack (Aug 2026): NT at 0-tech, 4i ends over the B-gaps, the
+          // three backers STACKED directly behind the three down bodies (that
+          // mirroring is the disguise), corners outside, two high safeties and the
+          // hybrid third safety (the Warrior) floating over the passing strength.
+          slots: [
+            { id: "S_FS", pos: "S", label: "FS", x: 0.36, y: 0.05, role: "S-Free" },
+            { id: "S_SS", pos: "S", label: "SS", x: 0.64, y: 0.05, role: "S-Strong" },
+            { id: "S_W", pos: "S", label: "WAR", x: 0.74, y: 0.26, role: "S-Hybrid", mesh: "SPACE" },
+            { id: "CB_L", pos: "CB", label: "CB", x: 0.06, y: 0.2, role: "CB-Press" },
+            { id: "CB_R", pos: "CB", label: "CB", x: 0.94, y: 0.2, role: "CB-Press" },
+            { id: "OLB_L", pos: "OLB", label: "STK", x: 0.32, y: 0.46, role: "OLB-Cover", mesh: "STACKER" },
+            { id: "LB_M", pos: "LB", label: "MIKE", x: 0.5, y: 0.48, role: "LB-Thumper", mesh: "STACKER" },
+            { id: "OLB_R", pos: "OLB", label: "STK", x: 0.68, y: 0.46, role: "OLB-Blitz", mesh: "STACKER" },
+            { id: "DE_L", pos: "DE", label: "DE", x: 0.34, y: 0.73, role: "DE-Power" },
+            { id: "DT_N", pos: "DT", label: "NT", x: 0.5, y: 0.755, role: "DT-NT" },
+            { id: "DE_R", pos: "DE", label: "DE", x: 0.66, y: 0.73, role: "DE-Power" }
+          ]
+        },
+        "Tite": {
+          // 4i-0-4i: ends pinch the B-gaps, JACK/JOKER overhangs hold the edges in
+          // space, twin ILBs run free behind a closed front.
+          slots: [
+            { id: "S_FS", pos: "S", label: "FS", x: 0.36, y: 0.05, role: "S-Free" },
+            { id: "S_SS", pos: "S", label: "SS", x: 0.64, y: 0.08, role: "S-Strong" },
+            { id: "CB_L", pos: "CB", label: "CB", x: 0.06, y: 0.2, role: "CB-Press" },
+            { id: "CB_R", pos: "CB", label: "CB", x: 0.94, y: 0.2, role: "CB-Press" },
+            { id: "OLB_J", pos: "OLB", label: "JOKER", x: 0.16, y: 0.45, role: "OLB-Cover", mesh: "OVERHANG" },
+            { id: "LB_I1", pos: "LB", label: "MIKE", x: 0.42, y: 0.46, role: "LB-Thumper", mesh: "STACKER" },
+            { id: "LB_I2", pos: "LB", label: "WILL", x: 0.58, y: 0.46, role: "LB-Cover", mesh: "STACKER" },
+            { id: "OLB_K", pos: "OLB", label: "JACK", x: 0.84, y: 0.45, role: "OLB-Blitz", mesh: "OVERHANG" },
+            { id: "DE_L", pos: "DE", label: "4i", x: 0.4, y: 0.73, role: "DE-Power" },
+            { id: "DT_N", pos: "DT", label: "NT", x: 0.5, y: 0.755, role: "DT-NT" },
+            { id: "DE_R", pos: "DE", label: "4i", x: 0.6, y: 0.73, role: "DE-Power" }
+          ]
+        },
+        "4-4": {
+          // The eight-man front: SPUR/BANDIT walked up outside, twin ILBs stacked,
+          // one lone centerfielder living dangerously.
+          slots: [
+            { id: "S_FS", pos: "S", label: "FS", x: 0.5, y: 0.06, role: "S-Free" },
+            { id: "CB_L", pos: "CB", label: "CB", x: 0.06, y: 0.22, role: "CB-Press" },
+            { id: "CB_R", pos: "CB", label: "CB", x: 0.94, y: 0.22, role: "CB-Press" },
+            { id: "OLB_S", pos: "OLB", label: "SPUR", x: 0.2, y: 0.48, role: "OLB-Blitz", mesh: "OVERHANG" },
+            { id: "LB_I1", pos: "LB", label: "MIKE", x: 0.42, y: 0.45, role: "LB-Thumper", mesh: "STACKER" },
+            { id: "LB_I2", pos: "LB", label: "WILL", x: 0.58, y: 0.45, role: "LB-Hybrid", mesh: "STACKER" },
+            { id: "OLB_B", pos: "OLB", label: "BNDT", x: 0.8, y: 0.48, role: "OLB-Cover", mesh: "OVERHANG" },
+            { id: "DE_L", pos: "DE", label: "DE", x: 0.24, y: 0.72, role: "DE-Speed" },
+            { id: "DT_1", pos: "DT", label: "DT", x: 0.42, y: 0.74, role: "DT-3tech" },
+            { id: "DT_2", pos: "DT", label: "NT", x: 0.58, y: 0.74, role: "DT-NT" },
+            { id: "DE_R", pos: "DE", label: "DE", x: 0.76, y: 0.72, role: "DE-Power" }
+          ]
+        },
+        "Big Nickel": {
+          // 4-2-5 with a ROVER: the third safety walks down over the slot/TE and
+          // tackles like a backer — the 12-personnel answer.
+          slots: [
+            { id: "S_FS", pos: "S", label: "FS", x: 0.34, y: 0.05, role: "S-Free" },
+            { id: "S_SS", pos: "S", label: "SS", x: 0.66, y: 0.07, role: "S-Strong" },
+            { id: "S_R", pos: "S", label: "ROV", x: 0.74, y: 0.28, role: "S-Hybrid", mesh: "SPACE" },
+            { id: "CB_L", pos: "CB", label: "CB", x: 0.06, y: 0.2, role: "CB-Press" },
+            { id: "CB_R", pos: "CB", label: "CB", x: 0.94, y: 0.2, role: "CB-Press" },
+            { id: "OLB_W", pos: "OLB", label: "WILL", x: 0.38, y: 0.44, role: "OLB-Cover", mesh: "STACKER" },
+            { id: "LB_M", pos: "LB", label: "MIKE", x: 0.56, y: 0.44, role: "LB-Cover", mesh: "STACKER" },
+            { id: "DE_L", pos: "DE", label: "LE", x: 0.22, y: 0.72, role: "DE-Speed" },
+            { id: "DT_1", pos: "DT", label: "DT", x: 0.42, y: 0.74, role: "DT-3tech" },
+            { id: "DT_2", pos: "DT", label: "DT", x: 0.58, y: 0.74, role: "DT-Quick" },
+            { id: "DE_R", pos: "DE", label: "RE", x: 0.78, y: 0.72, role: "DE-Power" }
+          ]
+        },
+        "Penny": {
+          // The 5-1 light box: stand-up EDGEs flank the three down bodies (five on
+          // the LOS), one MIKE behind, nickel shell over the top.
+          slots: [
+            { id: "S_FS", pos: "S", label: "FS", x: 0.36, y: 0.06, role: "S-Free" },
+            { id: "S_SS", pos: "S", label: "SS", x: 0.64, y: 0.08, role: "S-Strong" },
+            { id: "CB_L", pos: "CB", label: "CB", x: 0.06, y: 0.2, role: "CB-Press" },
+            { id: "CB_R", pos: "CB", label: "CB", x: 0.94, y: 0.2, role: "CB-Press" },
+            { id: "NB", pos: "CB", label: "NB", x: 0.76, y: 0.28, role: "CB-Nickel", mesh: "NB" },
+            { id: "LB_M", pos: "LB", label: "MIKE", x: 0.5, y: 0.46, role: "LB-Thumper", mesh: "STACKER" },
+            { id: "OLB_L", pos: "OLB", label: "EDGE", x: 0.2, y: 0.68, role: "OLB-Rush", mesh: "OVERHANG" },
+            { id: "OLB_R", pos: "OLB", label: "EDGE", x: 0.8, y: 0.68, role: "OLB-Rush", mesh: "OVERHANG" },
+            { id: "DE_L", pos: "DE", label: "DE", x: 0.36, y: 0.72, role: "DE-Power" },
+            { id: "DT_N", pos: "DT", label: "NT", x: 0.5, y: 0.755, role: "DT-NT" },
+            { id: "DE_R", pos: "DE", label: "DE", x: 0.64, y: 0.72, role: "DE-Power" }
           ]
         }
       };
@@ -7391,7 +7508,14 @@ var _CFB = (() => {
         "Nickel": ["OLB_W", "LB_M", "NB", "S_SS", "S_FS", "CB_L", "CB_R"],
         "Dime": ["LB_M", "NB", "S_D", "S_SS", "S_FS", "CB_L", "CB_R"],
         "46/Bear": ["OLB_J", "LB_M", "OLB_C", "S_SS", "S_FS", "CB_L", "CB_R"],
-        "5-2": ["LB_I1", "LB_I2", "S_SS", "S_FS", "CB_L", "CB_R"]
+        "5-2": ["LB_I1", "LB_I2", "S_SS", "S_FS", "CB_L", "CB_R"],
+        // 3-3-5: any of the six second-level hats can come — that's the point.
+        "3-3-5": ["OLB_L", "LB_M", "OLB_R", "S_W", "S_SS", "S_FS", "CB_L", "CB_R"],
+        "Tite": ["OLB_J", "LB_I1", "LB_I2", "OLB_K", "S_SS", "S_FS", "CB_L", "CB_R"],
+        "4-4": ["OLB_S", "LB_I1", "LB_I2", "OLB_B", "S_FS", "CB_L", "CB_R"],
+        "Big Nickel": ["OLB_W", "LB_M", "S_R", "S_SS", "S_FS", "CB_L", "CB_R"],
+        // Penny EDGEs already rush — their dial is the DROP share below.
+        "Penny": ["LB_M", "NB", "S_SS", "S_FS", "CB_L", "CB_R"]
       };
       DEF_DROP_ELIGIBLE = {
         "4-3": [],
@@ -7399,12 +7523,50 @@ var _CFB = (() => {
         "Nickel": [],
         "Dime": [],
         "46/Bear": [],
-        "5-2": []
+        "5-2": [],
+        "3-3-5": [],
+        "Tite": [],
+        "4-4": [],
+        "Big Nickel": [],
+        "Penny": ["OLB_L", "OLB_R"]
       };
     }
   });
 
   // js/constants.js
+  function schoolSchemeFront(school) {
+    const gp = school == null ? void 0 : school.gameplan;
+    const f = gp == null ? void 0 : gp.defFront;
+    if (f && f !== "auto" && DEF_FRONT_COUNTS[f]) return f;
+    const b = gp == null ? void 0 : gp.defBaseFront;
+    if (b && b !== "4-3" && b !== "3-4" && DEF_FRONT_COUNTS[b]) return b;
+    return null;
+  }
+  function schemeStarterCounts(school) {
+    const f = schoolSchemeFront(school);
+    if (!f) return STARTER_COUNTS;
+    return Object.assign({}, STARTER_COUNTS, DEF_FRONT_COUNTS[f]);
+  }
+  function schemeStarterOverride(school, pos) {
+    const f = schoolSchemeFront(school);
+    if (!f) return null;
+    const n = DEF_FRONT_COUNTS[f][pos];
+    return n != null && n !== STARTER_COUNTS[pos] ? n : null;
+  }
+  function schemeRosterTargets(school) {
+    const f = schoolSchemeFront(school);
+    if (!f) return ROSTER_TARGETS;
+    const fc = DEF_FRONT_COUNTS[f];
+    const out = Object.assign({}, ROSTER_TARGETS);
+    for (const pos of ["DE", "DT", "OLB", "LB", "CB", "S"]) {
+      const delta = (fc[pos] || 0) - (STARTER_COUNTS[pos] || 0);
+      if (!delta) continue;
+      const lo = ROSTER_POS_MIN[pos] != null ? ROSTER_POS_MIN[pos] : 1;
+      const hi = ROSTER_POS_MAX[pos] != null ? ROSTER_POS_MAX[pos] : 99;
+      out[pos] = Math.min(hi, Math.max(lo, ROSTER_TARGETS[pos] + delta * 2));
+    }
+    return out;
+  }
   function aggrStopFromBlitzPct(pct) {
     const p = pct != null ? pct : 20;
     if (p <= 10) return "bend";
@@ -7413,7 +7575,7 @@ var _CFB = (() => {
     if (p <= 38) return "attacking";
     return "house";
   }
-  var SAVE_VERSION, C, OVR_POS_ADJ, POS_WEIGHTS, ROLE_WEIGHTS, FRONT_ROLES, OUT_OF_POS, SUB_ADJACENT, SLOT_ELIGIBILITY, ARCHETYPE_DISTANCE, OFF_ROLE_BY_PLAY, FORMATION_ROLE_OVERRIDE, OFF_WEIGHTS, DEF_WEIGHTS, FORMATION_PACKAGES, FORMATION_WEIGHTS, DEF_FRONTS, DEF_FRONT_WEIGHTS, MATCHUP_MATRIX, FORMATION_SITUATIONAL, PRACTICE_SECONDARY, PRACTICE_TOOLS, DEFAULT_PRACTICE, PASS_TENDENCY, POSITIONS, ATTRIBUTES, MEASURED_ATTRS, ATTR_LABELS, attrLabel, PENALTY_CATALOG, CLASS_YEARS, ROSTER_TARGETS, STARTER_COUNTS, ROSTER_POS_MIN, ROSTER_POS_MAX, FORMATIONS, FORMATION_ALIAS, aliasFormation, ATTR_FLOORS, RECRUIT_CORE, SIZE_BANDS, FORMATION_PLAYBOOK;
+  var SAVE_VERSION, C, OVR_POS_ADJ, POS_WEIGHTS, ROLE_WEIGHTS, FRONT_ROLES, OUT_OF_POS, SUB_ADJACENT, SLOT_ELIGIBILITY, ARCHETYPE_DISTANCE, OFF_ROLE_BY_PLAY, FORMATION_ROLE_OVERRIDE, OFF_WEIGHTS, DEF_WEIGHTS, FORMATION_PACKAGES, FORMATION_WEIGHTS, DEF_FRONTS, DEF_FRONT_WEIGHTS, MATCHUP_MATRIX, FORMATION_SITUATIONAL, PRACTICE_SECONDARY, PRACTICE_TOOLS, DEFAULT_PRACTICE, PASS_TENDENCY, POSITIONS, ATTRIBUTES, MEASURED_ATTRS, ATTR_LABELS, attrLabel, PENALTY_CATALOG, CLASS_YEARS, ROSTER_TARGETS, STARTER_COUNTS, ROSTER_POS_MIN, ROSTER_POS_MAX, DEF_FRONT_COUNTS, FORMATIONS, FORMATION_ALIAS, aliasFormation, ATTR_FLOORS, RECRUIT_CORE, SIZE_BANDS, FORMATION_PLAYBOOK;
   var init_constants = __esm({
     "js/constants.js"() {
       SAVE_VERSION = 16;
@@ -9133,7 +9295,19 @@ var _CFB = (() => {
         // The true 5-2 (Aug 2026, realistic-fronts wave): FIVE down linemen — 5-tech
         // ends, 3-tech tackles, 0-tech nose (the article's Bear front) — behind them
         // two inside backers. The goal-line/power answer; dies in space vs spread.
-        "5-2": { DE: ["DE-Power", "DE-Power"], DT: ["DT-3tech", "DT-NT", "DT-3tech"], OLB: [], LB: ["LB-Thumper", "LB-Hybrid"], CB: ["CB-Press", "CB-Press"], S: ["S-Strong", "S-Free"] }
+        "5-2": { DE: ["DE-Power", "DE-Power"], DT: ["DT-3tech", "DT-NT", "DT-3tech"], OLB: [], LB: ["LB-Thumper", "LB-Hybrid"], CB: ["CB-Press", "CB-Press"], S: ["S-Strong", "S-Free"] },
+        // The odd stack (Aug 2026): two-gap ends over a nose, stack OLBs split
+        // cover/heat (the ambiguity IS the scheme), and the third safety is the
+        // hybrid Warrior/Aztec body the 3-3-5 was invented around.
+        "3-3-5": { DE: ["DE-Power", "DE-Power"], DT: ["DT-NT"], OLB: ["OLB-Cover", "OLB-Blitz"], LB: ["LB-Thumper"], CB: ["CB-Press", "CB-Press"], S: ["S-Free", "S-Strong", "S-Hybrid"] },
+        // Fronts wave 2 (Aug 2026): Tite wants two-gap 4i ends and space-backers;
+        // the 4-4 wants downhill bodies everywhere and one rangy centerfielder;
+        // Big Nickel's ROVER is a hybrid safety who tackles like a backer; Penny's
+        // EDGEs are true stand-up rushers over a nose.
+        "Tite": { DE: ["DE-Power", "DE-Power"], DT: ["DT-NT"], OLB: ["OLB-Cover", "OLB-Blitz"], LB: ["LB-Thumper", "LB-Cover"], CB: ["CB-Press", "CB-Press"], S: ["S-Free", "S-Strong"] },
+        "4-4": { DE: ["DE-Speed", "DE-Power"], DT: ["DT-3tech", "DT-NT"], OLB: ["OLB-Blitz", "OLB-Cover"], LB: ["LB-Thumper", "LB-Hybrid"], CB: ["CB-Press", "CB-Press"], S: ["S-Free"] },
+        "Big Nickel": { DE: ["DE-Speed", "DE-Power"], DT: ["DT-3tech", "DT-Quick"], OLB: ["OLB-Cover"], LB: ["LB-Cover"], CB: ["CB-Press", "CB-Press"], S: ["S-Free", "S-Strong", "S-Hybrid"] },
+        "Penny": { DE: ["DE-Power", "DE-Power"], DT: ["DT-NT"], OLB: ["OLB-Rush", "OLB-Rush"], LB: ["LB-Thumper"], CB: ["CB-Press", "CB-Press", "CB-Nickel"], S: ["S-Free", "S-Strong"] }
       };
       OUT_OF_POS = {
         MEASURED_KEEP: 0.94,
@@ -9333,8 +9507,14 @@ var _CFB = (() => {
         "Dime": { DL: 4, LB: 1, DB: 6 },
         "46/Bear": { DL: 4, LB: 3, DB: 4 },
         // 8 in the box: 4 DL + 3 LB + SS down; FS lone deep
-        "5-2": { DL: 5, LB: 2, DB: 4 }
+        "5-2": { DL: 5, LB: 2, DB: 4 },
         // five on the line of scrimmage, two ILBs
+        "3-3-5": { DL: 3, LB: 3, DB: 5 },
+        // the odd stack: three down, three stacked backers, five DBs
+        "Tite": { DL: 3, LB: 4, DB: 4 },
+        "4-4": { DL: 4, LB: 4, DB: 3 },
+        "Big Nickel": { DL: 4, LB: 2, DB: 5 },
+        "Penny": { DL: 5, LB: 1, DB: 5 }
       };
       DEF_FRONT_WEIGHTS = {
         "4-3": {
@@ -9381,26 +9561,72 @@ var _CFB = (() => {
           pass_short: { LB: 0.3, DB: 0.44, DL: 0.26 },
           pass_medium: { DB: 0.46, LB: 0.24, DL: 0.3 },
           pass_deep: { DB: 0.54, DL: 0.3, LB: 0.16 }
+        },
+        // 3-3-5: only three down bodies, so the run fit lives on flowing backers
+        // and safeties triggering downhill; in coverage it plays like a nickel with
+        // an extra hat in the middle of the field.
+        "3-3-5": {
+          run_inside: { DL: 0.42, LB: 0.38, DB: 0.2 },
+          run_outside: { DL: 0.26, LB: 0.4, DB: 0.34 },
+          pass_short: { LB: 0.34, DB: 0.48, DL: 0.18 },
+          pass_medium: { DB: 0.54, LB: 0.24, DL: 0.22 },
+          pass_deep: { DB: 0.64, DL: 0.22, LB: 0.14 }
+        },
+        // Tite: B-gaps die at the line (DL carries inside runs); everything wide
+        // is spilled to overhangs and safeties.
+        "Tite": {
+          run_inside: { DL: 0.5, LB: 0.34, DB: 0.16 },
+          run_outside: { DL: 0.24, LB: 0.42, DB: 0.34 },
+          pass_short: { LB: 0.36, DB: 0.44, DL: 0.2 },
+          pass_medium: { DB: 0.5, LB: 0.26, DL: 0.24 },
+          pass_deep: { DB: 0.6, DL: 0.22, LB: 0.18 }
+        },
+        // 4-4: eight hats in the box own the run; one deep safety owns (and can
+        // lose) everything over the top.
+        "4-4": {
+          run_inside: { DL: 0.52, LB: 0.38, DB: 0.1 },
+          run_outside: { DL: 0.32, LB: 0.46, DB: 0.22 },
+          pass_short: { LB: 0.42, DB: 0.36, DL: 0.22 },
+          pass_medium: { DB: 0.42, LB: 0.32, DL: 0.26 },
+          pass_deep: { DB: 0.5, DL: 0.28, LB: 0.22 }
+        },
+        // Big Nickel: nickel structure with a ROVER instead of a slot corner —
+        // sturdier run fits than the 4-2-5, a shade less slot speed.
+        "Big Nickel": {
+          run_inside: { DL: 0.5, LB: 0.3, DB: 0.2 },
+          run_outside: { DL: 0.3, LB: 0.34, DB: 0.36 },
+          pass_short: { LB: 0.3, DB: 0.5, DL: 0.2 },
+          pass_medium: { DB: 0.54, LB: 0.21, DL: 0.25 },
+          pass_deep: { DB: 0.64, LB: 0.13, DL: 0.23 }
+        },
+        // Penny: the five-man light wall handles the run so the lone MIKE can
+        // stay clean; on pass downs it's a nickel shell behind a 5-man look.
+        "Penny": {
+          run_inside: { DL: 0.54, LB: 0.26, DB: 0.2 },
+          run_outside: { DL: 0.36, LB: 0.28, DB: 0.36 },
+          pass_short: { LB: 0.22, DB: 0.54, DL: 0.24 },
+          pass_medium: { DB: 0.55, LB: 0.16, DL: 0.29 },
+          pass_deep: { DB: 0.64, LB: 0.1, DL: 0.26 }
         }
       };
       MATCHUP_MATRIX = {
-        "Power-I": { "4-3": 0.99, "3-4": 1, "Nickel": 1.1, "Dime": 1.15, "46/Bear": 0.88, "5-2": 0.85 },
-        "Spread": { "4-3": 1.05, "3-4": 1.04, "Nickel": 0.98, "Dime": 0.95, "46/Bear": 1.08, "5-2": 1.12 },
-        "Air Raid": { "4-3": 1.08, "3-4": 1.06, "Nickel": 0.96, "Dime": 0.93, "46/Bear": 1.12, "5-2": 1.16 },
-        "Pistol/RPO": { "4-3": 1, "3-4": 1, "Nickel": 1.01, "Dime": 1.02, "46/Bear": 1.01, "5-2": 1.04 },
-        "Trips/Bunch": { "4-3": 1.04, "3-4": 1.03, "Nickel": 0.98, "Dime": 0.96, "46/Bear": 1.06, "5-2": 1.1 },
+        "Power-I": { "4-3": 0.99, "3-4": 1, "Nickel": 1.1, "Dime": 1.15, "46/Bear": 0.88, "5-2": 0.85, "3-3-5": 1.08, "Tite": 1.04, "4-4": 0.9, "Big Nickel": 1.06, "Penny": 1.09 },
+        "Spread": { "4-3": 1.05, "3-4": 1.04, "Nickel": 0.98, "Dime": 0.95, "46/Bear": 1.08, "5-2": 1.12, "3-3-5": 0.97, "Tite": 0.95, "4-4": 1.06, "Big Nickel": 0.99, "Penny": 0.96 },
+        "Air Raid": { "4-3": 1.08, "3-4": 1.06, "Nickel": 0.96, "Dime": 0.93, "46/Bear": 1.12, "5-2": 1.16, "3-3-5": 0.96, "Tite": 0.97, "4-4": 1.1, "Big Nickel": 0.98, "Penny": 0.97 },
+        "Pistol/RPO": { "4-3": 1, "3-4": 1, "Nickel": 1.01, "Dime": 1.02, "46/Bear": 1.01, "5-2": 1.04, "3-3-5": 0.97, "Tite": 0.94, "4-4": 1, "Big Nickel": 0.99, "Penny": 0.94 },
+        "Trips/Bunch": { "4-3": 1.04, "3-4": 1.03, "Nickel": 0.98, "Dime": 0.96, "46/Bear": 1.06, "5-2": 1.1, "3-3-5": 0.97, "Tite": 0.98, "4-4": 1.05, "Big Nickel": 0.99, "Penny": 0.98 },
         // Expansion five: heavy sets punish sub packages and get smothered by Bear;
         // Empty is the mirror image, more extreme than Air Raid on both ends. The
         // 5-2 is the extreme end of the same axis — the best run wall in the game,
         // the worst thing you can be caught in against an empty set.
-        "Single Back": { "4-3": 1.01, "3-4": 1.01, "Nickel": 1, "Dime": 1, "46/Bear": 0.97, "5-2": 0.96 },
-        "Empty": { "4-3": 1.1, "3-4": 1.08, "Nickel": 0.97, "Dime": 0.92, "46/Bear": 1.14, "5-2": 1.18 },
-        "Wishbone": { "4-3": 0.98, "3-4": 1, "Nickel": 1.12, "Dime": 1.16, "46/Bear": 0.86, "5-2": 0.83 },
-        "Flexbone": { "4-3": 1, "3-4": 1.02, "Nickel": 1.09, "Dime": 1.13, "46/Bear": 0.9, "5-2": 0.87 },
-        "Wildcat": { "4-3": 0.98, "3-4": 0.99, "Nickel": 1.09, "Dime": 1.13, "46/Bear": 0.85, "5-2": 0.83 },
+        "Single Back": { "4-3": 1.01, "3-4": 1.01, "Nickel": 1, "Dime": 1, "46/Bear": 0.97, "5-2": 0.96, "3-3-5": 1, "Tite": 0.99, "4-4": 0.98, "Big Nickel": 0.98, "Penny": 0.99 },
+        "Empty": { "4-3": 1.1, "3-4": 1.08, "Nickel": 0.97, "Dime": 0.92, "46/Bear": 1.14, "5-2": 1.18, "3-3-5": 0.95, "Tite": 0.98, "4-4": 1.12, "Big Nickel": 0.97, "Penny": 0.96 },
+        "Wishbone": { "4-3": 0.98, "3-4": 1, "Nickel": 1.12, "Dime": 1.16, "46/Bear": 0.86, "5-2": 0.83, "3-3-5": 1.04, "Tite": 1.02, "4-4": 0.88, "Big Nickel": 1.08, "Penny": 1.06 },
+        "Flexbone": { "4-3": 1, "3-4": 1.02, "Nickel": 1.09, "Dime": 1.13, "46/Bear": 0.9, "5-2": 0.87, "3-3-5": 1, "Tite": 0.98, "4-4": 0.9, "Big Nickel": 1.06, "Penny": 1.02 },
+        "Wildcat": { "4-3": 0.98, "3-4": 0.99, "Nickel": 1.09, "Dime": 1.13, "46/Bear": 0.85, "5-2": 0.83, "3-3-5": 1.05, "Tite": 1.02, "4-4": 0.87, "Big Nickel": 1.06, "Penny": 1.08 },
         // Jumbo is the heaviest set in the game: it feasts on sub packages that
         // stay on the field and gets stonewalled by the run-wall fronts.
-        "Jumbo": { "4-3": 0.97, "3-4": 0.99, "Nickel": 1.13, "Dime": 1.18, "46/Bear": 0.84, "5-2": 0.82 }
+        "Jumbo": { "4-3": 0.97, "3-4": 0.99, "Nickel": 1.13, "Dime": 1.18, "46/Bear": 0.84, "5-2": 0.82, "3-3-5": 1.1, "Tite": 1.08, "4-4": 0.86, "Big Nickel": 1.1, "Penny": 1.14 }
       };
       FORMATION_SITUATIONAL = {
         "Power-I": { shortYardage: 1.14, thirdLong: 0.86, twoMinute: 0.88, redZone: 1.08, standard: 1 },
@@ -9505,6 +9731,34 @@ var _CFB = (() => {
       };
       ROSTER_POS_MIN = { QB: 2, RB: 4, WR: 6, TE: 2, OL: 9, DE: 3, DT: 3, OLB: 3, LB: 3, CB: 4, S: 3, K: 1, P: 1 };
       ROSTER_POS_MAX = { QB: 5, RB: 9, WR: 13, TE: 6, OL: 19, DE: 7, DT: 7, OLB: 7, LB: 7, CB: 9, S: 7, K: 3, P: 2 };
+      DEF_FRONT_COUNTS = {
+        "4-3": { DE: 2, DT: 2, OLB: 2, LB: 1, CB: 2, S: 2 },
+        // SAM/WILL are OLBs, MIKE is the LB
+        "3-4": { DE: 2, DT: 1, OLB: 2, LB: 2, CB: 2, S: 2 },
+        // 5-tech DEs, NT, edge OLBs, 2 ILB
+        "Nickel": { DE: 2, DT: 2, OLB: 1, LB: 1, CB: 3, S: 2 },
+        "Dime": { DE: 2, DT: 2, OLB: 0, LB: 1, CB: 3, S: 3 },
+        "46/Bear": { DE: 2, DT: 2, OLB: 2, LB: 1, CB: 2, S: 2 },
+        // Five-man wall + two inside backers (matches FRONT_ROLES["5-2"] / DEF_FRONT_WEIGHTS 5-2)
+        "5-2": { DE: 2, DT: 3, OLB: 0, LB: 2, CB: 2, S: 2 },
+        // The odd stack (Aug 2026): NT + two 4i ends, two stack OLBs + a Mike
+        // mirrored behind them, five DBs with a third hybrid safety. The 3-3-5 is
+        // the odd-front nickel that KEEPS the outside backers on the field.
+        "3-3-5": { DE: 2, DT: 1, OLB: 2, LB: 1, CB: 2, S: 3 },
+        // Fronts wave 2 (Aug 2026, brain-expansion pass 1):
+        // Tite (4i-0-4i): the modern anti-spread odd front — B-gaps closed by
+        // alignment, JACK/JOKER overhangs play space, backers run free.
+        "Tite": { DE: 2, DT: 1, OLB: 2, LB: 2, CB: 2, S: 2 },
+        // 4-4 stack: the eight-man front — SPUR/BANDIT outside, twin ILBs, one
+        // lone deep safety. Run-stuffing identity, exposed over the top.
+        "4-4": { DE: 2, DT: 2, OLB: 2, LB: 2, CB: 2, S: 1 },
+        // Big Nickel: 4-2-5 with a third SAFETY (the ROVER) instead of a slot
+        // corner — the 12-personnel/TE answer that still defends the pass.
+        "Big Nickel": { DE: 2, DT: 2, OLB: 1, LB: 1, CB: 2, S: 3 },
+        // Penny: the 5-1 light box — five on the LOS (stand-up EDGEs flank the
+        // three down bodies), one MIKE, nickel back end. The spread-run answer.
+        "Penny": { DE: 2, DT: 1, OLB: 2, LB: 1, CB: 3, S: 2 }
+      };
       FORMATIONS = {
         "Power-I": { passLean: -0.15, runIn: 0.75, runOut: 0.25, identity: "run_inside", label: "Power-I", desc: "Power run \u2014 FB, 2 TE, 1 WR" },
         "Spread": { passLean: 0.15, runIn: 0.4, runOut: 0.6, identity: "pass_medium", label: "Spread", desc: "Pass-lean \u2014 1 TE, 3 WR, tempo" },
@@ -13026,6 +13280,386 @@ var _CFB = (() => {
     }
   });
 
+  // js/engine/formations.js
+  function fieldUnit(pos, count, depthChart, used) {
+    const out = [];
+    for (const id of depthChart[pos] || []) {
+      if (out.length >= count) break;
+      if (used.has(id)) continue;
+      out.push(id);
+      used.add(id);
+    }
+    if (out.length >= count) return out;
+    for (const alt of SUB_CHAIN[pos] || []) {
+      for (const id of depthChart[alt] || []) {
+        if (out.length >= count) break;
+        if (used.has(id)) continue;
+        out.push(id);
+        used.add(id);
+      }
+      if (out.length >= count) break;
+    }
+    return out;
+  }
+  function resolvePersonnel(formationId, depthChart) {
+    const pkg = FORMATION_PACKAGES[aliasFormation(formationId)] || FORMATION_PACKAGES["Single Back"];
+    if (!pkg) return null;
+    const used = /* @__PURE__ */ new Set();
+    const personnel = {
+      OL: fieldUnit("OL", 5, depthChart, used),
+      QB: fieldUnit("QB", 1, depthChart, used)
+    };
+    const rbCount = (pkg.RB || 0) + (pkg.FB || 0);
+    const rbAll = rbCount > 0 ? fieldUnit("RB", rbCount, depthChart, used) : [];
+    const fbN = pkg.FB || 0;
+    personnel.RB = fbN > 0 ? rbAll.slice(0, rbAll.length - fbN) : rbAll;
+    personnel.FB = fbN > 0 ? rbAll.slice(rbAll.length - fbN) : [];
+    for (const [pos, count] of Object.entries(pkg)) {
+      if (pos === "RB" || pos === "FB") continue;
+      personnel[pos] = count > 0 ? fieldUnit(pos, count, depthChart, used) : [];
+    }
+    return personnel;
+  }
+  function resolveDefPersonnel(frontId, depthChart, roster = null) {
+    const FRONT_COUNTS = DEF_FRONT_COUNTS;
+    const RUSH_SLOTS = {
+      "4-3": ["DE", "DT"],
+      "3-4": ["DE", "DT", "OLB"],
+      "Nickel": ["DE", "DT"],
+      "Dime": ["DE", "DT"],
+      "46/Bear": ["DE", "DT"],
+      "5-2": ["DE", "DT"],
+      // 3-3-5: a three-man rush baseline — the stack backers cover; the heat
+      // comes from the blitz machinery (any of six second-level hats).
+      "3-3-5": ["DE", "DT"],
+      // Wave 2: Tite/4-4 overhangs play space; Big Nickel is a 4-down nickel;
+      // Penny's stand-up EDGEs are ON the line — they rush like 3-4 OLBs.
+      "Tite": ["DE", "DT"],
+      "4-4": ["DE", "DT"],
+      "Big Nickel": ["DE", "DT"],
+      "Penny": ["DE", "DT", "OLB"]
+    };
+    const counts = FRONT_COUNTS[frontId] || FRONT_COUNTS["4-3"];
+    const used = /* @__PURE__ */ new Set();
+    const ratingOf = roster ? (id) => {
+      var _a;
+      return ((_a = roster.find((p) => p.id === id)) == null ? void 0 : _a.compositeRating) || 0;
+    } : null;
+    const idealRoles = FRONT_ROLES[frontId] || null;
+    const fill = (slotPos) => {
+      var _a, _b, _c, _d, _e;
+      const n = counts[slotPos] || 0;
+      const out = [];
+      for (let i = 0; i < n; i++) {
+        let bestId = null, bestVal = -Infinity;
+        const elig = SLOT_ELIGIBILITY[slotPos] || { [slotPos]: 1 };
+        const idealRole = ((_a = idealRoles == null ? void 0 : idealRoles[slotPos]) == null ? void 0 : _a[i]) || null;
+        for (const [pos, mult] of Object.entries(elig)) {
+          for (const id of depthChart[pos] || []) {
+            if (used.has(id)) continue;
+            let val;
+            if (ratingOf) {
+              const p = roster.find((x) => x.id === id);
+              if (p && idealRole) {
+                const rv = roleRating(p, idealRole);
+                const natural = derivedArchetype(p) || idealRole;
+                const dist = (_d = (_c = (_b = ARCHETYPE_DISTANCE[p.position]) == null ? void 0 : _b[natural]) == null ? void 0 : _c[idealRole]) != null ? _d : 0;
+                val = rv * (1 - dist * C.SCHEME_FIT_MOD) * mult;
+              } else {
+                val = ratingOf(id) * mult;
+              }
+            } else {
+              val = (pos === slotPos ? 1e3 - out.length : 500) - depthChart[pos].indexOf(id);
+            }
+            if (val > bestVal) {
+              bestVal = val;
+              bestId = id;
+            }
+            if (!ratingOf && pos === slotPos) break;
+          }
+          if (!ratingOf && bestId && (SLOT_ELIGIBILITY[slotPos] || {})[slotPos] && ((_e = depthChart[slotPos]) == null ? void 0 : _e.includes(bestId))) break;
+        }
+        if (bestId) {
+          used.add(bestId);
+          out.push(bestId);
+        }
+      }
+      return out;
+    };
+    const DE = fill("DE"), DT = fill("DT"), OLB = fill("OLB"), ILB = fill("LB"), CB = fill("CB"), S = fill("S");
+    const rushSlots = RUSH_SLOTS[frontId] || RUSH_SLOTS["4-3"];
+    const slotMap2 = { DE, DT, OLB, LB: ILB, CB, S };
+    const DL = rushSlots.flatMap((k) => slotMap2[k]);
+    return {
+      // Granular positions (UI, roles, future features):
+      DE,
+      DT,
+      OLB,
+      ILB,
+      CB,
+      S,
+      // Composed units (consumed by sim logic — DO NOT REMOVE):
+      // LB keeps its historical semantic: ALL coverage backers on the field
+      // (true LBs first so box-fit logic prefers thumpers; non-rushing OLBs
+      // join them). In the 3-4 the OLBs rush, so LB = the two ILBs.
+      LB: rushSlots.includes("OLB") ? ILB : [...ILB, ...OLB],
+      DL,
+      // pass-rush unit (front-dependent: 3-4 includes OLBs)
+      DB: [...CB, ...S]
+      // coverage unit: corners + safeties
+    };
+  }
+  function assignRoles(players, roster, roleList) {
+    var _a, _b, _c;
+    const pool = players.map((id) => roster.find((p) => p.id === id)).filter(Boolean);
+    const slots = [...roleList];
+    const used = /* @__PURE__ */ new Set();
+    const assigned = [];
+    for (const role of slots) {
+      let best = null, bestVal = -Infinity;
+      for (const p of pool) {
+        if (used.has(p.id)) continue;
+        const rv = roleRating(p, role);
+        const natural = derivedArchetype(p) || role;
+        const dist = (_c = (_b = (_a = ARCHETYPE_DISTANCE[p.position]) == null ? void 0 : _a[natural]) == null ? void 0 : _b[role]) != null ? _c : 0;
+        const eff = rv * (1 - dist * C.SCHEME_FIT_MOD);
+        if (eff > bestVal) {
+          bestVal = eff;
+          best = p;
+        }
+      }
+      if (best) {
+        used.add(best.id);
+        assigned.push({ player: best, role });
+      }
+    }
+    return assigned;
+  }
+  function rollFormation(offFormations, eligible = null) {
+    const liveAll = (offFormations || []).filter((f) => f && FORMATION_PACKAGES[aliasFormation(f.id)]);
+    if (!liveAll.length) return "Single Back";
+    const live = eligible ? liveAll.filter((f) => eligible(aliasFormation(f.id))).length ? liveAll.filter((f) => eligible(aliasFormation(f.id))) : liveAll : liveAll;
+    const total = live.reduce((s, f) => s + (f.weight || 0), 0);
+    let pick2 = live[live.length - 1].id;
+    if (total <= 0) {
+      pick2 = live[0].id;
+    } else {
+      let r = Math.random() * total;
+      for (const f of live) {
+        r -= f.weight || 0;
+        if (r <= 0) {
+          pick2 = f.id;
+          break;
+        }
+      }
+    }
+    return aliasFormation(pick2);
+  }
+  function offPersonnelOf(formationId) {
+    const p = FORMATION_PACKAGES[aliasFormation(formationId)] || {};
+    return { backs: (p.RB || 0) + (p.FB || 0), te: p.TE || 0, wr: (p.WR || 0) + (p.SLOT || 0) };
+  }
+  function offPersonnelClass(formationId) {
+    const p = FORMATION_PACKAGES[aliasFormation(formationId)];
+    if (!p) return "11";
+    const backs = (p.RB || 0) + (p.FB || 0), te = p.TE || 0;
+    if (backs === 0) return "empty";
+    if (backs >= 3) return backs + te >= 5 ? "heavy" : "option";
+    if (backs >= 2) return "heavy";
+    if (te === 0) return "10";
+    if (te === 1) return "11";
+    return "12";
+  }
+  function rollFrontMix(mix, base) {
+    const live = Array.isArray(mix) ? mix.filter((f) => f && (f.weight || 0) > 0 && DEF_FRONT_COUNTS[f.id]) : [];
+    if (!live.length) return base;
+    let r = Math.random() * live.reduce((s, f) => s + f.weight, 0);
+    for (const f of live) {
+      if ((r -= f.weight) <= 0) return f.id;
+    }
+    return live[live.length - 1].id;
+  }
+  function selectDefFront(baseFront, down, distance, clock, half, trailing, offFormationId = null, philosophy = "auto", frontMix = null) {
+    const base = baseFront || "4-3";
+    const nickelOf = (b) => b === "3-3-5" || b === "Big Nickel" ? b : "Nickel";
+    const pers = offFormationId ? offPersonnelOf(offFormationId) : null;
+    const spread4 = !!pers && pers.wr >= 4;
+    const spread3 = !!pers && pers.wr === 3;
+    const heavy = !!pers && pers.backs + pers.te >= 3 && pers.wr <= 2;
+    if (down >= 3 && distance <= 2 && !spread4) return distance <= 1 ? "5-2" : "46/Bear";
+    if (philosophy === "match" && pers) {
+      if (spread4) return (down === 3 || down === 4) && distance >= 8 ? "Dime" : nickelOf(base);
+      if (spread3) return (down === 3 || down === 4) && distance >= 10 ? "Dime" : nickelOf(base);
+      if (heavy && distance <= 4) return "46/Bear";
+    }
+    if (philosophy === "base") {
+      if ((down === 3 || down === 4) && distance >= 12) return nickelOf(base);
+      if (half === 2 && clock < 120 && trailing > 10) return nickelOf(base);
+      return rollFrontMix(frontMix, base);
+    }
+    if (spread4) return (down === 3 || down === 4) && distance >= 6 ? "Dime" : nickelOf(base);
+    if (heavy && distance <= 4 && philosophy !== "base") return "46/Bear";
+    if ((down === 3 || down === 4) && distance >= 10) return "Dime";
+    if ((down === 3 || down === 4) && distance >= 6) return nickelOf(base);
+    if (half === 2 && clock < 120 && trailing > 10) return nickelOf(base);
+    return rollFrontMix(frontMix, base);
+  }
+  function resolveOffRole(formationId, playType, pos) {
+    var _a, _b, _c;
+    const ovr = (_b = (_a = FORMATION_ROLE_OVERRIDE[formationId]) == null ? void 0 : _a[playType]) == null ? void 0 : _b[pos];
+    if (ovr) return ovr;
+    return ((_c = OFF_ROLE_BY_PLAY[playType]) == null ? void 0 : _c[pos]) || null;
+  }
+  function offUnitStrengthRoles(personnel, roster, weights, formationId, playType) {
+    let unit = 0;
+    for (const [pos, weight] of Object.entries(weights)) {
+      const ids = personnel[pos] || [];
+      const players = ids.map((id) => roster.find((p) => p.id === id)).filter(Boolean);
+      if (players.length === 0) {
+        unit += weight * 30;
+        continue;
+      }
+      const role = resolveOffRole(formationId, playType, pos);
+      let sum = 0;
+      for (const p of players) {
+        sum += role ? roleRating(p, role) : p.compositeRating;
+      }
+      unit += weight * (sum / players.length);
+    }
+    return unit;
+  }
+  function defUnitStrengthSchemeFit(defPersonnel, frontId, roster, weights) {
+    const frontRoles = FRONT_ROLES[frontId];
+    let unit = 0;
+    for (const [pos, weight] of Object.entries(weights)) {
+      const ids = defPersonnel[pos] || [];
+      const players = ids.map((id) => roster.find((p) => p.id === id)).filter(Boolean);
+      if (players.length === 0) {
+        unit += weight * 30;
+        continue;
+      }
+      const roleList = (frontRoles == null ? void 0 : frontRoles[pos]) || [];
+      if (roleList.length === 0) {
+        const avg2 = players.reduce((s, p) => s + p.compositeRating, 0) / players.length;
+        unit += weight * avg2;
+        continue;
+      }
+      const assigned = assignRoles(ids, roster, roleList);
+      let sum = 0;
+      for (const { player, role } of assigned) sum += effectiveRoleRating(player, pos, role);
+      unit += weight * (sum / assigned.length);
+    }
+    return unit;
+  }
+  function effectiveRoleRating(player, pos, assignedRole) {
+    var _a, _b;
+    if (!assignedRole) return player.compositeRating;
+    const roleVal = roleRating(player, assignedRole);
+    const natural = derivedArchetype(player) || assignedRole;
+    const distTable = (_a = ARCHETYPE_DISTANCE[pos]) == null ? void 0 : _a[natural];
+    const dist = distTable ? (_b = distTable[assignedRole]) != null ? _b : 0 : 0;
+    const fitMult = 1 - dist * C.SCHEME_FIT_MOD;
+    return roleVal * fitMult;
+  }
+  function getMatchupEdge(offFormation, defFront) {
+    var _a, _b;
+    return (_b = (_a = MATCHUP_MATRIX[offFormation]) == null ? void 0 : _a[defFront]) != null ? _b : 1;
+  }
+  function getSituationalMod(formationId, down, distance, clock, fieldPos) {
+    const profile = FORMATION_SITUATIONAL[formationId];
+    if (!profile) return 1;
+    const distFromGoal = 100 - fieldPos;
+    if (distFromGoal <= 5) return profile.redZone;
+    if (down >= 3 && distance <= 2) return profile.shortYardage;
+    if (down >= 3 && distance >= 7) return profile.thirdLong;
+    if (clock < 120) return profile.twoMinute;
+    return profile.standard;
+  }
+  function schemeAdjustedOVR(player, frontId) {
+    var _a;
+    if (player.position !== "DE" && player.position !== "OLB" && player.position !== "LB") return player.compositeRating;
+    const pos = player.position;
+    const roles = (_a = FRONT_ROLES[frontId]) == null ? void 0 : _a[pos];
+    if (!roles || roles.length === 0) return player.compositeRating;
+    let best = -Infinity;
+    for (const role of new Set(roles)) {
+      const eff = effectiveRoleRating(player, pos, role);
+      if (eff > best) best = eff;
+    }
+    return Math.round(best);
+  }
+  function getOffWeights(formationId, playType) {
+    var _a, _b;
+    return (_b = (_a = FORMATION_WEIGHTS[formationId]) == null ? void 0 : _a[playType]) != null ? _b : null;
+  }
+  function getDefWeights(frontId, playType) {
+    var _a, _b;
+    return (_b = (_a = DEF_FRONT_WEIGHTS[frontId]) == null ? void 0 : _a[playType]) != null ? _b : null;
+  }
+  var FRONT_PRESSURE_SIGNATURE, FRONT_SIG_LABEL, SUB_CHAIN;
+  var init_formations = __esm({
+    "js/engine/formations.js"() {
+      init_constants();
+      init_player();
+      FRONT_PRESSURE_SIGNATURE = {
+        "4-3": "secondLevel",
+        // SAM/WILL downhill — backer heat is the 4-3's language
+        "3-4": "fireZone",
+        // the OLB drop machinery IS the fire zone
+        "Nickel": "theHouse",
+        // the 4-2-5's six-man zero
+        "Dime": "secondaryHeat",
+        // six DBs: the heat comes from the secondary
+        "46/Bear": "secondaryHeat",
+        // JACK/CHARLIE — the SS walked down and coming
+        "5-2": "secondLevel",
+        // five down linemen, two ILBs shot through the gaps
+        "3-3-5": "fireZone",
+        // the stack's whole identity: show six, bring two, drop the rest
+        "Tite": "fireZone",
+        // overhang drops behind shown pressure — the mint front's language
+        "4-4": "secondLevel",
+        // SPUR/BANDIT downhill from an eight-man front
+        "Big Nickel": "secondaryHeat",
+        // the ROVER is the heat: a safety nobody accounts for
+        "Penny": "fireZone"
+        // EDGEs bail off the five-man look, backers replace
+      };
+      FRONT_SIG_LABEL = {
+        "4-3": "backer heat (SAM/WILL downhill)",
+        "3-4": "fire zones (OLB drops behind shown pressure)",
+        "Nickel": "the six-man zero",
+        "Dime": "secondary heat",
+        "46/Bear": "JACK/CHARLIE \u2014 strong-safety heat off the edge",
+        "5-2": "inside-backer heat behind the five-man wall",
+        "3-3-5": "stack heat \u2014 any two of six, the offense guesses which",
+        "Tite": "overhang fire zones behind the closed B-gaps",
+        "4-4": "SPUR/BANDIT downhill from the eight-man front",
+        "Big Nickel": "ROVER heat \u2014 the third safety nobody picks up",
+        "Penny": "EDGE drops off the five-man light wall"
+      };
+      SUB_CHAIN = {
+        QB: ["RB", "WR", "TE"],
+        // the emergency QB nobody wants
+        RB: ["WR", "TE"],
+        WR: ["TE", "RB", "CB"],
+        // corners have played receiver forever
+        TE: ["OL", "RB", "WR"],
+        // jumbo: a sixth lineman is the classic answer
+        OL: ["TE", "DT"],
+        // a true emergency — DTs flip to OL in a pinch
+        DE: ["OLB", "DT", "LB"],
+        DT: ["DE", "OL"],
+        OLB: ["LB", "DE", "S"],
+        LB: ["OLB", "S", "DE"],
+        CB: ["S", "WR"],
+        S: ["CB", "LB", "OLB"],
+        K: ["P"],
+        P: ["K"]
+      };
+    }
+  });
+
   // js/engine/situations.js
   function resolveSituation({ down, distance, fieldPos, margin, clock }) {
     if (fieldPos >= 95) return "goal_line";
@@ -13629,6 +14263,10 @@ var _CFB = (() => {
   });
 
   // js/engine/portal.js
+  function startersAt(school, pos) {
+    const ovr = schemeStarterOverride(school, pos);
+    return ovr != null ? ovr : STARTERS[pos] || 1;
+  }
   function caliberTier(player) {
     const r = (player == null ? void 0 : player.compositeRating) || 0;
     return r >= C.PORTAL_TIER_HI ? 3 : r >= C.PORTAL_TIER_MID ? 2 : 1;
@@ -13680,7 +14318,7 @@ var _CFB = (() => {
   }
   function roleFor(school, player) {
     const better = ((school == null ? void 0 : school.roster) || []).filter((p) => p.position === player.position && (p.compositeRating || 0) > (player.compositeRating || 0)).length;
-    const starters = STARTERS[player.position] || 1;
+    const starters = startersAt(school, player.position);
     if (better === 0) return { role: "starter", score: C.PORTAL_ROLE_STARTER };
     if (better < starters) return { role: "rotation", score: C.PORTAL_ROLE_ROTATION };
     return { role: "buried", score: C.PORTAL_ROLE_BURIED };
@@ -13695,7 +14333,7 @@ var _CFB = (() => {
   function projectedPathToPlay(recruit, school) {
     const roster = (school == null ? void 0 : school.roster) || [];
     const pos = recruit.position;
-    const starters = STARTERS[pos] || 1;
+    const starters = startersAt(school, pos);
     const myPeak = projectedPeak(recruit);
     const aheadReturning = roster.filter(
       (p) => p.position === pos && p.classYear !== "SR" && projectedPeak(p) > myPeak
@@ -13751,7 +14389,7 @@ var _CFB = (() => {
   }
   function needScore(school, player) {
     const rank = school.roster.filter((p) => p.position === player.position).filter((p) => (p.compositeRating || 0) > (player.compositeRating || 0)).length;
-    const starters = STARTERS[player.position] || 1;
+    const starters = startersAt(school, player.position);
     if (rank < starters) return 1;
     if (rank < starters + 1) return 0.5;
     return 0.1;
@@ -13813,7 +14451,9 @@ var _CFB = (() => {
         if ((p.compositeRating || 0) < C.PLAYER_ATTRITION_MIN_RATING) continue;
         if (p.redshirted && p.redshirtYear === state2.season) continue;
         const aheadReturning = mySchool.roster.filter((x) => x.position === p.position && x.id !== p.id && (x.compositeRating || 0) > (p.compositeRating || 0) && (p.classYear === "SR" || x.classYear !== "SR")).length;
-        if (aheadReturning < C.PLAYER_ATTRITION_DEPTH) continue;
+        const schemeCut = Math.max(0, (STARTERS[p.position] || 1) - startersAt(mySchool, p.position));
+        const buriedBar = Math.max(1, C.PLAYER_ATTRITION_DEPTH - schemeCut);
+        if (aheadReturning < buriedBar) continue;
         p._attritionAhead = aheadReturning;
         eligible.push(p);
       }
@@ -13821,8 +14461,9 @@ var _CFB = (() => {
       const leaving = [];
       for (const p of eligible) {
         if (leaving.length >= C.PLAYER_ATTRITION_MAX_PER_YEAR) break;
-        const starters = STARTERS[p.position] || 1;
-        const depthOver = (p._attritionAhead || 0) - Math.max(C.PLAYER_ATTRITION_DEPTH, starters) + 1;
+        const starters = startersAt(mySchool, p.position);
+        const bar = Math.max(1, C.PLAYER_ATTRITION_DEPTH - Math.max(0, (STARTERS[p.position] || 1) - starters));
+        const depthOver = (p._attritionAhead || 0) - Math.max(bar, starters) + 1;
         const buriedMult = clamp2(1 + Math.max(0, depthOver) * C.PLAYER_ATTRITION_BURIED_STEP, 1, C.PLAYER_ATTRITION_BURIED_MAX);
         delete p._attritionAhead;
         if (Math.random() < C.PLAYER_ATTRITION_PROB * buriedMult) leaving.push(p);
@@ -14240,7 +14881,7 @@ var _CFB = (() => {
     const roster = (school == null ? void 0 : school.roster) || [];
     const have = roster.filter((p) => p.position === pos).length;
     const srs = roster.filter((p) => p.position === pos && p.classYear === "SR").length;
-    const need = (ROSTER_TARGETS[pos] || 0) - (have - srs);
+    const need = (schemeRosterTargets(school)[pos] || 0) - (have - srs);
     if (need >= 1) return 1 + Math.min(need, 3) / 3 * C.NEED_PULL_MAX;
     return Math.max(1 - C.NEED_PULL_MAX * 0.5, 1 + need * 0.06);
   }
@@ -14525,7 +15166,7 @@ var _CFB = (() => {
           const shortfall = min - returning;
           return 2.5 + shortfall * 0.8;
         }
-        const needN = (ROSTER_TARGETS[pos] || 0) - returning;
+        const needN = (schemeRosterTargets(school)[pos] || 0) - returning;
         return Math.max(0.4, Math.min(2.2, 0.4 + needN * 0.35));
       };
       const myTier = (_a = { D1: 3, D2: 2, D3: 1 }[school.division]) != null ? _a : 1;
@@ -18157,7 +18798,9 @@ var _CFB = (() => {
     }, 0) / wrs.length : 0;
     const offFormations = pickFormations(bucket, mobile, wrDeepBias);
     const frontLean = lbStr - dlStr + randNorm(0, 1.5);
-    const defBaseFront = frontLean > -2 ? "3-4" : "4-3";
+    let defBaseFront = frontLean > -2 ? "3-4" : "4-3";
+    const stackLean = (cbStr + sStr) / 2 - dlStr + randNorm(0, 2);
+    if (!globalThis.__no335 && stackLean > 4) defBaseFront = "3-3-5";
     const primaryFormation = ((_a = offFormations[0]) == null ? void 0 : _a.id) || "Single Back";
     const isOptionTeam = primaryFormation === "Flexbone" || primaryFormation === "Wishbone";
     let qbRunPct = 0;
@@ -18272,13 +18915,43 @@ var _CFB = (() => {
         heavy: { runCommit: 8 },
         wildcat: { edgePlay: "contain" }
       }
-    }, optionRate != null ? { optionRate, optionMix, pitchAggr } : {}), {
+    }, optionRate != null ? { optionRate, optionMix, pitchAggr } : {}), __spreadValues2(globalThis.__noDefCalls ? {} : buildAISignatureCalls(defBaseFront, agg, cbStr, sStr, lbStr), {
       // Phase 2 (Jul 2026): AI coaches now carry archetype situational matrices
       // — a run team hammers its heavy package on the goal line and 3rd & short,
       // a pass team empties out on 3rd & long — per Situational spec §10.
       situations: buildAISituations(bucket, offFormations, agg),
       baseTempo
-    });
+    }));
+  }
+  function buildAISignatureCalls(defBaseFront, agg, cbStr, sStr, lbStr = 50) {
+    const sig = FRONT_PRESSURE_SIGNATURE[defBaseFront] || "secondLevel";
+    const HEAT_WORD = { fireZone: "Fire", secondLevel: "Dog", secondaryHeat: "Cat", theHouse: "Zero" };
+    const heatName = `${defBaseFront} ${HEAT_WORD[sig] || "Dog"}`;
+    const manSecondary = cbStr >= sStr;
+    const covName = manSecondary ? "Lockdown" : "Mint";
+    const defCalls = {};
+    defCalls[heatName] = {
+      front: defBaseFront,
+      aggression: agg > 0.6 ? "house" : "attacking",
+      pressureIdentity: sig,
+      covShell: "single",
+      covStyle: sig === "theHouse" || sig === "secondaryHeat" ? "man" : "zone"
+    };
+    defCalls[covName] = manSecondary ? { covShell: "single", covStyle: "man", aggression: "bend" } : { covShell: "two", covStyle: "zone", zoneStyle: "match", aggression: "bend" };
+    const fams = !globalThis.__noCovFamilies;
+    if (fams) {
+      if (manSecondary) {
+        if (cbStr >= 52 && sStr >= 48) defCalls[covName].covFamily = "Cover 2-Man";
+      } else if (lbStr >= sStr && lbStr >= 52) defCalls[covName].covFamily = "Tampa 2";
+      else if (sStr >= 52) defCalls[covName].covFamily = "Cover 6";
+      defCalls.Victory = { covShell: "two", covStyle: "zone", covFamily: "Prevent", aggression: "bend" };
+    }
+    const heatLong = clamp2(30 + Math.round(agg * 40) + randInt3(-5, 5), 15, 75);
+    const heatMed = clamp2(15 + Math.round(agg * 30) + randInt3(-5, 5), 10, 55);
+    return { defCalls, callSheet: __spreadValues2({
+      third_long: { any: [[heatName, heatLong], [covName, 100 - heatLong]] },
+      third_medium: { any: [[heatName, heatMed], [covName, 100 - heatMed]] }
+    }, fams ? { four_min_lead: { any: [["Victory", 60], [covName, 40]] } } : {}) };
   }
   function buildAISituations(bucket, offFormations, agg) {
     const has = (id) => offFormations.some((f) => f.id === id);
@@ -18409,6 +19082,7 @@ var _CFB = (() => {
     "js/engine/ai.js"() {
       init_spread();
       init_constants();
+      init_formations();
       init_player();
       init_situations();
       init_world();
@@ -19094,9 +19768,10 @@ var _CFB = (() => {
   function computeAutoRedshirtCandidates(school, season) {
     const candidates = [];
     const positions = [...new Set(school.roster.map((p) => p.position))];
+    const starterTable = schemeStarterCounts(school);
     for (const pos of positions) {
       const atPos = school.roster.filter((p) => p.position === pos).sort((a, b) => b.compositeRating - a.compositeRating);
-      const rotationSize = (STARTER_COUNTS[pos] || 1) * 2;
+      const rotationSize = (starterTable[pos] || 1) * 2;
       for (const player of atPos) {
         if (player.classYear !== "FR") continue;
         if (player.redshirted) continue;
@@ -19177,6 +19852,17 @@ var _CFB = (() => {
     const namedFb = (activeDepth.FB || []).some((id) => allActive.has(id));
     const rank = (p) => p === "SLOT" ? hasJoker ? -2 : 1 : p === "RB" && namedFb ? -1 : 0;
     const posOrder = Object.keys(posSlots).sort((a, b) => rank(a) - rank(b));
+    for (const s of slots) {
+      const want = assignments == null ? void 0 : assignments[s.id];
+      if (!want || used.has(want) || !allActive.has(want)) continue;
+      const eligKey = s.mesh || s.pos;
+      if (SLOT_ELIGIBLE_POS[eligKey]) {
+        const p = playerPos == null ? void 0 : playerPos(want);
+        if (p && !SLOT_ELIGIBLE_POS[eligKey].includes(p)) continue;
+      }
+      bySlot[s.id] = want;
+      used.add(want);
+    }
     for (const pos of posOrder) {
       const isFbSlot = (s) => s.role === "FB-Lead" || s.label === "FB" || s.label === "B";
       const fbRank = namedFb ? -1 : 1;
@@ -19192,16 +19878,6 @@ var _CFB = (() => {
         pool = [...head, ...tail];
       }
       byPos[pos] = [];
-      for (const s of group) {
-        const want = assignments == null ? void 0 : assignments[s.id];
-        if (!want || used.has(want) || !allActive.has(want)) continue;
-        if (SLOT_ELIGIBLE_POS[s.pos]) {
-          const p = playerPos == null ? void 0 : playerPos(want);
-          if (p && !SLOT_ELIGIBLE_POS[s.pos].includes(p)) continue;
-        }
-        bySlot[s.id] = want;
-        used.add(want);
-      }
       let cursor = 0;
       const fbOverride = pos === "RB" && Array.isArray(activeDepth.FB) ? activeDepth.FB : null;
       for (const s of group) {
@@ -19221,6 +19897,23 @@ var _CFB = (() => {
           while (cursor < pool.length && used.has(pool[cursor])) cursor++;
           pick2 = cursor < pool.length ? pool[cursor] : null;
           if (pick2) cursor++;
+        }
+        if (!pick2 && s.mesh && MESH_AUTO_POOL[s.mesh]) {
+          const seen2 = /* @__PURE__ */ new Set();
+          let tail = MESH_AUTO_POOL[s.mesh](activeDepth).filter((id) => seen2.has(id) ? false : (seen2.add(id), true)).filter((id) => !used.has(id) && allActive.has(id));
+          if (playerPos && SLOT_ELIGIBLE_POS[s.mesh]) tail = tail.filter((id) => {
+            const p = playerPos(id);
+            return !p || SLOT_ELIGIBLE_POS[s.mesh].includes(p);
+          });
+          if (ratingById) {
+            const multOf = (id) => {
+              var _m;
+              const p = playerPos == null ? void 0 : playerPos(id);
+              return p ? (_m = (SLOT_ELIGIBILITY[s.pos] || {})[p]) != null ? _m : 1 : 1;
+            };
+            tail.sort((a, b) => (ratingById[b] || 0) * multOf(b) - (ratingById[a] || 0) * multOf(a));
+          }
+          pick2 = tail[0] || null;
         }
         if (pick2) used.add(pick2);
         bySlot[s.id] = pick2 || null;
@@ -19301,7 +19994,7 @@ var _CFB = (() => {
     if (!layout) return null;
     const { bySlot, byPos } = resolveSlots(layout.slots, assignments, activeDepth, ratingById, playerPos);
     const DE = byPos.DE || [], DT = byPos.DT || [], OLB = byPos.OLB || [], LB = byPos.LB || [], CB = byPos.CB || [], S = byPos.S || [];
-    const olbRush = frontId === "3-4";
+    const olbRush = frontId === "3-4" || frontId === "Penny";
     const blitzShareByPlayerId = {};
     const dropShareByPlayerId = {};
     const dropSlots = new Set(DEF_DROP_ELIGIBLE[frontId] || []);
@@ -19348,7 +20041,7 @@ var _CFB = (() => {
         if (entry.shares[s.id] == null) entry.shares[s.id] = defaultShareFor(s, legacy);
       }
     }
-    for (const fid of ["4-3", "3-4"]) {
+    for (const fid of Object.keys(DEF_FIELD_LAYOUTS)) {
       if (!fa.defense[fid]) fa.defense[fid] = { slots: {}, blitzShares: {} };
       const defEntry = fa.defense[fid];
       if (!defEntry.slots) defEntry.slots = {};
@@ -19398,7 +20091,19 @@ var _CFB = (() => {
         // the jet-motion man — pure speed, either listing
         OL: ["OL", "TE"],
         // a sixth lineman is real; a corner at guard is not
-        QB: ["QB"]
+        QB: ["QB"],
+        // ── Defensive job mesh (identity Stage 0, Aug 2026) ──────────────────────
+        // Keyed by the slot's MESH key (slot.mesh in DEF_FIELD_LAYOUTS), never by a
+        // roster position — base 4-3 and 3-4 slots carry no mesh key and stay
+        // hard-typed to their positions. Native position first in every list.
+        NB: ["CB", "S"],
+        // the nickel: a corner's job that a star safety can own (2010 Woodson)
+        OVERHANG: ["OLB", "DE", "LB"],
+        // JACK / JOKER / CHAR / SPUR / BANDIT / EDGE — stand-up edge bodies
+        STACKER: ["LB", "OLB"],
+        // stack / inside-backer jobs outside the two base fronts
+        SPACE: ["S", "LB", "CB"]
+        // WAR / ROVER / Dime DB — the space-safety hybrid jobs
       };
       MESH_AUTO_POOL = {
         SLOT: (d) => [...d.SLOT || [], ...d.WR || [], ...d.TE || []],
@@ -19411,352 +20116,15 @@ var _CFB = (() => {
         WING: (d) => [...d.WING || [], ...d.RB || [], ...d.TE || []],
         WILDCAT: (d) => [...d.WILDCAT || [], ...d.RB || [], ...d.WR || []],
         // QBs by hand only — never auto-drafted out wide
-        JETMAN: (d) => [...d.JETMAN || [], ...d.RB || [], ...d.WR || []]
-      };
-    }
-  });
-
-  // js/engine/formations.js
-  function fieldUnit(pos, count, depthChart, used) {
-    const out = [];
-    for (const id of depthChart[pos] || []) {
-      if (out.length >= count) break;
-      if (used.has(id)) continue;
-      out.push(id);
-      used.add(id);
-    }
-    if (out.length >= count) return out;
-    for (const alt of SUB_CHAIN[pos] || []) {
-      for (const id of depthChart[alt] || []) {
-        if (out.length >= count) break;
-        if (used.has(id)) continue;
-        out.push(id);
-        used.add(id);
-      }
-      if (out.length >= count) break;
-    }
-    return out;
-  }
-  function resolvePersonnel(formationId, depthChart) {
-    const pkg = FORMATION_PACKAGES[aliasFormation(formationId)] || FORMATION_PACKAGES["Single Back"];
-    if (!pkg) return null;
-    const used = /* @__PURE__ */ new Set();
-    const personnel = {
-      OL: fieldUnit("OL", 5, depthChart, used),
-      QB: fieldUnit("QB", 1, depthChart, used)
-    };
-    const rbCount = (pkg.RB || 0) + (pkg.FB || 0);
-    const rbAll = rbCount > 0 ? fieldUnit("RB", rbCount, depthChart, used) : [];
-    const fbN = pkg.FB || 0;
-    personnel.RB = fbN > 0 ? rbAll.slice(0, rbAll.length - fbN) : rbAll;
-    personnel.FB = fbN > 0 ? rbAll.slice(rbAll.length - fbN) : [];
-    for (const [pos, count] of Object.entries(pkg)) {
-      if (pos === "RB" || pos === "FB") continue;
-      personnel[pos] = count > 0 ? fieldUnit(pos, count, depthChart, used) : [];
-    }
-    return personnel;
-  }
-  function resolveDefPersonnel(frontId, depthChart, roster = null) {
-    const FRONT_COUNTS = {
-      "4-3": { DE: 2, DT: 2, OLB: 2, LB: 1, CB: 2, S: 2 },
-      // SAM/WILL are OLBs, MIKE is the LB
-      "3-4": { DE: 2, DT: 1, OLB: 2, LB: 2, CB: 2, S: 2 },
-      // 5-tech DEs, NT, edge OLBs, 2 ILB
-      "Nickel": { DE: 2, DT: 2, OLB: 1, LB: 1, CB: 3, S: 2 },
-      "Dime": { DE: 2, DT: 2, OLB: 0, LB: 1, CB: 3, S: 3 },
-      "46/Bear": { DE: 2, DT: 2, OLB: 2, LB: 1, CB: 2, S: 1 },
-      // Five-man wall + two inside backers (matches FRONT_ROLES["5-2"] / DEF_FRONT_WEIGHTS 5-2)
-      "5-2": { DE: 2, DT: 3, OLB: 0, LB: 2, CB: 2, S: 2 }
-    };
-    const RUSH_SLOTS = {
-      "4-3": ["DE", "DT"],
-      "3-4": ["DE", "DT", "OLB"],
-      "Nickel": ["DE", "DT"],
-      "Dime": ["DE", "DT"],
-      "46/Bear": ["DE", "DT"],
-      "5-2": ["DE", "DT"]
-    };
-    const counts = FRONT_COUNTS[frontId] || FRONT_COUNTS["4-3"];
-    const used = /* @__PURE__ */ new Set();
-    const ratingOf = roster ? (id) => {
-      var _a;
-      return ((_a = roster.find((p) => p.id === id)) == null ? void 0 : _a.compositeRating) || 0;
-    } : null;
-    const idealRoles = FRONT_ROLES[frontId] || null;
-    const fill = (slotPos) => {
-      var _a, _b, _c, _d, _e;
-      const n = counts[slotPos] || 0;
-      const out = [];
-      for (let i = 0; i < n; i++) {
-        let bestId = null, bestVal = -Infinity;
-        const elig = SLOT_ELIGIBILITY[slotPos] || { [slotPos]: 1 };
-        const idealRole = ((_a = idealRoles == null ? void 0 : idealRoles[slotPos]) == null ? void 0 : _a[i]) || null;
-        for (const [pos, mult] of Object.entries(elig)) {
-          for (const id of depthChart[pos] || []) {
-            if (used.has(id)) continue;
-            let val;
-            if (ratingOf) {
-              const p = roster.find((x) => x.id === id);
-              if (p && idealRole) {
-                const rv = roleRating(p, idealRole);
-                const natural = derivedArchetype(p) || idealRole;
-                const dist = (_d = (_c = (_b = ARCHETYPE_DISTANCE[p.position]) == null ? void 0 : _b[natural]) == null ? void 0 : _c[idealRole]) != null ? _d : 0;
-                val = rv * (1 - dist * C.SCHEME_FIT_MOD) * mult;
-              } else {
-                val = ratingOf(id) * mult;
-              }
-            } else {
-              val = (pos === slotPos ? 1e3 - out.length : 500) - depthChart[pos].indexOf(id);
-            }
-            if (val > bestVal) {
-              bestVal = val;
-              bestId = id;
-            }
-            if (!ratingOf && pos === slotPos) break;
-          }
-          if (!ratingOf && bestId && (SLOT_ELIGIBILITY[slotPos] || {})[slotPos] && ((_e = depthChart[slotPos]) == null ? void 0 : _e.includes(bestId))) break;
-        }
-        if (bestId) {
-          used.add(bestId);
-          out.push(bestId);
-        }
-      }
-      return out;
-    };
-    const DE = fill("DE"), DT = fill("DT"), OLB = fill("OLB"), ILB = fill("LB"), CB = fill("CB"), S = fill("S");
-    const rushSlots = RUSH_SLOTS[frontId] || RUSH_SLOTS["4-3"];
-    const slotMap2 = { DE, DT, OLB, LB: ILB, CB, S };
-    const DL = rushSlots.flatMap((k) => slotMap2[k]);
-    return {
-      // Granular positions (UI, roles, future features):
-      DE,
-      DT,
-      OLB,
-      ILB,
-      CB,
-      S,
-      // Composed units (consumed by sim logic — DO NOT REMOVE):
-      // LB keeps its historical semantic: ALL coverage backers on the field
-      // (true LBs first so box-fit logic prefers thumpers; non-rushing OLBs
-      // join them). In the 3-4 the OLBs rush, so LB = the two ILBs.
-      LB: rushSlots.includes("OLB") ? ILB : [...ILB, ...OLB],
-      DL,
-      // pass-rush unit (front-dependent: 3-4 includes OLBs)
-      DB: [...CB, ...S]
-      // coverage unit: corners + safeties
-    };
-  }
-  function assignRoles(players, roster, roleList) {
-    var _a, _b, _c;
-    const pool = players.map((id) => roster.find((p) => p.id === id)).filter(Boolean);
-    const slots = [...roleList];
-    const used = /* @__PURE__ */ new Set();
-    const assigned = [];
-    for (const role of slots) {
-      let best = null, bestVal = -Infinity;
-      for (const p of pool) {
-        if (used.has(p.id)) continue;
-        const rv = roleRating(p, role);
-        const natural = derivedArchetype(p) || role;
-        const dist = (_c = (_b = (_a = ARCHETYPE_DISTANCE[p.position]) == null ? void 0 : _a[natural]) == null ? void 0 : _b[role]) != null ? _c : 0;
-        const eff = rv * (1 - dist * C.SCHEME_FIT_MOD);
-        if (eff > bestVal) {
-          bestVal = eff;
-          best = p;
-        }
-      }
-      if (best) {
-        used.add(best.id);
-        assigned.push({ player: best, role });
-      }
-    }
-    return assigned;
-  }
-  function rollFormation(offFormations, eligible = null) {
-    const liveAll = (offFormations || []).filter((f) => f && FORMATION_PACKAGES[aliasFormation(f.id)]);
-    if (!liveAll.length) return "Single Back";
-    const live = eligible ? liveAll.filter((f) => eligible(aliasFormation(f.id))).length ? liveAll.filter((f) => eligible(aliasFormation(f.id))) : liveAll : liveAll;
-    const total = live.reduce((s, f) => s + (f.weight || 0), 0);
-    let pick2 = live[live.length - 1].id;
-    if (total <= 0) {
-      pick2 = live[0].id;
-    } else {
-      let r = Math.random() * total;
-      for (const f of live) {
-        r -= f.weight || 0;
-        if (r <= 0) {
-          pick2 = f.id;
-          break;
-        }
-      }
-    }
-    return aliasFormation(pick2);
-  }
-  function offPersonnelOf(formationId) {
-    const p = FORMATION_PACKAGES[aliasFormation(formationId)] || {};
-    return { backs: (p.RB || 0) + (p.FB || 0), te: p.TE || 0, wr: (p.WR || 0) + (p.SLOT || 0) };
-  }
-  function selectDefFront(baseFront, down, distance, clock, half, trailing, offFormationId = null, philosophy = "auto") {
-    const base = baseFront || "4-3";
-    const pers = offFormationId ? offPersonnelOf(offFormationId) : null;
-    const spread4 = !!pers && pers.wr >= 4;
-    const spread3 = !!pers && pers.wr === 3;
-    const heavy = !!pers && pers.backs + pers.te >= 3 && pers.wr <= 2;
-    if (down >= 3 && distance <= 2 && !spread4) return distance <= 1 ? "5-2" : "46/Bear";
-    if (philosophy === "match" && pers) {
-      if (spread4) return (down === 3 || down === 4) && distance >= 8 ? "Dime" : "Nickel";
-      if (spread3) return (down === 3 || down === 4) && distance >= 10 ? "Dime" : "Nickel";
-      if (heavy && distance <= 4) return "46/Bear";
-    }
-    if (philosophy === "base") {
-      if ((down === 3 || down === 4) && distance >= 12) return "Nickel";
-      if (half === 2 && clock < 120 && trailing > 10) return "Nickel";
-      return base;
-    }
-    if (spread4) return (down === 3 || down === 4) && distance >= 6 ? "Dime" : "Nickel";
-    if (heavy && distance <= 4 && philosophy !== "base") return "46/Bear";
-    if ((down === 3 || down === 4) && distance >= 10) return "Dime";
-    if ((down === 3 || down === 4) && distance >= 6) return "Nickel";
-    if (half === 2 && clock < 120 && trailing > 10) return "Nickel";
-    return base;
-  }
-  function resolveOffRole(formationId, playType, pos) {
-    var _a, _b, _c;
-    const ovr = (_b = (_a = FORMATION_ROLE_OVERRIDE[formationId]) == null ? void 0 : _a[playType]) == null ? void 0 : _b[pos];
-    if (ovr) return ovr;
-    return ((_c = OFF_ROLE_BY_PLAY[playType]) == null ? void 0 : _c[pos]) || null;
-  }
-  function offUnitStrengthRoles(personnel, roster, weights, formationId, playType) {
-    let unit = 0;
-    for (const [pos, weight] of Object.entries(weights)) {
-      const ids = personnel[pos] || [];
-      const players = ids.map((id) => roster.find((p) => p.id === id)).filter(Boolean);
-      if (players.length === 0) {
-        unit += weight * 30;
-        continue;
-      }
-      const role = resolveOffRole(formationId, playType, pos);
-      let sum = 0;
-      for (const p of players) {
-        sum += role ? roleRating(p, role) : p.compositeRating;
-      }
-      unit += weight * (sum / players.length);
-    }
-    return unit;
-  }
-  function defUnitStrengthSchemeFit(defPersonnel, frontId, roster, weights) {
-    const frontRoles = FRONT_ROLES[frontId];
-    let unit = 0;
-    for (const [pos, weight] of Object.entries(weights)) {
-      const ids = defPersonnel[pos] || [];
-      const players = ids.map((id) => roster.find((p) => p.id === id)).filter(Boolean);
-      if (players.length === 0) {
-        unit += weight * 30;
-        continue;
-      }
-      const roleList = (frontRoles == null ? void 0 : frontRoles[pos]) || [];
-      if (roleList.length === 0) {
-        const avg2 = players.reduce((s, p) => s + p.compositeRating, 0) / players.length;
-        unit += weight * avg2;
-        continue;
-      }
-      const assigned = assignRoles(ids, roster, roleList);
-      let sum = 0;
-      for (const { player, role } of assigned) sum += effectiveRoleRating(player, pos, role);
-      unit += weight * (sum / assigned.length);
-    }
-    return unit;
-  }
-  function effectiveRoleRating(player, pos, assignedRole) {
-    var _a, _b;
-    if (!assignedRole) return player.compositeRating;
-    const roleVal = roleRating(player, assignedRole);
-    const natural = derivedArchetype(player) || assignedRole;
-    const distTable = (_a = ARCHETYPE_DISTANCE[pos]) == null ? void 0 : _a[natural];
-    const dist = distTable ? (_b = distTable[assignedRole]) != null ? _b : 0 : 0;
-    const fitMult = 1 - dist * C.SCHEME_FIT_MOD;
-    return roleVal * fitMult;
-  }
-  function getMatchupEdge(offFormation, defFront) {
-    var _a, _b;
-    return (_b = (_a = MATCHUP_MATRIX[offFormation]) == null ? void 0 : _a[defFront]) != null ? _b : 1;
-  }
-  function getSituationalMod(formationId, down, distance, clock, fieldPos) {
-    const profile = FORMATION_SITUATIONAL[formationId];
-    if (!profile) return 1;
-    const distFromGoal = 100 - fieldPos;
-    if (distFromGoal <= 5) return profile.redZone;
-    if (down >= 3 && distance <= 2) return profile.shortYardage;
-    if (down >= 3 && distance >= 7) return profile.thirdLong;
-    if (clock < 120) return profile.twoMinute;
-    return profile.standard;
-  }
-  function schemeAdjustedOVR(player, frontId) {
-    var _a;
-    if (player.position !== "DE" && player.position !== "OLB" && player.position !== "LB") return player.compositeRating;
-    const pos = player.position;
-    const roles = (_a = FRONT_ROLES[frontId]) == null ? void 0 : _a[pos];
-    if (!roles || roles.length === 0) return player.compositeRating;
-    let best = -Infinity;
-    for (const role of new Set(roles)) {
-      const eff = effectiveRoleRating(player, pos, role);
-      if (eff > best) best = eff;
-    }
-    return Math.round(best);
-  }
-  function getOffWeights(formationId, playType) {
-    var _a, _b;
-    return (_b = (_a = FORMATION_WEIGHTS[formationId]) == null ? void 0 : _a[playType]) != null ? _b : null;
-  }
-  function getDefWeights(frontId, playType) {
-    var _a, _b;
-    return (_b = (_a = DEF_FRONT_WEIGHTS[frontId]) == null ? void 0 : _a[playType]) != null ? _b : null;
-  }
-  var FRONT_PRESSURE_SIGNATURE, FRONT_SIG_LABEL, SUB_CHAIN;
-  var init_formations = __esm({
-    "js/engine/formations.js"() {
-      init_constants();
-      init_player();
-      FRONT_PRESSURE_SIGNATURE = {
-        "4-3": "secondLevel",
-        // SAM/WILL downhill — backer heat is the 4-3's language
-        "3-4": "fireZone",
-        // the OLB drop machinery IS the fire zone
-        "Nickel": "theHouse",
-        // the 4-2-5's six-man zero
-        "Dime": "secondaryHeat",
-        // six DBs: the heat comes from the secondary
-        "46/Bear": "secondaryHeat",
-        // JACK/CHARLIE — the SS walked down and coming
-        "5-2": "secondLevel"
-        // five down linemen, two ILBs shot through the gaps
-      };
-      FRONT_SIG_LABEL = {
-        "4-3": "backer heat (SAM/WILL downhill)",
-        "3-4": "fire zones (OLB drops behind shown pressure)",
-        "Nickel": "the six-man zero",
-        "Dime": "secondary heat",
-        "46/Bear": "JACK/CHARLIE \u2014 strong-safety heat off the edge",
-        "5-2": "inside-backer heat behind the five-man wall"
-      };
-      SUB_CHAIN = {
-        QB: ["RB", "WR", "TE"],
-        // the emergency QB nobody wants
-        RB: ["WR", "TE"],
-        WR: ["TE", "RB", "CB"],
-        // corners have played receiver forever
-        TE: ["OL", "RB", "WR"],
-        // jumbo: a sixth lineman is the classic answer
-        OL: ["TE", "DT"],
-        // a true emergency — DTs flip to OL in a pinch
-        DE: ["OLB", "DT", "LB"],
-        DT: ["DE", "OL"],
-        OLB: ["LB", "DE", "S"],
-        LB: ["OLB", "S", "DE"],
-        CB: ["S", "WR"],
-        S: ["CB", "LB", "OLB"],
-        K: ["P"],
-        P: ["K"]
+        JETMAN: (d) => [...d.JETMAN || [], ...d.RB || [], ...d.WR || []],
+        // ── Defensive job mesh (identity Stage 0) ────────────────────────────────
+        // Consulted ONLY as the auto-fill TAIL for mesh-keyed defensive slots (the
+        // native room is always drained first via the slot's own pos pool), so
+        // untouched plans and AI defenses resolve near-identically.
+        NB: (d) => [...d.CB || [], ...d.S || []],
+        OVERHANG: (d) => [...d.OLB || [], ...d.DE || [], ...d.LB || []],
+        STACKER: (d) => [...d.LB || [], ...d.OLB || []],
+        SPACE: (d) => [...d.S || [], ...d.LB || [], ...d.CB || []]
       };
     }
   });
@@ -20767,7 +21135,7 @@ var _CFB = (() => {
   // js/engine/sim.js
   function composedFrontRoles(frontId) {
     const fr = FRONT_ROLES[frontId] || FRONT_ROLES["4-3"] || {};
-    const olbRush = frontId === "3-4";
+    const olbRush = frontId === "3-4" || frontId === "Penny";
     return {
       DL: olbRush ? [...fr.DE || [], ...fr.DT || [], ...fr.OLB || []] : [...fr.DE || [], ...fr.DT || []],
       LB: olbRush ? [...fr.LB || []] : [...fr.LB || [], ...fr.OLB || []],
@@ -20911,6 +21279,69 @@ var _CFB = (() => {
       defEff.blitzPct = clamp2(((_a = C.AGGRESSION.rate[o.aggression]) != null ? _a : 20) + ((_c = (_b = defSchool == null ? void 0 : defSchool.weeklyPlan) == null ? void 0 : _b.blitzShift) != null ? _c : 0), 0, 75);
     }
     if (o.runCommit != null) defEff.runCommit = clamp2(o.runCommit, -25, 25);
+    if (!globalThis.__noCovFamilies) {
+      if (o.covFamily && COV_FAMILY_IMPLIES[o.covFamily]) {
+        defEff.covFamily = o.covFamily;
+        defEff.covShell = COV_FAMILY_IMPLIES[o.covFamily].shell;
+        defEff.covStyle = COV_FAMILY_IMPLIES[o.covFamily].style;
+        if (o.covFamily === "Prevent") defEff.rush3 = true;
+      }
+      if (o.rotation) defEff.rotation = o.rotation;
+      if (o.rush3) defEff.rush3 = true;
+    }
+  }
+  function syncDefEff(defPlanEff, defEff) {
+    defPlanEff.blitzPct = defEff.blitzPct;
+    defPlanEff.coverageScheme = defEff.coverageScheme;
+    defPlanEff.defAggrEff = defEff.defAggression;
+    defPlanEff.pressIdentityEff = defEff.pressureIdentity;
+    defPlanEff.runCommitEff = defEff.runCommit;
+    defPlanEff.optionKeyEff = defEff.optionKey;
+    defPlanEff.edgePlayEff = defEff.edgePlay;
+    defPlanEff.covShellEff = defEff.covShell;
+    defPlanEff.covStyleEff = defEff.covStyle;
+    defPlanEff.pressLevelEff = defEff.pressLevel;
+    defPlanEff.robberCallEff = defEff.robberCall;
+    defPlanEff.zoneStyleEff = defEff.zoneStyle;
+    defPlanEff.bracketWhoEff = defEff.bracketWho;
+    defPlanEff.covFamilyEff = defEff.covFamily;
+    defPlanEff.rotationEff = defEff.rotation;
+    defPlanEff.rush3Eff = defEff.rush3;
+  }
+  function pickDefCall(gp, sitKey, persClass) {
+    if (globalThis.__noDefCalls) return null;
+    const lib = gp == null ? void 0 : gp.defCalls;
+    const row = gp == null ? void 0 : gp.callSheet ? gp.callSheet[sitKey] : null;
+    if (!lib || !row) return null;
+    const cell = row[persClass] || row.any;
+    if (!Array.isArray(cell) || !cell.length) return null;
+    const live = cell.filter((e) => Array.isArray(e) && lib[e[0]] && (e[1] || 0) > 0);
+    if (!live.length) return null;
+    let r = Math.random() * live.reduce((s, e) => s + e[1], 0);
+    let name = live[live.length - 1][0];
+    for (const e of live) {
+      if ((r -= e[1]) <= 0) {
+        name = e[0];
+        break;
+      }
+    }
+    const c = lib[name];
+    if (!c) return null;
+    return { name, call: {
+      front: c.front && c.front !== "auto" ? c.front : null,
+      covShell: c.covShell || null,
+      covStyle: c.covStyle || null,
+      edgePlay: c.edgePlay || null,
+      pressureIdentity: c.pressureIdentity || null,
+      robberCall: c.robberCall || null,
+      zoneStyle: c.zoneStyle || null,
+      aggression: c.aggression || null,
+      runCommit: c.runCommit != null ? c.runCommit : null,
+      // PASS 3 ingredients (sparse — absent on every pre-Pass-3 call).
+      covFamily: c.covFamily || null,
+      rotation: c.rotation || null,
+      rush3: c.rush3 ? true : null
+    } };
   }
   function formationCheckClass(fid) {
     if (fid === "Empty") return "empty";
@@ -21456,6 +21887,9 @@ var _CFB = (() => {
   function zoneLandmark(fam, depth) {
     if (depth === "short") return "flat";
     if (depth === "medium") return fam === "Cover 3" || fam === "C3 Fire Zone" ? "hook/curl" : "seam/hook";
+    if (fam === "Cover 6") return "deep quarter";
+    if (fam === "Tampa 2") return "deep half";
+    if (fam === "Prevent") return "deep umbrella";
     return fam === "Cover 4" ? "deep quarter" : fam === "Cover 2" || fam === "Cover 2-Man" ? "deep half" : "deep third";
   }
   function assignCoverage(receivers, defPersonnel, defRoster, frontId, isZoneHeavy, coverageScheme = "balanced", wr1Id = null, blitzerDbId = null, pressLevel = "balanced") {
@@ -21719,7 +22153,7 @@ var _CFB = (() => {
     const droppedIds = [];
     for (let i = 0; i < dlIds.length; i++) {
       const id = dlIds[i];
-      if (frontId === "3-4" && olbSet.has(id)) {
+      if ((frontId === "3-4" || frontId === "Penny") && olbSet.has(id)) {
         const dropP = ((_k = dropShareById == null ? void 0 : dropShareById[id]) != null ? _k : 18) / 100;
         if (Math.random() < dropP) {
           droppedIds.push(id);
@@ -21752,7 +22186,8 @@ var _CFB = (() => {
       const _sig = sigMatch ? 1 : 0.6;
       formTell = 1 + (formTell - 1) * _dcRead * _sig;
     }
-    const blitzPct = clamp2(pressureCallRate({ stop: aggrStop, lev: defPlan._defLev || "neutral", design: defPlan.blitzDesign, rate: defPlan.blitzPct }) * formTell, 0, C.AGGRESSION.capRate);
+    const rush3Call = !globalThis.__noCovFamilies && defPlan.rush3Eff === true;
+    const blitzPct = rush3Call ? 0 : clamp2(pressureCallRate({ stop: aggrStop, lev: defPlan._defLev || "neutral", design: defPlan.blitzDesign, rate: defPlan.blitzPct }) * formTell, 0, C.AGGRESSION.capRate);
     if (Math.random() < blitzPct) {
       result.blitzFired = true;
       result.pressCall = identity;
@@ -21856,6 +22291,25 @@ var _CFB = (() => {
     if (defPlan.spyQB && passRushers.length > 3) {
       passRushers.pop();
     }
+    const rush3DroppedIds = [];
+    if (rush3Call) {
+      const rushGrade = (p) => p.attributes.PWR * 0.3 + p.attributes.STR * 0.25 + p.attributes.SPD * 0.25 + p.attributes.TEC * 0.2;
+      while (passRushers.length > 3) {
+        let worst = 0, worstVal = Infinity;
+        for (let i = 0; i < passRushers.length; i++) {
+          const v = rushGrade(passRushers[i].player);
+          if (v < worstVal) {
+            worstVal = v;
+            worst = i;
+          }
+        }
+        const [cut] = passRushers.splice(worst, 1);
+        rush3DroppedIds.push(cut.player.id);
+      }
+      result.rushN = passRushers.length;
+      result.rush3 = true;
+    }
+    const defPersonnelCov = rush3DroppedIds.length ? __spreadProps2(__spreadValues2({}, defPersonnel), { LB: [...defPersonnel.LB || [], ...rush3DroppedIds] }) : defPersonnel;
     const forcedScreen = (offPlan == null ? void 0 : offPlan._forceScreen) || null;
     const isScreen = !!forcedScreen || playType === "pass_short" && !result.playAction && Math.random() < ((_n = offPlan.screenRate) != null ? _n : 14) / 100;
     const edgeRushMult = ((defPlan == null ? void 0 : defPlan.edgePlayEff) === "crash" ? 1.08 : (defPlan == null ? void 0 : defPlan.edgePlayEff) === "contain" ? 0.94 : 1) * clamp2(1 + (((_o = offPlan == null ? void 0 : offPlan.protEmphasis) != null ? _o : 50) - 50) / -250, 0.8, 1.2);
@@ -21919,7 +22373,7 @@ var _CFB = (() => {
       rushResult.sacked = false;
       const dl = passRushers.map((r) => r.player).filter(Boolean);
       const dlAWR = dl.length ? dl.reduce((s, p) => s + p.attributes.AWR, 0) / dl.length : 50;
-      const scrEdgeAdj = ((defPlan == null ? void 0 : defPlan.edgePlayEff) === "contain" ? 0.05 : (defPlan == null ? void 0 : defPlan.edgePlayEff) === "crash" ? -0.04 : 0) + ((defPlan == null ? void 0 : defPlan.covStyleEff) === "zone" ? 0.03 : (defPlan == null ? void 0 : defPlan.covStyleEff) === "man" ? -0.02 : 0);
+      const scrEdgeAdj = ((defPlan == null ? void 0 : defPlan.edgePlayEff) === "contain" ? 0.05 : (defPlan == null ? void 0 : defPlan.edgePlayEff) === "crash" ? -0.04 : 0) + ((defPlan == null ? void 0 : defPlan.covStyleEff) === "zone" ? 0.03 : (defPlan == null ? void 0 : defPlan.covStyleEff) === "man" ? -0.02 : 0) + (!globalThis.__noCovFamilies && (defPlan == null ? void 0 : defPlan.rotationEff) === "cloud" ? 0.04 : 0);
       const sniffChance = clamp2((jackpot ? 0.03 : 0.09) + (dlAWR - 50) * 22e-4 + scrEdgeAdj, 0.02, 0.27);
       const rbId = (offPersonnel.RB || [])[0];
       const wrId = (offPersonnel.WR || [])[0];
@@ -22045,7 +22499,7 @@ var _CFB = (() => {
     }
     if (rushResult.sacked) {
       const spyActive = defPlan.spyQB === true;
-      const styleScrMult = ((defPlan == null ? void 0 : defPlan.covStyleEff) === "zone" ? 0.85 : (defPlan == null ? void 0 : defPlan.covStyleEff) === "man" ? 1.1 : 1) * ((defPlan == null ? void 0 : defPlan.optionKeyEff) === "qb" ? 0.85 : 1);
+      const styleScrMult = ((defPlan == null ? void 0 : defPlan.covStyleEff) === "zone" ? 0.85 : (defPlan == null ? void 0 : defPlan.covStyleEff) === "man" ? 1.1 : 1) * ((defPlan == null ? void 0 : defPlan.optionKeyEff) === "qb" ? 0.85 : 1) * (!globalThis.__noCovFamilies && (defPlan == null ? void 0 : defPlan.covFamilyEff) === "Cover 2-Man" ? 1.15 : 1);
       const scrambleChance = (spyActive ? qbScrambleChance(qb) * 0.55 : qbScrambleChance(qb)) * styleScrMult;
       if (qb && Math.random() < scrambleChance) {
         if (!globalThis.__noScrThrow && (offPersonnel.WR || []).length) {
@@ -22119,7 +22573,7 @@ var _CFB = (() => {
     }
     if (!rushResult.sacked && rushResult.hurried && qb) {
       const spyActive = defPlan.spyQB === true;
-      const styleScrMult2 = ((defPlan == null ? void 0 : defPlan.covStyleEff) === "zone" ? 0.85 : (defPlan == null ? void 0 : defPlan.covStyleEff) === "man" ? 1.1 : 1) * ((defPlan == null ? void 0 : defPlan.optionKeyEff) === "qb" ? 0.85 : 1);
+      const styleScrMult2 = ((defPlan == null ? void 0 : defPlan.covStyleEff) === "zone" ? 0.85 : (defPlan == null ? void 0 : defPlan.covStyleEff) === "man" ? 1.1 : 1) * ((defPlan == null ? void 0 : defPlan.optionKeyEff) === "qb" ? 0.85 : 1) * (!globalThis.__noCovFamilies && (defPlan == null ? void 0 : defPlan.covFamilyEff) === "Cover 2-Man" ? 1.15 : 1);
       const baseScr = qbScrambleChance(qb) * 0.8 * styleScrMult2;
       const scrChance = spyActive ? baseScr * 0.5 : baseScr;
       if (Math.random() < scrChance) {
@@ -22153,7 +22607,7 @@ var _CFB = (() => {
     result.hurried = hurried;
     let passDepthKey = playType === "pass_short" ? "short" : playType === "pass_medium" ? "medium" : "deep";
     const covStyleLive = (_G = (_F = defPlan == null ? void 0 : defPlan.covStyleEff) != null ? _F : defPlan == null ? void 0 : defPlan.covStyle) != null ? _G : "balanced";
-    const isZoneHeavy = covStyleLive === "zone" ? true : covStyleLive === "man" ? false : ["Nickel", "Dime", "3-4"].includes(frontId);
+    const isZoneHeavy = covStyleLive === "zone" ? true : covStyleLive === "man" ? false : ["Nickel", "Dime", "3-4", "3-3-5", "Tite", "Big Nickel", "Penny"].includes(frontId);
     const DEPTHS = ["short", "medium", "deep"];
     const tiltFor = (pid) => {
       var _a2;
@@ -22213,7 +22667,7 @@ var _CFB = (() => {
     }
     const coverageAssigned = assignCoverage(
       receiversOnField,
-      defPersonnel,
+      defPersonnelCov,
       defRoster,
       frontId,
       isZoneHeavy,
@@ -22301,14 +22755,80 @@ var _CFB = (() => {
     }
     if (paBite > 0) {
       const boxBite = 1 + Math.max(0, defPlan.runCommitEff || 0) * 0.03;
+      const rotPA = !globalThis.__noCovFamilies && defPlan.rotationEff === "buzz" && ((_conceptCtx == null ? void 0 : _conceptCtx.fam) === "Cover 3" || (_conceptCtx == null ? void 0 : _conceptCtx.fam) === "C3 Fire Zone") ? 0.85 : 1;
       for (const a of coverageAssigned) {
-        a.separation = clamp2(a.separation + paBite * 0.075 * boxBite, 0, 1);
+        a.separation = clamp2(a.separation + paBite * 0.075 * boxBite * rotPA, 0, 1);
       }
     }
     const rcCov = defPlan.runCommitEff || 0;
     if (rcCov) {
       for (const a of coverageAssigned) {
         a.separation = clamp2(a.separation + rcCov * C.RUNCOMMIT_COV_SCALE, 0, 1);
+      }
+    }
+    if (!globalThis.__noCovFamilies && (defPlan.covFamilyEff || defPlan.rotationEff)) {
+      const famLive = defPlan.covFamilyEff || null;
+      const rotLive = defPlan.rotationEff || null;
+      const famResolved = (_conceptCtx == null ? void 0 : _conceptCtx.fam) || null;
+      const _wr1 = (offPersonnel.WR || [])[0] || null;
+      const _wr2 = (offPersonnel.WR || [])[1] || null;
+      if (famLive === "Cover 6") {
+        for (const a of coverageAssigned) {
+          if (a.receiverId === _wr1) {
+            if (a.passDepth === "short") a.separation = clamp2(a.separation - 0.04, 0, 1);
+            else if (a.passDepth === "deep") a.separation = clamp2(a.separation - 0.03, 0, 1);
+          } else {
+            if (a.passDepth === "deep") a.separation = clamp2(a.separation - 0.03, 0, 1);
+            else if (a.passDepth === "short") a.separation = clamp2(a.separation + 0.02, 0, 1);
+            else {
+              a._qtrRob = true;
+              if (a.breakIn) a.separation = clamp2(a.separation - 0.035, 0, 1);
+            }
+          }
+        }
+      } else if (famLive === "Tampa 2") {
+        let mike = null, mv = -Infinity;
+        for (const id of defPersonnel.LB || []) {
+          const p = defRoster.find((pl) => pl.id === id);
+          if (!p) continue;
+          const v = p.attributes.SPD * 0.55 + p.attributes.AWR * 0.45;
+          if (v > mv) {
+            mv = v;
+            mike = p;
+          }
+        }
+        const poleQ = mike ? clamp2((mv - 50) / 50, -0.3, 0.5) : -0.3;
+        for (const a of coverageAssigned) {
+          const inside = a.receiverId !== _wr1 && a.receiverId !== _wr2;
+          if (a.passDepth === "deep" && inside) a.separation = clamp2(a.separation - 0.05 * (1 + poleQ), 0, 1);
+          else if (a.passDepth === "medium" && a.landmark === "seam/hook") a.separation = clamp2(a.separation + 0.03, 0, 1);
+        }
+        if (mike) result._pole = mike.id;
+      } else if (famLive === "Cover 2-Man") {
+        for (const a of coverageAssigned) {
+          if (a.passDepth !== "deep") a.separation = clamp2(a.separation - 0.03, 0, 1);
+        }
+      } else if (famLive === "Prevent") {
+        for (const a of coverageAssigned) {
+          if (a.passDepth === "deep") a.separation = clamp2(a.separation - 0.1, 0, 1);
+          else if (a.passDepth === "medium") a.separation = clamp2(a.separation + 0.02, 0, 1);
+          else a.separation = clamp2(a.separation + 0.05, 0, 1);
+        }
+      }
+      if (rotLive && (famResolved === "Cover 3" || famResolved === "C3 Fire Zone")) {
+        for (const a of coverageAssigned) {
+          const boundary = a.receiverId === _wr1;
+          if (rotLive === "sky") {
+            if (a.passDepth === "short" && !boundary) a.separation = clamp2(a.separation - 0.02, 0, 1);
+            else if (a.passDepth === "deep") a.separation = clamp2(a.separation + 0.015, 0, 1);
+          } else if (rotLive === "cloud") {
+            if (a.passDepth === "short" && boundary) a.separation = clamp2(a.separation - 0.03, 0, 1);
+          } else if (rotLive === "buzz") {
+            if (a.passDepth === "medium" && a.breakIn) a.separation = clamp2(a.separation - 0.03, 0, 1);
+            else if (a.passDepth === "deep") a.separation = clamp2(a.separation + 0.01, 0, 1);
+          }
+        }
+        result.rotation = rotLive;
       }
     }
     const wrOrder = offPersonnel.WR || [];
@@ -22339,6 +22859,7 @@ var _CFB = (() => {
         routeDbl: c.routeDbl || false,
         voided: c.voided || false,
         busted: c.busted || false,
+        _qtrRob: c._qtrRob || false,
         landmark: (_a2 = c.landmark) != null ? _a2 : null,
         // Per-slot share (field assignments) takes priority; else legacy bucket.
         // Fix F: a correct motion read steers the QB to the uncovered man — lift
@@ -22397,7 +22918,7 @@ var _CFB = (() => {
     const _covCovered = chosen._bestSep != null ? chosen._bestSep < C.COVSACK_COVERED_SEP : chosen._readCollapsed;
     if (!globalThis.__noCovSack && qb && hurried && _covCovered && !hotThrow) {
       const _escSpy = defPlan.spyQB === true;
-      const _escStyle = ((defPlan == null ? void 0 : defPlan.covStyleEff) === "zone" ? 0.85 : (defPlan == null ? void 0 : defPlan.covStyleEff) === "man" ? 1.1 : 1) * ((defPlan == null ? void 0 : defPlan.optionKeyEff) === "qb" ? 0.85 : 1);
+      const _escStyle = ((defPlan == null ? void 0 : defPlan.covStyleEff) === "zone" ? 0.85 : (defPlan == null ? void 0 : defPlan.covStyleEff) === "man" ? 1.1 : 1) * ((defPlan == null ? void 0 : defPlan.optionKeyEff) === "qb" ? 0.85 : 1) * (!globalThis.__noCovFamilies && (defPlan == null ? void 0 : defPlan.covFamilyEff) === "Cover 2-Man" ? 1.15 : 1);
       const _escChance = qbScrambleChance(qb) * C.COVSACK_SCRAMBLE_MULT * _escStyle * (_escSpy ? 0.5 : 1);
       if (Math.random() < _escChance) {
         const _escLane = (_escSpy ? 0.2 : 0.32) + Math.random() * 0.2;
@@ -22490,7 +23011,7 @@ var _CFB = (() => {
     const robCall = (defPlan == null ? void 0 : defPlan.robberCallEff) || "auto";
     let robber = null;
     if (!globalThis.__noRobber && robCall !== "overtop" && (defPlan == null ? void 0 : defPlan.covShellEff) === "two" && chosen.breakIn && helper) {
-      const twoVert = robCall === "rob" || targets.some((t) => t !== chosen && (t.passDepth === "deep" || t.passDepth === "medium" && t.routeShape === "speed"));
+      const twoVert = robCall === "rob" || !globalThis.__noCovFamilies && (defPlan == null ? void 0 : defPlan.covFamilyEff) === "Cover 6" && chosen._qtrRob === true || targets.some((t) => t !== chosen && (t.passDepth === "deep" || t.passDepth === "medium" && t.routeShape === "speed"));
       if (twoVert) {
         const rob = helper.attributes.AWR * 0.6 + helper.attributes.SPD * 0.4;
         const lookoff = (qb.attributes.AWR - 50) * 0.5;
@@ -22536,7 +23057,7 @@ var _CFB = (() => {
       result.throwerId = (_aa = qb == null ? void 0 : qb.id) != null ? _aa : null;
       return result;
     }
-    const useVdeep = passDepthKey === "deep" && sep > C.VDEEP_SEP_THRESHOLD && receiverObj._gameArch === "WR-Deep" && Math.random() < C.VDEEP_PROB;
+    const useVdeep = passDepthKey === "deep" && sep > C.VDEEP_SEP_THRESHOLD && receiverObj._gameArch === "WR-Deep" && Math.random() < C.VDEEP_PROB && !(!globalThis.__noCovFamilies && (defPlan == null ? void 0 : defPlan.covFamilyEff) === "Prevent");
     const depthBand = useVdeep ? "vdeep" : passDepthKey === "short" ? "short" : passDepthKey === "medium" ? "medium" : "deep";
     const routeYds = Math.max(0, Math.round(randNorm(
       C.PASS_YARDS[depthBand].mean,
@@ -23925,6 +24446,14 @@ var _CFB = (() => {
       const _namedPlay = forcedCall && forcedCall.concept && forcedCall.concept !== "sheet" && FORMATION_PLAYBOOK && Object.values(FORMATION_PLAYBOOK).some((l) => l.includes(forcedCall.concept)) ? forcedCall.concept : null;
       const _formEligible = _namedPlay ? ((id) => (FORMATION_PLAYBOOK[id] || []).includes(_namedPlay)) : null;
       const offFormationId = (forcedCall == null ? void 0 : forcedCall.formationId) && FORMATION_PACKAGES[forcedCall.formationId] ? forcedCall.formationId : aliasFormation(rollFormation(offEff.offFormations, _formEligible) || offPlan.offFormation || "Single Back");
+      if (!forcedDefCall || forcedDefCall._ride) {
+        const _dc = pickDefCall(defPlan, defSit, offPersonnelClass(offFormationId));
+        if (_dc) {
+          applyDefCall(defEff, _dc.call, defSchool);
+          syncDefEff(defPlanEff, defEff);
+          defPlanEff._defCallName = _dc.name;
+        }
+      }
       if ((!forcedDefCall || forcedDefCall._ride) && defPlan.formChecks) {
         const _chk = defPlan.formChecks[formationCheckClass(offFormationId)];
         if (_chk) {
@@ -23937,13 +24466,7 @@ var _CFB = (() => {
             aggression: _chk.defAggression || null,
             runCommit: _chk.runCommit != null ? clamp2(defEff.runCommit + _chk.runCommit, -25, 25) : null
           }, defSchool);
-          defPlanEff.blitzPct = defEff.blitzPct;
-          defPlanEff.defAggrEff = defEff.defAggression;
-          defPlanEff.pressIdentityEff = defEff.pressureIdentity;
-          defPlanEff.runCommitEff = defEff.runCommit;
-          defPlanEff.edgePlayEff = defEff.edgePlay;
-          defPlanEff.covShellEff = defEff.covShell;
-          defPlanEff.covStyleEff = defEff.covStyle;
+          syncDefEff(defPlanEff, defEff);
         }
       }
       const defFrontId = defEff.defFront !== "auto" ? defEff.defFront : selectDefFront(
@@ -23954,7 +24477,8 @@ var _CFB = (() => {
         gameState.half,
         gameState.score.def - gameState.score.off,
         offFormationId,
-        (_B = (_A = defEff.subPhilosophy) != null ? _A : defPlan.subPhilosophy) != null ? _B : "auto"
+        (_B = (_A = defEff.subPhilosophy) != null ? _A : defPlan.subPhilosophy) != null ? _B : "auto",
+        defPlan.defFrontMix || null
       );
       let playType = pickPlayType(
         offFormationId,
@@ -24025,7 +24549,7 @@ var _CFB = (() => {
       const activeDefDepth = filterActiveDepth(defDepth, defCtx, "def");
       const offFA = (_E = (_D = offPlan.fieldAssignments) == null ? void 0 : _D.offense) == null ? void 0 : _E[offFormationId];
       const baseFront = defPlan.defBaseFront || "4-3";
-      const defFA = (_G = (_F = defPlan.fieldAssignments) == null ? void 0 : _F.defense) == null ? void 0 : _G[baseFront];
+      const defFA = (_G = (_F = defPlan.fieldAssignments) == null ? void 0 : _F.defense) == null ? void 0 : _G[defFrontId];
       const offPosOf = (id) => {
         var _a2;
         return ((_a2 = offRoster.find((p) => p.id === id)) == null ? void 0 : _a2.position) || null;
@@ -24043,9 +24567,10 @@ var _CFB = (() => {
         if (live.length) offDepthWithSlot = __spreadProps2(__spreadValues2({}, offDepthWithSlot), { [key]: live });
       }
       const offField = resolveOffField(offFormationId, offFA == null ? void 0 : offFA.slots, offFA == null ? void 0 : offFA.shares, offDepthWithSlot, null, offPosOf);
-      const defBaseField = resolveDefField(baseFront, defFA == null ? void 0 : defFA.slots, defFA == null ? void 0 : defFA.blitzShares, activeDefDepth, null, defPosOf);
+      const defHasPins = !!defFA && (Object.keys(defFA.slots || {}).length > 0 || Object.values(defFA.blitzShares || {}).some((v) => v > 0));
+      const defBaseField = defFrontId === baseFront || defHasPins ? resolveDefField(defFrontId, defFA == null ? void 0 : defFA.slots, defFA == null ? void 0 : defFA.blitzShares, activeDefDepth, null, defPosOf) : null;
       const offPersonnel = offField ? offField.personnel : resolvePersonnel(offFormationId, activeOffDepth);
-      const defPersonnel = defBaseField && defFrontId === baseFront ? defBaseField.personnel : resolveDefPersonnel(defFrontId, activeDefDepth, defRoster);
+      const defPersonnel = defBaseField ? defBaseField.personnel : resolveDefPersonnel(defFrontId, activeDefDepth, defRoster);
       const qb0 = (() => {
         const id = ((offPersonnel == null ? void 0 : offPersonnel.QB) || [])[0];
         return id ? offRoster.find((p) => p.id === id) : null;
@@ -24053,14 +24578,20 @@ var _CFB = (() => {
       const losFree = (_I = offEff.losFreedom) != null ? _I : "auto";
       const sPl0 = (defPersonnel.S || []).map((id) => defRoster.find((pl) => pl.id === id)).filter(Boolean);
       const sAwr0 = sPl0.length ? sPl0.reduce((t, pl) => t + pl.attributes.AWR, 0) / sPl0.length : 50;
-      const covFam = coverageFamily((_J = defEff.covShell) != null ? _J : "balanced", (_K = defEff.covStyle) != null ? _K : "balanced", sAwr0);
+      const covFam = !globalThis.__noCovFamilies && defEff.covFamily && FAMILY_SHELL[defEff.covFamily] ? defEff.covFamily : coverageFamily((_J = defEff.covShell) != null ? _J : "balanced", (_K = defEff.covStyle) != null ? _K : "balanced", sAwr0);
       const DISGUISE_SHOW = {
         "Cover 1": "Cover 2",
         "Cover 3": "Cover 2",
         "Cover 0": "Cover 1",
         "Cover 2": "Cover 3",
         "Cover 2-Man": "Cover 1",
-        "Cover 4": "Cover 3"
+        "Cover 4": "Cover 3",
+        // PASS 3: Cover 6 sells the full two-high (quarters look); Tampa 2's
+        // classic disguise is rolling from a single-high show; 2-Man shows
+        // press-Cover 1 (already mapped). Prevent disguises nothing — everyone
+        // in the stadium knows what it is, so it has no entry.
+        "Cover 6": "Cover 2",
+        "Tampa 2": "Cover 3"
       };
       const oppMemPre = seenMemory(defCtx);
       let shownFam = covFam, fooled = false;
@@ -24076,7 +24607,7 @@ var _CFB = (() => {
       const believedFam = fooled ? shownFam : covFam;
       let killCall = null;
       if (qb0 && losFree !== "never" && !familyPinned) {
-        const shellSeen = fooled && defEff.covShell !== "balanced" && defEff.covShell != null ? ["Cover 2", "Cover 4", "Cover 2-Man"].includes(shownFam) ? -1 : 1 : defEff.covShell === "single" ? 1 : defEff.covShell === "two" ? -1 : 0;
+        const shellSeen = fooled && defEff.covShell !== "balanced" && defEff.covShell != null ? ["Cover 2", "Cover 4", "Cover 2-Man", "Cover 6", "Tampa 2", "Prevent"].includes(shownFam) ? -1 : 1 : defEff.covShell === "single" ? 1 : defEff.covShell === "two" ? -1 : 0;
         const boxScore = shellSeen + (defEff.runCommit || 0) / 12;
         const seeIt = clamp2((((_Q = qb0.attributes.AWR) != null ? _Q : 50) - 55) * 8e-3 * (losFree === "free" ? 1.5 : 1), 0, 0.25);
         if ((playType === "run_inside" || playType === "run_outside") && boxScore >= 1 && Math.random() < seeIt) {
@@ -24146,12 +24677,21 @@ var _CFB = (() => {
         name: concept.name,
         def: concept.name ? (_aa = (_$ = PASS_CONCEPTS[concept.name]) != null ? _$ : RUN_CONCEPTS[concept.name]) != null ? _aa : null : null,
         fam: covFam,
+        // PASS 3 (Aug 2026): the RESOLVED family's shell, stamped for assignCoverage.
+        // Fix E (shell-wide press/off) and the leverage help-rule both read
+        // _conceptCtx.shell — and nothing ever set it, so the live "corner bails vs
+        // two-high" conversion was dead code since the coverage pass (the probe's
+        // mean-neutrality checks passed either way). The family is the truth of the
+        // snap (a "balanced" dial coin-flips inside coverageFamily), so the shell
+        // comes from covFam, not the raw dial.
+        shell: FAMILY_SHELL[covFam] || "single",
         edgePlay: defEff.edgePlay || "balanced"
       };
       offPlanEff._forcePANative = !!(concept.name && PASS_CONCEPTS[concept.name] && PASS_CONCEPTS[concept.name].paNative);
       const offUnit = baseOffUnit * (1 + concept.mod) * (fakeSurprise ? 1.1 : 1) * h2Counter * coordIqMod(offSchool, "off", offFormationId) * (2 - coordIqMod(defSchool, "def", defFrontId)) * getMatchupEdge(offFormationId, defFrontId) * getSituationalMod(offFormationId, down, distance, gameState.clock, fieldPos) * shortYardagePower(playType, distance, offPersonnel, offRoster) * (1 + (((_ba = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : _ba.groundPound) || 0) * 8e-3) * (down === 4 ? 1 + (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.riverboat) || 0) * 0.01 : 1) * (offense.isHome ? C.HOME_EDGE : 1 - (1 - (2 - C.HOME_EDGE)) * (1 - (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.roadWarrior) || 0) * 0.08)) * ((_ca = offense.form) != null ? _ca : 1) * (2 - ((_da = defense.form) != null ? _da : 1)) * ((_ea = offense.execMult) != null ? _ea : 1) * (2 - ((_fa = defense.execMult) != null ? _fa : 1)) + ((offPlan == null ? void 0 : offPlan._h2OffLean) ? offPlan._h2OffLean.eff * C.K_CONTEXT : 0);
       const rcDef = defEff.runCommit || 0;
-      const shellRunMult = playType === "run_inside" || playType === "run_outside" ? defEff.covShell === "single" ? 1.04 : defEff.covShell === "two" ? 0.95 : 1 : 1;
+      const rotRunMult = !globalThis.__noCovFamilies && defEff.rotation && (covFam === "Cover 3" || covFam === "C3 Fire Zone") ? defEff.rotation === "sky" ? playType === "run_outside" ? 1.04 : 1 : defEff.rotation === "cloud" ? playType === "run_outside" ? 1.02 : 1 : defEff.rotation === "buzz" ? playType === "run_inside" ? 1.02 : 1 : 1 : 1;
+      const shellRunMult = (playType === "run_inside" || playType === "run_outside" ? defEff.covShell === "single" ? 1.04 : defEff.covShell === "two" ? 0.95 : 1 : 1) * rotRunMult;
       const edgeRunMult = defEff.edgePlay === "contain" ? playType === "run_outside" ? 1.04 : playType === "run_inside" ? 0.98 : 1 : defEff.edgePlay === "crash" ? playType === "run_outside" ? 0.96 : playType === "run_inside" ? 1.02 : 1 : 1;
       const oppMem = seenMemory(defCtx);
       _tkStyle = (_ha = (_ga = defEff.tackleStyle) != null ? _ga : defPlan.tackleStyle) != null ? _ha : "balanced";
@@ -24364,7 +24904,8 @@ var _CFB = (() => {
       if (rpoKept && playResult) playResult.rpoKept = true;
       {
         let fam = covFam;
-        if (playResult.fireZone) fam = "C3 Fire Zone";
+        const _famPinned = !globalThis.__noCovFamilies && !!defEff.covFamily;
+        if (playResult.fireZone && !_famPinned) fam = "C3 Fire Zone";
         else if (playResult.blitzFired && fam === "Cover 1" && ((_ya = defEff.blitzPct) != null ? _ya : 20) >= 40) fam = "Cover 0";
         playResult.coverage = fam;
         if (shownFam !== covFam) {
@@ -25655,7 +26196,7 @@ var _CFB = (() => {
       twoPtMade: 0
     };
   }
-  var OPENERS_YIELDS, QB_RUN_BASE, OPTION_CAPABLE, CALL_CATEGORIES, SPEED_OPTION, JET_CAPABLE, DRAW_DEFAULT, JET_SLOTS, _passCtx, _tkStyle, _optKey, _conceptCtx, FATIGUE_PHYSICAL, REAL_SLOTS, _rosterByIdCache, _penaltyScale, TYPE_BASELINE, DIFFICULTY_EDGE;
+  var OPENERS_YIELDS, FAMILY_SHELL, COV_FAMILY_IMPLIES, QB_RUN_BASE, OPTION_CAPABLE, CALL_CATEGORIES, SPEED_OPTION, JET_CAPABLE, DRAW_DEFAULT, JET_SLOTS, _passCtx, _tkStyle, _optKey, _conceptCtx, FATIGUE_PHYSICAL, REAL_SLOTS, _rosterByIdCache, _penaltyScale, TYPE_BASELINE, DIFFICULTY_EDGE;
   var init_sim = __esm({
     "js/engine/sim.js"() {
       init_spread();
@@ -25673,6 +26214,24 @@ var _CFB = (() => {
       init_yacgeo();
       init_utils();
       OPENERS_YIELDS = /* @__PURE__ */ new Set(["goal_line", "backed_up", "two_min_trail", "four_min_lead", "red_zone"]);
+      FAMILY_SHELL = {
+        "Cover 1": "single",
+        "Cover 3": "single",
+        "Cover 0": "single",
+        "C3 Fire Zone": "single",
+        "Cover 2": "two",
+        "Cover 4": "two",
+        "Cover 2-Man": "two",
+        "Cover 6": "two",
+        "Tampa 2": "two",
+        "Prevent": "two"
+      };
+      COV_FAMILY_IMPLIES = {
+        "Cover 6": { shell: "two", style: "zone" },
+        "Tampa 2": { shell: "two", style: "zone" },
+        "Cover 2-Man": { shell: "two", style: "man" },
+        "Prevent": { shell: "two", style: "zone" }
+      };
       QB_RUN_BASE = {
         "Power-I": 0.04,
         "Air Raid": 0.08,
@@ -25933,6 +26492,51 @@ var _CFB = (() => {
     clone.convPenalty = { factor: conversionPenaltyFactor(state2) };
     refreshRatings(clone);
     return { from: p.position, current: Math.round(p.compositeRating), projected: clone.compositeRating };
+  }
+  function cutDayConversionRecs(state2) {
+    var _a, _b;
+    const school = state2.world.schools.find((s) => s.id === state2.playerSchoolId);
+    if (!school) return [];
+    const gradIds = new Set(graduatingSeniors(state2).map((p) => p.id));
+    const roster = school.roster.filter((p) => !gradIds.has(p.id));
+    const converted = new Set((((_a = state2.preseason) == null ? void 0 : _a.posChanges) || []).map((c) => c.playerId));
+    const counts = {};
+    for (const p of roster) counts[p.position] = (counts[p.position] || 0) + 1;
+    const roomRank = (pos, rating, selfId) => roster.filter((x) => x.position === pos && x.id !== selfId && x.compositeRating > rating).length + 1;
+    const recs = [];
+    for (const p of roster) {
+      if (converted.has(p.id)) continue;
+      if (p.position === "K" || p.position === "P") continue;
+      const fromCount = counts[p.position] || 0;
+      const fromRank = roomRank(p.position, p.compositeRating, null);
+      const starters = STARTER_COUNTS[p.position] || 1;
+      const buried = fromRank > starters + 1 || fromCount > (ROSTER_TARGETS[p.position] || 0);
+      if (!buried) continue;
+      let best = null;
+      for (const [pos, target] of Object.entries(ROSTER_TARGETS)) {
+        if (pos === p.position || pos === "K" || pos === "P") continue;
+        const deficit = target - (counts[pos] || 0);
+        const prev = previewConversion(state2, p.id, pos);
+        if (!prev) continue;
+        if (prev.projected < prev.current - 3) continue;
+        const toRank = roomRank(pos, prev.projected, p.id);
+        const startsThere = toRank <= (STARTER_COUNTS[pos] || 1);
+        if (deficit <= 0 && !(startsThere && prev.projected >= prev.current + 2)) continue;
+        const score = fromRank - toRank + Math.max(0, deficit) * 2 + (prev.projected - prev.current) * 0.3;
+        if (score <= 1) continue;
+        if (!best || score > best.score) best = { to: pos, current: prev.current, projected: prev.projected, toRank, toCount: counts[pos] || 0, deficit, score };
+      }
+      if (best) recs.push(__spreadValues2({
+        playerId: p.id,
+        name: `${((_b = p.name) == null ? void 0 : _b.first) || ""} ${p.name && p.name.last || ""}`.trim(),
+        from: p.position,
+        fromRank,
+        fromCount,
+        classYear: p.classYear,
+        isWalkOn: !!p.isWalkOn
+      }, best));
+    }
+    return recs.sort((a, b) => b.score - a.score).slice(0, 6);
   }
   function convertPosition(state2, playerId, newPos, opts = {}) {
     var _a, _b;
@@ -26839,7 +27443,7 @@ var _CFB = (() => {
     const roster = school.roster || [];
     const have = roster.filter((p) => p.position === pos).length;
     const srs = roster.filter((p) => p.position === pos && p.classYear === "SR").length;
-    return Math.max(0, (ROSTER_TARGETS[pos] || 0) - (have - srs));
+    return Math.max(0, (schemeRosterTargets(school)[pos] || 0) - (have - srs));
   }
   function canAffordCost(budget, cost) {
     return cost > 0 && budget >= cost;
@@ -28225,7 +28829,7 @@ var _CFB = (() => {
   }
   function neediestPosition(school) {
     let worstPos = "OL", worstGap = -Infinity;
-    for (const [pos, target] of Object.entries(ROSTER_TARGETS)) {
+    for (const [pos, target] of Object.entries(schemeRosterTargets(school))) {
       const have = school.roster.filter((p) => p.position === pos).length;
       const gap = target - have;
       if (gap > worstGap) {
@@ -29913,6 +30517,7 @@ var _CFB = (() => {
     state.ui.callQBRun = false;
     state.ui.callTimeout = false;
     state.ui.defCall = null;
+    state.ui.defCallName = null;
     state.ui.callSTOpen = false;
     state.ui.callDrill = null;
     state.ui.showCallSheet = false;
@@ -30041,6 +30646,7 @@ var _CFB = (() => {
     state.ui.callQBRun = false;
     state.ui.callTimeout = false;
     state.ui.defCall = null;
+    state.ui.defCallName = null;
     state.ui.callSTOpen = false;
     state.ui.callDrill = null;
     state.ui.showCallSheet = false;
@@ -30342,6 +30948,7 @@ var _CFB = (() => {
     state.ui.callQBRun = false;
     state.ui.callTimeout = false;
     state.ui.defCall = null;
+    state.ui.defCallName = null;
     state.ui.callDrill = null;
     state.ui.callSTOpen = false;
     state._callModeToday = null;
@@ -31875,6 +32482,7 @@ var _CFB = (() => {
   function renderDefenseDefaults(gp) {
     var _a, _b, _c, _d, _e;
     const defBaseFront = gp.defBaseFront || "4-3";
+    const frontMix = Array.isArray(gp.defFrontMix) ? gp.defFrontMix.filter((f) => f && PIN_FRONTS.includes(f.id)) : [];
     const covScheme = gp.coverageScheme || "balanced";
     const COV_TIPS = {
       balanced: "\u25B8 Everyone covers his own man by alignment. No strengths, no holes \u2014 the safe default.",
@@ -31887,7 +32495,7 @@ var _CFB = (() => {
         <div class="gameplan-group">
 
           <div class="rec-tabs gp-subtabs">
-            ${[["front", "Front"], ["coverage", "Coverage"], ["pressure", "Pressure"], ["checks", "Checks"]].map(([id, lbl]) => `
+            ${[["front", "Front"], ["coverage", "Coverage"], ["pressure", "Pressure"], ["calls", "Calls"], ["checks", "Checks"]].map(([id, lbl]) => `
               <button class="rec-tab${defSubTab === id ? " active" : ""}" data-defsub="${id}">${lbl}</button>`).join("")}
           </div>
 
@@ -31915,6 +32523,28 @@ var _CFB = (() => {
             </div>
           </div>
 
+          <div class="gp-row">
+            <label class="gp-label">Front Mix <span class="gp-hint">(standard downs \u2014 pick up to 5)</span></label>
+            <div class="gp-options">
+              ${PIN_FRONTS.map((fid) => {
+      const inMix = frontMix.some((f) => f.id === fid);
+      return `<button class="gp-option gp-option-sm${inMix ? " active" : ""}" data-dfmix-front="${fid}">${fid}</button>`;
+    }).join("")}
+            </div>
+            ${frontMix.length ? `
+            <div class="formation-weights">
+              ${frontMix.map((entry, i) => `
+                <div class="fw-row">
+                  <span class="fw-label">${escapeHtml(entry.id)}</span>
+                  <input class="gp-slider dfw-slider" type="range" data-dfw-index="${i}" min="5" max="95" value="${entry.weight}" />
+                  <span class="fw-pct" id="dfw-pct-${i}">${Math.round(entry.weight)}%</span>
+                </div>`).join("")}
+              <div class="fw-bar">
+                ${frontMix.map((e, i) => `<div class="fw-seg" style="width:${e.weight}%;background:var(--team-1);opacity:${0.4 + i * 0.2}"></div>`).join("")}
+              </div>
+            </div>` : `
+            <div class="gp-tip tip-info">\u25B8 Empty = you line up in your base front every standard down. Add fronts to roll a weighted mix \u2014 the defensive mirror of your offensive formation weights. Short-yardage walls and obvious-pass subs still override on top.</div>`}
+          </div>
 
           <div class="gp-row">
             <label class="gp-label">Box <span class="gp-hint">(run commit)</span></label>
@@ -32054,6 +32684,8 @@ var _CFB = (() => {
           </div>
           </details>`}
 
+          ${defSubTab !== "calls" ? "" : renderDefCallsSection(gp)}
+
           ${defSubTab !== "checks" ? "" : renderFormChecksSection(gp)}
 
           ${defSubTab !== "pressure" ? "" : `
@@ -32191,6 +32823,33 @@ var _CFB = (() => {
           rebalanceWeights(gp.offFormations);
         }
         rerender();
+      });
+    });
+    root.querySelectorAll("[data-dfmix-front]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (!Array.isArray(gp.defFrontMix)) gp.defFrontMix = [];
+        const fid = btn.dataset.dfmixFront;
+        const idx = gp.defFrontMix.findIndex((f) => f.id === fid);
+        if (idx >= 0) gp.defFrontMix.splice(idx, 1);
+        else {
+          if (gp.defFrontMix.length >= 5) gp.defFrontMix.pop();
+          gp.defFrontMix.push({ id: fid, weight: 33 });
+        }
+        if (gp.defFrontMix.length) rebalanceWeights(gp.defFrontMix);
+        rerender();
+      });
+    });
+    root.querySelectorAll(".dfw-slider").forEach((slider) => {
+      slider.addEventListener("input", () => {
+        const i = parseInt(slider.dataset.dfwIndex);
+        if (!Array.isArray(gp.defFrontMix) || !gp.defFrontMix[i]) return;
+        holdAndRebalance(gp.defFrontMix, i, parseInt(slider.value));
+        gp.defFrontMix.forEach((f, j) => {
+          const sl = root.querySelector(`.dfw-slider[data-dfw-index="${j}"]`);
+          if (sl && j !== i) sl.value = f.weight;
+          const pctEl = root.querySelector(`#dfw-pct-${j}`);
+          if (pctEl) pctEl.textContent = `${Math.round(f.weight)}%`;
+        });
       });
     });
     root.querySelectorAll(".fw-slider").forEach((slider) => {
@@ -32410,6 +33069,98 @@ var _CFB = (() => {
         rerender();
       });
     });
+    (_l = root.querySelector("#new-call-add")) == null ? void 0 : _l.addEventListener("click", () => {
+      var _i2;
+      const nm = (((_i2 = root.querySelector("#new-call-name")) == null ? void 0 : _i2.value) || "").trim().slice(0, 24);
+      if (!nm) return;
+      const calls = gp.defCalls || (gp.defCalls = {});
+      if (Object.keys(calls).length >= MAX_DEF_CALLS || calls[nm]) {
+        if (!Object.keys(calls).length) delete gp.defCalls;
+        return;
+      }
+      calls[nm] = {};
+      callEditName = nm;
+      rerender();
+    });
+    root.querySelectorAll("[data-call-open]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        callEditName = callEditName === btn.dataset.callOpen ? null : btn.dataset.callOpen;
+        rerender();
+      });
+    });
+    root.querySelectorAll("[data-call-del]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const nm = btn.dataset.callDel;
+        if (gp.defCalls) {
+          delete gp.defCalls[nm];
+          if (!Object.keys(gp.defCalls).length) delete gp.defCalls;
+        }
+        sheetPurgeName(gp, nm);
+        if (callEditName === nm) callEditName = null;
+        rerender();
+      });
+    });
+    root.querySelectorAll("[data-call-name]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        var _c2;
+        const nm = btn.dataset.callName, field = btn.dataset.callField, val = btn.dataset.callVal;
+        const call = (_c2 = gp.defCalls) == null ? void 0 : _c2[nm];
+        if (!call) return;
+        const v = field === "runCommit" ? parseInt(val, 10) : field === "rush3" ? true : val;
+        if (call[field] === v) delete call[field];
+        else call[field] = v;
+        rerender();
+      });
+    });
+    root.querySelectorAll("[data-call-clear]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        var _c2;
+        const call = (_c2 = gp.defCalls) == null ? void 0 : _c2[btn.dataset.callClear];
+        if (call) delete call[btn.dataset.callField];
+        rerender();
+      });
+    });
+    root.querySelectorAll("[data-dcs-sit]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        callSheetSit = btn.dataset.dcsSit;
+        rerender();
+      });
+    });
+    root.querySelectorAll("[data-dcs-pers]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        callSheetPers = btn.dataset.dcsPers;
+        rerender();
+      });
+    });
+    root.querySelectorAll("[data-dcs-call]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const nm = btn.dataset.dcsCall;
+        const cell = sheetCellOf(gp, callSheetSit, callSheetPers, true);
+        const i = cell.findIndex((e) => e[0] === nm);
+        if (i >= 0) cell.splice(i, 1);
+        else cell.push([nm, 50]);
+        const total = cell.reduce((s, e) => s + (e[1] || 0), 0) || 1;
+        cell.forEach((e) => e[1] = Math.max(5, Math.round((e[1] || 50) / total * 100)));
+        sheetCleanup(gp);
+        rerender();
+      });
+    });
+    root.querySelectorAll(".dcw-slider").forEach((slider) => {
+      slider.addEventListener("input", () => {
+        const i = parseInt(slider.dataset.dcwIndex);
+        const cell = sheetCellOf(gp, callSheetSit, callSheetPers);
+        if (!Array.isArray(cell) || !cell[i]) return;
+        const objs = cell.map((e) => ({ id: e[0], weight: e[1] }));
+        holdAndRebalance(objs, i, parseInt(slider.value));
+        objs.forEach((o, j) => cell[j] = [o.id, o.weight]);
+        root.querySelectorAll(".dcw-slider").forEach((other) => {
+          const j = parseInt(other.dataset.dcwIndex);
+          if (other !== slider && cell[j]) other.value = cell[j][1];
+          const pct = root.querySelector(`#dcw-pct-${j}`);
+          if (pct && cell[j]) pct.textContent = `${Math.round(cell[j][1])}%`;
+        });
+      });
+    });
     (_l = root.querySelector("#wildcat-pass")) == null ? void 0 : _l.addEventListener("input", (e) => {
       gp.wildcatPassRate = parseInt(e.target.value);
       const el = root.querySelector("#wildcat-pass-val");
@@ -32466,6 +33217,123 @@ var _CFB = (() => {
   function cellIsCustom(sits, key) {
     const c = sits[key];
     return !!c && Object.keys(c).length > 0;
+  }
+  function sheetCellOf(gp, sit, pers, create = false) {
+    if (create) {
+      const sheet = gp.callSheet || (gp.callSheet = {});
+      const row = sheet[sit] || (sheet[sit] = {});
+      return row[pers] || (row[pers] = []);
+    }
+    var _r;
+    return (_r = gp.callSheet ? gp.callSheet[sit] : null) ? _r[pers] : null;
+  }
+  function sheetCleanup(gp) {
+    const sheet = gp.callSheet;
+    if (!sheet) return;
+    for (const sit of Object.keys(sheet)) {
+      const row = sheet[sit];
+      for (const pers of Object.keys(row)) {
+        if (!Array.isArray(row[pers]) || !row[pers].length) delete row[pers];
+      }
+      if (!Object.keys(row).length) delete sheet[sit];
+    }
+    if (!Object.keys(sheet).length) delete gp.callSheet;
+  }
+  function sheetPurgeName(gp, name) {
+    const sheet = gp.callSheet;
+    if (!sheet) return;
+    for (const row of Object.values(sheet)) {
+      for (const pers of Object.keys(row)) {
+        row[pers] = (row[pers] || []).filter((e) => Array.isArray(e) && e[0] !== name);
+      }
+    }
+    sheetCleanup(gp);
+  }
+  function renderDefCallsSection(gp) {
+    const calls = gp.defCalls || {};
+    const names = Object.keys(calls);
+    const sheet = gp.callSheet || {};
+    const sitKeys = SITUATION_KEYS.filter((k) => k !== "openers");
+    const sit = sitKeys.includes(callSheetSit) ? callSheetSit : "base";
+    const pers = PERS_COLS.some(([p]) => p === callSheetPers) ? callSheetPers : "any";
+    const cell = (sheet[sit] || {})[pers] || [];
+    const cellNames = cell.map((e) => e[0]);
+    const rowHas = (k) => !!(sheet[k] && Object.values(sheet[k]).some((c) => Array.isArray(c) && c.length));
+    const persHas = (p) => !!(sheet[sit] && Array.isArray(sheet[sit][p]) && sheet[sit][p].length);
+    return `
+          <details class="gp-section" open>
+          <summary class="gp-section-hdr">NAMED CALLS <span class="gp-section-sub">your call library \u2014 packages, not dials</span></summary>
+          <div class="gp-tip tip-info">\u25B8 A named call is a whole defense in one word \u2014 front, shell, heat and rules saved together, the way a real sheet speaks ("Stack Buzz Dog"). Author up to ${MAX_DEF_CALLS} below, then weight them on the matchup sheet. Any dial a call leaves INHERIT rides your standing plan for that snap.</div>
+          ${names.map((nm) => {
+      const call = calls[nm] || {};
+      const open2 = callEditName === nm;
+      const chips = CALL_FIELDS.filter(([f]) => call[f] != null).map(([f, fl, opts]) => {
+        var _o;
+        const v = String(call[f]);
+        return `${fl}: ${((_o = opts.find(([ov]) => ov === v)) == null ? void 0 : _o[1]) || v}`;
+      }).join(" \xB7 ") || "nothing set \u2014 pure inherit";
+      return `
+          <div class="gp-row chk-card${open2 ? " chk-live" : ""}">
+            <label class="gp-label"><button class="gp-option gp-option-sm${open2 ? " active" : ""}" data-call-open="${escapeHtml(nm)}">${escapeHtml(nm)}</button>
+              <span class="gp-hint">${escapeHtml(chips)}</span>
+              <button class="sit-mini-btn" data-call-del="${escapeHtml(nm)}">Delete</button></label>
+            ${!open2 ? "" : CALL_FIELDS.map(([field, flbl, opts]) => {
+        const cur = call[field] != null ? String(call[field]) : null;
+        return `
+            <div class="chk-row">
+              <span class="chk-lbl">${flbl}</span>
+              <button class="dc-plan${cur == null ? " active" : ""}" data-call-clear="${escapeHtml(nm)}" data-call-field="${field}">inherit</button>
+              ${opts.map(([v, ol]) => `<button class="dc-chip${cur === v ? " active" : ""}" data-call-name="${escapeHtml(nm)}" data-call-field="${field}" data-call-val="${v}">${ol}</button>`).join("")}
+            </div>`;
+      }).join("")}
+          </div>`;
+    }).join("")}
+          ${names.length >= MAX_DEF_CALLS ? `<div class="gp-tip tip-info">\u25B8 Library full \u2014 ${MAX_DEF_CALLS} calls is a real sheet. Delete one to author another.</div>` : `
+          <div class="gp-row">
+            <div class="chk-row">
+              <input type="text" id="new-call-name" maxlength="24" placeholder="Name a call\u2026 (e.g. Stack Buzz Dog)" style="flex:1;min-width:0" />
+              <button class="gp-option gp-option-sm" id="new-call-add">+ Add call</button>
+            </div>
+          </div>`}
+          </details>
+
+          <details class="gp-section" open>
+          <summary class="gp-section-hdr">MATCHUP CALL SHEET <span class="gp-section-sub">situation \xD7 their personnel</span></summary>
+          <div class="gp-tip tip-info">\u25B8 The sheet answers one question per snap: THIS situation, THEIR personnel \u2014 what do I call? Pick a situation and a personnel column, then weight the calls you'd dial up. ANY covers every look the row doesn't name. Untouched cells play your standing plan exactly; your live headset call still beats the sheet.</div>
+          <div class="gp-row">
+            <label class="gp-label">Situation</label>
+            <div class="gp-options">
+              ${sitKeys.map((k) => `<button class="gp-option gp-option-sm${sit === k ? " active" : ""}" data-dcs-sit="${k}">${SITUATION_LABELS[k]}${rowHas(k) ? " \u25CF" : ""}</button>`).join("")}
+            </div>
+          </div>
+          <div class="gp-row">
+            <label class="gp-label">Their personnel</label>
+            <div class="gp-options">
+              ${PERS_COLS.map(([p, pl, pd]) => `<button class="gp-option gp-option-sm${pers === p ? " active" : ""}" data-dcs-pers="${p}" title="${pd}">${pl}${persHas(p) ? " \u25CF" : ""}</button>`).join("")}
+            </div>
+          </div>
+          <div class="gp-row">
+            <label class="gp-label">${SITUATION_LABELS[sit]} \xB7 vs ${(PERS_COLS.find(([p]) => p === pers) || [])[1] || pers}</label>
+            ${names.length ? `
+            <div class="gp-options">
+              ${names.map((nm) => `<button class="gp-option gp-option-sm${cellNames.includes(nm) ? " active" : ""}" data-dcs-call="${escapeHtml(nm)}">${escapeHtml(nm)}</button>`).join("")}
+            </div>` : `<div class="gp-tip tip-info">\u25B8 Author a named call above first \u2014 the sheet weights calls, it doesn't invent them.</div>`}
+            ${cell.length ? `
+            <div class="formation-weights">
+              ${cell.map((entry, i) => `
+                <div class="fw-row">
+                  <span class="fw-label">${escapeHtml(entry[0])}</span>
+                  <input class="gp-slider dcw-slider" type="range" data-dcw-index="${i}" min="5" max="95" value="${entry[1]}" />
+                  <span class="fw-pct" id="dcw-pct-${i}">${Math.round(entry[1])}%</span>
+                </div>`).join("")}
+              <div class="fw-bar">
+                ${cell.map((e, i) => `<div class="fw-seg" style="width:${e[1]}%;background:var(--team-1);opacity:${0.4 + i * 0.2}"></div>`).join("")}
+              </div>
+              <div class="gp-tip tip-info">\u25B8 The weights are the mix \u2014 the sim rolls this cell's calls at these shares every time the moment comes up.</div>
+            </div>` : `
+            <div class="gp-tip tip-info">\u25B8 Empty cell \u2014 the standing plan (and any formation check) plays this moment exactly as today.</div>`}
+          </div>
+          </details>`;
   }
   function renderFormChecksSection(gp) {
     const checks = gp.formChecks || {};
@@ -33275,7 +34143,7 @@ var _CFB = (() => {
     }).join("")}
 `;
   }
-  var CHK_CLASSES, CHK_FIELDS, gameplanSection, offSubTab, pbFormTab, defSubTab, sitSide, openSitKey, SIT_DESCS, SIT_NUDGE, SIT_TIPS, PIN_FRONTS, COV_OPTIONS, ALL_FORMATIONS, DEF_FRONTS2, DEF_FRONT_DESCS, DEF_FRONT_NEEDS, SIMPLE_DIALS, SIMPLE_SITS;
+  var CHK_CLASSES, CHK_FIELDS, MAX_DEF_CALLS, CALL_FIELDS, PERS_COLS, gameplanSection, offSubTab, pbFormTab, defSubTab, sitSide, openSitKey, callSheetSit, callSheetPers, callEditName, SIT_DESCS, SIT_NUDGE, SIT_TIPS, PIN_FRONTS, COV_OPTIONS, ALL_FORMATIONS, DEF_FRONTS2, DEF_FRONT_DESCS, DEF_FRONT_NEEDS, SIMPLE_DIALS, SIMPLE_SITS;
   var init_gameplan = __esm({
     "js/ui/views/gameplan.js"() {
       init_spread();
@@ -33294,12 +34162,40 @@ var _CFB = (() => {
         ["wildcat", "VS WILDCAT", "direct snap \u2014 QB split wide"]
       ];
       CHK_FIELDS = [
-        ["defFront", "Front", [["4-3", "4-3"], ["3-4", "3-4"], ["Nickel", "Nickel"], ["Dime", "Dime"], ["46/Bear", "46/Bear"], ["5-2", "5-2"]]],
+        ["defFront", "Front", [["4-3", "4-3"], ["3-4", "3-4"], ["Tite", "Tite"], ["Nickel", "Nickel"], ["Big Nickel", "Big Nickel"], ["3-3-5", "3-3-5"], ["Penny", "Penny"], ["Dime", "Dime"], ["4-4", "4-4"], ["46/Bear", "46/Bear"], ["5-2", "5-2"]]],
         ["defAggression", "Pressure", [["bend", "Bend"], ["selective", "Selective"], ["balanced", "Balanced"], ["attacking", "Attacking"], ["house", "House"]]],
         ["covShell", "Shell", [["single", "Single"], ["two", "Two-high"]]],
         ["covStyle", "Style", [["man", "Man"], ["zone", "Zone"]]],
         ["edgePlay", "Edge", [["contain", "Set it"], ["crash", "Crash"]]],
         ["runCommit", "Box", [["-8", "Lighten \u22128"], ["8", "Commit +8"]]]
+      ];
+      MAX_DEF_CALLS = 12;
+      CALL_FIELDS = [
+        ["front", "Front", [["4-3", "4-3"], ["3-4", "3-4"], ["Tite", "Tite"], ["Nickel", "Nickel"], ["Big Nickel", "Big Nickel"], ["3-3-5", "3-3-5"], ["Penny", "Penny"], ["Dime", "Dime"], ["4-4", "4-4"], ["46/Bear", "46/Bear"], ["5-2", "5-2"]]],
+        ["aggression", "Pressure", [["bend", "Bend"], ["selective", "Selective"], ["balanced", "Balanced"], ["attacking", "Attacking"], ["house", "House"]]],
+        ["pressureIdentity", "Heat", [["fireZone", "Fire Zone"], ["secondLevel", "Second Level"], ["secondaryHeat", "Secondary Heat"], ["theHouse", "The House"]]],
+        ["covShell", "Shell", [["single", "Single"], ["two", "Two-high"]]],
+        ["covStyle", "Style", [["man", "Man"], ["zone", "Zone"]]],
+        ["edgePlay", "Edge", [["contain", "Set it"], ["crash", "Crash"]]],
+        ["robberCall", "Robber", [["rob", "Rob"], ["overtop", "Overtop"]]],
+        ["zoneStyle", "Zone Eyes", [["spot", "Spot"], ["match", "Match"]]],
+        ["runCommit", "Box", [["-10", "Lighten \u221210"], ["10", "Commit +10"]]],
+        // PASS 3: coverage-family ingredients — call-only, never standing dials.
+        // A family pins the coverage outright (and forces its shell/style); a
+        // rotation is the single-high force rule; Rush 3 drops eight. Prevent
+        // bundles Rush 3 by itself (owner call).
+        ["covFamily", "Coverage", [["Cover 6", "Cover 6"], ["Tampa 2", "Tampa 2"], ["Cover 2-Man", "2-Man"], ["Prevent", "Prevent"]]],
+        ["rotation", "Rotation", [["sky", "Sky"], ["cloud", "Cloud"], ["buzz", "Buzz"]]],
+        ["rush3", "Rush", [["true", "Rush 3 / Drop 8"]]]
+      ];
+      PERS_COLS = [
+        ["any", "ANY", "every look this row doesn't name"],
+        ["empty", "EMPTY", "no backs"],
+        ["10", "10", "1 back \xB7 0 TE \u2014 Air Raid"],
+        ["11", "11", "1 back \xB7 1 TE \u2014 Spread family"],
+        ["12", "12", "1 back \xB7 2 TE \u2014 Ace"],
+        ["heavy", "HEAVY", "2+ backs / multi-TE"],
+        ["option", "BONE", "3-back option looks"]
       ];
       gameplanSection = "offense";
       offSubTab = "package";
@@ -33307,6 +34203,9 @@ var _CFB = (() => {
       defSubTab = "front";
       sitSide = "offense";
       openSitKey = null;
+      callSheetSit = "base";
+      callSheetPers = "any";
+      callEditName = null;
       SIT_DESCS = {
         openers: "Your scripted first two drives of the game",
         goal_line: "Ball inside the 5 \u2014 score or stop",
@@ -33341,19 +34240,29 @@ var _CFB = (() => {
         first_ten: "\u25B8 The identity down \u2014 most snaps in a game start here. Changing this cell reshapes your whole offense more than any other.",
         base: "\u25B8 The fallback for anything no other situation claims (mostly 2nd & short/medium)."
       };
-      PIN_FRONTS = ["4-3", "3-4", "Nickel", "Dime", "46/Bear", "5-2"];
+      PIN_FRONTS = ["4-3", "3-4", "Tite", "Nickel", "Big Nickel", "3-3-5", "Penny", "Dime", "4-4", "46/Bear", "5-2"];
       COV_OPTIONS = [["balanced", "Balanced"], ["lockTop", "Lock WR1"], ["bracketTop", "Bracket WR1"]];
       ALL_FORMATIONS = Object.keys(FORMATIONS);
-      DEF_FRONTS2 = ["4-3", "3-4", "Nickel"];
+      DEF_FRONTS2 = ["4-3", "3-4", "Tite", "Nickel", "Big Nickel", "3-3-5", "4-4"];
       DEF_FRONT_DESCS = {
         "4-3": "4 DL \xB7 3 LB \xB7 4 DB \u2014 balanced base, auto-subs to Nickel/Dime/46/5-2",
         "3-4": "3 DL \xB7 4 LB \xB7 4 DB \u2014 versatile, blitz-friendly, auto-subs by situation",
-        "Nickel": "4 DL \xB7 2 LB \xB7 5 DB \u2014 the 4-2-5: spread-first base with a true nickelback, auto-subs heavy vs power"
+        "Nickel": "4 DL \xB7 2 LB \xB7 5 DB \u2014 the 4-2-5: spread-first base with a true nickelback, auto-subs heavy vs power",
+        "3-3-5": "3 DL \xB7 3 LB \xB7 5 DB \u2014 the odd stack: five DBs and stacked backers, disguise-first",
+        "Tite": "3 DL \xB7 4 LB \xB7 4 DB \u2014 4i-0-4i odd front: B-gaps closed by alignment, backers run free",
+        "4-4": "4 DL \xB7 4 LB \xB7 3 DB \u2014 the eight-man front: SPUR/BANDIT outside, one deep safety",
+        "Big Nickel": "4 DL \xB7 2 LB \xB7 5 DB \u2014 nickel with a ROVER (3rd safety) instead of a slot corner",
+        "Penny": "5 on the LOS \xB7 1 LB \xB7 5 DB \u2014 the light-box spread-run answer"
       };
       DEF_FRONT_NEEDS = {
         "4-3": "Wants 3-tech DTs, pass-rush DEs, a thumper MLB and rangy cover LBs.",
         "3-4": "Wants a two-gap nose tackle, edge-rush OLBs and downhill inside LBs.",
-        "Nickel": "Wants a true NICKEL corner (quick, tackles), rangy cover LBs and speed ends."
+        "Nickel": "Wants a true NICKEL corner (quick, tackles), rangy cover LBs and speed ends.",
+        "3-3-5": "Wants a two-gap nose, hybrid run-and-cover stack OLBs and a third safety who tackles like a backer.",
+        "Tite": "Wants two-gap 4i ends, a stout nose and rangy space-backers at JACK/JOKER.",
+        "4-4": "Wants downhill bodies at all four backer spots and one truly rangy free safety.",
+        "Big Nickel": "Wants a ROVER \u2014 a hybrid safety who covers TEs and tackles like a backer.",
+        "Penny": "Wants two stand-up EDGE rushers, a two-gap nose and a sideline-to-sideline MIKE."
       };
       SIMPLE_DIALS = [
         {
@@ -38875,8 +39784,44 @@ var _CFB = (() => {
   <div class="event-embed">${renderScheduling()}</div>
   <p class="offseason-hint" style="margin-top:10px">Continue to start Season ${state.season + 1}.</p>`;
   }
+  function cutDayRecsBody(school, recs) {
+    var _a, _b;
+    const pre = state.preseason || {};
+    const capLeft = C.POS_CHANGE_CAP - (pre.posChanges || []).filter((c) => !c.anytime).length;
+    const penaltyPct = Math.round(conversionPenaltyFactor(state) * 100);
+    const ord = (n) => `${n}${n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th"}`;
+    return `
+  <div class="offseason-item" style="margin-top:8px">
+    <span class="offseason-label">Staff recommendation${recs.length !== 1 ? "s" : ""}</span>
+    <span class="offseason-detail">${recs.length} position change${recs.length !== 1 ? "s" : ""} worth a look before anyone gets cut \xB7 <b>${Math.max(0, capLeft)}/${C.POS_CHANGE_CAP} camp conversions left</b></span>
+  </div>
+  <p class="offseason-hint" style="margin:4px 0 8px">The staff walked the roster before cut day: these players are buried where they are, and another room has a job for them. A convert takes a \u2212${penaltyPct}% haircut for one season and locks in when camp runs \u2014 it counts against the same ${C.POS_CHANGE_CAP}-conversion camp limit as the spring board. Convert who you like, then head to cuts.</p>
+  ${conversionPreviewPanel()}
+  <div class="inline-roster-list" style="margin-top:8px">
+    ${recs.map((r) => {
+      const diff = r.projected - r.current;
+      return `
+        <div class="cut-row" style="flex-wrap:wrap">
+          <span class="pos-chip pos-${r.from}">${r.from}</span>
+          <span style="color:var(--muted)">\u2192</span>
+          <span class="pos-chip pos-${r.to}">${r.to}</span>
+          <span class="cut-yr muted">${r.classYear}${r.isWalkOn ? " WO" : ""}</span>
+          <span class="cut-name"><span class="player-link" data-pcard="${r.playerId}">${escapeHtml(r.name)}</span></span>
+          <span class="rating-chip rating-${ratingColor(r.current)}">${r.current}</span>
+          <span style="color:var(--muted)">\u2192</span>
+          <span class="rating-chip rating-${ratingColor(r.projected)}">${r.projected}</span>
+          <span style="color:${diff >= 0 ? "var(--green)" : "var(--red)"};font-size:12px">${diff >= 0 ? "+" : ""}${diff}</span>
+          <button class="btn-sm btn-primary cutrec-convert-btn" data-cutrec-id="${r.playerId}" data-cutrec-to="${r.to}" ${capLeft <= 0 ? 'disabled title="Camp conversion limit reached"' : ""}>Convert</button>
+          <span class="offseason-hint" style="flex-basis:100%;margin:2px 0 0">${ord(r.fromRank)} of ${r.fromCount} in the ${r.from} room \xB7 ${r.deficit > 0 ? `${r.to} room is ${r.deficit} short` : `walks in as the ${ord(r.toRank)} ${r.to}`}</span>
+        </div>`;
+    }).join("")}
+  </div>
+  <button class="btn-primary" id="btn-cutrecs-continue" style="margin-top:12px;width:100%">Continue to Cut Day \u2192</button>`;
+  }
   function cutDayBody(school) {
     var _a;
+    const _recs = cutDayConversionRecs(state);
+    if (_recs.length && !((_a = state.offseason) == null ? void 0 : _a.data.cutRecsSeen)) return cutDayRecsBody(school, _recs);
     const coach = state.playerCoach;
     const roster = (school == null ? void 0 : school.roster) || [];
     const scholarships = (coach == null ? void 0 : coach.scholarshipsAvailable) || 0;
@@ -38899,6 +39844,7 @@ var _CFB = (() => {
     <span class="offseason-detail">${roster.length}/${C.ROSTER_SIZE}${gradsLeaving > 0 ? ` (\u2212${gradsLeaving} grad)` : ""}${over > 0 ? ` \xB7 <b style="color:var(--red)">cut ${over} to advance</b>` : " \xB7 under the cap \u2713"} \xB7 ${schCount} scholarship \xB7 ${woCount} walk-on \xB7 ${scholarships} slots open \xB7 <b${atCutCap ? ' style="color:var(--red)"' : ""}>${cutsUsed}/${C.SEASON_CUT_CAP} cuts used</b></span>
   </div>
   <p class="offseason-hint" style="margin:4px 0 8px">Cuts are permanent. Scholarship players return one slot; walk-ons do not. Graduating seniors (${gradsLeaving}) leave free at season's end and are already counted. Max ${C.SEASON_CUT_CAP} cuts a season (over-cap trims don't count against it). The portal won't open until the roster fits.</p>
+  ${_recs.length ? `<button class="btn-ghost btn-sm" id="btn-cutrecs-back" style="margin:0 0 8px">\u21C4 Staff suggestions \u2014 ${_recs.length} position change${_recs.length !== 1 ? "s" : ""} on the table</button>` : ""}
   <div class="filter-chips">
     <button class="filter-chip${!cutModalPos ? " active" : ""}" data-cut-pos="">ALL POS</button>
     ${POSITIONS.map((p) => `<button class="filter-chip${cutModalPos === p ? " active" : ""}" data-cut-pos="${p}">${p}</button>`).join("")}
@@ -39153,13 +40099,14 @@ var _CFB = (() => {
     for (const arr of Object.values((school == null ? void 0 : school.depthChart) || {})) {
       for (const id of (arr || []).slice(0, 2)) twoDeep.add(id);
     }
+    const schemeTargets = schemeRosterTargets(school);
     const rows = POSITIONS.map((pos) => {
       const atPos = roster.filter((p) => p.position === pos);
       const now = atPos.length;
       const grad = atPos.filter((p) => leavingSet.has(p.id)).length;
       const after = now - grad;
       const min = ROSTER_POS_MIN[pos] != null ? ROSTER_POS_MIN[pos] : 0;
-      const target = ROSTER_TARGETS[pos] || 0;
+      const target = schemeTargets[pos] || 0;
       const short = Math.max(0, min - after);
       const gradStarters = atPos.filter((p) => leavingSet.has(p.id) && twoDeep.has(p.id)).length;
       return { pos, now, grad, after, min, target, short, gradStarters };
@@ -40070,6 +41017,21 @@ var _CFB = (() => {
         rerender();
       });
     });
+    document.querySelectorAll(".cutrec-convert-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.ui.convPending = { playerId: btn.dataset.cutrecId, to: btn.dataset.cutrecTo, anytime: false };
+        rerender();
+      });
+    });
+    (document.getElementById("btn-cutrecs-continue") || {}).onclick = () => {
+      if (state.offseason) state.offseason.data.cutRecsSeen = true;
+      state.ui.convPending = null;
+      rerender();
+    };
+    (document.getElementById("btn-cutrecs-back") || {}).onclick = () => {
+      if (state.offseason) state.offseason.data.cutRecsSeen = false;
+      rerender();
+    };
     document.querySelectorAll(".cut-player-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         var _a2, _b2;
@@ -40163,6 +41125,7 @@ var _CFB = (() => {
   init_gameplan();
   init_utils();
   var depthTab = "offense";
+  var defFrontTab = null;
   var activeOffFormation = null;
   var depthSecOpen = {};
   var depthPosTab = {};
@@ -40240,7 +41203,7 @@ var _CFB = (() => {
     </div>
 
     ${depthTab === "offense" ? renderOffense(school, gp, selectedOff) : ""}
-    ${depthTab === "defense" ? renderDefense(school, gp, baseFront) : ""}
+    ${depthTab === "defense" ? renderDefense(school, gp, defFrontTab || (gp.defFront && gp.defFront !== "auto" ? gp.defFront : baseFront)) : ""}
     ${depthTab === "st" ? renderST(school) : ""}
 
     ${picker ? renderPicker2(school) : ""}
@@ -40736,9 +41699,11 @@ var _CFB = (() => {
   </div>
 `;
   }
-  function renderDefense(school, gp, baseFront) {
+  function renderDefense(school, gp, front) {
+    const baseFront = front;
     const layout = DEF_FIELD_LAYOUTS[baseFront];
     if (!layout) return `<div class="card"><div class="empty-hint">Unknown front.</div></div>`;
+    const identityFront = gp.defFront && gp.defFront !== "auto" ? gp.defFront : gp.defBaseFront || "4-3";
     const entry = gp.fieldAssignments.defense[baseFront] || { slots: {}, blitzShares: {} };
     const activeDepth = buildActiveDepth(school);
     const ratingById = buildRatingById(school);
@@ -40750,14 +41715,15 @@ var _CFB = (() => {
     const blitzerCount = Object.values(blitzShares).filter((v) => v > 0).length;
     const simple = gameplanIsSimple();
     return `
-  <div class="fielded-formation-picker">
-    <span class="ff-front-label">Base Front: <strong>${baseFront}</strong></span>
-    <span class="ff-hint">Change your base front on Game Plan \xB7 situational subs are automatic</span>
+  <div class="fielded-formation-picker ff-strip">
+    ${Object.keys(DEF_FIELD_LAYOUTS).map((fid) => `
+      <button class="ff-pill${fid === baseFront ? " active" : ""}" data-dfront="${fid}">${fid}${fid === identityFront ? " \u2605" : ""}</button>`).join("")}
+    <span class="ff-hint">\u2605 = your identity front \xB7 pins here apply whenever this front takes the field \xB7 situational subs are automatic</span>
   </div>
 
   <details class="dc-tip"${depthSecOpen["tip:defense"] ? " open" : ""} data-do-sec="tip:defense">
     <summary>How this screen works</summary>
-    <div class="dc-tip-body">${simple ? `Tap a slot to change who lines up there. Blitzers are picked automatically \u2014 your best pass-rushers come when a blitz fires. Set how aggressive below.` : `Tap a slot to assign. The \u26A1 dial on each defender is his BLITZ SHARE \u2014 his odds of joining the rush when a blitz fires. A blitzing LB or DB abandons his coverage to come \u2014 sacks on one end, busted coverage on the other.${baseFront === "3-4" ? " Your OLBs carry the \u{1F6E1} DROP dial instead: how often the edge man bails into coverage rather than rushing (default 18%). When his drop meets a blitzer firing behind it, that's a FIRE ZONE \u2014 same rush count, angles the protection never saw." : " Linemen always rush."}`}</div>
+    <div class="dc-tip-body">${simple ? `Tap a slot to change who lines up there. Blitzers are picked automatically \u2014 your best pass-rushers come when a blitz fires. Set how aggressive below.` : `Tap a slot to assign. The \u26A1 dial on each defender is his BLITZ SHARE \u2014 his odds of joining the rush when a blitz fires. A blitzing LB or DB abandons his coverage to come \u2014 sacks on one end, busted coverage on the other.${baseFront === "3-4" || baseFront === "Penny" ? " Your edge men carry the \u{1F6E1} DROP dial instead: how often the edge man bails into coverage rather than rushing (default 18%). When his drop meets a blitzer firing behind it, that's a FIRE ZONE \u2014 same rush count, angles the protection never saw." : " Linemen always rush."}`}</div>
   </details>
 
   <div class="field-card def-field">
@@ -41121,8 +42087,13 @@ var _CFB = (() => {
       OL: ["OL", "TE"]
     };
     const isFbSlot = slot && (slot.role === "FB-Lead" || slot.label === "FB" || slot.label === "B");
-    const posList = isFbSlot ? ["RB", "TE"] : SHARED_POS[pos] || [pos];
-    const candidates = roster.filter((p) => posList.includes(p.position)).map((p) => ({ p, rat: slotRating(p, slot) })).sort((a, b) => b.rat - a.rat);
+    const meshPool = slot && slot.mesh ? SLOT_ELIGIBLE_POS[slot.mesh] : null;
+    const posList = isFbSlot ? ["RB", "TE"] : meshPool || SHARED_POS[pos] || [pos];
+    const jobFitMult = (p) => {
+      var _a2;
+      return meshPool ? (_a2 = (SLOT_ELIGIBILITY[slot.pos] || {})[p.position]) != null ? _a2 : 1 : 1;
+    };
+    const candidates = roster.filter((p) => posList.includes(p.position)).map((p) => ({ p, rat: Math.round(slotRating(p, slot) * jobFitMult(p)) })).sort((a, b) => b.rat - a.rat);
     return `
   <div class="picker-overlay" data-picker-close="bg">
     <div class="picker-panel" data-picker-stop="1">
@@ -41353,6 +42324,13 @@ var _CFB = (() => {
         depthTab = btn.dataset.dtab;
         picker = null;
         formationInfoOpen = false;
+        rerender();
+      });
+    });
+    document.querySelectorAll("[data-dfront]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        defFrontTab = btn.dataset.dfront;
+        picker = null;
         rerender();
       });
     });
@@ -43258,8 +44236,9 @@ var _CFB = (() => {
   }
   function classNeedRows(school, klass) {
     const rows = [];
+    const targets = schemeRosterTargets(school);
     for (const pos of POSITIONS) {
-      const target = ROSTER_TARGETS[pos] || 0;
+      const target = targets[pos] || 0;
       if (target === 0) continue;
       const returning = school.roster.filter((p) => p.position === pos && p.classYear !== "SR").length;
       const deficit = Math.max(0, target - returning);
@@ -43489,7 +44468,7 @@ var _CFB = (() => {
     const classNeed = (pos) => {
       const have = (school.roster || []).filter((p) => p.position === pos).length;
       const srs = (school.roster || []).filter((p) => p.position === pos && p.classYear === "SR").length;
-      return Math.max(0, (ROSTER_TARGETS[pos] || 0) - (have - srs));
+      return Math.max(0, (schemeRosterTargets(school)[pos] || 0) - (have - srs));
     };
     const committedAt = {}, offeredAt = {};
     for (const pos of positions) {
@@ -46393,12 +47372,13 @@ ${renderAutoRecruitLog()}`;
       const screen = !!p.isScreen;
       const _throwAway = !!p.throwAway;
       const _cn = String(p.concept || "");
-      const screenKind = !screen ? null : /Bubble/i.test(_cn) ? "bubble" : /Tunnel/i.test(_cn) ? "tunnel" : /RB Screen/i.test(_cn) ? "rb" : backs.length && !catchers.length ? "rb" : backs.some((b) => String(b.id) === String(p.targetId)) ? "rb" : "bubble";
+      const tr = p.trace || null;
+      const _traceTgt = p.targetSlotId ? [...catchers, ...backs].find((s) => s.id === p.targetSlotId) || null : null;
+      const _traceIsBack = _traceTgt ? backs.includes(_traceTgt) : null;
+      const screenKind = !screen ? null : _traceTgt ? _traceIsBack ? "rb" : /Tunnel/i.test(_cn) ? "tunnel" : "bubble" : /Bubble/i.test(_cn) ? "bubble" : /Tunnel/i.test(_cn) ? "tunnel" : /RB Screen/i.test(_cn) ? "rb" : backs.length && !catchers.length ? "rb" : backs.some((b) => String(b.id) === String(p.targetSlotId || "")) ? "rb" : "bubble";
       const _slotish = catchers.filter((s) => s.pos === "SLOT");
       const _outside = [...catchers].sort((a, b) => Math.abs(b.bx - 50) - Math.abs(a.bx - 50));
       const _fadeConcept = /Red-Zone Fade/i.test(_cn);
-      const tr = p.trace || null;
-      const _traceTgt = p.targetSlotId ? [...catchers, ...backs].find((s) => s.id === p.targetSlotId) || null : null;
       const tgtSlot = _traceTgt || (!screen ? _fadeConcept && _outside.length ? _outside[0] : catchers.length ? catchers.reduce((a, b) => Math.abs(b.bx - side) < Math.abs(a.bx - side) ? b : a) : backs[0] : screenKind === "rb" ? backs[0] || catchers[0] : screenKind === "tunnel" ? _outside[0] || catchers[0] || backs[0] : _slotish[0] || catchers.find((s) => Math.abs(s.bx - 50) < 35) || catchers[0] || backs[0]);
       const typAir = t === "pass_deep" ? 27 : t === "pass_medium" ? 15 : 6;
       const air = screen ? -1.5 : p.complete && !p.turnover ? clamp6(((_h = p.yards) != null ? _h : 2) * 0.6, 2, typAir) : typAir;
@@ -46427,7 +47407,7 @@ ${renderAutoRecruitLog()}`;
       const tEnd = p.turnover ? tCatch + 0.55 : tCatch + (p.complete ? yac : 0.12);
       dur = tEnd + LINGER;
       const _qbStartDepthU = Math.max(0, qbSlot.by - LOS);
-      const _quickSet = screen || p.isRPO || t === "pass_short" && !p.playAction;
+      const _quickSet = screen || p.rpo || t === "pass_short" && !p.playAction;
       const _setDepthU = _quickSet ? _qbStartDepthU + 0.4 : t === "pass_deep" ? Math.max(_qbStartDepthU + 1.5, 5.4) : t === "pass_medium" ? Math.max(_qbStartDepthU + 1.1, 4.2) : (
         /* pass_short (3-step) */
         Math.max(_qbStartDepthU + 0.7, 3.2)
@@ -46464,6 +47444,8 @@ ${renderAutoRecruitLog()}`;
       for (const b of backs) {
         if (screen && b === tgtSlot) {
           A[b.id].behave = (t2, w2, a2) => t2 < PRESNAP ? null : t2 >= tCatch && p.complete && !p.turnover ? [catchPt[0], endY, schedSp(a2, [catchPt[0], endY], t2, tEnd, a2.speed)] : [catchPt[0], catchPt[1], schedSp(a2, catchPt, t2, tCatch, 5.5)];
+        } else if (b === tgtSlot && !_throwAway) {
+          A[b.id].behave = (t2, w2, a2) => t2 < PRESNAP ? null : t2 >= tCatch && p.complete && !p.turnover ? [catchPt[0], endY, schedSp(a2, [catchPt[0], endY], t2, tEnd, a2.speed)] : p.playAction && t2 < PRESNAP + 0.45 ? [qbSlot.bx, LOS + 1.5, 6] : [catchPt[0], catchPt[1], schedSp(a2, catchPt, t2, tCatch, 5.8)];
         } else if (A[b.id] !== A.QB && !A[b.id].behave) {
           A[b.id].behave = (t2) => t2 < PRESNAP ? null : p.playAction && t2 < PRESNAP + 0.45 ? [qbSlot.bx, LOS + 1.5, 6] : [clamp6(b.bx + (b.bx <= 50 ? -14 : 14), 4, 96), LOS + 1.2, 5.8];
         }
@@ -46572,6 +47554,7 @@ ${renderAutoRecruitLog()}`;
         }
         if (best) {
           best.picked = true;
+          var _intPicker = best;
           const prev = best.behave;
           best.behave = (t2, w2, a2) => t2 < throwAt ? prev ? prev(t2, w2, a2) : null : t2 < tCatch ? [catchPt[0], catchPt[1], best.speed] : [catchPt[0] + (rnd() < 0.5 ? -6 : 6), catchPt[1] + 6, best.speed];
           for (const s of catchers) {
@@ -46593,6 +47576,7 @@ ${renderAutoRecruitLog()}`;
       }
       var endInfo = carrier ? { actor: carrier, at: tEnd, pt: [catchPt[0], endY] } : null;
       var ballEnd = carrier ? { at: tEnd, pt: [catchPt[0], endY] } : { at: tCatch, pt: catchPt };
+      var _catchT = tCatch;
     } else if (isPass && p.sack) {
       const tSack = PRESNAP + 1.45;
       dur = tSack + LINGER;
@@ -46656,7 +47640,6 @@ ${renderAutoRecruitLog()}`;
       carrier.behave = (t2) => {
         if (t2 < PRESNAP) return null;
         if (p.isScramble && t2 < meshAt) return [qbSlot.bx, qbSlot.by + 3.2, 5.5];
-        if (p.optionPhase === "jet" && t2 < PRESNAP) return null;
         if (pitchAt && t2 < pitchAt) return [carrierSlot.bx + (endPt[0] - carrierSlot.bx) * 0.3, carrierSlot.by, carrier.speed * 0.8];
         if (isJet && t2 < meshAt) return [jetMeshPt[0], jetMeshPt[1], 8];
         if (t2 < meshAt + HANDOFF && !p.isScramble && carrierSlot.id !== "QB" && !isJet && !directSnap) return [meshPt[0], meshPt[1], carrier.speed * (t2 < meshAt ? 0.82 : 0.66)];
@@ -46955,7 +47938,7 @@ ${renderAutoRecruitLog()}`;
         const openField = nNear <= 2;
         const dxT = tTr[0] - ex, dyT = tTr[1] - ey;
         const gain2 = p.yards || 0;
-        const nearGoal = p.fieldPos != null && p.fieldPos >= 96 || p.td && gain2 <= 3;
+        const nearGoal = p.fieldPos != null && p.fieldPos >= 96;
         const fromBehind = dyT > 0.8;
         const lateral = Math.abs(dxT) > Math.abs(dyT) + 0.3;
         let style = nearGoal ? "goalline" : appSpd > 5.4 && openField && lateral ? "shoestring" : appSpd > 5.4 && openField ? "collision" : fromBehind && appSpd > 4.6 ? "drag" : assist ? "gang" : lateral ? "wrap" : "form";
@@ -47012,7 +47995,8 @@ ${renderAutoRecruitLog()}`;
       if (!mv && runLike && p.td && (p.fieldPos == null || p.fieldPos >= 94)) mv = "dive";
       if (!mv && p.isScramble && !p.td && (p.yards || 0) > 0 && (p.qbSlid === true || p.qbSlid == null && rnd() < 0.55)) mv = "slide";
       if (mv) {
-        const mvT = mv === "dive" || mv === "slide" ? Math.max(PRESNAP + 0.1, endInfo.at - 0.3) : PRESNAP + (endInfo.at - PRESNAP) * 0.6;
+        let mvT = mv === "dive" || mv === "slide" ? Math.max(PRESNAP + 0.1, endInfo.at - 0.3) : PRESNAP + (endInfo.at - PRESNAP) * 0.6;
+        if (typeof _catchT !== "undefined" && _catchT != null) mvT = Math.max(mvT, _catchT + 0.08);
         moveCue = { id: carrier.id, style: mv, t: mvT };
       }
     }
@@ -47033,6 +48017,10 @@ ${renderAutoRecruitLog()}`;
     if (endInfo && carrier) {
       const iEnd = Math.round(endInfo.at / STEP);
       for (let i = iEnd; i < ball.track.length; i++) ball.track[i] = [...carrier.track[Math.min(i, carrier.track.length - 1)]];
+    }
+    if (typeof _intPicker !== "undefined" && _intPicker && !carrier) {
+      const iC = Math.round(ballEnd.at / STEP) + 2;
+      for (let i = iC; i < ball.track.length; i++) ball.track[i] = [..._intPicker.track[Math.min(i, _intPicker.track.length - 1)]];
     }
     if (p.turnover && !isPass && endInfo) {
       const iEnd = Math.round(ballEnd.at / STEP);
@@ -47125,6 +48113,7 @@ ${renderAutoRecruitLog()}`;
   // js/ui/sprite.js
   init_utils();
   function spriteMarkup(a, face) {
+    var _a;
     const off = a.team === "off";
     const c = off ? "wsp-off" : "wsp-def";
     const hl = off ? "wsp-off-hl" : "wsp-def-hl";
@@ -47168,8 +48157,8 @@ ${renderAutoRecruitLog()}`;
     const vs = `<g class="wsp-vs">${sLegs}${sRunFar}${sTorso}${sPoses}${sHelmet}</g>`;
     const flip = `<g class="wsp-flip"${face === "w" ? ' transform="scale(-1,1)"' : ""}>${vf}${vb}${vs}</g>`;
     const body = `<ellipse class="wsp-shadow" cx="0" cy="-.12" rx="1.72" ry=".38"/><g class="wsp-shell">${flip}</g>`;
-    const tag = `<text class="${off ? "wo-lbl" : "wd-lbl"} wsp-tag" x="0" y="${off ? "1.9" : "-5.8"}">${a.label}</text>`;
-    return `<g class="wsp${a.qb ? " wsp-qb" : ""}" style="--gait:${gait}s;--wsp-lean:0deg">${body}</g>${tag}`;
+    const tag = `<text class="${off ? "wo-lbl" : "wd-lbl"} wsp-tag" x="0" y="${off ? "1.9" : "-5.8"}">${escapeHtml(String((_a = a.label) != null ? _a : ""))}</text>`;
+    return `<g class="wsp${a.qb ? " wsp-qb" : ""}" style="--gait:${gait}s">${body}</g>${tag}`;
   }
   function ballMarkup(x, y) {
     return `<g id="wp-ball" class="wa-ballg" transform="translate(${x},${y})"><ellipse class="wab-shadow" cx="0" cy="0.55" rx="1.15" ry="0.4"/><g class="wab-lift"><g class="wab-spin"><rect class="wab-core" x="-1.15" y="-0.7" width="2.3" height="1.4"/><rect class="wab-end" x="-1.6" y="-0.45" width="0.5" height="0.9"/><rect class="wab-end" x="1.1"  y="-0.45" width="0.5" height="0.9"/><rect class="wab-lace" x="-0.5" y="-0.25" width="1.0" height="0.5"/></g></g></g>`;
@@ -47198,8 +48187,8 @@ ${renderAutoRecruitLog()}`;
     m.x = x;
     m.y = y;
     const k = Math.min(1, idt * 9);
-    m.vx += (dx / idt - m.vx) * k;
-    m.vy += (dy / idt - m.vy) * k;
+    m.vx += (dx / dt - m.vx) * k;
+    m.vy += (dy / dt - m.vy) * k;
     const v = Math.hypot(m.vx, m.vy);
     const still = v < WSP_STILL_V;
     if (still !== m.still) {
@@ -49196,11 +50185,38 @@ ${renderAutoRecruitLog()}`;
       state.ui.callConceptPreview = null;
       answerPlayCall(_decorateCall({ concept: nm }));
     }));
+    document.querySelectorAll("[data-dc-callname]").forEach((b) => b.addEventListener("click", () => {
+      var _a3, _b3, _c3, _d2, _e2, _f2;
+      var _a2, _b2, _c2;
+      const nm = b.dataset.dcCallname;
+      if (nm === "__clear" || state.ui.defCallName === nm) {
+        state.ui.defCallName = null;
+        rerender();
+        return;
+      }
+      const call = (_c2 = (_b2 = (_a2 = getPlayerSchool()) == null ? void 0 : _a2.gameplan) == null ? void 0 : _b2.defCalls) == null ? void 0 : _c2[nm];
+      if (!call) return;
+      const sel = {};
+      for (const f of ["front", "aggression", "covShell", "covStyle", "edgePlay", "robberCall", "zoneStyle", "pressureIdentity"]) {
+        if (call[f] != null && call[f] !== "auto") sel[f] = String(call[f]);
+      }
+      if (call.covFamily != null) sel.covFamily = String(call.covFamily);
+      if (call.rotation != null) sel.rotation = String(call.rotation);
+      if (call.rush3) sel.rush3 = true;
+      if (call.runCommit != null) {
+        const standingRC = ((_f2 = (_e2 = (_d2 = (_c3 = (_b3 = (_a3 = state.pendingHalftime) == null ? void 0 : _a3.token) == null ? void 0 : _b3.pending) == null ? void 0 : _c3.drive) == null ? void 0 : _d2.sit) == null ? void 0 : _e2.standing) == null ? void 0 : _f2.runCommit) || 0;
+        sel.runCommit = String(call.runCommit - standingRC);
+      }
+      state.ui.defCall = sel;
+      state.ui.defCallName = nm;
+      rerender();
+    }));
     document.querySelectorAll("[data-dc-field]").forEach((b) => b.addEventListener("click", () => {
       const f = b.dataset.dcField, v = b.dataset.dcVal;
       const sel = state.ui.defCall || (state.ui.defCall = {});
       if (sel[f] === v) delete sel[f];
       else sel[f] = v;
+      if ((f === "covShell" || f === "covStyle") && sel.covFamily != null) delete sel.covFamily;
       rerender();
     }));
     document.querySelectorAll("[data-dc-clear]").forEach((b) => b.addEventListener("click", () => {
@@ -49211,6 +50227,7 @@ ${renderAutoRecruitLog()}`;
     (document.getElementById("dc-send") || {}).onclick = () => {
       var _a2, _b2, _c2, _d2, _e2, _f2;
       if (!callTapOk()) return;
+      state.ui.defCallName = null;
       const sel = state.ui.defCall || {};
       if (!Object.keys(sel).length) {
         answerPlayCall({ concept: "sheet" });
@@ -49224,7 +50241,9 @@ ${renderAutoRecruitLog()}`;
       answerPlayCall(call);
     };
     (document.getElementById("dc-ride") || {}).onclick = () => {
-      if (callTapOk()) answerPlayCall({ concept: "sheet" });
+      if (!callTapOk()) return;
+      state.ui.defCallName = null;
+      answerPlayCall({ concept: "sheet" });
     };
     (_F = document.getElementById("cs-sheet-call")) == null ? void 0 : _F.addEventListener("click", () => {
       if (callTapOk()) answerPlayCall({ concept: "sheet" });
@@ -49734,7 +50753,7 @@ ${renderAutoRecruitLog()}`;
 </div>`;
   }
   var DEF_CALL_ROWS = [
-    ["front", "FRONT", [["4-3", "4-3"], ["3-4", "3-4"], ["Nickel", "Nickel"], ["Dime", "Dime"], ["46/Bear", "46/Bear"], ["5-2", "5-2"]]],
+    ["front", "FRONT", [["4-3", "4-3"], ["3-4", "3-4"], ["Tite", "Tite"], ["Nickel", "Nickel"], ["Big Nickel", "Big Nickel"], ["3-3-5", "3-3-5"], ["Penny", "Penny"], ["Dime", "Dime"], ["4-4", "4-4"], ["46/Bear", "46/Bear"], ["5-2", "5-2"]]],
     ["aggression", "PRESSURE", [["bend", "Bend"], ["selective", "Selective"], ["balanced", "Balanced"], ["attacking", "Attacking"], ["house", "House"]]],
     ["covShell", "SHELL", [["single", "Single-high"], ["two", "Two-high"]]],
     ["covStyle", "STYLE", [["man", "Man"], ["zone", "Zone"]]],
@@ -49786,6 +50805,30 @@ ${renderAutoRecruitLog()}`;
       <span class="cs-head-score">US ${us} \u2014 ${them} THEM</span>
     </div>
     <p class="cs-diagram-hint">They're breaking the huddle. Pin any dial for THIS SNAP ONLY \u2014 anything you don't touch rides your standing plan.</p>
+    ${(() => {
+      var _s;
+      const lib = ((_s = getPlayerSchool()) == null ? void 0 : _s.gameplan) ? getPlayerSchool().gameplan.defCalls : null;
+      const names = lib ? Object.keys(lib) : [];
+      if (!names.length) return "";
+      const cur = state.ui.defCallName || null;
+      const curSel = state.ui.defCall || {};
+      const ROT_LBL = { sky: "Sky", cloud: "Cloud", buzz: "Buzz" };
+      const ing = [
+        curSel.covFamily ? `\u2601 ${curSel.covFamily === "Cover 2-Man" ? "2-Man" : curSel.covFamily}` : null,
+        curSel.rotation ? `\u21BA ${ROT_LBL[curSel.rotation] || curSel.rotation}` : null,
+        curSel.rush3 ? "\u2602 Rush 3 / Drop 8" : null
+      ].filter(Boolean);
+      return `
+    <div class="dc-row">
+      <span class="dc-row-label">CALL</span>
+      <span class="dc-plan${cur ? "" : " active"}" data-dc-callname="__clear" title="Drop the named call, keep your pins">ad-lib</span>
+      ${names.map((nm) => `<button class="dc-chip${cur === nm ? " active" : ""}" data-dc-callname="${escapeHtml(nm)}">${escapeHtml(nm)}</button>`).join("")}
+    </div>${cur && ing.length ? `
+    <div class="dc-row">
+      <span class="dc-row-label"></span>
+      <span class="dc-plan active" title="These ride the named call \u2014 adjust SHELL or STYLE to shed the coverage pin">${ing.map(escapeHtml).join(" \xB7 ")}</span>
+    </div>` : ""}`;
+    })()}
     ${rows}
     <div class="cs-footer dc-footer">
       <button class="btn primary dc-send" id="dc-send">${nSel ? `\u{1F6E1} SEND IT (${nSel} call${nSel > 1 ? "s" : ""})` : "\u{1F6E1} RIDE THE PLAN \u2192"}</button>
