@@ -6637,6 +6637,136 @@ body *::after {
   .mm-classic-del { min-width:40px; padding-inline:9px; }
 }
   
+/* ══════════════════════════════════════════════════════════════════════════
+   DEPTH CHART REDESIGN (Aug 2026) — compact, collapsible, phone-first.
+   Same features, same handlers; this block only reorganizes the presentation:
+   one-row scrollable formation strip, tap-to-expand help, per-position
+   accordions in FULL DEPTH, deduped band labels, subtler dial guards.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Formation switcher: one panning row on the phone — not a wall of pills */
+@media (max-width: 700px) and (orientation: portrait) {
+  .fielded-formation-picker.ff-strip {
+    flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; margin-bottom: 8px;
+  }
+  .fielded-formation-picker.ff-strip::-webkit-scrollbar { display: none; }
+  .fielded-formation-picker.ff-strip .ff-pill { flex: 0 0 auto; white-space: nowrap; }
+}
+
+/* Collapsed help — one quiet line until the coach asks for it */
+.dc-tip {
+  margin: 0 0 10px; border: 1px solid rgba(255,255,255,0.08);
+  border-left: 3px solid var(--gold, #d4a017); border-radius: 6px;
+  background: rgba(255,255,255,0.02);
+}
+.dc-tip > summary {
+  list-style: none; cursor: pointer; user-select: none;
+  padding: 7px 10px; font-size: 10.5px; font-weight: 800;
+  letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-2);
+}
+.dc-tip > summary::-webkit-details-marker { display: none; }
+.dc-tip > summary::before { content: '\24D8'; margin-right: 7px; color: var(--gold, #d4a017); }
+.dc-tip[open] > summary { color: var(--text-1); }
+.dc-tip-body { padding: 0 10px 9px; font-size: 11px; line-height: 1.5; color: var(--text-1); }
+
+/* FULL DEPTH: one position at a time behind a tab strip */
+.do-tabs {
+  display: flex; align-items: stretch; gap: 4px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  margin: 2px 0 8px; padding-bottom: 2px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.do-tabs::-webkit-scrollbar { display: none; }
+.do-tab {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 5px;
+  padding: 8px 10px; min-height: 40px;
+  background: none; border: none; border-bottom: 2px solid transparent;
+  color: var(--text-2); cursor: pointer;
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em;
+}
+.do-tab .pos-chip { pointer-events: none; }
+.do-tab-n { font-size: 9px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.do-tab.active { border-bottom-color: var(--team-1); color: var(--text-0); }
+.do-tab.active .do-tab-n { color: var(--text-1); }
+.do-tab-spots { text-transform: uppercase; }
+.do-group[data-drag-list] { border-bottom: none; padding: 2px 0 8px; }
+.do-row { padding: 3px 2px; }
+.do-uniq-sub-line { font-size: 9.5px; color: var(--text-2); font-style: italic; padding: 0 2px 6px; }
+.do-group-uniq { border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+/* Drag-to-reorder: the ≡ handle owns the gesture; rows glide around the lift */
+.do-drag {
+  flex: 0 0 auto; width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px; color: var(--text-2); font-size: 14px; line-height: 1;
+  cursor: grab; touch-action: none; user-select: none;
+}
+.do-drag:active { cursor: grabbing; color: var(--text-0); }
+.do-row, .depth-slot { transition: transform 0.12s; }
+.do-dragging {
+  position: relative; z-index: 6; transition: none !important;
+  background: var(--bg-hover, rgba(255,255,255,0.07));
+  box-shadow: 0 6px 18px rgba(0,0,0,0.55);
+  border-radius: 6px;
+}
+.do-dragging .do-drag { cursor: grabbing; border-color: var(--team-1); color: var(--team-1); }
+@media (max-width: 700px) and (orientation: portrait) {
+  .do-drag { width: 40px; height: 40px; font-size: 16px; }
+}
+
+/* Field bands: hide the label row when it repeats the band above */
+@media (max-width: 700px) and (orientation: portrait) {
+  .frow[data-band=""]::before { display: none; }
+  .frow { padding: 4px 4px 6px; }
+  .frow[data-band=""] { padding-top: 0; }
+}
+
+/* Dial guards: show the dial through the glass; a quiet edit affordance */
+@media (max-width: 700px) {
+  .phone-dial-unlock {
+    background: rgba(10, 16, 28, 0.55);
+    border: 1px dashed rgba(255,255,255,0.22);
+    color: var(--text-2); font-size: 8px; letter-spacing: 0.1em;
+    backdrop-filter: none;
+  }
+  .phone-dial-unlock:active { background: rgba(10, 16, 28, 0.75); color: var(--text-1); }
+}
+
+/* Special teams: K/P side by side, returner full width below */
+.depth-group-st { align-items: flex-start; }
+.depth-group-st > .depth-col { flex: 1 1 150px; min-width: 140px; }
+.depth-group-st > .depth-col:last-child { flex: 1 1 100%; }
+
+/* Blitz legend: one quiet line */
+.blitz-legend { font-size: 10.5px; line-height: 1.45; }
+
+/* Dial guards, round 2: a pencil over the glass, not a label over the dial.
+   The full-cover tap target stays (that is the guard's whole job); only the
+   presentation shrinks to an edit glyph so the value reads through. */
+@media (max-width: 700px) {
+  .phone-dial-unlock { font-size: 0; letter-spacing: 0; overflow: visible; }
+  .phone-dial-unlock::before {
+    content: '\270E';
+    position: absolute; top: -6px; right: -6px;
+    width: 17px; height: 17px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; line-height: 1; color: var(--gold, #d4a017);
+    background: #0d1420; border: 1px solid rgba(212,160,23,0.7);
+    border-radius: 50%;
+  }
+}
+
+/* RB carry dial: give the name room back on portrait */
+@media (max-width: 700px) and (orientation: portrait) {
+  .do-carry { gap: 4px; }
+  .do-carry-pct { min-width: 46px; }
+}
+
+/* Carry dial value: never wrap the runner glyph off its number */
+.do-carry-pct { white-space: nowrap; }
+
   </style>
 </head>
 <body>
@@ -6646,7 +6776,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "15a4b89e60";
+globalThis.__BUILD__ = "adeb4b1481";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -7972,9 +8102,15 @@ var _CFB = (() => {
           DIVISIONS: ["D1", "D2", "D3"],
           START_DIVISION: "D3",
           MAX_SLOTS: 3,
-          // THE HARVEST (T5): retirement banks the FULL career, permanently. Active
-          // coaches carry their own DNA; retirement commits it in one lump.
-          BANK_SHARE: 1,
+          // THE HARVEST (T5): retirement commits the career in one lump, permanently.
+          // Active coaches carry their own DNA; only walking away deposits it.
+          // Cut from 1.0 (2026-08): at full share a ~10-season career (~550 XP on
+          // its signature axis) saturated the G5 inheritance cap in 2–3 retirements,
+          // and every retirement after that changed nothing a protégé felt. Pacing
+          // math at 0.4: cap XP 617 ÷ typical inherit share ~0.4 ≈ 1,540 pool
+          // needed; 550 × 0.4 = 220 banked per career ≈ 6–7 retirements to fill.
+          // The family legacy is a dynasty-long build, not a two-coach sprint.
+          BANK_SHARE: 0.4,
           // THE LIVE TRICKLE: each season, a SMALL share of the growth a working coach
           // added to his OWN DNA that year is also deposited into the tree's shared
           // pool. One-way: the pool is read ONLY when seeding a promoted coordinator
@@ -24606,8 +24742,11 @@ var _CFB = (() => {
           scoreOff: possession === "home" ? token.homeScore : token.awayScore,
           scoreDef: possession === "home" ? token.awayScore : token.homeScore
         };
+        const _koFirst = driveResult.plays.find((pl) => pl.clock != null);
+        const _koClock = _koFirst ? _koFirst.clock : clock;
+        const _koHalf = _koFirst && _koFirst.half != null ? _koFirst.half : half;
         for (const _ko of pendingKickoff.reverse())
-          driveResult.plays.unshift(__spreadProps2(__spreadValues2(__spreadValues2({}, _ko), _koScore), { clock, half, down: 0, distance: 0 }));
+          driveResult.plays.unshift(__spreadProps2(__spreadValues2(__spreadValues2({}, _ko), _koScore), { clock: _koClock, half: _koHalf, down: 0, distance: 0 }));
         pendingKickoff = null;
       }
       if (driveResult.pen) {
@@ -39718,6 +39857,8 @@ var _CFB = (() => {
   init_utils();
   var depthTab = "offense";
   var activeOffFormation = null;
+  var depthSecOpen = {};
+  var depthPosTab = {};
   var picker = null;
   var uniqSwap = null;
   var formationInfoOpen = false;
@@ -39771,14 +39912,14 @@ var _CFB = (() => {
     return `
   <div class="view-depthchart">
     ${embed ? `<div class="view-header embed-actions">
-      <div class="view-subtitle">Tap a slot to assign \xB7 shares &amp; blitzers on the field \xB7 depth order and RB split below</div>
+      <div class="view-subtitle">Who starts \xB7 who's next \xB7 who gets the ball</div>
       <div class="header-actions">
         <button class="btn-ghost" id="btn-auto-sort">Auto-Fill</button>
       </div>
-    </div>` : `<div class="view-header">
+    </div>` : `<div class="view-header dc-header">
       <div>
         <h1 class="view-title">${tipTerm("depth-chart", "Depth Chart")}</h1>
-        <div class="view-subtitle">Tap a slot to assign \xB7 shares &amp; blitzers on the field \xB7 full depth order and RB carry split below</div>
+        <div class="view-subtitle">Who starts \xB7 who's next \xB7 who gets the ball</div>
       </div>
       <div class="header-actions">
         <button class="btn-ghost" id="btn-auto-sort">Auto-Fill</button>
@@ -39817,7 +39958,7 @@ var _CFB = (() => {
     normalizeShares(entry.shares, catchSlots.map((s) => s.id));
     const shareTotal = 100;
     return `
-  <div class="fielded-formation-picker">
+  <div class="fielded-formation-picker ff-strip">
     ${selectedOff.map((id) => `
       <button class="ff-pill${id === fid ? " active" : ""}" data-off-formation="${id}">${escapeHtml(id)}</button>
     `).join("")}
@@ -39826,11 +39967,14 @@ var _CFB = (() => {
   <div class="formation-info-row">
     <button class="btn-ghost formation-info-btn" type="button" data-formation-info-open="1"
             aria-label="Explain the positions in ${escapeHtml(fid)}">
-      <span aria-hidden="true">\u24D8</span> Where everyone lines up
+      <span aria-hidden="true">\u24D8</span> Where everyone lines up in ${escapeHtml(fid)}
     </button>
   </div>
 
-  <div class="gp-tip tip-info">\u25B8 Tap any slot to change who starts there. The dial under each pass-catcher is his TARGET SHARE \u2014 his slice of 100% of the QB's looks. Move one man and the rest rebalance (5% a tap). One rule to know: 25%+ makes him the FEATURED man, and defenses bracket featured men \u2014 volume buys attention. The line reads left-to-right: LT \xB7 LG \xB7 C \xB7 RG \xB7 RT \u2014 your run-direction dials on the Game Plan point at these five.</div>
+  <details class="dc-tip"${depthSecOpen["tip:offense"] ? " open" : ""} data-do-sec="tip:offense">
+    <summary>How this screen works</summary>
+    <div class="dc-tip-body">Tap any slot to change who starts there. The dial under each pass-catcher is his TARGET SHARE \u2014 his slice of 100% of the QB's looks. Move one man and the rest rebalance (5% a tap). One rule to know: 25%+ makes him the FEATURED man, and defenses bracket featured men \u2014 volume buys attention. The line reads left-to-right: LT \xB7 LG \xB7 C \xB7 RG \xB7 RT \u2014 your run-direction dials on the Game Plan point at these five.</div>
+  </details>
 
   <div class="field-card off-field">
     <div class="field-turf">
@@ -40185,21 +40329,31 @@ var _CFB = (() => {
     return ((_b = ((layout == null ? void 0 : layout.slots) || []).find((s) => s.pos === pos)) == null ? void 0 : _b.role) || null;
   }
   function renderDepthOrder(school, side) {
-    const groups = DEPTH_POS[side] || [];
     const slotOf = slotLabelsByPlayer(school, side);
+    const groups = (DEPTH_POS[side] || []).filter((pos) => {
+      var _a;
+      return (((_a = school.depthChart) == null ? void 0 : _a[pos]) || []).length > 0;
+    });
+    const uniq = side === "offense" ? UNIQUE_DEPTH_OFF : UNIQUE_DEPTH_DEF;
+    const hasSpots = uniq.some((u) => uniqueDepthTop(school, u, 1).length > 0);
+    const tabs = hasSpots ? [...groups, "__spots"] : groups;
+    if (!tabs.length) return "";
+    let active = depthPosTab[side];
+    if (!tabs.includes(active)) active = tabs[0];
     return `
   <div class="card depth-order-card">
     <div class="card-header">
       <span class="card-title">FULL DEPTH</span>
-      <span class="card-sub">\u25B2 to promote \xB7 order = who plays next</span>
+      <span class="card-sub">drag \u2261 to reorder \xB7 order = who plays next</span>
     </div>
-    ${groups.map((pos) => {
-      var _a;
-      const ids = ((_a = school.depthChart) == null ? void 0 : _a[pos]) || [];
-      if (!ids.length) return "";
+    <div class="do-tabs">
+      ${tabs.map((pos) => pos === "__spots" ? `<button class="do-tab do-tab-spots${active === "__spots" ? " active" : ""}" data-do-tab="${side}:__spots">SPOTS</button>` : `<button class="do-tab${active === pos ? " active" : ""}" data-do-tab="${side}:${pos}"><span class="pos-chip pos-${pos}">${pos}</span><span class="do-tab-n">${(school.depthChart[pos] || []).length}</span></button>`).join("")}
+    </div>
+    ${active === "__spots" ? "" : (() => {
+      const pos = active;
+      const ids = school.depthChart[pos] || [];
       return `
-        <div class="do-group">
-          <div class="do-pos"><span class="pos-chip pos-${pos}">${pos}</span></div>
+        <div class="do-group" data-drag-list="pos:${pos}">
           ${ids.map((id, i) => {
         const p = school.roster.find((x) => x.id === id);
         if (!p) return "";
@@ -40219,7 +40373,8 @@ var _CFB = (() => {
                 </span>`;
         })() : "";
         return `
-              <div class="do-row${i === 0 ? " do-starter" : ""}">
+              <div class="do-row${i === 0 ? " do-starter" : ""}" data-pid="${id}">
+                <button class="do-drag" data-drag-handle="1" aria-label="Drag to reorder ${escapeHtml(fullName(p))}">\u2261</button>
                 ${(() => {
           var _a2;
           const hit = slotOf[id];
@@ -40237,38 +40392,39 @@ var _CFB = (() => {
         })()}
                 <span class="do-arch">${escapeHtml(archetypeLabel(p) || "")}</span>
                 ${committee}
-                <span class="do-up-spacer"></span>
-                ${i > 0 ? `<button class="do-up" data-depth-up="${pos}" data-pid="${id}" title="Promote">\u25B2</button>` : '<span class="do-up-spacer"></span>'}
               </div>`;
       }).join("")}
         </div>`;
-    }).join("")}
+    })()}
   ${(() => {
-      const uniq = side === "offense" ? UNIQUE_DEPTH_OFF : UNIQUE_DEPTH_DEF;
-      if (!uniq.length) return "";
+      if (active !== "__spots") return "";
+      const uniq2 = side === "offense" ? UNIQUE_DEPTH_OFF : UNIQUE_DEPTH_DEF;
+      if (!uniq2.length) return "";
       const curForm = side === "offense" ? activeOffFormation : (school.gameplan || {}).defBaseFront || "4-3";
-      const blocks = uniq.map((u) => {
+      const blocks = uniq2.map((u) => {
         const top = uniqueDepthTop(school, u, 5);
         if (!top.length) return "";
         const live = u.forms.includes(curForm);
         const noteHtml = live ? `<span class="do-slot-note on">plays in ${escapeHtml(curForm)}</span>` : `<span class="do-slot-note">only in ${escapeHtml(u.forms.join(", "))}</span>`;
         const rows = top.map(({ p, fit }, i) => `
-        <div class="do-row do-row-uniq${i === 0 ? " do-starter" : ""}">
+        <div class="do-row do-row-uniq${i === 0 ? " do-starter" : ""}" data-pid="${p.id}">
+          <button class="do-drag" data-drag-handle="1" aria-label="Drag to reorder ${escapeHtml(fullName(p))}">\u2261</button>
           <span class="do-rank">${i + 1}</span>
           <span class="do-name"><span class="player-link" data-pcard="${p.id}">${escapeHtml(fullName(p))}</span></span>
           <span class="pos-chip pos-${p.position}" style="font-size:9px;padding:1px 5px">${p.position}</span>
           <span class="class-badge class-${p.classYear.toLowerCase()}">${p.classYear}</span>
           <span class="do-rating" style="color:${ratingColor(Math.round(fit))}" title="${escapeHtml((archetypeLabel(u.role) || u.role) + " fit \u2014 how well he plays this exotic spot. Overall " + Math.round(p.compositeRating) + ".")}">${Math.round(fit)}</span>
-          ${i > 0 ? `<button class="do-up" data-uniq-up="${u.pos}" data-pid="${p.id}" title="Make him your ${escapeHtml(u.label)} \u2014 he plays this spot whenever a formation calls for it">\u25B2</button>` : '<span class="do-up-spacer"></span>'}
         </div>`).join("");
         return `
         <div class="do-group do-group-uniq">
           <div class="do-pos"><span class="pos-chip pos-${u.pos}">${escapeHtml(u.label)}</span>${noteHtml}<button class="do-uniq-swap" data-uniq-swap="${u.pos}" title="Choose who plays ${escapeHtml(u.label)} \u2014 full list by rating">Swap \u21C4</button></div>
-          ${rows}
+          <div data-drag-list="uniq:${u.pos}">${rows}</div>
         </div>`;
       }).filter(Boolean).join("");
       if (!blocks) return "";
-      return `<div class="do-uniq-header">FORMATION-SPECIFIC SPOTS <span class="do-uniq-sub">top fits \xB7 they play here only when the formation calls for it</span></div>${blocks}`;
+      return `
+        <div class="do-uniq-sub-line">top fits \xB7 they play these spots only when the formation calls for it</div>
+        ${blocks}`;
     })()}
   </div>
 `;
@@ -40292,7 +40448,10 @@ var _CFB = (() => {
     <span class="ff-hint">Change your base front on Game Plan \xB7 situational subs are automatic</span>
   </div>
 
-  ${simple ? `<div class="gp-tip tip-info">\u25B8 Tap a slot to change who lines up there. Blitzers are picked automatically \u2014 your best pass-rushers come when a blitz fires. Set how aggressive below.</div>` : `<div class="gp-tip tip-info">\u25B8 Tap a slot to assign. The \u26A1 dial on each defender is his BLITZ SHARE \u2014 his odds of joining the rush when a blitz fires. A blitzing LB or DB abandons his coverage to come \u2014 sacks on one end, busted coverage on the other.${baseFront === "3-4" ? " Your OLBs carry the \u{1F6E1} DROP dial instead: how often the edge man bails into coverage rather than rushing (default 18%). When his drop meets a blitzer firing behind it, that's a FIRE ZONE \u2014 same rush count, angles the protection never saw." : " Linemen always rush."}</div>`}
+  <details class="dc-tip"${depthSecOpen["tip:defense"] ? " open" : ""} data-do-sec="tip:defense">
+    <summary>How this screen works</summary>
+    <div class="dc-tip-body">${simple ? `Tap a slot to change who lines up there. Blitzers are picked automatically \u2014 your best pass-rushers come when a blitz fires. Set how aggressive below.` : `Tap a slot to assign. The \u26A1 dial on each defender is his BLITZ SHARE \u2014 his odds of joining the rush when a blitz fires. A blitzing LB or DB abandons his coverage to come \u2014 sacks on one end, busted coverage on the other.${baseFront === "3-4" ? " Your OLBs carry the \u{1F6E1} DROP dial instead: how often the edge man bails into coverage rather than rushing (default 18%). When his drop meets a blitzer firing behind it, that's a FIRE ZONE \u2014 same rush count, angles the protection never saw." : " Linemen always rush."}`}</div>
+  </details>
 
   <div class="field-card def-field">
     <div class="field-turf def-turf">
@@ -40365,25 +40524,25 @@ var _CFB = (() => {
     return `
   <div class="depth-col">
     <div class="depth-col-header"><span class="depth-pos">RET</span></div>
-    <div class="depth-slots">
+    <div class="depth-slots" data-drag-list="ret">
       ${shown.map((id, idx) => {
       const entry = pool.find((x) => x.p.id === id);
       if (!entry) return "";
       const p = entry.p;
-      return `<div class="depth-slot${idx === 0 ? " starter" : ""}">
+      return `<div class="depth-slot${idx === 0 ? " starter" : ""}" data-pid="${p.id}">
+          <button class="do-drag" data-drag-handle="1" aria-label="Drag to reorder ${escapeHtml(fullName(p))}">\u2261</button>
           <div class="depth-slot-rank">${idx + 1}</div>
           <div class="depth-slot-info">
             <div class="depth-slot-name"><span class="player-link" data-pcard="${p.id}">${escapeHtml(fullName(p))}</span> <span class="ret-pos">${p.position}</span></div>
           </div>
           <div class="ret-controls">
-            ${idx > 0 ? `<button class="ret-btn" data-ret-up="${id}" title="Move up">\u25B2</button>` : ""}
             <span class="depth-slot-rating ${ratingColor(entry.ret)}">${entry.ret}</span>
           </div>
         </div>`;
     }).join("")}
       ${shown.length === 0 ? '<div class="depth-slot empty">No eligible returners</div>' : ""}
     </div>
-    <div class="ret-hint">Top man returns kicks &amp; punts. \u25B2 to promote.</div>
+    <div class="ret-hint">Top man returns kicks &amp; punts. Drag to reorder.</div>
   </div>
 `;
   }
@@ -40396,11 +40555,12 @@ var _CFB = (() => {
     return `
   <div class="depth-col">
     <div class="depth-col-header"><span class="depth-pos">${pos}</span></div>
-    <div class="depth-slots">
+    <div class="depth-slots" data-drag-list="st:${pos}">
       ${ordered.map((id, idx) => {
       const p = roster.find((pl) => pl.id === id);
       if (!p) return "";
-      return `<div class="depth-slot${idx < starterCount ? " starter" : ""}">
+      return `<div class="depth-slot${idx < starterCount ? " starter" : ""}" data-pid="${p.id}">
+          ${ordered.length > 1 ? `<button class="do-drag" data-drag-handle="1" aria-label="Drag to reorder ${escapeHtml(fullName(p))}">\u2261</button>` : ""}
           <div class="depth-slot-rank">${idx + 1}</div>
           <div class="depth-slot-info"><div class="depth-slot-name"><span class="player-link" data-pcard="${p.id}">${escapeHtml(fullName(p))}</span></div></div>
           <span class="depth-slot-rating ${ratingColor(Math.round(p.compositeRating))}">${Math.round(p.compositeRating)}</span>
@@ -40414,7 +40574,9 @@ var _CFB = (() => {
   function bandLabel(slots, side) {
     const poss = new Set(slots.map((s) => s.pos));
     if (side === "defense") {
-      if (poss.has("CB") || poss.has("S")) return "Secondary";
+      if (poss.has("CB") && poss.has("S")) return "Secondary";
+      if (poss.has("S")) return "Safeties";
+      if (poss.has("CB")) return "Corners";
       if (poss.has("LB") || poss.has("OLB")) return "Linebackers";
       return "Line";
     }
@@ -40456,11 +40618,17 @@ var _CFB = (() => {
         return aLine - bLine || a.y - b.y;
       });
     }
-    return visibleBands.map((b) => `
-  <div class="frow" data-band="${escapeHtml(bandLabel(b.slots, side))}"
+    let lastBand = null;
+    return visibleBands.map((b) => {
+      let lbl = bandLabel(b.slots, side);
+      if (lbl === lastBand) lbl = "";
+      else lastBand = lbl;
+      return `
+  <div class="frow" data-band="${escapeHtml(lbl)}"
        data-unit="${b.slots.some((s) => s.pos === "OL") ? "line" : "skill"}">
     ${b.slots.sort((a, c) => a.x - c.x).map((s) => slotHtmlById[s.id]).join("")}
-  </div>`).join("");
+  </div>`;
+    }).join("");
   }
   function renderFieldSlot(school, slot, playerId, opts) {
     var _a;
@@ -40734,12 +40902,145 @@ var _CFB = (() => {
   function buildRatingById(school) {
     return Object.fromEntries(((school == null ? void 0 : school.roster) || []).map((p) => [p.id, p.compositeRating]));
   }
+  function findScrollParent(el) {
+    let n = el.parentElement;
+    while (n) {
+      const s = getComputedStyle(n);
+      if (/(auto|scroll)/.test(s.overflowY) && n.scrollHeight > n.clientHeight) return n;
+      n = n.parentElement;
+    }
+    return document.scrollingElement || document.documentElement;
+  }
+  function depthDragOrder(school, kind) {
+    var _a, _b;
+    if (kind.indexOf("pos:") === 0) {
+      return [...((_a = school.depthChart) == null ? void 0 : _a[kind.slice(4)]) || []];
+    }
+    if (kind.indexOf("uniq:") === 0) {
+      const u = UNIQUE_DEPTH_OFF.find((x) => x.pos === kind.slice(5));
+      return u ? uniqueDepthTop(school, u, 999).map((x) => x.p.id) : [];
+    }
+    if (kind === "ret") {
+      const roster = school.roster || [];
+      const pool = roster.filter((p) => ["RB", "WR", "CB", "S"].includes(p.position)).map((p) => ({ id: p.id, ret: roleRating(p, "Returner") })).sort((a, b) => b.ret - a.ret).map((x) => x.id);
+      const existing = (((_b = school.depthOrder) == null ? void 0 : _b.RET) || []).filter((x) => pool.includes(x));
+      const overrideSet = new Set(existing);
+      return [...existing, ...pool.filter((x) => !overrideSet.has(x))];
+    }
+    if (kind.indexOf("st:") === 0) {
+      const pos = kind.slice(3);
+      const inPool = (school.roster || []).filter((p) => p.position === pos).sort((a, b) => b.compositeRating - a.compositeRating);
+      const override = ((school.depthOrder || {})[pos] || []).filter((id) => inPool.find((p) => p.id === id));
+      const overrideSet = new Set(override);
+      return [...override, ...inPool.filter((p) => !overrideSet.has(p.id)).map((p) => p.id)];
+    }
+    return [];
+  }
+  function applyDepthReorder(kind, pid, to) {
+    const school = getPlayerSchool();
+    if (!school) return;
+    const cur = depthDragOrder(school, kind);
+    const from = cur.indexOf(pid);
+    if (from < 0) return;
+    cur.splice(from, 1);
+    cur.splice(Math.max(0, Math.min(to, cur.length)), 0, pid);
+    school.depthOrder = school.depthOrder || {};
+    if (kind.indexOf("pos:") === 0) {
+      school.depthOrder[kind.slice(4)] = cur;
+      school.depthChart = buildDepthChart(school.roster, school.gameplan, school.depthOrder);
+    } else if (kind.indexOf("uniq:") === 0) {
+      school.depthOrder[kind.slice(5)] = cur;
+    } else if (kind === "ret") {
+      school.depthOrder.RET = cur;
+    } else if (kind.indexOf("st:") === 0) {
+      school.depthOrder[kind.slice(3)] = cur;
+      school.depthChart = buildDepthChart(school.roster, school.gameplan, school.depthOrder);
+    }
+    rerender();
+  }
+  function setupDepthDrag() {
+    document.querySelectorAll("[data-drag-list]").forEach((listEl) => {
+      const kind = listEl.dataset.dragList;
+      listEl.querySelectorAll("[data-drag-handle]").forEach((handle) => {
+        handle.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const row = handle.closest("[data-pid]");
+          if (!row) return;
+          const rows = [...listEl.querySelectorAll("[data-pid]")];
+          const startIdx = rows.indexOf(row);
+          if (startIdx < 0) return;
+          const rects = rows.map((r) => r.getBoundingClientRect());
+          const rowH = rects[startIdx].height;
+          const scroller = findScrollParent(listEl);
+          const startScroll = scroller.scrollTop;
+          const startY = rects[startIdx].top + rowH / 2;
+          let to = startIdx;
+          let moved = false;
+          row.classList.add("do-dragging");
+          try {
+            handle.setPointerCapture(e.pointerId);
+          } catch (err) {
+          }
+          const onMove = (ev) => {
+            const y = ev.clientY + (scroller.scrollTop - startScroll);
+            if (!moved && Math.abs(y - startY) < 4) return;
+            moved = true;
+            row.style.transform = `translateY(${y - startY}px)`;
+            let above = 0;
+            for (let k = 0; k < rows.length; k++) {
+              if (k === startIdx) continue;
+              if (y > rects[k].top + rects[k].height / 2) above++;
+            }
+            to = above;
+            rows.forEach((r, k) => {
+              if (k === startIdx) return;
+              const kk = k < startIdx ? k : k - 1;
+              const shift = (kk >= to ? rowH : 0) + (k > startIdx ? -rowH : 0);
+              r.style.transform = shift ? `translateY(${shift}px)` : "";
+            });
+            const vh = window.innerHeight || 800;
+            if (ev.clientY < 90) scroller.scrollTop -= 14;
+            else if (ev.clientY > vh - 90) scroller.scrollTop += 14;
+          };
+          const finish = (commit) => {
+            handle.removeEventListener("pointermove", onMove);
+            handle.removeEventListener("pointerup", onUp);
+            handle.removeEventListener("pointercancel", onCancel);
+            rows.forEach((r) => {
+              r.style.transform = "";
+            });
+            row.classList.remove("do-dragging");
+            if (commit && moved && to !== startIdx) applyDepthReorder(kind, row.dataset.pid, to);
+          };
+          const onUp = () => finish(true);
+          const onCancel = () => finish(false);
+          handle.addEventListener("pointermove", onMove);
+          handle.addEventListener("pointerup", onUp);
+          handle.addEventListener("pointercancel", onCancel);
+        });
+      });
+    });
+  }
   function setupListeners9() {
     var _a, _b, _c;
     const school = getPlayerSchool();
     if (!school) return;
     const gp = school.gameplan;
     ensureFieldAssignments(gp);
+    document.querySelectorAll("[data-do-sec]").forEach((d) => {
+      d.addEventListener("toggle", () => {
+        depthSecOpen[d.dataset.doSec] = d.open;
+      });
+    });
+    document.querySelectorAll("[data-do-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const parts = btn.dataset.doTab.split(":");
+        depthPosTab[parts[0]] = parts[1];
+        rerender();
+      });
+    });
+    setupDepthDrag();
     document.querySelectorAll("[data-dtab]").forEach((btn) => {
       btn.addEventListener("click", () => {
         depthTab = btn.dataset.dtab;
@@ -40851,41 +41152,6 @@ var _CFB = (() => {
         });
       });
     });
-    document.querySelectorAll("[data-depth-up]").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        var _a2;
-        e.stopPropagation();
-        const school2 = getPlayerSchool();
-        const pos = btn.dataset.depthUp;
-        const pid = btn.dataset.pid;
-        const cur = pos === "SLOT" ? [...buildActiveDepth(school2).SLOT || []] : [...((_a2 = school2.depthChart) == null ? void 0 : _a2[pos]) || []];
-        const i = cur.indexOf(pid);
-        if (i > 0) {
-          [cur[i - 1], cur[i]] = [cur[i], cur[i - 1]];
-          school2.depthOrder = school2.depthOrder || {};
-          school2.depthOrder[pos] = cur;
-          if (pos !== "SLOT") {
-            school2.depthChart = buildDepthChart(school2.roster, school2.gameplan, school2.depthOrder);
-          }
-        }
-        rerender();
-      });
-    });
-    document.querySelectorAll("[data-uniq-up]").forEach((btn) => btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const school2 = getPlayerSchool();
-      const upos = btn.dataset.uniqUp, pid = btn.dataset.pid;
-      const u = UNIQUE_DEPTH_OFF.find((x) => x.pos === upos);
-      if (!u) return;
-      const cur = uniqueDepthTop(school2, u, 999).map((x) => x.p.id);
-      const i = cur.indexOf(pid);
-      if (i > 0) {
-        [cur[i - 1], cur[i]] = [cur[i], cur[i - 1]];
-        school2.depthOrder = school2.depthOrder || {};
-        school2.depthOrder[upos] = cur;
-      }
-      rerender();
-    }));
     document.querySelectorAll("[data-uniq-swap]").forEach((btn) => btn.addEventListener("click", (e) => {
       e.stopPropagation();
       uniqSwap = btn.dataset.uniqSwap;
@@ -40944,21 +41210,6 @@ var _CFB = (() => {
         const val = (_a2 = btn.parentElement) == null ? void 0 : _a2.querySelector(".fs-blitz-val");
         if (val) val.textContent = `${next}`;
         (_b2 = btn.closest(".field-slot")) == null ? void 0 : _b2.classList.toggle("blitzing", next > 0);
-      });
-    });
-    document.querySelectorAll("[data-ret-up]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        var _a2;
-        const id = btn.dataset.retUp;
-        const roster = (school == null ? void 0 : school.roster) || [];
-        const pool = roster.filter((p) => ["RB", "WR", "CB", "S"].includes(p.position)).map((p) => ({ id: p.id, ret: roleRating(p, "Returner") })).sort((a, b) => b.ret - a.ret).map((x) => x.id);
-        const existing = (((_a2 = school.depthOrder) == null ? void 0 : _a2.RET) || []).filter((x) => pool.includes(x));
-        const overrideSet = new Set(existing);
-        const current = [...existing, ...pool.filter((x) => !overrideSet.has(x))];
-        const order = [id, ...current.filter((x) => x !== id)];
-        if (!school.depthOrder) school.depthOrder = {};
-        school.depthOrder.RET = order;
-        rerender();
       });
     });
     (_c = document.getElementById("btn-auto-sort")) == null ? void 0 : _c.addEventListener("click", () => {
@@ -45833,6 +46084,7 @@ ${renderAutoRecruitLog()}`;
       const seedId = String(p.receiverId || p.targetId || "");
       const side = seedId ? seedId.split("").reduce((s2, c) => s2 + c.charCodeAt(0), 0) % 2 ? 76 : 24 : 50;
       const screen = !!p.isScreen;
+      const _throwAway = !!p.throwAway;
       const _cn = String(p.concept || "");
       const screenKind = !screen ? null : /Bubble/i.test(_cn) ? "bubble" : /Tunnel/i.test(_cn) ? "tunnel" : /RB Screen/i.test(_cn) ? "rb" : backs.length && !catchers.length ? "rb" : backs.some((b) => String(b.id) === String(p.targetId)) ? "rb" : "bubble";
       const _slotish = catchers.filter((s) => s.pos === "SLOT");
@@ -45846,6 +46098,10 @@ ${renderAutoRecruitLog()}`;
       const _tbx = (_i = tgtSlot == null ? void 0 : tgtSlot.bx) != null ? _i : 50;
       const _toBoundary = _tbx <= 50 ? -1 : 1;
       const catchPt = !screen ? [clamp6(((_j = tgtSlot == null ? void 0 : tgtSlot.bx) != null ? _j : side) + (rnd() - 0.5) * 3, 4, 96), clamp6(LOS - air * YPU, 3, 40)] : screenKind === "tunnel" ? [clamp6(_tbx - _toBoundary * 10, 12, 88), LOS - 0.3] : screenKind === "rb" ? [clamp6(_tbx + (_tbx <= 50 ? -9 : 9), 6, 94), LOS + 1.8] : [clamp6(_tbx + _toBoundary * 6, 4, 96), LOS + 1.2];
+      if (_throwAway) {
+        catchPt[0] = rnd() < 0.5 ? 7 : 93;
+        catchPt[1] = clamp6(LOS - 5 * YPU, 3, 40);
+      }
       const _screenDelay = screenKind === "bubble" ? 0.15 : screenKind === "tunnel" ? 0.55 : 0.62;
       const _catchDepthYds = Math.max(0, (LOS - catchPt[1]) / YPU);
       const _routeBreak = SNAP_END + clamp6(0.45 + _catchDepthYds / (SPD.WR * 1.4), 0.5, 2.1) + (p.playAction ? 0.3 : 0);
@@ -45896,7 +46152,7 @@ ${renderAutoRecruitLog()}`;
         const shape = s === tgtSlot && tr && tr.dbl && DBL_SHAPE[shape0] ? DBL_SHAPE[shape0] : shape0;
         const wps = routeWaypoints(shape, s.bx, s.by, mid);
         const base = waypointBehavior(wps, A[s.id].speed, PRESNAP);
-        A[s.id].behave = s === tgtSlot && (!screen || screenShape) ? (t2, w2, a2) => t2 < PRESNAP ? null : t2 >= tCatch && p.complete && !p.turnover ? [catchPt[0], endY, schedSp(a2, [catchPt[0], endY], t2, tEnd, a2.speed)] : t2 >= (isScreenTgt ? throwAt : throwAt * 0.9) ? [catchPt[0], catchPt[1], a2.speed] : base(t2, w2, a2) : base;
+        A[s.id].behave = s === tgtSlot && !_throwAway && (!screen || screenShape) ? (t2, w2, a2) => t2 < PRESNAP ? null : t2 >= tCatch && p.complete && !p.turnover ? [catchPt[0], endY, schedSp(a2, [catchPt[0], endY], t2, tEnd, a2.speed)] : t2 >= (isScreenTgt ? throwAt : throwAt * 0.9) ? [catchPt[0], catchPt[1], a2.speed] : base(t2, w2, a2) : base;
       });
       for (const b of backs) {
         if (screen && b === tgtSlot) {
@@ -46053,9 +46309,9 @@ ${renderAutoRecruitLog()}`;
       var ballEnd = { at: tSack, pt: [sackPt[0], sackPt[1] - 0.8] };
     } else {
       const scheme = !p.optionPhase && !p.isScramble ? RUN_SCHEMES[p.concept] || RUN_SCHEMES[RUN_ALIAS[p.concept]] || null : null;
-      const dir = p.runDir === "left" ? -1 : p.runDir === "right" ? 1 : rnd() < 0.5 ? -1 : 1;
-      const lane = p.optionPhase === "jet" ? p.runDir === "left" ? 8 : 92 : p.isScramble ? seeded(p)() < 0.5 ? 24 : 76 : scheme ? clamp6(50 + dir * scheme.gap, 6, 94) : p.runDir === "left" ? t === "run_outside" ? 13 : 33 : p.runDir === "right" ? t === "run_outside" ? 87 : 67 : 50;
-      const endPt = [clamp6(lane + (rnd() - 0.5) * 4, 3, 97), endY];
+      let dir = p.runDir === "left" ? -1 : p.runDir === "right" ? 1 : rnd() < 0.5 ? -1 : 1;
+      let lane = p.optionPhase === "jet" ? p.runDir === "left" ? 8 : 92 : p.isScramble ? seeded(p)() < 0.5 ? 24 : 76 : scheme ? clamp6(50 + dir * scheme.gap, 6, 94) : p.runDir === "left" ? t === "run_outside" ? 13 : 33 : p.runDir === "right" ? t === "run_outside" ? 87 : 67 : 50;
+      let endPt = [clamp6(lane + (rnd() - 0.5) * 4, 3, 97), endY];
       const backs = off.filter((s) => s.pos === "RB" || s.pos === "FB" || s.pos === "WING" || s.pos === "ABACK" || s.pos === "WILDCAT");
       const deepBack = backs.length ? backs.reduce((a2, b2) => b2.by > a2.by ? b2 : a2) : null;
       const _jetMan = () => {
@@ -46067,8 +46323,14 @@ ${renderAutoRecruitLog()}`;
       carrier = A[carrierSlot.id];
       const directSnap = p.optionPhase === "wildcat";
       const isJet = p.optionPhase === "jet";
+      const _jetDir = isJet ? carrierSlot.bx < 50 ? 1 : -1 : dir;
+      if (isJet) {
+        dir = _jetDir;
+        lane = _jetDir > 0 ? 92 : 8;
+        endPt = [clamp6(lane + (rnd() - 0.5) * 4, 3, 97), endY];
+      }
       const _qbX = qbSlot.bx;
-      const jetMeshX = Math.abs(_qbX - 50) < 20 ? _qbX + (p.runDir === "left" ? -2 : 2) : 50 + (p.runDir === "left" ? -2 : 2);
+      const jetMeshX = Math.abs(_qbX - 50) < 20 ? _qbX + (_jetDir < 0 ? -2 : 2) : 50 + (_jetDir < 0 ? -2 : 2);
       const jetMeshPt = isJet ? [jetMeshX, LOS + 2.2] : null;
       const meshAt = directSnap ? SNAP_END : isJet ? SNAP_END + 0.18 : SNAP_END + (p.optionPhase === "draw" ? 0.55 : p.isScramble ? 0.85 : 0.28);
       if (isJet) carrier.speed = Math.max(carrier.speed, 8);
@@ -46311,7 +46573,11 @@ ${renderAutoRecruitLog()}`;
       }
       for (const a2 of everyone) a2.track.push([a2.x, a2.y]);
       const bp = ballPlan(t2);
-      ball.track.push([clamp6(bp[0], 1, 99), clamp6(bp[1], 1.5, 60)]);
+      const _bp0 = bp ? bp[0] : NaN, _bp1 = bp ? bp[1] : NaN;
+      const _prevB = ball.track.length ? ball.track[ball.track.length - 1] : [50, LOS + 0.6];
+      const _bx = Number.isFinite(_bp0) ? _bp0 : _prevB[0];
+      const _by = Number.isFinite(_bp1) ? _bp1 : _prevB[1];
+      ball.track.push([clamp6(_bx, 1, 99), clamp6(_by, 1.5, 60)]);
     }
     if (typeof beatenAt !== "undefined" && beatenAt != null) {
       let best = p.beatenDefSlot ? defs.find((d) => d.slot.id === p.beatenDefSlot) : null;
