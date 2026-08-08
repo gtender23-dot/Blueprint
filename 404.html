@@ -6776,7 +6776,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "6d898346b1";
+globalThis.__BUILD__ = "29f4fc10f2";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -7420,6 +7420,10 @@ var _CFB = (() => {
       C = {
         // ── Division / world structure ────────────────────────────────────────────
         PRESTIGE_MAX: { D3: 3, D2: 4, D1: 6 },
+        // G8 (Aug 2026): icing the kicker — share of would-be clutch makes shaken
+        // loose by a pre-kick timeout. Real-world studies put icing between nothing
+        // and a few points of accuracy; we sit at the modest end. [TUNE]
+        ICE_KICKER_EFF: 0.04,
         // per-division prestige ceiling (Chunk 5 rescale)
         // Tier-based talent generation (tier: 1=D3, 2=D2, 3=D1)
         // Arrival rebalance: players START ~7 lower than before while POTENTIAL_BAND
@@ -18222,7 +18226,8 @@ var _CFB = (() => {
       rushInPct: clamp2(58 + Math.round(lean * 1.5) + randInt3(-6, 6), 35, 80),
       passDepth,
       blitzPct: 15 + Math.round(Math.random() * 20),
-      pressureSource: { edge: 50 + Math.round(Math.random() * 20), interior: 15 + Math.round(Math.random() * 15), secondary: 15 + Math.round(Math.random() * 20) },
+      // pressureSource retired (G11, Aug 2026) — normalizeDefGameplan deleted it on
+      // every load anyway; pressureIdentity + fieldAssignments.blitzShares own "who comes"
       coverageScheme: Math.random() < 0.75 ? "balanced" : Math.random() < 0.6 ? "lockTop" : "bracketTop",
       greenDog: Math.random() < 0.3,
       spyQB: Math.random() < 0.25,
@@ -23502,11 +23507,20 @@ var _CFB = (() => {
           }
         }
         if (decision === "fg") {
+          let _iced = false;
+          const _fgMargin = gameState.score.off - gameState.score.def;
+          const _fgClutch = _fgMargin >= -3 && _fgMargin <= 0 && (gameState.half === 3 || gameState.half >= 2 && gameState.clock <= 180);
+          if (_fgClutch && gameState.timeouts && (gameState.timeouts[gameState.defSide] || 0) > 0 && Math.random() < 0.55) {
+            gameState.timeouts[gameState.defSide] = Math.max(0, (gameState.timeouts[gameState.defSide] || 0) - 1);
+            _iced = true;
+            log.push(`\u23F1\uFE0F Timeout \u2014 ${defSchool.name} ices the kicker (${gameState.timeouts[gameState.defSide]} left)`);
+          }
           const _fgBlocked = Math.random() < C.FG_BLOCK_RATE;
-          const made = !_fgBlocked && attemptFG(offRoster, offDepth, fgKickDist, ((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.specialTeams) || 0);
+          const made = !_fgBlocked && attemptFG(offRoster, offDepth, fgKickDist, ((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.specialTeams) || 0) && !(_iced && Math.random() < C.ICE_KICKER_EFF);
           plays.push({
             type: "fg",
             made,
+            iced: _iced,
             blocked: _fgBlocked,
             fgDist: fgKickDist,
             kickerId: (_b = (offDepth["K"] || [])[0]) != null ? _b : null,
@@ -24950,69 +24964,85 @@ var _CFB = (() => {
             const recvRoster = receivingTeam === "home" ? homeRoster : awayRoster;
             const recvSchool = receivingTeam === "home" ? homeSchool : awaySchool;
             const kickSchool = scoringTeam === "home" ? homeSchool : awaySchool;
-            const ko = kickoffOutcome(kickRoster, recvRoster, (((_f = recvSchool == null ? void 0 : recvSchool.depthOrder) == null ? void 0 : _f.RET) || [])[0], ((_g = kickSchool == null ? void 0 : kickSchool._dnaGrades) == null ? void 0 : _g.specialTeams) || 0);
-            const retName = ko.returner ? `${ko.returner.name.first[0]}. ${ko.returner.name.last}` : null;
-            if (!token.koReturns) token.koReturns = [];
-            if (!ko.touchback && ko.returner) {
-              token.koReturns.push({
-                side: receivingTeam,
-                returnerId: ko.returner.id,
-                yards: ko.retYds || 0,
-                td: !!ko.td
-              });
-            }
-            pendingKickoff = ko.td ? [] : [{
-              type: "kickoff",
-              onside: false,
-              touchback: !!ko.touchback,
-              returnerId: (_i = (_h = ko.returner) == null ? void 0 : _h.id) != null ? _i : null,
-              retYds: ko.retYds || 0,
-              returnTD: false,
-              fieldPos: 50
-            }];
-            if (ko.td) {
-              log.push(`KICKOFF RETURN TOUCHDOWN \u2014 ${retName || "The returner"} takes it all the way for ${recvSchool.name}!`);
-              const pat = Math.random() < C.PAT_RATE ? 1 : 0;
-              if (receivingTeam === "home") token.homeScore += 6 + pat;
-              else token.awayScore += 6 + pat;
-              const ko2 = kickoffOutcome(recvRoster, kickRoster, (((_k = (_j = scoringTeam === "home" ? homeSchool : awaySchool) == null ? void 0 : _j.depthOrder) == null ? void 0 : _k.RET) || [])[0], ((_l = recvSchool == null ? void 0 : recvSchool._dnaGrades) == null ? void 0 : _l.specialTeams) || 0);
-              if (!ko2.touchback && ko2.returner) {
+            if (margin > 0 && clock <= 12) {
+              possession = receivingTeam;
+              fieldPos = clamp2(Math.round(randNorm(38, 4)), 28, 48);
+              pendingKickoff = [{
+                type: "kickoff",
+                onside: false,
+                squib: true,
+                touchback: false,
+                returnerId: null,
+                retYds: 0,
+                returnTD: false,
+                fieldPos: 50
+              }];
+              log.push(`Squib kick \u2014 ${kickSchool.name} bounces it short, ${recvSchool.name} takes over at the ${fieldPos <= 50 ? fieldPos : 100 - fieldPos}`);
+            } else {
+              const ko = kickoffOutcome(kickRoster, recvRoster, (((_f = recvSchool == null ? void 0 : recvSchool.depthOrder) == null ? void 0 : _f.RET) || [])[0], ((_g = kickSchool == null ? void 0 : kickSchool._dnaGrades) == null ? void 0 : _g.specialTeams) || 0);
+              const retName = ko.returner ? `${ko.returner.name.first[0]}. ${ko.returner.name.last}` : null;
+              if (!token.koReturns) token.koReturns = [];
+              if (!ko.touchback && ko.returner) {
                 token.koReturns.push({
-                  side: scoringTeam,
-                  returnerId: ko2.returner.id,
-                  yards: ko2.retYds || 0,
-                  td: false
+                  side: receivingTeam,
+                  returnerId: ko.returner.id,
+                  yards: ko.retYds || 0,
+                  td: !!ko.td
                 });
               }
-              pendingKickoff = [
-                {
-                  type: "kickoff",
-                  onside: false,
-                  touchback: false,
-                  returnerId: (_n = (_m = ko.returner) == null ? void 0 : _m.id) != null ? _n : null,
-                  retYds: ko.retYds || 0,
-                  returnTD: true,
-                  koTeam: (recvSchool == null ? void 0 : recvSchool.name) || "",
-                  fieldPos: 50
-                },
-                {
-                  type: "kickoff",
-                  onside: false,
-                  touchback: !!ko2.touchback,
-                  returnerId: (_p = (_o = ko2.returner) == null ? void 0 : _o.id) != null ? _p : null,
-                  retYds: ko2.retYds || 0,
-                  returnTD: false,
-                  fieldPos: 50
+              pendingKickoff = ko.td ? [] : [{
+                type: "kickoff",
+                onside: false,
+                touchback: !!ko.touchback,
+                returnerId: (_i = (_h = ko.returner) == null ? void 0 : _h.id) != null ? _i : null,
+                retYds: ko.retYds || 0,
+                returnTD: false,
+                fieldPos: 50
+              }];
+              if (ko.td) {
+                log.push(`KICKOFF RETURN TOUCHDOWN \u2014 ${retName || "The returner"} takes it all the way for ${recvSchool.name}!`);
+                const pat = Math.random() < C.PAT_RATE ? 1 : 0;
+                if (receivingTeam === "home") token.homeScore += 6 + pat;
+                else token.awayScore += 6 + pat;
+                const ko2 = kickoffOutcome(recvRoster, kickRoster, (((_k = (_j = scoringTeam === "home" ? homeSchool : awaySchool) == null ? void 0 : _j.depthOrder) == null ? void 0 : _k.RET) || [])[0], ((_l = recvSchool == null ? void 0 : recvSchool._dnaGrades) == null ? void 0 : _l.specialTeams) || 0);
+                if (!ko2.touchback && ko2.returner) {
+                  token.koReturns.push({
+                    side: scoringTeam,
+                    returnerId: ko2.returner.id,
+                    yards: ko2.retYds || 0,
+                    td: false
+                  });
                 }
-              ];
-              possession = scoringTeam;
-              fieldPos = ko2.fieldPos;
-            } else {
-              if (!ko.touchback && retName && ko.retYds != null) {
-                log.push(`${retName} returns the kickoff ${ko.retYds} yards`);
+                pendingKickoff = [
+                  {
+                    type: "kickoff",
+                    onside: false,
+                    touchback: false,
+                    returnerId: (_n = (_m = ko.returner) == null ? void 0 : _m.id) != null ? _n : null,
+                    retYds: ko.retYds || 0,
+                    returnTD: true,
+                    koTeam: (recvSchool == null ? void 0 : recvSchool.name) || "",
+                    fieldPos: 50
+                  },
+                  {
+                    type: "kickoff",
+                    onside: false,
+                    touchback: !!ko2.touchback,
+                    returnerId: (_p = (_o = ko2.returner) == null ? void 0 : _o.id) != null ? _p : null,
+                    retYds: ko2.retYds || 0,
+                    returnTD: false,
+                    fieldPos: 50
+                  }
+                ];
+                possession = scoringTeam;
+                fieldPos = ko2.fieldPos;
+              } else {
+                if (!ko.touchback && retName && ko.retYds != null) {
+                  log.push(`${retName} returns the kickoff ${ko.retYds} yards`);
+                }
+                possession = receivingTeam;
+                fieldPos = ko.fieldPos;
               }
-              possession = receivingTeam;
-              fieldPos = ko.fieldPos;
             }
           }
         } else {
@@ -27598,6 +27628,13 @@ var _CFB = (() => {
       } else if (adj.kind === "fresh") {
         myGP._h2Fresh = { eff: Math.min(0.5, 0.28 * strength) };
         adjEval = { kind: "fresh", h1Pts: isHome ? token.homeScore : token.awayScore };
+      } else if (adj.kind === "protect") {
+        myGP._h2Protect = { eff: Math.min(0.2, 0.1 * strength) };
+        adjEval = { kind: "protect", h1Sacks: myH1SacksAllowed };
+      } else if (adj.kind === "shadow" && adj.id) {
+        myGP._h2Shadow = { id: adj.id, eff: Math.min(0.12, 0.07 * strength) };
+        const _h1Rec = ((_c2) => (_c2 == null ? void 0 : _c2.recYds) || 0)((oppStats || {})[adj.id]);
+        adjEval = { kind: "shadow", id: adj.id, name: adj.name || "their top target", h1RecYds: _h1Rec };
       }
     }
     {
@@ -27660,6 +27697,18 @@ var _CFB = (() => {
         const h2Pts = myFinal - adjEval.h1Pts;
         worked = h2Pts >= adjEval.h1Pts;
         line = `Fresh legs: ${adjEval.h1Pts} scored in H1 \u2192 ${h2Pts} closing the game out`;
+      } else if (adjEval.kind === "protect") {
+        const oppPS = isHome ? result.awayPlayerStats : result.homePlayerStats;
+        const finalSacks = Object.values(oppPS || {}).reduce((s2, p2) => s2 + (p2.sacks || 0), 0);
+        const h2Sacks = Math.max(0, finalSacks - adjEval.h1Sacks);
+        worked = h2Sacks <= adjEval.h1Sacks;
+        line = `Protection: ${adjEval.h1Sacks} sack${adjEval.h1Sacks === 1 ? "" : "s"} allowed in H1 \u2192 ${h2Sacks} behind the extra bodies`;
+      } else if (adjEval.kind === "shadow") {
+        const oppPS = isHome ? result.awayPlayerStats : result.homePlayerStats;
+        const finalRec = ((oppPS || {})[adjEval.id] || {}).recYds || 0;
+        const h2Rec = Math.max(0, finalRec - adjEval.h1RecYds);
+        worked = h2Rec < adjEval.h1RecYds;
+        line = `Shadow on ${adjEval.name}: ${adjEval.h1RecYds} receiving yards in H1 \u2192 ${h2Rec} under the bracket`;
       }
       try {
         addDnaXP(state2._coachId, { adjustments: worked ? 6 : 1 });
@@ -30047,16 +30096,19 @@ var _CFB = (() => {
     var _a;
     if ((_a = state.pendingHalftime) == null ? void 0 : _a.exhibition) {
       return exhibitionResume((t) => {
+        var _a2;
         const adj = state.pendingHalftime.adjustment;
         if (adj) {
           const myGP = t.playerSide === "away" ? t.awayGP : t.homeGP;
           if (adj.kind === "offlean") myGP._h2OffLean = { eff: 0.08 };
           else if (adj.kind === "deflean") myGP._h2DefLean = { eff: 0.08 };
           else if (adj.kind === "fresh") myGP._h2Fresh = { eff: 0.28 };
+          else if (adj.kind === "protect") myGP._h2Protect = { eff: 0.1 };
+          else if (adj.kind === "shadow" && adj.id) myGP._h2Shadow = { id: adj.id, eff: 0.07 };
         }
         if (state._exhibitionMode !== "both") {
           const aiGP = t.playerSide === "away" ? t.homeGP : t.awayGP;
-          setAutoCounter(aiGP, t.drives, t.playerSide === "away" ? "away" : "home");
+          setAutoCounter(aiGP, t.drives, t.playerSide === "away" ? "away" : "home", (_a2 = state.settings) == null ? void 0 : _a2.diffCoaching);
         }
         state.ui.showHalftime = false;
         stepSecondHalf(t, homeGPEdits, awayGPEdits);
@@ -47943,6 +47995,8 @@ ${renderAutoRecruitLog()}`;
       ${adjCard("offlean", "\u2694\uFE0F", "Lean offensive", "Tip the team toward offense in H2 \u2014 win the line, run it better, buy the passer time")}
       ${adjCard("deflean", "\u{1F6E1}", "Lean defensive", "Tip the team toward defense in H2 \u2014 win the front, get after the passer, stuff the run")}
       ${adjCard("fresh", "\u{1F50B}", "Fresh legs", "A conditioning push \u2014 your team wears down slower the rest of the game")}
+      ${adjCard("protect", "\u{1F9F1}", "Protect the QB", "Extra bodies stay in and chip the rushers \u2014 fewer sacks and hits the rest of the way")}
+      ${hotId ? adjCard("shadow", "\u{1F576}", `Shadow ${escapeHtml(hotName)}`, `Bracket their hot hand every snap of H2 \u2014 ${escapeHtml(hotName)} (${hotYds} yds so far) sees a cloud`, `data-ht-adj-id="${escapeHtml(String(hotId))}" data-ht-adj-name="${escapeHtml(hotName)}"`) : ""}
     </div>
   </div>`;
     const margin = myScore - oppScore;
@@ -48822,7 +48876,7 @@ ${renderAutoRecruitLog()}`;
           const cur = state.pendingHalftime.adjustment;
           if ((cur == null ? void 0 : cur.kind) === kind) {
             state.pendingHalftime.adjustment = null;
-          } else state.pendingHalftime.adjustment = { kind };
+          } else state.pendingHalftime.adjustment = { kind, id: btn.dataset.htAdjId || null, name: btn.dataset.htAdjName || null };
           renderApp();
         });
       });
@@ -49932,8 +49986,41 @@ ${renderAutoRecruitLog()}`;
       return `<button class="cs-tag-btn${_on ? " active" : ""}" data-cs-timeout="1" ${_left <= 0 ? "disabled" : ""} title="Call timeout \u2014 stops the clock this play (saves the run-off). ${_left} left this half.">\u23F1\uFE0F Timeout (${_left})</button>`;
     })()}
       </div>` : "";
+    const _GRP_CAT2 = { inside: "run_inside", perimeter: "run_outside", quick: "pass_short", dropback: "pass_medium", shots: "pass_deep", gadgets: "gadget" };
+    const _GRP_LBL = { inside: "inside run", perimeter: "outside run", quick: "quick game", dropback: "dropback", shots: "shot play", gadgets: "gadget" };
+    const _sugWOf = (nm) => {
+      var _z2;
+      return weights ? Math.max(0, (_z2 = weights[nm]) != null ? _z2 : 50) : 50;
+    };
+    const _sugPool = Object.keys(_GRP_CAT2).filter((g) => !_lockedGrps.has(g)).flatMap((g) => conceptsFor(g).map((nm) => ({ nm, g })));
+    const _sugTop = _sugPool.slice().sort((a, b) => _sugWOf(b.nm) - _sugWOf(a.nm)).slice(0, 3);
+    const suggestRow = _sugTop.length ? `
+      <div class="cs-form-strip cs-suggest-row">
+        <span class="cs-form-tag" title="The plays your sheet leans hardest toward right here \u2014 tap to call one">COACH'S CALL</span>
+        ${_sugTop.map(({ nm, g }) => `<button class="cs-form-btn" data-cs-callconcept="${escapeHtml(nm)}" title="Call ${escapeHtml(nm)} \u2014 the sheet's top ${_GRP_LBL[g]} here">\u2605 ${escapeHtml(nm)}</button>`).join("")}
+      </div>` : "";
+    const _legalSet = new Set(_sugPool.map((x) => x.nm));
+    const _recentNames = [];
+    {
+      const _pd = token.pending && token.pending.drive ? [{ possession: token.pending.possession, plays: token.pending.drive.plays || [] }] : [];
+      const drv = (token.drives || []).concat(_pd);
+      for (let i = drv.length - 1; i >= 0 && _recentNames.length < 3; i--) {
+        const d = drv[i];
+        if (d.possession !== mySide) continue;
+        const ps = d.plays || [];
+        for (let j = ps.length - 1; j >= 0 && _recentNames.length < 3; j--) {
+          const p = ps[j];
+          if (p.coachCall && p.concept && _legalSet.has(p.concept) && !_recentNames.includes(p.concept)) _recentNames.push(p.concept);
+        }
+      }
+    }
+    const recentRow = _recentNames.length ? `
+      <div class="cs-form-strip cs-suggest-row">
+        <span class="cs-form-tag">RECENT</span>
+        ${_recentNames.map((nm) => `<button class="cs-form-btn" data-cs-callconcept="${escapeHtml(nm)}" title="Run it again \u2014 ${escapeHtml(nm)}">\u21BB ${escapeHtml(nm)}</button>`).join("")}
+      </div>` : "";
     const adj = (_g = state.pendingHalftime) == null ? void 0 : _g.adjustment;
-    const adjChip = adj ? `<span class="cs-adj">${adj.kind === "offlean" ? "\u2694\uFE0F Leaning offensive" : adj.kind === "deflean" ? "\u{1F6E1} Leaning defensive" : adj.kind === "fresh" ? "\u{1F50B} Fresh legs" : "Halftime adjustment live"}</span>` : "";
+    const adjChip = adj ? `<span class="cs-adj">${adj.kind === "offlean" ? "\u2694\uFE0F Leaning offensive" : adj.kind === "deflean" ? "\u{1F6E1} Leaning defensive" : adj.kind === "fresh" ? "\u{1F50B} Fresh legs" : adj.kind === "protect" ? "\u{1F9F1} Protecting the QB" : adj.kind === "shadow" ? `\u{1F576} Shadowing ${escapeHtml(adj.name || "their top target")}` : "Halftime adjustment live"}</span>` : "";
     const fdLine = goal ? 100 : Math.max(0, Math.min(100, ctx2.fieldPos + ctx2.distance));
     const fieldBar = `
       <div class="cs-field" aria-hidden="true">
@@ -49957,6 +50044,7 @@ ${renderAutoRecruitLog()}`;
       ${renderCallFeed(token)}
       ${timeControlBar()}
       ${formStrip}
+      ${suggestRow}${recentRow}
       ${_drillCat ? drillBlock : _selForm !== "__auto" ? formationPage : `<div class="cs-cats">${tiles}</div>`}
       ${(() => {
       const _dfg = 100 - ctx2.fieldPos;
