@@ -6776,7 +6776,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "cdef91c461";
+globalThis.__BUILD__ = "6d898346b1";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -12342,6 +12342,7 @@ var _CFB = (() => {
       }
     }
     t.fork.appliedDownSeason = null;
+    if (t.fork.handoff) delete t.fork.handoff;
     syncTreeRecord(state2);
     return { worked, memory: __spreadValues({}, t.memory), trickled };
   }
@@ -12474,6 +12475,7 @@ var _CFB = (() => {
     var _a;
     const t = ensureTree(state2);
     if (!t) return [];
+    if (pendingHandoff(state2)) return [];
     const rank = { D3: 0, D2: 1, D1: 2 };
     const here = (_a = rank[t.active]) != null ? _a : 0;
     const open = new Set(openDivisions(state2));
@@ -12492,6 +12494,9 @@ var _CFB = (() => {
     var _a;
     const t = ensureTree(state2);
     if (!t) return { ok: false, reason: "Not a tree game." };
+    if (pendingHandoff(state2)) {
+      return { ok: false, reason: "Settle the handoff at your old school first \u2014 right now that is the only program you can send a coordinator to." };
+    }
     if (t.fork.appliedDownSeason === state2.season) {
       return { ok: false, reason: "You have already placed a coordinator this offseason." };
     }
@@ -12508,6 +12513,66 @@ var _CFB = (() => {
     state2.jobOpenings = (state2.jobOpenings || []).filter((o) => o.schoolId !== schoolId);
     syncTreeRecord(state2);
     return res;
+  }
+  function noteMoveUpHandoff(state2, oldSchoolId) {
+    var _a;
+    const t = ensureTree(state2);
+    if (!t) return null;
+    const school = (_a = state2.world) == null ? void 0 : _a.schools.find((s) => s.id === oldSchoolId);
+    if (!school) return null;
+    const div = school.division;
+    if (t.slots[div] && !t.slots[div].retired) return null;
+    if (liveSlots(state2).length >= C.TREE.MAX_SLOTS) return null;
+    if (!promotionCandidates(state2, { schoolId: oldSchoolId }).length) return null;
+    t.fork.handoff = { schoolId: oldSchoolId, schoolName: school.name, division: div, season: state2.season };
+    syncTreeRecord(state2);
+    return t.fork.handoff;
+  }
+  function pendingHandoff(state2) {
+    var _a, _b;
+    const t = ensureTree(state2);
+    const h = (_a = t == null ? void 0 : t.fork) == null ? void 0 : _a.handoff;
+    if (!h) return null;
+    const close = () => {
+      delete t.fork.handoff;
+      return null;
+    };
+    if (h.season !== state2.season) return close();
+    if (t.slots[h.division] && !t.slots[h.division].retired) return close();
+    const school = (_b = state2.world) == null ? void 0 : _b.schools.find((s) => s.id === h.schoolId);
+    if (!school) return close();
+    if (!promotionCandidates(state2, { schoolId: h.schoolId }).length) return close();
+    return h;
+  }
+  function handoffCandidates(state2) {
+    const h = pendingHandoff(state2);
+    if (!h) return [];
+    return promotionCandidates(state2, { schoolId: h.schoolId });
+  }
+  function executeHandoff(state2, side) {
+    const h = pendingHandoff(state2);
+    if (!h) return { ok: false, reason: "No handoff window open." };
+    const res = promoteCoordinatorToHC(state2, {
+      sourceSchoolId: h.schoolId,
+      side,
+      targetSchoolId: h.schoolId,
+      takeControl: false
+    });
+    if (!res.ok) return res;
+    const t = ensureTree(state2);
+    delete t.fork.handoff;
+    t.fork.appliedDownSeason = state2.season;
+    syncTreeRecord(state2);
+    return res;
+  }
+  function declineHandoff(state2) {
+    var _a;
+    const t = ensureTree(state2);
+    if (!((_a = t == null ? void 0 : t.fork) == null ? void 0 : _a.handoff)) return { ok: false, reason: "No handoff window open." };
+    const h = t.fork.handoff;
+    delete t.fork.handoff;
+    syncTreeRecord(state2);
+    return { ok: true, schoolName: h.schoolName };
   }
   function canRetire(state2) {
     const t = ensureTree(state2);
@@ -23594,7 +23659,10 @@ var _CFB = (() => {
               formations: formations.length ? formations : [aliasFormation(offPlan.offFormation || "Single Back")],
               conceptsByGroup: conceptGroups(),
               // the sheet's ≈% follow the SITUATION (wizard grid)
-              conceptWeights: (_j = askEff.conceptWeights) != null ? _j : null
+              conceptWeights: (_j = askEff.conceptWeights) != null ? _j : null,
+              // Madden pass 2: per-formation sheets ride along so the call sheet
+              // can browse a pinned formation's own playbook
+              formationPlaybooks: offPlan.formationPlaybooks || null
             })
           } };
         }
@@ -23638,6 +23706,7 @@ var _CFB = (() => {
                 pressureIdentity: askEff.pressureIdentity,
                 edgePlay: askEff.edgePlay,
                 robberCall: askEff.robberCall,
+                zoneStyle: askEff.zoneStyle,
                 runCommit: askEff.runCommit
               }
             })
@@ -24022,9 +24091,11 @@ var _CFB = (() => {
       const baseDefUnit = defUnitStrengthSchemeFit(defPersonnel, defFrontId, defRoster, defWeights);
       const h2Counter = defPlan._h2Counter && defPlan._h2Counter.formationId === offFormationId ? 1 - defPlan._h2Counter.eff : 1;
       let concept = { name: null, mod: 0 };
-      const _pbGate = forcedCall ? FORMATION_PLAYBOOK[offFormationId] || null : null;
-      if (playType.startsWith("pass")) concept = pickPassConcept(playType, offPersonnel, offRoster, covFam, offPlanEff.conceptWeights || null, forcedConceptName, _pbGate);
-      else if (playType === "run_inside" || playType === "run_outside") concept = pickRunConcept(playType, offPersonnel, offRoster, defEff, offPlanEff.conceptWeights || null, forcedConceptName, _pbGate);
+      const _pbGate = FORMATION_PLAYBOOK[offFormationId] || null;
+      const _fpbSheet = offPlan.formationPlaybooks ? offPlan.formationPlaybooks[offFormationId] : null;
+      const _cwEff = _fpbSheet && Object.keys(_fpbSheet).length ? __spreadValues(__spreadValues({}, offPlanEff.conceptWeights || {}), _fpbSheet) : offPlanEff.conceptWeights || null;
+      if (playType.startsWith("pass")) concept = pickPassConcept(playType, offPersonnel, offRoster, covFam, _cwEff, forcedConceptName, _pbGate);
+      else if (playType === "run_inside" || playType === "run_outside") concept = pickRunConcept(playType, offPersonnel, offRoster, defEff, _cwEff, forcedConceptName, _pbGate);
       let audible = false;
       if (concept.name && playType.startsWith("pass") && qb0 && losFree !== "never" && audiblesUsed < (losFree === "free" ? 2 : 1)) {
         const calledVs = (_U = (_T = (_S = PASS_CONCEPTS[concept.name]) == null ? void 0 : _S.vs) == null ? void 0 : _T[believedFam]) != null ? _U : 0;
@@ -24035,7 +24106,8 @@ var _CFB = (() => {
           let bestName = null, bestVs = calledVs;
           for (const [nm, c] of Object.entries(PASS_CONCEPTS)) {
             if (c.depth !== depth || c.minWR && wrN < c.minWR) continue;
-            if (offPlanEff.conceptWeights && ((_W = offPlanEff.conceptWeights[nm]) != null ? _W : 50) <= 0) continue;
+            if (_pbGate && !_pbGate.includes(nm)) continue;
+            if (_cwEff && ((_W = _cwEff[nm]) != null ? _W : 50) <= 0) continue;
             const v = (_Y = (_X = c.vs) == null ? void 0 : _X[believedFam]) != null ? _Y : 0;
             if (v > bestVs) {
               bestVs = v;
@@ -24713,7 +24785,7 @@ var _CFB = (() => {
       const ask = token.askFourth && controlled ? (sit) => skipHolds(sit) ? null : token.askFourth(sit) : null;
       const askCall = token.callMode && token.callMode !== "off" && controlled ? (sit) => skipHolds(sit) ? null : token.callMode === "all" ? "ASK" : token.callMode === "keydowns" && isKeyDownSituation(sit) ? "ASK" : null : null;
       const controlledDef = tokenControlsSide(token, possession === "home" ? "away" : "home");
-      const askDefCall = token.callMode && token.callMode !== "off" && controlledDef && !controlled ? (sit) => skipHolds(sit) ? null : isKeyDownSituation(sit) ? "ASK" : null : null;
+      const askDefCall = token.callMode && token.callMode !== "off" && controlledDef && !controlled ? (sit) => skipHolds(sit) ? null : token.callMode === "all" ? "ASK" : isKeyDownSituation(sit) ? "ASK" : null : null;
       const driveResult = simulateDrive(
         offense,
         defense,
@@ -25162,7 +25234,7 @@ var _CFB = (() => {
     const mineDef = tokenControlsSide(token, otSide === "home" ? "away" : "home");
     const ask = token.askFourth && mine ? token.askFourth : null;
     const askCall = token.callMode && token.callMode !== "off" && mine ? (sit) => token.callMode === "all" ? "ASK" : token.callMode === "keydowns" && isKeyDownSituation(sit) ? "ASK" : null : null;
-    const askDefCall = token.callMode && token.callMode !== "off" && mineDef && !mine ? (sit) => isKeyDownSituation(sit) ? "ASK" : null : null;
+    const askDefCall = token.callMode && token.callMode !== "off" && mineDef && !mine ? (sit) => token.callMode === "all" ? "ASK" : isKeyDownSituation(sit) ? "ASK" : null : null;
     const otDrive = simulateDrive(otOffense, otDefense, gameState, log, { ask, askCall, askDefCall, resume: resumeDrive });
     if (otDrive.pending) {
       token.pending = {
@@ -25234,6 +25306,7 @@ var _CFB = (() => {
       scoreDef: s.score.def,
       formations: s.formations || [],
       conceptsByGroup: s.conceptsByGroup || conceptGroups(),
+      formationPlaybooks: s.formationPlaybooks || null,
       conceptWeights: (_a = s.conceptWeights) != null ? _a : null,
       // situation-effective sheet (wizard grid)
       playsSoFar: (token.drives || []).reduce((n, d) => {
@@ -28796,6 +28869,7 @@ var _CFB = (() => {
     } : null;
     const oldSchoolId = state2.playerSchoolId;
     const oldSchool = state2.world.schools.find((s) => s.id === oldSchoolId);
+    const walkedOut = !!(oldSchool && oldSchool.id !== newSchoolId && oldSchool.coach === pc);
     if (oldSchool && oldSchool.id !== newSchoolId && (!oldSchool.coach || oldSchool.coach === pc)) {
       oldSchool.coach = makeReplacementAICoach(oldSchool);
     }
@@ -28820,6 +28894,13 @@ var _CFB = (() => {
       syncActiveSlot(state2);
     } catch (e) {
       console.warn("W9 slot sync:", e.message);
+    }
+    if (walkedOut) {
+      try {
+        noteMoveUpHandoff(state2, oldSchoolId);
+      } catch (e) {
+        console.warn("W9 handoff:", e.message);
+      }
     }
     return { ok: true, schoolName: newSchool.name };
   }
@@ -31502,7 +31583,21 @@ var _CFB = (() => {
           <details class="gp-section" open>
           <summary class="gp-section-hdr">THE PLAYBOOK <span class="gp-section-sub">concept weights \u2014 your call sheet</span></summary>
           <div class="gp-tip tip-info">\u25B8 Every snap the sim now calls a real CONCEPT \u2014 this is where you weight them. 50 is a balanced call sheet; crank what your roster executes, bench what it can't (0 = never called, and your QB can't audible into it). Each concept beats some coverages and dies against others \u2014 the drive log shows you which you're meeting. Fair warning: the defense keeps film. Calling one concept on 30%+ of its snaps gets it jumped, so a lopsided sheet pays a tax. Weights ride with your saved plans, so different opponents can get different books.</div>
-          ${renderPlaybookGroups(gp)}
+          ${(() => {
+      const carried = (gp.offFormations || []).filter((f) => f && f.id && (f.weight || 0) > 0).map((f) => f.id).filter((id) => FORMATION_PLAYBOOK[id]);
+      if (pbFormTab && !carried.includes(pbFormTab)) pbFormTab = null;
+      const authoredIn = (fid) => {
+        var _b2;
+        return Object.keys(((_b2 = gp.formationPlaybooks) == null ? void 0 : _b2[fid]) || {}).length;
+      };
+      const strip = carried.length ? `
+          <div class="gp-row"><div class="gp-options">
+            <button class="gp-option gp-option-sm${!pbFormTab ? " active" : ""}" data-pbform="">GLOBAL SHEET</button>
+            ${carried.map((id) => `<button class="gp-option gp-option-sm${pbFormTab === id ? " active" : ""}" data-pbform="${escapeHtml(id)}">${escapeHtml(id)}${authoredIn(id) ? ` (${authoredIn(id)})` : ""}</button>`).join("")}
+          </div></div>
+          <div class="gp-hint">Madden-style formation sheets: pick a formation to author ITS playbook. Overrides apply only to snaps from that formation; untouched plays inherit the global sheet.</div>` : "";
+      return strip + (pbFormTab ? renderFormationPlaybook(gp, pbFormTab) : renderPlaybookGroups(gp));
+    })()}
           </details>`}
 
           ${offSubTab !== "tempo" ? "" : `
@@ -32166,6 +32261,55 @@ var _CFB = (() => {
     });
     (_k = root.querySelector("#cw-reset")) == null ? void 0 : _k.addEventListener("click", () => {
       gp.conceptWeights = {};
+      rerender();
+    });
+    root.querySelectorAll("[data-pbform]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        pbFormTab = btn.dataset.pbform || null;
+        rerender();
+      });
+    });
+    root.querySelectorAll("input[data-fpb]").forEach((sl) => {
+      sl.addEventListener("input", (e) => {
+        const fid = sl.dataset.fpbform, nm = sl.dataset.fpb;
+        const all = gp.formationPlaybooks || (gp.formationPlaybooks = {});
+        const sheet = all[fid] || (all[fid] = {});
+        sheet[nm] = parseInt(e.target.value);
+        const grp = root.querySelectorAll(`input[data-fpbgrp="${sl.dataset.fpbgrp}"]`);
+        let tot = 0;
+        grp.forEach((g) => {
+          tot += parseInt(g.value) || 0;
+        });
+        grp.forEach((g) => {
+          const w = parseInt(g.value) || 0;
+          const el = root.querySelector(`.cw-val[data-fpbval="${CSS.escape(g.dataset.fpb)}"]`);
+          if (!el) return;
+          el.textContent = w === 0 ? "benched" : `\u2248${tot ? Math.round(100 * w / tot) : 0}%`;
+          el.classList.toggle("cw-benched", w === 0);
+        });
+      });
+      sl.addEventListener("change", () => rerender());
+    });
+    root.querySelectorAll("[data-fpbclear]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        var _b2;
+        const fid = btn.dataset.fpbform, nm = btn.dataset.fpbclear;
+        const sheet = (_b2 = gp.formationPlaybooks) == null ? void 0 : _b2[fid];
+        if (sheet) {
+          delete sheet[nm];
+          if (!Object.keys(sheet).length) delete gp.formationPlaybooks[fid];
+          if (!Object.keys(gp.formationPlaybooks || {}).length) delete gp.formationPlaybooks;
+        }
+        rerender();
+      });
+    });
+    (_k = root.querySelector("#fpb-reset")) == null ? void 0 : _k.addEventListener("click", () => {
+      var _b2;
+      const fid = (_b2 = root.querySelector("#fpb-reset")) == null ? void 0 : _b2.dataset.fpbform;
+      if (fid && gp.formationPlaybooks) {
+        delete gp.formationPlaybooks[fid];
+        if (!Object.keys(gp.formationPlaybooks).length) delete gp.formationPlaybooks;
+      }
       rerender();
     });
     root.querySelectorAll("[data-offsub]").forEach((btn) => {
@@ -32980,6 +33124,55 @@ var _CFB = (() => {
     if (c.punishes === "crash") bits.push("eats crash edges");
     return bits.join(" \xB7 ");
   }
+  function renderFormationPlaybook(gp, fid) {
+    var _a;
+    const carry = FORMATION_PLAYBOOK[fid] || [];
+    const global = gp.conceptWeights || {};
+    const sheet = ((_a = gp.formationPlaybooks) == null ? void 0 : _a[fid]) || {};
+    const nAuthored = Object.keys(sheet).length;
+    const groups = [
+      ["QUICK GAME", Object.entries(PASS_CONCEPTS).filter(([nm, c]) => c.depth === "short" && carry.includes(nm))],
+      ["DROPBACK", Object.entries(PASS_CONCEPTS).filter(([nm, c]) => c.depth === "medium" && carry.includes(nm))],
+      ["SHOT PLAYS", Object.entries(PASS_CONCEPTS).filter(([nm, c]) => c.depth === "deep" && carry.includes(nm))],
+      ["INSIDE RUN GAME", Object.entries(RUN_CONCEPTS).filter(([nm, c]) => c.type === "run_inside" && carry.includes(nm))],
+      ["PERIMETER RUN GAME", Object.entries(RUN_CONCEPTS).filter(([nm, c]) => c.type === "run_outside" && carry.includes(nm))]
+    ].filter(([, list]) => list.length);
+    return `
+  <div class="cw-explain">This is <b>${escapeHtml(fid)}'s own call sheet</b> \u2014 ${carry.length} plays it actually runs.
+  Slide a play here and the override applies only to snaps out of ${escapeHtml(fid)}; anything you don't touch
+  <b>inherits the global sheet</b>. 0 is still a cut \u2014 benched here means never called from this formation.
+  ${nAuthored ? `<b>${nAuthored} play${nAuthored === 1 ? "" : "s"} authored.</b>` : "Nothing authored yet \u2014 this formation runs the global book."}</div>
+  ${nAuthored ? `<div class="gp-row"><button class="gp-option gp-option-sm" id="fpb-reset" data-fpbform="${escapeHtml(fid)}">Reset ${escapeHtml(fid)} to the global sheet</button></div>` : ""}
+  ${groups.map(([title, list], gi) => {
+      const eff = (nm) => {
+        var _b;
+        return (_b = sheet[nm] != null ? sheet[nm] : global[nm]) != null ? _b : 50;
+      };
+      const gTot = list.reduce((t, [nm]) => t + eff(nm), 0) || 1;
+      return `
+    <div class="cw-group">
+      <div class="cw-group-hdr">${title}</div>
+      ${list.map(([name, c]) => {
+        const authored = sheet[name] != null;
+        const w = eff(name);
+        const shr = Math.round(100 * w / gTot);
+        return `
+        <div class="cw-row">
+          <div class="cw-name">${escapeHtml(name)} <span class="cw-hint">${conceptHint(name, c)}</span>
+            ${authored ? `<button class="cw-offsheet" data-fpbclear="${escapeHtml(name)}" data-fpbform="${escapeHtml(fid)}" title="Authored for ${escapeHtml(fid)} \u2014 tap to go back to inheriting the global weight">set here \xB7 tap to inherit</button>` : ""}
+          </div>
+          <div class="gp-slider-wrap">
+            <span class="gp-slider-lo">bench</span>
+            <input class="gp-slider" type="range" min="0" max="100" step="5" value="${w}" data-fpb="${escapeHtml(name)}" data-fpbform="${escapeHtml(fid)}" data-fpbgrp="${gi}" />
+            <span class="gp-slider-hi">feature</span>
+            <span class="gp-slider-val cw-val${w === 0 ? " cw-benched" : ""}" data-fpbval="${escapeHtml(name)}">${w === 0 ? "benched" : `\u2248${shr}%`}</span>
+          </div>
+        </div>`;
+      }).join("")}
+    </div>`;
+    }).join("")}
+`;
+  }
   function renderPlaybookGroups(gp, opts = null) {
     var _a;
     const cw = (_a = opts == null ? void 0 : opts.cw) != null ? _a : gp.conceptWeights || {};
@@ -33030,7 +33223,7 @@ var _CFB = (() => {
     }).join("")}
 `;
   }
-  var CHK_CLASSES, CHK_FIELDS, gameplanSection, offSubTab, defSubTab, sitSide, openSitKey, SIT_DESCS, SIT_NUDGE, SIT_TIPS, PIN_FRONTS, COV_OPTIONS, ALL_FORMATIONS, DEF_FRONTS2, DEF_FRONT_DESCS, DEF_FRONT_NEEDS, SIMPLE_DIALS, SIMPLE_SITS;
+  var CHK_CLASSES, CHK_FIELDS, gameplanSection, offSubTab, pbFormTab, defSubTab, sitSide, openSitKey, SIT_DESCS, SIT_NUDGE, SIT_TIPS, PIN_FRONTS, COV_OPTIONS, ALL_FORMATIONS, DEF_FRONTS2, DEF_FRONT_DESCS, DEF_FRONT_NEEDS, SIMPLE_DIALS, SIMPLE_SITS;
   var init_gameplan = __esm({
     "js/ui/views/gameplan.js"() {
       init_spread();
@@ -33058,6 +33251,7 @@ var _CFB = (() => {
       ];
       gameplanSection = "offense";
       offSubTab = "package";
+      pbFormTab = null;
       defSubTab = "front";
       sitSide = "offense";
       openSitKey = null;
@@ -37137,6 +37331,7 @@ var _CFB = (() => {
     ${officeHeader}
 
     <div class="co-zone-label">THE PROGRAM <span class="muted">\u2014 one pool pays for everything</span></div>
+    ${renderHandoffCard()}
     ${ledger}
     ${facilities}
     ${renderTreePanel()}
@@ -37152,6 +37347,7 @@ var _CFB = (() => {
         ${renderCareerPanel(coach)}
       </div>
       ${renderOffers()}
+      ${renderHandoffCard()}
     `}
 
     <div class="co-zone-label">THE LEGACY <span class="muted">\u2014 what you're becoming</span></div>
@@ -37243,12 +37439,64 @@ var _CFB = (() => {
   </div>
 `;
   }
+  function renderHandoffCard() {
+    var _a;
+    if (!isTreeGame(state)) return "";
+    const h = pendingHandoff(state);
+    if (!h) return "";
+    const cands = handoffCandidates(state);
+    const school = (_a = state.world) == null ? void 0 : _a.schools.find((s) => s.id === h.schoolId);
+    const interim = school == null ? void 0 : school.coach;
+    const interimName = interim && interim.name ? `${interim.name.first || ""} ${interim.name.last || ""}`.trim() : "the interim hire";
+    return `
+  <div class="card tree-card career-blocking">
+    <div class="card-header"><span class="card-title">THE HANDOFF \u2014 ${escapeHtml((h.schoolName || "your old program").toUpperCase())}</span>
+      <span class="muted" style="font-size:11px">this offseason only</span></div>
+    <p class="offseason-hint" style="margin:0 16px 8px">You walked out of ${escapeHtml(h.schoolName)} to take this job. Right now \u2014 and only right now \u2014 you can hand the program to one of the coordinators you left behind: he takes your old chair, and ${escapeHtml(h.division)} becomes a branch of your tree. Pass, and ${escapeHtml(interimName)} keeps it for good.</p>
+    <div class="skill-list">
+      ${cands.map((c) => `
+        <div class="skill-row offer-row">
+          <div class="skill-head">
+            <span class="skill-name">${escapeHtml(String(c.side).toUpperCase())} ${escapeHtml(c.coord.name.first)} ${escapeHtml(c.coord.name.last)}</span>
+            <span class="muted">${c.credentials.seasons} yr${c.credentials.avgUnitGrade ? ` \xB7 units ${escapeHtml(c.credentials.avgUnitGrade)}` : ""}${c.credentials.streakBPlus ? ` \xB7 ${c.credentials.streakBPlus}-yr B+ streak` : ""}</span>
+          </div>
+          <button class="btn-primary btn-sm" data-tree-handoff-side="${escapeHtml(c.side)}">Send him down</button>
+        </div>`).join("")}
+    </div>
+    <div style="padding:0 16px 14px">
+      <button class="btn-ghost btn-sm" data-tree-handoff-decline>Pass \u2014 ${escapeHtml(interimName)} keeps the job</button>
+    </div>
+  </div>`;
+  }
+  function setupHandoffListeners() {
+    var _a;
+    document.querySelectorAll("[data-tree-handoff-side]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const res = executeHandoff(state, btn.dataset.treeHandoffSide);
+        if (!res.ok) {
+          notify(res.reason, "warning", 4500);
+          return;
+        }
+        notify(`${res.name} takes over at ${res.schoolName} \u2014 your old program is a branch of the tree now. He's yours to coach whenever you want him.`, "success", 7e3);
+        await saveNow();
+        rerender();
+      });
+    });
+    (_a = document.querySelector("[data-tree-handoff-decline]")) == null ? void 0 : _a.addEventListener("click", async () => {
+      if (!confirm("Pass on the handoff? The interim coach keeps your old program for good \u2014 this offer doesn't come back.")) return;
+      const res = declineHandoff(state);
+      if (res.ok) notify(`You let ${res.schoolName} go. The interim staff keeps the program.`, "info", 5e3);
+      await saveNow();
+      rerender();
+    });
+  }
   function renderTreePanel() {
     var _a, _b, _c, _d, _e;
     if (!isTreeGame(state)) return "";
     const snap = treeSnapshot(state);
     if (!snap) return "";
     const retire = canRetire(state);
+    const handoff = pendingHandoff(state);
     const promoteHere = promotionCandidates(state, { schoolId: state.playerSchoolId });
     const openDivs = snap.openDivisions;
     const school = getPlayerSchool();
@@ -37264,7 +37512,7 @@ var _CFB = (() => {
       <button class="btn-ghost btn-sm" data-hire-market="${sideLabel2}">Hire</button></div>`;
       const topSchemes = Object.entries(coord.schemeIQ || {}).sort((a, b) => b[1] - a[1]).slice(0, 2);
       const cred = cand ? cand.credentials : null;
-      const canPromote = !!(openDivs.length && cand);
+      const canPromote = !!(openDivs.length && cand && !handoff);
       return `
     <div class="staff-row">
       <div class="staff-info">
@@ -37311,7 +37559,7 @@ var _CFB = (() => {
       ${coordRow("OC")}
       ${coordRow("DC")}
       ${market}
-      ${openDivs.length && promoteHere.length ? `<p class="offseason-hint" style="margin:8px 16px 10px">Promote and he takes over ${escapeHtml((school == null ? void 0 : school.name) || "your program")} and you become him. His service record walks in with him \u2014 years put in and the grade of the work become his day-one credentials, not a flat percentage. Never forced.</p>` : ""}
+      ${openDivs.length && promoteHere.length && !handoff ? `<p class="offseason-hint" style="margin:8px 16px 10px">Promote and he takes over ${escapeHtml((school == null ? void 0 : school.name) || "your program")} and you become him. His service record walks in with him \u2014 years put in and the grade of the work become his day-one credentials, not a flat percentage. Never forced.</p>` : ""}
 
       ${canDown ? `
         <div class="tree-sec-hdr">PLANT ONE DOWNWARD</div>
@@ -37497,8 +37745,10 @@ var _CFB = (() => {
     document.querySelectorAll(".accept-offer-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         const result = acceptJob(state, btn.dataset.schoolId);
-        if (result.ok) notify(`You've accepted the job at ${result.schoolName}!`, "success");
-        else notify(result.reason, "warning");
+        if (result.ok) {
+          const h = pendingHandoff(state);
+          notify(h ? `You've accepted the job at ${result.schoolName} \u2014 and ${h.schoolName} needs a coach. This offseason only, you can send one of your old coordinators down to take it.` : `You've accepted the job at ${result.schoolName}!`, "success", h ? 7e3 : void 0);
+        } else notify(result.reason, "warning");
         rerender();
       });
     });
@@ -37520,6 +37770,7 @@ var _CFB = (() => {
       if (isTreeGame(state)) noteOfferDeclined(state);
       notify(n > 0 ? `You turned down the offers \u2014 and the AD noticed. Seat +${C.OFFER_LEVERAGE_JS}.` : "You turned down the offers and stayed put.", "info");
     });
+    setupHandoffListeners();
     document.querySelectorAll("[data-tree-switch]").forEach((btn) => {
       btn.addEventListener("click", () => {
         switchTreeSlot(btn.dataset.treeSwitch);
@@ -38223,6 +38474,8 @@ var _CFB = (() => {
     </div>
 
     ${renderTreeAgenda()}
+
+    ${renderHandoffCard()}
 
     ${railHtml ? `<div class="event-rail">${railHtml}</div>` : ""}
 
@@ -39515,6 +39768,7 @@ var _CFB = (() => {
       for (const ev of events) if (ev == null ? void 0 : ev.text) notify(ev.text, /lost/i.test(ev.text) ? "warning" : "info", 4e3);
       rerender();
     });
+    setupHandoffListeners();
     document.querySelectorAll("[data-tree-final]").forEach((b) => b.addEventListener("click", () => {
       softFinalize(state, b.dataset.treeFinal);
       rerender();
@@ -39603,7 +39857,8 @@ var _CFB = (() => {
         const result = acceptJob(state, btn.dataset.offerSchool);
         if (result.ok) {
           state.pendingOffers = null;
-          notify(`You're the new coach at ${result.schoolName}.`, "success");
+          const h = isTreeGame(state) ? pendingHandoff(state) : null;
+          notify(h ? `You're the new coach at ${result.schoolName} \u2014 and ${h.schoolName} needs a coach. This offseason only, you can send one of your old coordinators down to take it.` : `You're the new coach at ${result.schoolName}.`, "success", h ? 7e3 : void 0);
         } else notify(result.reason, "warning");
         rerender();
       });
@@ -48900,9 +49155,19 @@ ${renderAutoRecruitLog()}`;
       rerender();
     }));
     (document.getElementById("dc-send") || {}).onclick = () => {
+      var _a2, _b2, _c2, _d2, _e2, _f2;
       if (!callTapOk()) return;
       const sel = state.ui.defCall || {};
-      answerPlayCall(Object.keys(sel).length ? __spreadProps2(__spreadValues2({}, sel), { _def: true }) : { concept: "sheet" });
+      if (!Object.keys(sel).length) {
+        answerPlayCall({ concept: "sheet" });
+        return;
+      }
+      const call = __spreadProps2(__spreadValues2({}, sel), { _def: true });
+      if (call.runCommit != null) {
+        const standingRC = ((_f2 = (_e2 = (_d2 = (_c2 = (_b2 = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token) == null ? void 0 : _b2.pending) == null ? void 0 : _c2.drive) == null ? void 0 : _d2.sit) == null ? void 0 : _e2.standing) == null ? void 0 : _f2.runCommit) || 0;
+        call.runCommit = standingRC + parseInt(call.runCommit, 10);
+      }
+      answerPlayCall(call);
     };
     (document.getElementById("dc-ride") || {}).onclick = () => {
       if (callTapOk()) answerPlayCall({ concept: "sheet" });
@@ -49171,7 +49436,7 @@ ${renderAutoRecruitLog()}`;
           <div class="kickoff-section-label">HOW MUCH OF THE HEADSET DO YOU WANT?</div>
           ${opt("off", "\u{1F4CB}", "Headset Off", "The call sheet runs the whole game \u2014 zero prompts.")}
           ${opt("keydowns", "\u{1F3AF}", "Key Downs", "3rd &amp; 4th downs, the red zone, the two-minute drill \u2014 and the big go/punt/kick calls.")}
-          ${opt("all", "\u{1F3A7}", "Every Snap", "Full coordinator mode \u2014 every offensive play and the big 4th-down calls are yours.")}
+          ${opt("all", "\u{1F3A7}", "Every Snap", "Full coordinator mode \u2014 every play on offense AND defense, plus the big 4th-down calls.")}
           ` : `
           <button class="kickoff-opt kickoff-simhalf" id="kickoff-sim-half">
             <span class="kickoff-opt-icon">\u23E9</span>
@@ -49421,6 +49686,8 @@ ${renderAutoRecruitLog()}`;
     ["covStyle", "STYLE", [["man", "Man"], ["zone", "Zone"]]],
     ["edgePlay", "EDGE", [["contain", "Set it"], ["crash", "Crash"]]],
     ["robberCall", "ROBBER", [["rob", "Rob the middle"], ["overtop", "Stay over top"]]],
+    ["zoneStyle", "ZONE RULES", [["spot", "Spot-drop"], ["match", "Match"]]],
+    ["runCommit", "BOX", [["-8", "Lighten \u22128"], ["8", "Commit +8"]]],
     ["pressureIdentity", "HEAT SHAPE", [["fireZone", "Fire Zone"], ["secondLevel", "2nd Level"], ["secondaryHeat", "DB Heat"], ["theHouse", "The House"]]]
   ];
   function defCallPanelHtml() {
@@ -49446,6 +49713,8 @@ ${renderAutoRecruitLog()}`;
       covStyle: standing.covStyle || "balanced",
       edgePlay: standing.edgePlay || "balanced",
       robberCall: standing.robberCall || "auto",
+      zoneStyle: standing.zoneStyle || "balanced",
+      runCommit: (standing.runCommit || 0) > 0 ? `+${standing.runCommit} committed` : (standing.runCommit || 0) < 0 ? `${standing.runCommit} light` : "even box",
       pressureIdentity: standing.pressureIdentity || "front's signature"
     };
     const nSel = Object.keys(sel).length;
@@ -49484,7 +49753,10 @@ ${renderAutoRecruitLog()}`;
     const school = mySide === "home" ? token.homeSchool : token.awaySchool;
     const opp = mySide === "home" ? token.awaySchool : token.homeSchool;
     const gp = token[`${mySide}GP`] || {};
-    const weights = (_f = (_e = ctx2.conceptWeights) != null ? _e : gp.conceptWeights) != null ? _f : null;
+    const _weightsBase = (_f = (_e = ctx2.conceptWeights) != null ? _e : gp.conceptWeights) != null ? _f : null;
+    const _fpbAll = ctx2.formationPlaybooks || gp.formationPlaybooks || null;
+    const _fpbSel = state.ui.callFormation && _fpbAll ? _fpbAll[state.ui.callFormation] : null;
+    const weights = _fpbSel && Object.keys(_fpbSel).length ? __spreadValues(__spreadValues({}, _weightsBase || {}), _fpbSel) : _weightsBase;
     const qSecs = ctx2.half === 3 ? ctx2.clock : ctx2.clock > 900 ? ctx2.clock - 900 : ctx2.clock;
     const mm = Math.floor(qSecs / 60), ss = String(qSecs % 60).padStart(2, "0");
     const spot = ctx2.fieldPos >= 50 ? `opp ${100 - ctx2.fieldPos}` : `own ${ctx2.fieldPos}`;
@@ -49595,6 +49867,50 @@ ${renderAutoRecruitLog()}`;
     const _carried = (gp == null ? void 0 : gp.offFormations) || [];
     const _formList = (_carried.length ? _carried : [{ id: gp == null ? void 0 : gp.offFormation }]).map((f) => f && f.id).filter((id) => id && FORMATION_PACKAGES[id]);
     const _selForm = state.ui.callFormation || "__auto";
+    let formationPage = "";
+    if (_selForm !== "__auto") {
+      const _fpPreview = state.ui.callConceptPreview && conceptsFor("quick").concat(conceptsFor("dropback"), conceptsFor("shots"), conceptsFor("inside"), conceptsFor("perimeter"), conceptsFor("gadgets")).includes(state.ui.callConceptPreview) ? state.ui.callConceptPreview : null;
+      if (_fpPreview) formationPage = conceptPreviewHtml(_fpPreview);
+      else {
+        const _wOf = (nm) => {
+          var _z;
+          return weights ? Math.max(0, (_z = weights[nm]) != null ? _z : 50) : 50;
+        };
+        const GRP_META = [
+          ["inside", "\u{1F3C3} INSIDE RUNS", "run_inside"],
+          ["perimeter", "\u{1F300} OUTSIDE RUNS", "run_outside"],
+          ["quick", "\u26A1 QUICK GAME", "pass_short"],
+          ["dropback", "\u{1F3AF} DROPBACK", "pass_medium"],
+          ["shots", "\u{1F680} SHOT PLAYS", "pass_deep"],
+          ["gadgets", "\u{1F0CF} GADGETS", "gadget"]
+        ];
+        const _nAuth = _fpbSel ? Object.keys(_fpbSel).length : 0;
+        const sections = GRP_META.map(([grp, label, cat]) => {
+          if (_lockedGrps.has(grp)) return `
+        <div class="cs-drill-head"><span class="cs-drill-title">${label} \xB7 <span class="muted">\u{1F512} ${escapeHtml(_lockTip)}</span></span></div>`;
+          const list = conceptsFor(grp).slice().sort((a, b) => _wOf(b) - _wOf(a));
+          if (!list.length) return "";
+          return `
+        <div class="cs-drill-head"><span class="cs-drill-title">${label}</span></div>
+        <div class="cs-concepts">
+          <button class="cs-concept cs-surprise" data-cs-concept="__surprise" data-cs-cat="${cat}"><span class="cs-surprise-die">\u{1F3B2}</span><span>Surprise me</span></button>
+          ${list.map((nm) => `<div class="cs-concept-tile"><button class="cs-concept cs-concept-card" data-cs-callconcept="${escapeHtml(nm)}" aria-label="Call ${escapeHtml(nm)}">${conceptPlayGraphic(nm)}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-learn">Call play \u2192</span></button><button class="cs-info-btn" data-cs-preview="${escapeHtml(nm)}" aria-label="Learn about ${escapeHtml(nm)}">INFO</button></div>`).join("")}
+        </div>`;
+        }).join("");
+        const outs = ["inside", "perimeter", "quick", "dropback", "shots", "gadgets"].flatMap((grp) => conceptsOffSheet(grp));
+        const outBlock = outs.length ? `<div class="cs-offsheet-hdr">OFF THE SHEET</div>
+        <div class="cs-concepts cs-concepts-out">${outs.map(({ nm, why }) => `<div class="cs-concept-tile cs-concept-out"><div class="cs-concept cs-concept-card cs-concept-dead" aria-label="${escapeHtml(nm)} unavailable: ${escapeHtml(why)}">${conceptPlayGraphic(nm)}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-dead-why">${escapeHtml(why)}</span></div></div>`).join("")}</div>` : "";
+        formationPage = `
+      <div class="cs-drill">
+        <div class="cs-drill-head">
+          <span class="cs-drill-title">${escapeHtml(_selForm).toUpperCase()}'S PLAYBOOK${_nAuth ? ` \xB7 <span class="muted">${_nAuth} play${_nAuth === 1 ? "" : "s"} authored for this formation</span>` : ""}</span>
+        </div>
+        <p class="cs-diagram-hint">Every play ${escapeHtml(_selForm)} runs, best-weighted first. Tap to call it now \u2014 or Auto up top for the category tiles.</p>
+        ${sections}
+        ${outBlock}
+      </div>`;
+      }
+    }
     const _drillGrp = _drillCat ? _drillCat.grp : null;
     const _paDisabled = !!(_drillGrp && (_RUN_GRPS.includes(_drillGrp) || _drillGrp === "gadgets"));
     const _runLevDisabled = !!(_drillGrp && (_PASS_GRPS.includes(_drillGrp) || _drillGrp === "gadgets"));
@@ -49641,7 +49957,7 @@ ${renderAutoRecruitLog()}`;
       ${renderCallFeed(token)}
       ${timeControlBar()}
       ${formStrip}
-      ${_drillCat ? drillBlock : `<div class="cs-cats">${tiles}</div>`}
+      ${_drillCat ? drillBlock : _selForm !== "__auto" ? formationPage : `<div class="cs-cats">${tiles}</div>`}
       ${(() => {
       const _dfg = 100 - ctx2.fieldPos;
       const _fgYds = _dfg + 17;
