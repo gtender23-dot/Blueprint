@@ -6776,7 +6776,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "adeb4b1481";
+globalThis.__BUILD__ = "cdef91c461";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -25421,7 +25421,7 @@ var _CFB = (() => {
           const s = getPS(offPS, play.rusherId);
           s.rushAtt++;
           s.rushYds += play.yards;
-          if (isTD && last) s.rushTD++;
+          if (isTD && play.td) s.rushTD++;
         }
         if (play.tacklerId) {
           const d = getPS(defPS, play.tacklerId);
@@ -25470,7 +25470,7 @@ var _CFB = (() => {
           if (play.complete) {
             s.passComp++;
             s.passYds += play.yards;
-            if (isTD && last) s.passTD++;
+            if (isTD && play.td) s.passTD++;
           } else if (play.turnover && play.turnoverType === "interception") {
             s.passInt++;
           }
@@ -25485,7 +25485,7 @@ var _CFB = (() => {
           s.recComp++;
           s.recYds += play.yards;
           if (play.contested) s.contestedRec++;
-          if (isTD && last) s.recTD++;
+          if (isTD && play.td) s.recTD++;
         }
         if (play.intPickerId) {
           const d = getPS(defPS, play.intPickerId);
