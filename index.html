@@ -8446,7 +8446,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "45e41d80ad";
+globalThis.__BUILD__ = "8148deb3f0";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -24749,7 +24749,8 @@ var _CFB = (() => {
     const mugCall = _pf && defPlan.pressLookEff === "mug" && !rush3Call;
     const amoebaCall = _pf && defPlan.pressLookEff === "amoeba" && !rush3Call;
     const crossCall = _pf && defPlan.dogGameEff === "cross" && !rush3Call;
-    const blitzPct = rush3Call ? 0 : clamp2(pressureCallRate({ stop: aggrStop, lev: defPlan._defLev || "neutral", design: defPlan.blitzDesign, rate: defPlan.blitzPct }) * formTell, 0, C.AGGRESSION.capRate);
+    const _pieHeatMult = !globalThis.__noBlitzPie && defPlan._pieHeat != null ? 0.5 + defPlan._pieHeat / 100 : 1;
+    const blitzPct = rush3Call ? 0 : clamp2(pressureCallRate({ stop: aggrStop, lev: defPlan._defLev || "neutral", design: defPlan.blitzDesign, rate: defPlan.blitzPct }) * formTell * _pieHeatMult, 0, C.AGGRESSION.capRate);
     if (Math.random() < blitzPct) {
       result.blitzFired = true;
       result.pressCall = identity;
@@ -24782,7 +24783,46 @@ var _CFB = (() => {
         claimed.add(p.id);
         if ((p.position === "S" || p.position === "CB") && !blitzerDbId) blitzerDbId = p.id;
       };
-      if (identity === "secondaryHeat" || identity === "theHouse") {
+      let pieUsed = false;
+      if (!globalThis.__noBlitzPie && extra > 0) {
+        const _slices = [];
+        for (const [id, w] of Object.entries(pref)) if (w > 0 && onField.has(id) && !claimed.has(id)) _slices.push({ id, w, fz: false });
+        for (const [id, w] of Object.entries(dropShareById || {})) if (w > 0 && onField.has(id)) _slices.push({ id, w, fz: true });
+        const _tot = _slices.reduce((s, x) => s + x.w, 0);
+        if (_tot > 0) {
+          let _r2 = Math.random() * _tot;
+          let _sl = _slices[0];
+          for (const x of _slices) {
+            _r2 -= x.w;
+            if (_r2 <= 0) {
+              _sl = x;
+              break;
+            }
+          }
+          if (_sl.fz) {
+            const _di = passRushers.findIndex((x) => x.player.id === _sl.id && !x.blitzer);
+            if (_di >= 0 && passRushers.length > 3) {
+              const [_dp] = passRushers.splice(_di, 1);
+              droppedIds.push(_dp.player.id);
+              lbIds.push(_dp.player.id);
+            }
+            const _backer = pick2(lbIds.filter((id) => id !== _sl.id), lbGrade);
+            if (_backer) {
+              send(_backer);
+              pieUsed = true;
+              extra--;
+            }
+          } else {
+            const _pp = defRoster.find((pl) => pl.id === _sl.id);
+            if (_pp) {
+              send(_pp);
+              pieUsed = true;
+              extra--;
+            }
+          }
+        }
+      }
+      if (!pieUsed && (identity === "secondaryHeat" || identity === "theHouse")) {
         send(pick2(dbIds, dbGrade));
         extra--;
       }
@@ -24830,6 +24870,10 @@ var _CFB = (() => {
       delete result.zeroBehind;
       delete result.crossDog;
       delete result._crossIds;
+    }
+    if (result.blitzFired) {
+      const _bl = passRushers.filter((r) => r.blitzer).map((r) => r.player.id);
+      if (_bl.length) result.blitzerIds = _bl;
     }
     if (mugCall) result.mug = result.blitzFired ? "fired" : "bail";
     if (amoebaCall) result.amoeba = true;
@@ -27428,8 +27472,9 @@ var _CFB = (() => {
         if (live.length) offDepthWithSlot = __spreadProps2(__spreadValues2({}, offDepthWithSlot), { [key]: live });
       }
       const offField = resolveOffField(offFormationId, offFA == null ? void 0 : offFA.slots, offFA == null ? void 0 : offFA.shares, offDepthWithSlot, null, offPosOf, offById);
-      const defHasPins = !!defFA && (Object.keys(defFA.slots || {}).length > 0 || Object.values(defFA.blitzShares || {}).some((v) => v > 0));
+      const defHasPins = !!defFA && (Object.keys(defFA.slots || {}).length > 0 || Object.values(defFA.blitzShares || {}).some((v) => v > 0) || defFA.heat != null);
       const defBaseField = defFrontId === baseFront || defHasPins ? resolveDefField(defFrontId, defFA == null ? void 0 : defFA.slots, defFA == null ? void 0 : defFA.blitzShares, activeDefDepth, null, defPosOf, defById) : null;
+      defPlanEff._pieHeat = !globalThis.__noBlitzPie && defFA && defFA.heat != null ? defFA.heat : null;
       const offPersonnel = offField ? offField.personnel : resolvePersonnel(offFormationId, activeOffDepth);
       const defPersonnel = defBaseField ? defBaseField.personnel : resolveDefPersonnel(defFrontId, activeDefDepth, defRoster);
       const qb0 = (() => {
@@ -27959,6 +28004,9 @@ var _CFB = (() => {
         offSit,
         tempo: offPlan._liveTempo || offEff.tempo,
         blitzFired: (_za = playResult.blitzFired) != null ? _za : false,
+        // BLITZ PIE: who came (ids), when a blitz fired — probe/film surface
+        blitzerIds: playResult.blitzerIds || null,
+        fireZone: playResult.fireZone || false,
         clock: gameState.clock,
         half: gameState.half,
         scoreOff: gameState.score.off,
@@ -45365,7 +45413,7 @@ var _CFB = (() => {
 
   <details class="dc-tip"${depthSecOpen["tip:defense"] ? " open" : ""} data-do-sec="tip:defense">
     <summary>How this screen works</summary>
-    <div class="dc-tip-body">${simple ? `Tap a slot to change who lines up there. Blitzers are picked automatically \u2014 your best pass-rushers come when a blitz fires. Set how aggressive below.` : `Tap a slot to assign. The \u26A1 dial on each defender is his BLITZ SHARE \u2014 his odds of joining the rush when a blitz fires. A blitzing LB or DB abandons his coverage to come \u2014 sacks on one end, busted coverage on the other.${baseFront === "3-4" || baseFront === "Penny" ? " Your edge men carry the \u{1F6E1} DROP dial instead: how often the edge man bails into coverage rather than rushing (default 18%). When his drop meets a blitzer firing behind it, that's a FIRE ZONE \u2014 same rush count, angles the protection never saw." : " Linemen always rush."}`}</div>
+    <div class="dc-tip-body">${simple ? `Tap a slot to change who lines up there. Blitzers are picked automatically \u2014 your best pass-rushers come when a blitz fires. Set how aggressive below.` : `Tap a slot to assign. The \u26A1 and \u{1F6E1} dials share one PRESSURE PIE \u2014 a 100% split of whose look it is when the blitz fires. \u26A1 slice = that man is the extra rusher (he abandons his coverage to come). \u{1F6E1} slice (edge men in odd fronts) = a FIRE ZONE through him: he drops into coverage and a backer comes behind \u2014 same rush count, angles the protection never saw. HOW OFTEN pressure comes is the HEAT dial below, riding on top of your Game Plan blitz rate.`}</div>
   </details>
 
   <div class="field-card def-field">
@@ -45385,11 +45433,16 @@ var _CFB = (() => {
     </div>
   </div>
 
-  ${simple ? renderSimpleDefPanel(school, gp) : `<div class="blitz-legend">
-    <span class="blitz-dot"></span> Per-slot rush share \u2014 each defender's independent chance to blitz when a blitz fires.
-    Set how often blitzes fire on <a data-nav="gameplan" class="link">Game Plan \xB7 Defense</a>.
-    <strong>${blitzerCount}</strong> defender${blitzerCount !== 1 ? "s" : ""} with share &gt; 0.
-  </div>`}
+  ${simple ? renderSimpleDefPanel(school, gp) : (() => {
+      const heat = entry.heat != null ? entry.heat : null;
+      return `<div class="blitz-legend">
+    <span class="blitz-dot"></span> <strong>PRESSURE PIE</strong> \u2014 one 100% allocation across the \u26A1/\u{1F6E1} dials: when the blitz fires, whose look is it. <strong>${blitzerCount}</strong> slice${blitzerCount !== 1 ? "s" : ""} dialed${blitzerCount === 0 ? " \u2014 auto (best rusher comes)" : ""}.
+    <span class="fs-blitz" style="margin-left:8px" title="How often pressure comes when this front is on the field \u2014 multiplies your Game Plan blitz rate (0 = half as often, 50 = as dialed, 100 = half again more)">
+      HEAT <button class="fs-blitz-btn" data-heat-step="-1">\u2212</button><span class="fs-blitz-val">${heat == null ? "auto" : heat}</span><button class="fs-blitz-btn" data-heat-step="1">+</button>${heat != null ? `<button class="fs-blitz-btn" data-heat-reset="1" title="Back to auto (Game Plan rate untouched)">\u21BA</button>` : ""}
+    </span>
+    Base rate lives on <a data-nav="gameplan" class="link">Game Plan \xB7 Defense</a>.
+  </div>`;
+    })()}
   ${renderDepthOrder(school, "defense")}
 `;
   }
@@ -45578,10 +45631,17 @@ var _CFB = (() => {
   </div>
 `;
   }
+  function _pieShareOf(slot, blitzShares) {
+    const raw = (blitzShares == null ? void 0 : blitzShares[slot.id]) || 0;
+    if (!raw) return 0;
+    let tot = 0;
+    for (const v of Object.values(blitzShares)) if (v > 0) tot += v;
+    return tot > 0 ? Math.round(raw / tot * 100) : 0;
+  }
   function renderBlitzControl(slot, blitzShares) {
-    const val = (blitzShares == null ? void 0 : blitzShares[slot.id]) || 0;
+    const val = _pieShareOf(slot, blitzShares);
     return `
-  <div class="fs-blitz" title="Blitz rush share (0\u2013100)">
+  <div class="fs-blitz" title="His slice of the pressure pie \u2014 the share of fired blitzes where HE is the extra man. Slices sum to 100 across the front.">
     <button class="fs-blitz-btn" data-blitz-step="-1" data-blitz-slot="${slot.id}">\u2212</button>
     <span class="fs-blitz-val">${val}</span>
     <button class="fs-blitz-btn" data-blitz-step="1" data-blitz-slot="${slot.id}">+</button>
@@ -45589,10 +45649,9 @@ var _CFB = (() => {
 `;
   }
   function renderDropControl(slot, blitzShares) {
-    var _a;
-    const val = (_a = blitzShares == null ? void 0 : blitzShares[slot.id]) != null ? _a : 18;
+    const val = _pieShareOf(slot, blitzShares);
     return `
-  <div class="fs-blitz fs-drop" title="Drop share (0\u2013100): how often he bails into coverage instead of rushing \u2014 pair with an ILB/S blitz for a fire zone">
+  <div class="fs-blitz fs-drop" title="His slice of the pressure pie \u2014 the share of fired blitzes that are a FIRE ZONE through him: he drops into coverage and a backer comes behind. Undialed, he still bails naturally on ~18% of snaps.">
     <span class="fs-drop-ico">\u{1F6E1}</span>
     <button class="fs-blitz-btn" data-blitz-step="-1" data-blitz-slot="${slot.id}">\u2212</button>
     <span class="fs-blitz-val">${val}</span>
@@ -46129,21 +46188,49 @@ var _CFB = (() => {
         repaintOffShares(gp, activeOffFormation);
       });
     });
+    const _defViewFront = () => defFrontTab || (gp.defFront && gp.defFront !== "auto" ? gp.defFront : gp.defBaseFront || "4-3");
+    const _defViewEntry = () => {
+      const front = _defViewFront();
+      return gp.fieldAssignments.defense[front] || (gp.fieldAssignments.defense[front] = { slots: {}, blitzShares: {} });
+    };
     document.querySelectorAll("[data-blitz-step]").forEach((btn) => {
       btn.addEventListener("click", (e) => {
-        var _a2, _b2;
         e.stopPropagation();
-        const front = gp.defBaseFront || "4-3";
-        const entry = gp.fieldAssignments.defense[front];
+        const entry = _defViewEntry();
         if (!entry.blitzShares) entry.blitzShares = {};
+        const map = entry.blitzShares;
         const slotId = btn.dataset.blitzSlot;
         const step = parseInt(btn.dataset.blitzStep, 10);
-        const cur = entry.blitzShares[slotId] || 0;
-        const next = Math.max(0, Math.min(100, cur + step * 10));
-        entry.blitzShares[slotId] = next;
-        const val = (_a2 = btn.parentElement) == null ? void 0 : _a2.querySelector(".fs-blitz-val");
-        if (val) val.textContent = `${next}`;
-        (_b2 = btn.closest(".field-slot")) == null ? void 0 : _b2.classList.toggle("blitzing", next > 0);
+        const cur = map[slotId] || 0;
+        const want = Math.max(0, cur + step * 10);
+        if (want <= 0) {
+          delete map[slotId];
+          const keys = Object.keys(map).filter((k) => map[k] > 0);
+          if (keys.length) normalizeShares(map, keys);
+        } else {
+          const keys = [.../* @__PURE__ */ new Set([...Object.keys(map).filter((k) => map[k] > 0), slotId])];
+          if (keys.length === 1) map[slotId] = 100;
+          else setSplitRebalanced(map, keys, slotId, want);
+        }
+        rerender();
+      });
+    });
+    document.querySelectorAll("[data-heat-step]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const entry = _defViewEntry();
+        const step = parseInt(btn.dataset.heatStep, 10);
+        const cur = entry.heat != null ? entry.heat : 50;
+        entry.heat = Math.max(0, Math.min(100, cur + step * 10));
+        rerender();
+      });
+    });
+    document.querySelectorAll("[data-heat-reset]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const entry = _defViewEntry();
+        delete entry.heat;
+        rerender();
       });
     });
     (_c = document.getElementById("btn-auto-sort")) == null ? void 0 : _c.addEventListener("click", () => {
