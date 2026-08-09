@@ -8309,6 +8309,33 @@ body *::after {
 .wp-kick-landing-live { animation:wp-m15-landing 1s steps(3,end) infinite; }
 @keyframes wp-m15-landing { 0%,100% { opacity:.18; } 50% { opacity:.62; } }
 
+/* Milestone 16: field-state integrity. The arrow is derived from the same
+   possession sign as every field coordinate, so LOS and gain direction share
+   a single visual truth. It sits inside the sideline and never covers action. */
+.wf-drive-direction path {
+  fill:none;
+  stroke:var(--px-cyan,#59d8ff);
+  stroke-width:.42;
+  stroke-linecap:square;
+  stroke-linejoin:miter;
+  paint-order:stroke;
+  filter:drop-shadow(.35px .35px 0 rgba(5,7,12,.88));
+}
+.wf-drive-direction { opacity:.92; pointer-events:none; }
+#watch-board[data-field-direction="left"] .wf-first { filter:drop-shadow(-.45px 0 0 rgba(5,7,12,.72)); }
+#watch-board[data-field-direction="right"] .wf-first { filter:drop-shadow(.45px 0 0 rgba(5,7,12,.72)); }
+
+/* The possession bug changes only when the recorded play changes possession;
+   the pulse makes that handoff readable without adding another overlay. */
+.watch-bug.wsb-possession-change .wsb-side.has-ball {
+  animation:wsb-m16-possession .64s steps(3,end) both;
+}
+@keyframes wsb-m16-possession {
+  0% { background:rgba(255,211,77,.3); }
+  48% { background:rgba(89,216,255,.18); }
+  100% { background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.015)); }
+}
+
   </style>
 </head>
 <body>
@@ -8318,7 +8345,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "7746b7aae8";
+globalThis.__BUILD__ = "0d7a4975bd";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -10281,6 +10308,54 @@ var _CFB = (() => {
         // simple-mode "QB Involved in run game" maps to this qbRunPct (designed QB runs)
         XP_CONVERT_HIT: 6,
         // Evaluator XP when a converted player starts next season
+        // ── PASS 7 (Aug 2026): roster brain — snap tracking · morale · convert
+        // brain · identity stage 4. All OFF-FIELD machinery (zero sim reads — the
+        // bands can only move through roster composition, gated by pass7_band_ab).
+        // Kill-switches: __noSnapTrack / __noMorale / __noConvertBrain /
+        // __noEarnBridge / __noBulkCut. Plan: Ref/PASS7_ROSTER_PLAN.md.
+        PASS7: {
+          // Fix D — morale (persistent, visible, portal-only effects)
+          moraleInit: 70,
+          // baseline; ticks drift back toward it
+          moraleGainCap: 3,
+          moraleLossCap: 4,
+          // per-game clamp on the usage delta
+          moraleUsageK: 22,
+          // pts of morale swing per 1.0 of (actual − expected) snap share
+          moraleDrift: 0.6,
+          // per-game pull back toward the baseline
+          moraleTeamW: 0.5,
+          // per-game team-result term (+win / −loss)
+          moraleLowBar: 40,
+          moraleMidBar: 55,
+          moraleHighBar: 80,
+          moraleLowMult: 2.2,
+          moraleMidMult: 1.4,
+          moraleHighMult: 0.6,
+          // portal-probability multipliers by morale bucket
+          moraleShareFloor: 0.15,
+          // real snap share below this counts as buried for the convert brain
+          // Fix C — convert brain
+          aiPosChangeCap: 2,
+          // AI converts per school per offseason (player school keeps POS_CHANGE_CAP)
+          convertBridgeBonus: 3,
+          // rec-score bonus when a bridge trait covers the destination
+          convertSizeW: 8,
+          // rec-score weight on the projected size-fit gain at the destination
+          // Stage 4a — earnable bridges (real snaps at a foreign job)
+          bridgeEarnSnaps: 220,
+          bridgeEarnShare: 0.35,
+          // Stage 4b — offseason bulk/cut
+          bulkMin: 5,
+          bulkMax: 12,
+          // per-offseason weight-move cap, WE/CON-seeded within [min,max]
+          bulkAttrPer10: { STR: 2, PWR: 1.5, SPD: -2, AGI: -1.5 },
+          // coupled attribute nudges per +10 lb (cut = reverse), zero-sum in spirit
+          bulkJobShare: 0.35,
+          // foreign-job share that makes that job's window the body target
+          bulkReportMin: 6
+          // player-school inbox digest lists moves at/above this many lb
+        },
         DEV_FOCUS_MULT: 1.5,
         // Stage-5 focus group development multiplier
         DEV_NONFOCUS_MULT: 0.9,
@@ -12968,6 +13043,9 @@ var _CFB = (() => {
       heightInches,
       traits,
       gpa,
+      // PASS 7 (Fix D): usage morale — persistent, off-field only. Legacy saves
+      // lazy-init to the same baseline on their first tick.
+      morale: C.PASS7 ? C.PASS7.moraleInit : 70,
       hometown: loc,
       distanceFromSchool: Math.round(distance),
       attributes: attrs,
@@ -13032,6 +13110,8 @@ var _CFB = (() => {
       // identity: the trait block survives the whitelist copy (world-gen rosters
       // must match signed recruits — see IDENTITY_DESIGN §7)
       traits: r.traits,
+      // PASS 7: morale survives the whitelist copy too (same parity law)
+      morale: r.morale,
       gpa: r.gpa,
       hometown: r.hometown,
       promises: { frStart: false, soStart: false, pctPlays: null },
@@ -16349,6 +16429,13 @@ var _CFB = (() => {
     const ovr = schemeStarterOverride(school, pos);
     return ovr != null ? ovr : STARTERS[pos] || 1;
   }
+  function moraleMult(p) {
+    if (globalThis.__noMorale) return 1;
+    const m = p == null ? void 0 : p.morale;
+    if (m == null) return 1;
+    const P7 = C.PASS7;
+    return m < P7.moraleLowBar ? P7.moraleLowMult : m < P7.moraleMidBar ? P7.moraleMidMult : m > P7.moraleHighBar ? P7.moraleHighMult : 1;
+  }
   function caliberTier(player) {
     const r = (player == null ? void 0 : player.compositeRating) || 0;
     return r >= C.PORTAL_TIER_HI ? 3 : r >= C.PORTAL_TIER_MID ? 2 : 1;
@@ -16499,18 +16586,21 @@ var _CFB = (() => {
         if (p.redshirted && p.redshirtYear === state2.season) continue;
         if (perDiv[school.division] >= C.PORTAL_CAP_PER_DIV) break;
         const buried = depthRankAtPos(school, p) >= C.PORTAL_BURIED_DEPTH;
+        const unhappy = !globalThis.__noMorale && p.morale != null && p.morale < C.PASS7.moraleLowBar;
         let prob = 0;
         if (buried) prob = Math.max(prob, C.PORTAL_BURIED_PROB);
+        if (unhappy) prob = Math.max(prob, C.PORTAL_BURIED_PROB);
         if (coachLeft) prob = Math.max(prob, C.PORTAL_COACH_LEFT_PROB);
         if (collapsing) prob = Math.max(prob, C.PORTAL_COLLAPSE_PROB);
-        if (prob > 0 && Math.random() < prob) {
-          leavers.push({ p, buried });
+        prob *= moraleMult(p);
+        if (prob > 0 && Math.random() < Math.min(0.95, prob)) {
+          leavers.push({ p, buried, unhappy });
           perDiv[school.division]++;
         }
       }
-      for (const { p, buried } of leavers) {
+      for (const { p, buried, unhappy } of leavers) {
         school.roster = school.roster.filter((x) => x.id !== p.id);
-        const reason = coachLeft ? "coach left" : collapsing ? "program collapsing" : buried ? "buried \u2014 wants to play" : "seeking a fresh start";
+        const reason = coachLeft ? "coach left" : collapsing ? "program collapsing" : buried ? "buried \u2014 wants to play" : unhappy ? "unhappy with his role" : "seeking a fresh start";
         portal.players.push({
           player: p,
           fromSchoolId: school.id,
@@ -16548,7 +16638,7 @@ var _CFB = (() => {
         const depthOver = (p._attritionAhead || 0) - Math.max(bar, starters) + 1;
         const buriedMult = clamp2(1 + Math.max(0, depthOver) * C.PLAYER_ATTRITION_BURIED_STEP, 1, C.PLAYER_ATTRITION_BURIED_MAX);
         delete p._attritionAhead;
-        if (Math.random() < C.PLAYER_ATTRITION_PROB * buriedMult) leaving.push(p);
+        if (Math.random() < C.PLAYER_ATTRITION_PROB * buriedMult * moraleMult(p)) leaving.push(p);
       }
       for (const p of leaving) {
         mySchool.roster = mySchool.roster.filter((x) => x.id !== p.id);
@@ -22149,7 +22239,16 @@ var _CFB = (() => {
       const pid = bySlot[s.id];
       if (pid && s.role) roleBySlotPlayer[pid] = s.role;
     }
-    return { personnel, shareByPlayerId, bySlot, roleBySlotPlayer };
+    const oopByPlayer = {};
+    if (playerPos) {
+      for (const s of layout.slots) {
+        const pid = bySlot[s.id];
+        if (!pid) continue;
+        const nat = playerPos(pid);
+        if (nat && s.pos !== nat) oopByPlayer[pid] = s.pos;
+      }
+    }
+    return { personnel, shareByPlayerId, bySlot, roleBySlotPlayer, oopByPlayer };
   }
   function resolveDefField(frontId, assignments, blitzShares, activeDepth, ratingById = null, playerPos = null, playerById = null) {
     const layout = DEF_FIELD_LAYOUTS[frontId];
@@ -27782,6 +27881,23 @@ var _CFB = (() => {
         (isHurry ? C.TEMPO_FATIGUE_OFF : 1) * _gpFatigueMult * _offFresh,
         (isHurry ? C.TEMPO_FATIGUE_DEF : 1) * _defFresh
       );
+      if (!globalThis.__noSnapTrack) {
+        const jm = (ctx2, id, key) => {
+          const m = ctx2.jobSnapMap || (ctx2.jobSnapMap = {});
+          const e = m[id] || (m[id] = {});
+          e[key] = (e[key] || 0) + 1;
+        };
+        for (const bucket of ["DE", "DT", "OLB", "ILB", "CB", "S"]) {
+          for (const id of defPersonnel[bucket] || []) {
+            const nat = defPosOf(id);
+            if (!nat) continue;
+            const natBucket = nat === "LB" ? "ILB" : nat;
+            if (bucket !== natBucket) jm(defCtx, id, bucket);
+          }
+        }
+        const _oop = offField == null ? void 0 : offField.oopByPlayer;
+        if (_oop) for (const [id, key] of Object.entries(_oop)) jm(offCtx, id, key);
+      }
       if (!offPlanEff._injuriesOff && playResult.qbInjured && playResult.qbInjuryGames > 0 && playResult.rusherId) {
         const injQb = offRoster.find((p) => p.id === playResult.rusherId);
         if (injQb) {
@@ -27940,8 +28056,8 @@ var _CFB = (() => {
     const awayGP = structuredClone(awayGameplan);
     const homeStats = emptyGameStats();
     const awayStats = emptyGameStats();
-    const homeCtx = { fatigueMap: {}, snapCountMap: {}, benchedMap: {}, offSnaps: 0, defSnaps: 0 };
-    const awayCtx = { fatigueMap: {}, snapCountMap: {}, benchedMap: {}, offSnaps: 0, defSnaps: 0 };
+    const homeCtx = { fatigueMap: {}, snapCountMap: {}, benchedMap: {}, offSnaps: 0, defSnaps: 0, jobSnapMap: {} };
+    const awayCtx = { fatigueMap: {}, snapCountMap: {}, benchedMap: {}, offSnaps: 0, defSnaps: 0, jobSnapMap: {} };
     const homeForm = clamp2(1 + randNorm(0, C.FORM_SIGMA), 1 - C.FORM_CLAMP, 1 + C.FORM_CLAMP);
     const awayForm = clamp2(1 + randNorm(0, C.FORM_SIGMA), 1 - C.FORM_CLAMP, 1 + C.FORM_CLAMP);
     const homeTeam = { roster: homeRoster, depth: homeDepth, gameplan: homeGP, school: homeSchool, isHome: true, ctx: homeCtx, form: homeForm };
@@ -28447,6 +28563,11 @@ var _CFB = (() => {
       awayPlayerStats,
       homeSnapCounts: homeCtx.snapCountMap,
       awaySnapCounts: awayCtx.snapCountMap,
+      // PASS 7 (Fix D): job-bucket snaps + team side totals, for persistence
+      homeJobSnaps: homeCtx.jobSnapMap,
+      awayJobSnaps: awayCtx.jobSnapMap,
+      homeTeamSnaps: { off: homeCtx.offSnaps, def: homeCtx.defSnaps },
+      awayTeamSnaps: { off: awayCtx.offSnaps, def: awayCtx.defSnaps },
       // Game-day form rolls (upset mechanic) — surfaced for postgame narrative
       // ("they came out flat") and debugging; nothing persists them.
       homeForm: (_c = homeTeam.form) != null ? _c : 1,
@@ -28472,6 +28593,10 @@ var _CFB = (() => {
         awayPlayerStats: {},
         homeSnapCounts: {},
         awaySnapCounts: {},
+        homeJobSnaps: {},
+        awayJobSnaps: {},
+        homeTeamSnaps: { off: 0, def: 0 },
+        awayTeamSnaps: { off: 0, def: 0 },
         drives: [],
         log: ["Game not played \u2014 a team could not field a roster (forfeit)."],
         homeSchool,
@@ -29307,26 +29432,63 @@ var _CFB = (() => {
     const grade = gradeIndexFromXP(xp);
     return Math.max(C.POS_CHANGE_PENALTY * 0.25, C.POS_CHANGE_PENALTY * (1 - grade * 0.05));
   }
-  function previewConversion(state2, playerId, newPos) {
-    const school = state2.world.schools.find((s) => s.id === state2.playerSchoolId);
+  function previewConversion(state2, playerId, newPos, school = null) {
+    const mine = !school || school.id === state2.playerSchoolId;
+    school = school || state2.world.schools.find((s) => s.id === state2.playerSchoolId);
     const p = school == null ? void 0 : school.roster.find((x) => x.id === playerId);
     if (!p) return null;
     const clone = JSON.parse(JSON.stringify(p));
     clone.position = newPos;
-    clone.convPenalty = { factor: conversionPenaltyFactor(state2) };
+    clone.convPenalty = { factor: mine ? conversionPenaltyFactor(state2) : C.POS_CHANGE_PENALTY };
     refreshRatings(clone);
     return { from: p.position, current: Math.round(p.compositeRating), projected: clone.compositeRating };
   }
-  function cutDayConversionRecs(state2) {
+  function _bandKeyForPos(position) {
+    if (position === "DE" || position === "DT") return "DL";
+    if (position === "CB" || position === "S") return "DB";
+    if (position === "OLB") return "LB";
+    return position;
+  }
+  function posSizeFit(weight, pos) {
+    var _a;
+    const band = (_a = SIZE_BANDS == null ? void 0 : SIZE_BANDS.byPos) == null ? void 0 : _a[_bandKeyForPos(pos)];
+    if (!band || !weight) return 1;
+    const [, , wMin, wMax] = band;
+    const dist = weight < wMin ? wMin - weight : weight > wMax ? weight - wMax : 0;
+    return 1 - Math.min(0.1, dist * 2e-3);
+  }
+  function bodyTargetForPos(weight, pos) {
+    var _a;
+    const band = (_a = SIZE_BANDS == null ? void 0 : SIZE_BANDS.byPos) == null ? void 0 : _a[_bandKeyForPos(pos)];
+    if (!band || !weight) return null;
+    const [, , wMin, wMax] = band;
+    const t = clamp2(weight, wMin, wMax);
+    return t === weight ? null : t;
+  }
+  function schoolConversionRecs(state2, school) {
     var _a, _b;
-    const school = state2.world.schools.find((s) => s.id === state2.playerSchoolId);
     if (!school) return [];
-    const gradIds = new Set(graduatingSeniors(state2).map((p) => p.id));
-    const roster = school.roster.filter((p) => !gradIds.has(p.id));
-    const converted = new Set((((_a = state2.preseason) == null ? void 0 : _a.posChanges) || []).map((c) => c.playerId));
+    const mine = school.id === state2.playerSchoolId;
+    const brain = !globalThis.__noConvertBrain;
+    const gradIds = mine ? new Set(graduatingSeniors(state2).map((p) => p.id)) : /* @__PURE__ */ new Set();
+    const roster = school.roster.filter((p) => !gradIds.has(p.id) && (mine || p.classYear !== "SR"));
+    const converted = new Set(mine ? (((_a = state2.preseason) == null ? void 0 : _a.posChanges) || []).map((c) => c.playerId) : []);
     const counts = {};
     for (const p of roster) counts[p.position] = (counts[p.position] || 0) + 1;
     const roomRank = (pos, rating, selfId) => roster.filter((x) => x.position === pos && x.id !== selfId && x.compositeRating > rating).length + 1;
+    const sideSnaps = (p) => {
+      var _s;
+      const off = ["QB", "RB", "WR", "TE", "OL", "FB"].includes(p.position);
+      return ((_s = school.stats) == null ? void 0 : _s[off ? "offSnaps" : "defSnaps"]) || 0;
+    };
+    const usageBuried = (p) => {
+      var _s;
+      if (!brain || globalThis.__noSnapTrack) return false;
+      const team = sideSnaps(p);
+      const snaps = ((_s = p.stats) == null ? void 0 : _s.snaps) || 0;
+      if (!team || team < 200) return false;
+      return snaps / team < C.PASS7.moraleShareFloor && p.classYear !== "FR";
+    };
     const recs = [];
     for (const p of roster) {
       if (converted.has(p.id)) continue;
@@ -29334,33 +29496,51 @@ var _CFB = (() => {
       const fromCount = counts[p.position] || 0;
       const fromRank = roomRank(p.position, p.compositeRating, null);
       const starters = STARTER_COUNTS[p.position] || 1;
-      const buried = fromRank > starters + 1 || fromCount > (ROSTER_TARGETS[p.position] || 0);
+      const buried = fromRank > starters + 1 || fromCount > (ROSTER_TARGETS[p.position] || 0) || usageBuried(p);
       if (!buried) continue;
       let best = null;
       for (const [pos, target] of Object.entries(ROSTER_TARGETS)) {
         if (pos === p.position || pos === "K" || pos === "P") continue;
         const deficit = target - (counts[pos] || 0);
-        const prev = previewConversion(state2, p.id, pos);
+        const prev = previewConversion(state2, p.id, pos, school);
         if (!prev) continue;
         if (prev.projected < prev.current - 3) continue;
         const toRank = roomRank(pos, prev.projected, p.id);
         const startsThere = toRank <= (STARTER_COUNTS[pos] || 1);
         if (deficit <= 0 && !(startsThere && prev.projected >= prev.current + 2)) continue;
-        const score = fromRank - toRank + Math.max(0, deficit) * 2 + (prev.projected - prev.current) * 0.3;
+        let score = fromRank - toRank + Math.max(0, deficit) * 2 + (prev.projected - prev.current) * 0.3;
+        let bodyDelta = 0;
+        if (brain) {
+          const projT = bodyTargetForPos(p.weight, pos);
+          const projW = projT == null ? p.weight : p.weight + clamp2(projT - p.weight, -C.PASS7.bulkMax, C.PASS7.bulkMax);
+          score += C.PASS7.convertSizeW * (posSizeFit(projW, pos) - posSizeFit(p.weight, p.position));
+          const bk = (_b = p.traits) == null ? void 0 : _b.bridge;
+          const bdef = bk ? BRIDGE_CATALOG[bk] : null;
+          if (bdef && (bdef.buckets || []).includes(pos)) score += C.PASS7.convertBridgeBonus;
+          bodyDelta = projT == null ? 0 : Math.round(projT - p.weight);
+        }
         if (score <= 1) continue;
-        if (!best || score > best.score) best = { to: pos, current: prev.current, projected: prev.projected, toRank, toCount: counts[pos] || 0, deficit, score };
+        if (!best || score > best.score) best = { to: pos, current: prev.current, projected: prev.projected, toRank, toCount: counts[pos] || 0, deficit, score, bodyDelta };
       }
       if (best) recs.push(__spreadValues2({
         playerId: p.id,
-        name: `${((_b = p.name) == null ? void 0 : _b.first) || ""} ${p.name && p.name.last || ""}`.trim(),
+        name: `${(p.name == null ? void 0 : p.name.first) || ""} ${p.name && p.name.last || ""}`.trim(),
         from: p.position,
         fromRank,
         fromCount,
         classYear: p.classYear,
-        isWalkOn: !!p.isWalkOn
+        isWalkOn: !!p.isWalkOn,
+        // Fix D surface: flag flight risks so the cut-day screen can say WHY
+        // the staff is pitching the move ("unhappy — buried")
+        unhappy: brain && !globalThis.__noMorale && p.morale != null && p.morale < C.PASS7.moraleLowBar,
+        usageBuried: usageBuried(p)
       }, best));
     }
     return recs.sort((a, b) => b.score - a.score).slice(0, 6);
+  }
+  function cutDayConversionRecs(state2) {
+    const school = state2.world.schools.find((s) => s.id === state2.playerSchoolId);
+    return schoolConversionRecs(state2, school);
   }
   function convertPosition(state2, playerId, newPos, opts = {}) {
     var _a, _b;
@@ -29384,6 +29564,11 @@ var _CFB = (() => {
     const applySeason = inOffseason ? state2.season + 1 : state2.season;
     p.convPenalty = { season: applySeason, factor: conversionPenaltyFactor(state2) };
     p.convDev = { season: applySeason, left: C.POS_CHANGE_DEV_SEASONS };
+    if (!globalThis.__noBulkCut) {
+      const bt = bodyTargetForPos(p.weight, newPos);
+      if (bt != null) p.bodyPlan = { targetW: bt, from, to: newPos };
+      else delete p.bodyPlan;
+    }
     refreshRatings(p);
     school.depthChart = buildDepthChart(school.roster, school.gameplan, school.depthOrder || {});
     data.posChanges = data.posChanges || [];
@@ -29419,6 +29604,144 @@ var _CFB = (() => {
       }
     }
     coach.pendingConversions = keep;
+  }
+  function aiRosterConverts(state2) {
+    if (globalThis.__noConvertBrain) return;
+    for (const school of state2.world.schools) {
+      if (school.id === state2.playerSchoolId) continue;
+      if (!(school.roster || []).length) continue;
+      const recs = schoolConversionRecs(state2, school);
+      let done = 0;
+      for (const r of recs) {
+        if (done >= C.PASS7.aiPosChangeCap) break;
+        if (r.score < 2.5 || r.isWalkOn) continue;
+        const p = school.roster.find((x) => x.id === r.playerId);
+        if (!p || p.position === r.to) continue;
+        p.position = r.to;
+        p.convPenalty = { season: state2.season, factor: C.POS_CHANGE_PENALTY };
+        p.convDev = { season: state2.season, left: C.POS_CHANGE_DEV_SEASONS };
+        if (!globalThis.__noBulkCut) {
+          const bt = bodyTargetForPos(p.weight, r.to);
+          if (bt != null) p.bodyPlan = { targetW: bt, from: r.from, to: r.to };
+        }
+        refreshRatings(p);
+        done++;
+      }
+      if (done) school.depthChart = buildDepthChart(school.roster, school.gameplan, school.depthOrder || {});
+    }
+  }
+  function earnBridges(state2) {
+    var _a, _b, _c;
+    if (globalThis.__noEarnBridge || globalThis.__noSnapTrack) return;
+    const P7 = C.PASS7;
+    for (const school of state2.world.schools) {
+      const mine = school.id === state2.playerSchoolId;
+      for (const p of school.roster || []) {
+        const snaps = ((_a = p.stats) == null ? void 0 : _a.snaps) || 0;
+        const at = (_b = p.stats) == null ? void 0 : _b.snapsAt;
+        if (!at || snaps < P7.bridgeEarnSnaps) continue;
+        if (((_c = p.traits) == null ? void 0 : _c.bridge) || ((_c = p.traits) == null ? void 0 : _c.earned)) continue;
+        const cands = EARN_BRIDGE_MAP[p.position] || [];
+        let best = null;
+        for (const c of cands) {
+          if (!BRIDGE_CATALOG[c.k] || !BRIDGE_CATALOG[c.k].pos.includes(p.position)) continue;
+          const n = c.keys.reduce((s, k) => s + (at[k] || 0), 0);
+          if (n / snaps >= P7.bridgeEarnShare && (!best || n > best.n)) best = { k: c.k, n };
+        }
+        if (!best) continue;
+        if (!p.traits) p.traits = { bridge: null, play: [], flaws: [], earned: false };
+        p.traits.bridge = best.k;
+        p.traits.earned = true;
+        if (mine && state2.inbox && state2.inbox.push) {
+          const nm = `${(p.name == null ? void 0 : p.name.first) || ""} ${(p.name == null ? void 0 : p.name.last) || ""}`.trim();
+          state2.inbox.push({
+            id: `bridge_${p.id}_${state2.season}`,
+            day: state2.day,
+            subject: "\u2B50 A player has grown into a new role",
+            body: `${nm} (${p.position}) logged ${best.n} real snaps living in a different job all season \u2014 he's become a ${BRIDGE_CATALOG[best.k].name}. The job is his now, at full rate.`,
+            read: false
+          });
+        }
+      }
+    }
+  }
+  function offseasonBulkCut(state2) {
+    var _a, _b, _c;
+    if (globalThis.__noBulkCut) return;
+    const P7 = C.PASS7;
+    const notable = [];
+    for (const school of state2.world.schools) {
+      const mine = school.id === state2.playerSchoolId;
+      for (const p of school.roster || []) {
+        if (p.position === "K" || p.position === "P" || !p.weight) continue;
+        let target = null, why = null;
+        if ((_a = p.bodyPlan) == null ? void 0 : _a.targetW) {
+          target = p.bodyPlan.targetW;
+          why = `for the move to ${p.bodyPlan.to || p.position}`;
+        } else if (!globalThis.__noSnapTrack && ((_b = p.stats) == null ? void 0 : _b.snapsAt)) {
+          const snaps = p.stats.snaps || 0;
+          if (snaps > 0) {
+            let bk = null, bn = 0;
+            for (const [k, n] of Object.entries(p.stats.snapsAt)) {
+              if (n > bn) {
+                bk = k;
+                bn = n;
+              }
+            }
+            if (bk && bn / snaps >= P7.bulkJobShare) {
+              const pos = BULK_BUCKET_POS[bk] || bk;
+              const t = bodyTargetForPos(p.weight, pos);
+              if (t != null) {
+                target = t;
+                why = `for the ${bk} job he's living at`;
+              }
+            }
+          }
+        }
+        if (target == null) {
+          const t = bodyTargetForPos(p.weight, p.position);
+          if (t != null) {
+            target = t;
+            why = "back toward playing weight";
+          }
+        }
+        if (target == null || target === p.weight) {
+          if (p.bodyPlan && (p.bodyPlan.targetW == null || p.bodyPlan.targetW === p.weight)) delete p.bodyPlan;
+          continue;
+        }
+        const we = (p.attributes == null ? void 0 : p.attributes.WE) != null ? p.attributes.WE : 50;
+        const con = (p.attributes == null ? void 0 : p.attributes.CON) != null ? p.attributes.CON : 50;
+        const cap = Math.round(P7.bulkMin + (P7.bulkMax - P7.bulkMin) * clamp2((we + con) / 2 / 100, 0, 1));
+        const move = Math.round(clamp2(target - p.weight, -cap, cap));
+        if (!move) continue;
+        p.weight += move;
+        for (const [k, per10] of Object.entries(P7.bulkAttrPer10 || {})) {
+          if (p.attributes && p.attributes[k] != null) {
+            p.attributes[k] = clamp2(Math.round(p.attributes[k] + per10 * (move / 10)), 1, 99);
+          }
+        }
+        refreshRatings(p);
+        if (p.bodyPlan && Math.abs((p.bodyPlan.targetW || p.weight) - p.weight) < 1) delete p.bodyPlan;
+        if (mine && Math.abs(move) >= P7.bulkReportMin) {
+          const nm = `${(p.name == null ? void 0 : p.name.first) || ""} ${(p.name == null ? void 0 : p.name.last) || ""}`.trim();
+          notable.push(`${nm} (${p.position}) ${move > 0 ? "bulked up" : "cut"} ${Math.abs(move)} lb ${why} \u2014 now ${p.weight} lb.`);
+        }
+      }
+    }
+    if (notable.length && state2.inbox && state2.inbox.push) {
+      state2.inbox.push({
+        id: `bulkcut_${state2.season}`,
+        day: state2.day,
+        subject: "\u{1F3CB}\uFE0F Offseason body work",
+        body: notable.join("\n"),
+        read: false
+      });
+    }
+  }
+  function pass7Rollover(state2) {
+    aiRosterConverts(state2);
+    earnBridges(state2);
+    offseasonBulkCut(state2);
   }
   function statLine(gs) {
     const parts = [];
@@ -29948,7 +30271,7 @@ var _CFB = (() => {
     }
     return rounds;
   }
-  var OFFSEASON_STAGES, PRESEASON_WEEKS, FOCUS_GROUPS, SPRING_OFF_POS, SPRING_DEF_POS, TROPHY_ITEMS, NC_WINDOW, CLINIC_OPTIONS;
+  var EARN_BRIDGE_MAP, BULK_BUCKET_POS, OFFSEASON_STAGES, PRESEASON_WEEKS, FOCUS_GROUPS, SPRING_OFF_POS, SPRING_DEF_POS, TROPHY_ITEMS, NC_WINDOW, CLINIC_OPTIONS;
   var init_offseason = __esm({
     "js/engine/offseason.js"() {
       init_spread();
@@ -29960,8 +30283,22 @@ var _CFB = (() => {
       init_player();
       init_portal();
       init_sim();
+      init_traits();
       init_world();
       init_utils();
+      EARN_BRIDGE_MAP = {
+        LB: [{ k: "spaceBacker", keys: ["S", "CB"] }],
+        OLB: [{ k: "spaceBacker", keys: ["S", "CB"] }, { k: "edgeBender", keys: ["DE"] }],
+        DE: [{ k: "edgeBender", keys: ["OLB"] }],
+        S: [{ k: "slotStar", keys: ["CB"] }, { k: "boxGeneral", keys: ["ILB", "OLB"] }],
+        TE: [{ k: "moveTE", keys: ["SLOT", "WR"] }, { k: "hBack", keys: ["RB"] }],
+        RB: [
+          { k: "backfieldWeapon", keys: ["SLOT", "WR"] },
+          { k: "hBack", keys: ["TE"] },
+          { k: "wildcatEngine", keys: ["WILDCAT", "QB"] }
+        ]
+      };
+      BULK_BUCKET_POS = { ILB: "LB", SLOT: "WR" };
       OFFSEASON_STAGES = [
         {
           id: "jobmarket",
@@ -31284,6 +31621,62 @@ var _CFB = (() => {
     accumTeamStats(away.stats, result.awayStats, result.awayScore, result.homeScore, result.homeStats);
     if (result.homePlayerStats) applyPlayerGameStats(home.roster, result.homePlayerStats);
     if (result.awayPlayerStats) applyPlayerGameStats(away.roster, result.awayPlayerStats);
+    if (!globalThis.__noSnapTrack) {
+      applySnapCounts(home, result.homeSnapCounts, result.homeJobSnaps, result.homeTeamSnaps);
+      applySnapCounts(away, result.awaySnapCounts, result.awayJobSnaps, result.awayTeamSnaps);
+      tickMorale(home, result.homeScore > result.awayScore);
+      tickMorale(away, result.awayScore > result.homeScore);
+    }
+  }
+  function applySnapCounts(school, snapCounts, jobSnaps, teamSnaps) {
+    for (const [id, n] of Object.entries(snapCounts || {})) {
+      const p = school.roster.find((x) => x.id === id);
+      if (!p || !n) continue;
+      if (!p.stats) p.stats = {};
+      if (!p.careerStats) p.careerStats = {};
+      p.stats.snaps = (p.stats.snaps || 0) + n;
+      p.careerStats.snaps = (p.careerStats.snaps || 0) + n;
+      const jobs = (jobSnaps || {})[id];
+      if (jobs) {
+        const at = p.stats.snapsAt || (p.stats.snapsAt = {});
+        for (const [k, jn] of Object.entries(jobs)) at[k] = (at[k] || 0) + jn;
+      }
+    }
+    if (teamSnaps && school.stats) {
+      school.stats.offSnaps = (school.stats.offSnaps || 0) + (teamSnaps.off || 0);
+      school.stats.defSnaps = (school.stats.defSnaps || 0) + (teamSnaps.def || 0);
+    }
+  }
+  function tickMorale(school, won) {
+    var _a, _b;
+    if (globalThis.__noMorale) return;
+    const P7 = C.PASS7;
+    const roster = school.roster || [];
+    const rank = /* @__PURE__ */ new Map();
+    const rooms = {};
+    for (const p of roster) (rooms[p.position] || (rooms[p.position] = [])).push(p);
+    for (const list of Object.values(rooms)) {
+      list.sort((a, b) => (b.compositeRating || 0) - (a.compositeRating || 0));
+      list.forEach((p, i) => rank.set(p.id, i + 1));
+    }
+    for (const p of roster) {
+      if (p.morale == null) p.morale = P7.moraleInit;
+      if (p.position === "K" || p.position === "P") continue;
+      if ((p.injuryGamesOut || 0) > 0) continue;
+      const teamSnaps = ((_a = school.stats) == null ? void 0 : _a[OFF_POS_SET.has(p.position) ? "offSnaps" : "defSnaps"]) || 0;
+      if (!teamSnaps) continue;
+      const actual = (((_b = p.stats) == null ? void 0 : _b.snaps) || 0) / teamSnaps;
+      const starters = STARTER_COUNTS[p.position] || 1;
+      const r = rank.get(p.id) || 99;
+      let expected = r <= starters ? 0.65 : r === starters + 1 ? 0.3 : 0.1;
+      if (p.redshirted) expected = 0;
+      else if (p.classYear === "FR") expected *= 0.6;
+      else if (p.classYear === "JR" || p.classYear === "SR") expected = Math.min(0.75, expected + 0.06);
+      const delta = Math.max(-P7.moraleLossCap, Math.min(P7.moraleGainCap, P7.moraleUsageK * (actual - expected))) + (won ? P7.moraleTeamW : -P7.moraleTeamW);
+      let m = p.morale + delta;
+      m += Math.sign(P7.moraleInit - m) * Math.min(P7.moraleDrift, Math.abs(P7.moraleInit - m));
+      p.morale = Math.max(0, Math.min(100, m));
+    }
   }
   function flawName(k) {
     return FLAW_NAMES[k] || k;
@@ -32486,6 +32879,7 @@ var _CFB = (() => {
         }
       }
     }
+    pass7Rollover(state2);
     const blank = emptyStats();
     for (const school of state2.world.schools) {
       for (const player of school.roster) {
@@ -32642,7 +33036,7 @@ var _CFB = (() => {
     }
     school._olLastFive = five;
   }
-  var FLAW_NAMES, PHASES, RECRUITING_OPEN, REG_WEEK_1_DAY, REG_WEEK_COUNT, weekLabel, weekShort, AUTO_BOARD_MAX, PLAYOFF_DIVS, RECORD_CATS, GRADE_LETTERS;
+  var OFF_POS_SET, FLAW_NAMES, PHASES, RECRUITING_OPEN, REG_WEEK_1_DAY, REG_WEEK_COUNT, weekLabel, weekShort, AUTO_BOARD_MAX, PLAYOFF_DIVS, RECORD_CATS, GRADE_LETTERS;
   var init_season = __esm({
     "js/engine/season.js"() {
       init_spread();
@@ -32665,6 +33059,7 @@ var _CFB = (() => {
       init_starts();
       init_world();
       init_utils();
+      OFF_POS_SET = /* @__PURE__ */ new Set(["QB", "RB", "WR", "TE", "OL", "FB"]);
       FLAW_NAMES = { grabby: "Grabby", jumpy: "Jumpy", gambler: "Gambler", headhunter: "Headhunter", freelancer: "Freelancer", drops: "Drops", fumbler: "Fumbler", happyFeet: "Happy Feet", slowStarter: "Slow Starter", telegraph: "Telegraph", heroBall: "Hero Ball", dancer: "Dancer", bodyCatcher: "Body Catcher", bitesHard: "Bites Hard", laneDrifter: "Lane Drifter", holdingHabit: "Holding Habit", shanks: "Shanks", muffs: "Muffs" };
       PHASES = {
         PRESEASON: { days: [1, 4], label: "Preseason" },
@@ -42931,7 +43326,7 @@ var _CFB = (() => {
           <span class="rating-chip rating-${ratingColor(r.projected)}">${r.projected}</span>
           <span style="color:${diff >= 0 ? "var(--green)" : "var(--red)"};font-size:12px">${diff >= 0 ? "+" : ""}${diff}</span>
           <button class="btn-sm btn-primary cutrec-convert-btn" data-cutrec-id="${r.playerId}" data-cutrec-to="${r.to}" ${capLeft <= 0 ? 'disabled title="Camp conversion limit reached"' : ""}>Convert</button>
-          <span class="offseason-hint" style="flex-basis:100%;margin:2px 0 0">${ord(r.fromRank)} of ${r.fromCount} in the ${r.from} room \xB7 ${r.deficit > 0 ? `${r.to} room is ${r.deficit} short` : `walks in as the ${ord(r.toRank)} ${r.to}`}</span>
+          <span class="offseason-hint" style="flex-basis:100%;margin:2px 0 0">${ord(r.fromRank)} of ${r.fromCount} in the ${r.from} room \xB7 ${r.deficit > 0 ? `${r.to} room is ${r.deficit} short` : `walks in as the ${ord(r.toRank)} ${r.to}`}${r.bodyDelta ? ` \xB7 <b>${r.bodyDelta > 0 ? `bulks up (+${r.bodyDelta} lb)` : `slims down (\u2212${Math.abs(r.bodyDelta)} lb)`}</b>` : ""}${r.unhappy ? ' \xB7 <b style="color:var(--red)">unhappy \u2014 flight risk</b>' : r.usageBuried ? ' \xB7 <span style="color:var(--muted)">rotation barely used him</span>' : ""}</span>
         </div>`;
     }).join("")}
   </div>
@@ -50290,8 +50685,23 @@ ${renderAutoRecruitLog()}`;
     const yToBoard = (y) => LOS + Math.max(0, y - 0.5) * DEPTH_YDS_PER_Y * YPU;
     const off = offSlotsRaw.map((s) => __spreadProps2(__spreadValues2({}, s), { bx: s.x * 100, by: yToBoard(s.y) }));
     const defRaw = defSlotsRaw || [];
-    const defMaxY = defRaw.length ? Math.max(...defRaw.map((s) => s.y)) : 0;
-    const def = defRaw.map((s) => __spreadProps2(__spreadValues2({}, s), { bx: s.x * 100, by: Math.max(3, 29 - (defMaxY - s.y) * 36) }));
+    const defDepthYds = (s) => {
+      const role = String(s.role || "");
+      if (s.pos === "DE" || s.pos === "DT") return s.pos === "DT" ? 0.65 : 0.85;
+      if (s.pos === "OLB" && /Rush/.test(role) && s.y >= 0.6) return 1.05;
+      if (s.pos === "CB") return s.id === "NB" || /Nickel/.test(role) ? 4.25 : 1.45;
+      if (s.pos === "S") {
+        if (s.mesh === "SPACE" || s.y >= 0.24) return s.y >= 0.34 ? 4.5 : 6;
+        return 10.5 + Math.max(0, 0.1 - s.y) * 20;
+      }
+      if (s.mesh === "OVERHANG") return 3.75;
+      return s.mesh === "STACKER" || s.pos === "LB" ? 4.25 : 4.5;
+    };
+    const def = defRaw.map((s) => __spreadProps2(__spreadValues2({}, s), {
+      bx: s.x * 100,
+      by: LOS - defDepthYds(s) * YPU,
+      alignDepth: defDepthYds(s)
+    }));
     const qbSlot = off.find((s) => s.id === "QB") || { bx: 50, by: LOS + 3 * YPU, id: "QB", label: "QB", pos: "QB" };
     const gain = clamp6(p.yards || 0, -15, 100);
     const endY = clamp6(LOS - (p.td ? Math.min(p.yards || 0, 100) : gain) * YPU, -60, 61);
@@ -52989,6 +53399,11 @@ ${renderAutoRecruitLog()}`;
     if (st.rushAtt > 0) statBits.push(`${st.rushAtt} car \xB7 ${st.rushYds} yds \xB7 ${st.rushTD} TD`);
     if (st.recComp > 0) statBits.push(`${st.recComp} rec \xB7 ${st.recYds} yds \xB7 ${st.recTD} TD`);
     if (st.tackles > 0 || st.sacks > 0 || st.ints > 0) statBits.push(`${st.tackles || 0} tkl \xB7 ${st.sacks || 0} sck \xB7 ${st.ints || 0} INT`);
+    if (!globalThis.__noSnapTrack && st.snaps > 0) {
+      const at = st.snapsAt || {};
+      const foreign = Object.entries(at).sort((a, b) => b[1] - a[1])[0];
+      statBits.push(`${st.snaps} snaps${foreign && foreign[1] >= 20 ? ` (${foreign[1]} at ${foreign[0]})` : ""}`);
+    }
     const potChar = { average: "C", good: "B", great: "A", sky: "S" }[p.potentialBand] || "?";
     const potKnown = isMine2 && p.potentialRevealed;
     const m = p.measurables;
@@ -53012,6 +53427,12 @@ ${renderAutoRecruitLog()}`;
         ${derivedArchetype(p) ? `<span class="arch-chip arch-chip-lg" data-tip="archetype" title="What is an archetype?">${archetypeLabel(derivedArchetype(p))}</span>` : ""}
         <span>${school ? `<span class="team-link" data-scout-team="${school.id}">${escapeHtml(school.name)} ${escapeHtml(school.nick || "")}</span>` : '<span class="muted">Transfer portal</span>'}</span>
         ${p.height || p.weight ? `<span>${p.height ? escapeHtml(String(p.height)) : ""}${p.height && p.weight ? " \xB7 " : ""}${p.weight ? `${p.weight} lbs` : ""}</span>` : ""}
+        ${!globalThis.__noMorale && isMine2 && p.morale != null ? (() => {
+      const mv = Math.round(p.morale);
+      const bar = C.PASS7 || {};
+      const lab = mv < (bar.moraleLowBar || 40) ? ["Unhappy", "var(--red)"] : mv < (bar.moraleMidBar || 55) ? ["Restless", "var(--gold, orange)"] : mv > (bar.moraleHighBar || 80) ? ["Locked in", "var(--green)"] : ["Content", "var(--muted)"];
+      return `<span title="Morale ${mv} \u2014 tracks his real snap share vs the role he expects. Low morale feeds the portal." style="color:${lab[1]};font-size:12px;letter-spacing:.3px">\u25CF ${lab[0]}</span>`;
+    })() : ""}
         ${renderTraitChips(p)}
         ${m ? `<span class="testing-sheet">40yd ${m.forty} \xB7 Vert ${m.vert}&quot; \xB7 Shuttle ${m.shuttle} \xB7 Bench ${m.bench}</span>` : ""}
         ${((_a = p.hometown) == null ? void 0 : _a.city) ? `<span>${escapeHtml(p.hometown.city)}, ${escapeHtml(p.hometown.state || "")}</span>` : ""}
@@ -54845,6 +55266,8 @@ ${renderAutoRecruitLog()}`;
     const short = (school, fallback) => escapeHtml(String((school == null ? void 0 : school.abbr) || (school == null ? void 0 : school.name) || fallback).slice(0, 4).toUpperCase());
     const el = document.getElementById("watch-bug");
     if (!el) return;
+    el.classList.remove("wsb-possession-change");
+    el.dataset.possession = hasBall || "";
     el.innerHTML = `
   <div class="wsb-matchup">
     <div class="wsb-side wsb-home${hasBall === "home" ? " has-ball" : ""}">
@@ -54877,6 +55300,20 @@ ${renderAutoRecruitLog()}`;
       <div class="wdi-cell"><span>FIELD</span><b>${escapeHtml(dd ? `${dd}${spot ? ` \xB7 ${spot}` : ""}` : "\u2014")}</b></div>
     </div>`;
     }
+  }
+  function watchBugPossession(side) {
+    const el = document.getElementById("watch-bug");
+    if (!el || side !== "home" && side !== "away") return;
+    el.dataset.possession = side;
+    el.querySelector(".wsb-home") == null ? void 0 : el.querySelector(".wsb-home").classList.toggle("has-ball", side === "home");
+    el.querySelector(".wsb-away") == null ? void 0 : el.querySelector(".wsb-away").classList.toggle("has-ball", side === "away");
+    const school = side === "home" ? _watch == null ? void 0 : _watch.r.homeSchool : _watch == null ? void 0 : _watch.r.awaySchool;
+    const possessionCell = document.querySelector("#watch-desktop-insight .wdi-cell");
+    const value = possessionCell == null ? void 0 : possessionCell.querySelector("b");
+    if (value) value.textContent = (school == null ? void 0 : school.name) || "Possession changed";
+    el.classList.remove("wsb-possession-change");
+    void el.offsetWidth;
+    el.classList.add("wsb-possession-change");
   }
   var _watchAnim = null;
   function watchStopAnim() {
@@ -54913,8 +55350,16 @@ ${renderAutoRecruitLog()}`;
     viewW: 100,
     viewH: 56
   });
+  var _watchSideDir = 1;
+  function watchSideDirection(board) {
+    return (board == null ? void 0 : board.possession) === "away" ? -1 : 1;
+  }
+  function watchSideFacing(team) {
+    const off = _watchSideDir > 0 ? "e" : "w";
+    return team === "off" ? off : off === "e" ? "w" : "e";
+  }
   function watchSideX(worldY) {
-    return 31 + (31 - worldY) * WATCH_SIDE.longitudinal;
+    return 31 + _watchSideDir * (31 - worldY) * WATCH_SIDE.longitudinal;
   }
   function watchSideY(worldX) {
     return WATCH_SIDE.fieldTop + worldX * (WATCH_SIDE.fieldHeight / 100);
@@ -54923,16 +55368,15 @@ ${renderAutoRecruitLog()}`;
     return [watchSideX(worldY), watchSideY(worldX)];
   }
   function watchSideFieldX(absYard, fieldPos) {
-    return 31 + (absYard - fieldPos) * WATCH_SIDE.ypu * WATCH_SIDE.longitudinal;
+    return 31 + _watchSideDir * (absYard - fieldPos) * WATCH_SIDE.ypu * WATCH_SIDE.longitudinal;
   }
   function watchSideCameraX(p, focusX = 31, viewW = WATCH_SIDE.viewW) {
     const fp = Number.isFinite(p == null ? void 0 : p.fieldPos) ? p.fieldPos : 50;
     const endZone = 10 * WATCH_SIDE.ypu * WATCH_SIDE.longitudinal;
-    const ownEnd = watchSideFieldX(0, fp) - endZone - 4;
-    const farEnd = watchSideFieldX(100, fp) + endZone + 4;
-    const maxX = farEnd - viewW;
-    const minX = ownEnd;
-    const wanted = focusX - viewW * 0.38;
+    const goalA = watchSideFieldX(0, fp), goalB = watchSideFieldX(100, fp);
+    const minX = Math.min(goalA, goalB) - endZone - 4;
+    const maxX = Math.max(goalA, goalB) + endZone + 4 - viewW;
+    const wanted = focusX - viewW * (_watchSideDir > 0 ? 0.38 : 0.62);
     return Math.max(minX, Math.min(Math.max(minX, maxX), wanted));
   }
   function watchSetSpritePalette(svg, board) {
@@ -54952,6 +55396,9 @@ ${renderAutoRecruitLog()}`;
     const svg = document.getElementById("watch-board");
     if (!svg) return null;
     watchStopAnim();
+    _watchSideDir = watchSideDirection(board);
+    svg.dataset.fieldDirection = _watchSideDir > 0 ? "right" : "left";
+    svg.dataset.fieldPossession = (board == null ? void 0 : board.possession) || "";
     svg.classList.remove(
       "watch-presnap",
       "watch-snap-release",
@@ -54994,7 +55441,8 @@ ${renderAutoRecruitLog()}`;
     const glyph = (a) => sprites ? spriteMarkup(a, a.team === "off" ? "e" : "w") : a.team === "def" ? `<text class="wd-x" x="0" y="0">\u2715</text><text class="wd-lbl" x="0" y="-2.6">${a.label}</text>` : `<circle r="1.9" class="wo-c${a.qb ? " wo-qb" : ""}" cx="0" cy="0"/><text class="wo-lbl" x="0" y="4.4">${a.label}</text>`;
     svg.innerHTML = watchFieldBase(p, board) + `<polyline id="wp-trail" class="wp-trail" points=""/><g id="wp-spot" class="wp-spot" transform="translate(0,0)"><ellipse class="wp-spot-ring" rx="2.6" ry="1.15"/><path class="wp-spot-chevron" d="M-1.15 1.8L0 3.05l1.15-1.25z"/></g><g id="wp-engagements">${(script.blocks || []).map((b, i) => `<g class="wp-engage" data-wengage="${i}"><ellipse class="wp-engage-shadow" rx="1.45" ry=".48"/><path class="wp-engage-pads" d="M-1.8-.8L-.35 0-1.8.8M1.8-.8L.35 0 1.8.8"/><circle class="wp-engage-core" r=".32"/></g>`).join("")}</g><g id="wp-blocks">${(script.blocks || []).map((b, i) => `<line class="wp-block-link" data-wblock="${i}"/>`).join("")}</g>` + script.actors.map((a) => {
       const [sx, sy] = watchSidePoint(a.track[0][0], a.track[0][1]);
-      return `<g class="wp-actor wp-team-${a.team}${a.qb ? " wp-qb" : ""}${sprites ? ` wsp-still wsp-face-${a.team === "off" ? "e" : "w"}` : ""}" data-wpa="${a.id}" data-wpg="${a.grp || ""}" transform="translate(${sx.toFixed(2)},${sy.toFixed(2)})">` + glyph(a) + `</g>`;
+      const face = watchSideFacing(a.team);
+      return `<g class="wp-actor wp-team-${a.team}${a.qb ? " wp-qb" : ""}${sprites ? ` wsp-still wsp-face-${face}` : ""}" data-wpa="${a.id}" data-wpg="${a.grp || ""}" transform="translate(${sx.toFixed(2)},${sy.toFixed(2)})">` + (sprites ? spriteMarkup(a, face) : glyph(a)) + `</g>`;
     }).join("") + `<g id="wp-fx"></g>` + (() => {
       const [sx, sy] = watchSidePoint(script.ball.track[0][0], script.ball.track[0][1]);
       return ballMarkup(sx, sy);
@@ -55585,7 +56033,10 @@ ${renderAutoRecruitLog()}`;
     svg.classList.add("watch-special-teams", isFG ? "watch-kick-place" : "watch-kick-punt");
     if (sprites) svg.classList.add("watch-sprites");
     else svg.classList.remove("watch-sprites");
-    const cast = (a) => sprites ? `<g class="wp-actor wp-team-${a.team} wsp-still wsp-face-${a.team === "off" ? "e" : "w"}" data-wpk="${a.id}" transform="translate(${a.x.toFixed(2)},${a.y.toFixed(2)})">${spriteMarkup(a, a.team === "off" ? "e" : "w")}</g>` : "";
+    const cast = (a) => {
+      const face = watchSideFacing(a.team);
+      return sprites ? `<g class="wp-actor wp-team-${a.team} wsp-still wsp-face-${face}" data-wpk="${a.id}" transform="translate(${a.x.toFixed(2)},${a.y.toFixed(2)})">${spriteMarkup(a, face)}</g>` : "";
+    };
     const landingMarkup = !isFG && !p.blocked ? `<g id="wp-kick-landing" class="wp-kick-landing" transform="translate(${endX.toFixed(2)},${endY.toFixed(2)})"><ellipse rx="2.7" ry="1.05"/><ellipse rx="1.55" ry=".6"/><path d="M0-1.65v3.3M-1.1-.85L0-1.65l1.1.8"/></g>` : "";
     svg.innerHTML = watchFieldBase(p, board) + landingMarkup + cast({ id: "LS", team: "off", label: "LS", x: startX, y: startY }) + (isFG ? cast({ id: "H", team: "off", label: "H", x: holdX, y: holdY }) : "") + cast({ id: "K", team: "off", label: isFG ? "K" : "P", x: isFG ? kickX0 : holdX, y: isFG ? kickY0 : holdY }) + (!isFG && !p.blocked ? cast({ id: "PR", team: "def", label: "PR", x: retX, y: retY }) : "") + (!isFG && !p.blocked && !p.touchback ? cast({ id: "G1", team: "off", label: "G", x: g1X, y: g1Y }) + cast({ id: "G2", team: "off", label: "G", x: g2X, y: g2Y }) : "") + (p.blocked ? cast({ id: "RS", team: "def", label: "LB", x: rushX0, y: rushY0 }) : "") + ballMarkup(startX, startY) + `<g id="wp-fx"></g>`;
     const ballN = svg.querySelector("#wp-ball"), ballLiftN = ballN == null ? void 0 : ballN.querySelector(".wab-lift"), fxN = svg.querySelector("#wp-fx");
@@ -55701,13 +56152,20 @@ ${renderAutoRecruitLog()}`;
     svg.classList.toggle("watch-kick-onside", !!p.onside);
     const [teeX, teeY] = watchSidePoint(50, 31);
     const kickYds = p.onside ? 12 : 58;
-    const [endX, endY] = watchSidePoint(p.onside ? 44 : 50, Math.max(2.6, 31 - kickYds * WATCH_SIDE.ypu));
+    const kickTeam = p.returnTD || p.onside && p.recovered ? "off" : "def";
+    const returnTeam = kickTeam === "off" ? "def" : "off";
+    const kickEndWorldY = 31 + kickYds * WATCH_SIDE.ypu;
+    const [endX, endY] = watchSidePoint(p.onside ? 44 : 50, kickEndWorldY);
     const retYds = !p.onside && !p.touchback ? Math.max(0, p.retYds || 0) : 0;
-    const [retEndX, retEndY] = watchSidePoint(50, Math.min(58, 31 - kickYds * WATCH_SIDE.ypu + retYds * WATCH_SIDE.ypu));
+    const [retEndX, retEndY] = watchSidePoint(50, kickEndWorldY - retYds * WATCH_SIDE.ypu);
     const [c1X, c1Y] = watchSidePoint(20, 33), [c2X, c2Y] = watchSidePoint(80, 33);
-    const cast = (a) => sprites ? `<g class="wp-actor wp-team-${a.team} wsp-still wsp-face-${a.team === "off" ? "e" : "w"}" data-wpk="${a.id}" transform="translate(${a.x.toFixed(2)},${a.y.toFixed(2)})">${spriteMarkup(a, a.team === "off" ? "e" : "w")}</g>` : "";
+    const cast = (a) => {
+      const face = watchSideFacing(a.team);
+      return sprites ? `<g class="wp-actor wp-team-${a.team} wsp-still wsp-face-${face}" data-wpk="${a.id}" transform="translate(${a.x.toFixed(2)},${a.y.toFixed(2)})">${spriteMarkup(a, face)}</g>` : "";
+    };
     const landingMarkup = `<g id="wp-kick-landing" class="wp-kick-landing" transform="translate(${endX.toFixed(2)},${endY.toFixed(2)})"><ellipse rx="2.7" ry="1.05"/><ellipse rx="1.55" ry=".6"/><path d="M0-1.65v3.3M-1.1-.85L0-1.65l1.1.8"/></g>`;
-    svg.innerHTML = watchFieldBase(p, board) + landingMarkup + cast({ id: "K", team: "off", label: "K", x: teeX - 8, y: teeY }) + cast({ id: "C1", team: "off", label: "CV", x: c1X, y: c1Y }) + cast({ id: "C2", team: "off", label: "CV", x: c2X, y: c2Y }) + (!p.touchback || p.onside ? cast({ id: "PR", team: "def", label: p.onside ? "HANDS" : "PR", x: endX, y: endY - 2 }) : "") + ballMarkup(teeX, teeY) + `<g id="wp-fx"></g>`;
+    const kickStartX = teeX + _watchSideDir * 8;
+    svg.innerHTML = watchFieldBase(p, board) + landingMarkup + cast({ id: "K", team: kickTeam, label: "K", x: kickStartX, y: teeY }) + cast({ id: "C1", team: kickTeam, label: "CV", x: c1X, y: c1Y }) + cast({ id: "C2", team: kickTeam, label: "CV", x: c2X, y: c2Y }) + (!p.touchback || p.onside ? cast({ id: "PR", team: returnTeam, label: p.onside ? "HANDS" : "PR", x: endX, y: endY - 2 }) : "") + ballMarkup(teeX, teeY) + `<g id="wp-fx"></g>`;
     const ballN = svg.querySelector("#wp-ball"), ballLiftN = ballN == null ? void 0 : ballN.querySelector(".wab-lift"), fxN = svg.querySelector("#wp-fx");
     const kN = svg.querySelector('[data-wpk="K"]'), prN = svg.querySelector('[data-wpk="PR"]');
     const c1N = svg.querySelector('[data-wpk="C1"]'), c2N = svg.querySelector('[data-wpk="C2"]'), landingN = svg.querySelector("#wp-kick-landing");
@@ -55762,7 +56220,7 @@ ${renderAutoRecruitLog()}`;
       landingN == null ? void 0 : landingN.classList.toggle("wp-kick-landing-live", t >= runT && t < boomT + 0.18);
       if (kN) {
         const u = Math.min(1, t / runT);
-        wspPlace(kN, lerp(teeX - 8, teeX - 1.4, u), teeY);
+        wspPlace(kN, lerp(kickStartX, teeX + _watchSideDir * 1.4, u), teeY);
       }
       kN == null ? void 0 : kN.classList.toggle("wp-kick-approach", t >= 0.08 && t < runT - 0.16);
       kN == null ? void 0 : kN.classList.toggle("wp-kick-plant", t >= runT - 0.16 && t < runT + 0.02);
@@ -55822,7 +56280,8 @@ ${renderAutoRecruitLog()}`;
     const [sx2, sy2] = watchSidePoint(50, LOSW - 2 * YPU2);
     svg.innerHTML = watchFieldBase(p, board) + cast.map((a) => {
       const [x, y] = watchSidePoint(a.wx, a.wy);
-      return sprites ? `<g class="wp-actor wp-team-${a.team}${a.qb ? " wp-qb" : ""} wsp-still wsp-face-${a.team === "off" ? "e" : "w"}" transform="translate(${x.toFixed(2)},${y.toFixed(2)})">${spriteMarkup(a, a.team === "off" ? "e" : "w")}</g>` : "";
+      const face = watchSideFacing(a.team);
+      return sprites ? `<g class="wp-actor wp-team-${a.team}${a.qb ? " wp-qb" : ""} wsp-still wsp-face-${face}" transform="translate(${x.toFixed(2)},${y.toFixed(2)})">${spriteMarkup(a, face)}</g>` : "";
     }).join("") + ballMarkup(bx0, by0) + `<g id="wp-fx"></g>`;
     const ballN = svg.querySelector("#wp-ball"), fxN = svg.querySelector("#wp-fx");
     const [tx, ty] = p.made ? [gx, gy] : [sx2, sy2];
@@ -55860,7 +56319,8 @@ ${renderAutoRecruitLog()}`;
     const [cx0, cy0] = watchSidePoint(50, 31);
     const mk2 = (id, team, label, wx, wy, qb = false) => {
       const [x, y] = watchSidePoint(wx, wy);
-      return sprites ? `<g class="wp-actor wp-team-${team}${qb ? " wp-qb" : ""} wsp-still wsp-face-${team === "off" ? "e" : "w"}" data-wpk="${id}" transform="translate(${x.toFixed(2)},${y.toFixed(2)})">${spriteMarkup({ id, team, label, qb }, team === "off" ? "e" : "w")}</g>` : "";
+      const face = watchSideFacing(team);
+      return sprites ? `<g class="wp-actor wp-team-${team}${qb ? " wp-qb" : ""} wsp-still wsp-face-${face}" data-wpk="${id}" transform="translate(${x.toFixed(2)},${y.toFixed(2)})">${spriteMarkup({ id, team, label, qb }, face)}</g>` : "";
     };
     let bodies = "";
     for (let i = 0; i < 5; i++) bodies += mk2("OL" + i, "off", "OL", 38 + i * 6, 31.8);
@@ -56011,29 +56471,30 @@ ${renderAutoRecruitLog()}`;
     if (fp != null) {
       const xOf = (abs) => watchSideFieldX(abs, fp);
       const gOwn = xOf(0), gFar = xOf(100);
-      const grassX = gOwn - EZ, grassW = gFar - gOwn + 2 * EZ;
+      const gLeft = Math.min(gOwn, gFar), gRight = Math.max(gOwn, gFar);
+      const grassX = gLeft - EZ, grassW = gRight - gLeft + 2 * EZ;
       under += `<rect x="${grassX.toFixed(1)}" y="${FT}" width="${grassW.toFixed(1)}" height="${FH}" class="wf-turf"/>`;
       for (let abs = 0; abs < 100; abs += 10) {
         const x0 = xOf(abs), x5 = xOf(abs + 5);
-        under += `<rect x="${x0.toFixed(1)}" y="${FT}" width="${(x5 - x0).toFixed(1)}" height="${FH}" class="wf-mow"/>`;
+        under += `<rect x="${Math.min(x0, x5).toFixed(1)}" y="${FT}" width="${Math.abs(x5 - x0).toFixed(1)}" height="${FH}" class="wf-mow"/>`;
       }
       const homeC = board == null ? void 0 : board.homeFill;
       const awayC = board == null ? void 0 : board.awayFill;
       const homeN = board == null ? void 0 : board.homeName;
       const awayN = board == null ? void 0 : board.awayName;
-      const ez = (xLeft, fill, name, rotation) => {
+      const ez = (xLeft, fill, name, rotation, owner) => {
         const cx = xLeft + EZ / 2, cy = FT + FH / 2;
-        let s = `<rect x="${xLeft.toFixed(1)}" y="${FT}" width="${EZ.toFixed(1)}" height="${FH}" class="wf-endzone" fill="${fill}"/><rect x="${xLeft.toFixed(1)}" y="${FT}" width="${EZ.toFixed(1)}" height="${FH}" fill="url(#wf-ezchk)"/>`;
+        let s = `<g class="wf-endzone-group" data-wf-owner="${owner}"><rect x="${xLeft.toFixed(1)}" y="${FT}" width="${EZ.toFixed(1)}" height="${FH}" class="wf-endzone" fill="${fill}"/><rect x="${xLeft.toFixed(1)}" y="${FT}" width="${EZ.toFixed(1)}" height="${FH}" fill="url(#wf-ezchk)"/>`;
         if (name) {
           const txt = escapeHtml(String(name).toUpperCase());
           s += `<text x="${cx.toFixed(1)}" y="${(cy + 1.7).toFixed(1)}" class="wf-ez-lbl" transform="rotate(${rotation} ${cx.toFixed(1)} ${cy.toFixed(1)})"${txt.length > 9 ? ` textLength="${(FH - 6).toFixed(1)}" lengthAdjust="spacingAndGlyphs"` : ""}>${txt}</text>`;
         }
-        return s;
+        return s + `</g>`;
       };
-      under += ez(gOwn - EZ, homeC || "var(--team-1,#175b35)", homeN, -90);
-      under += ez(gFar, awayC || "#c23a35", awayN, 90);
+      under += ez(gLeft - EZ, homeC || "var(--team-1,#175b35)", homeN, -90, "home");
+      under += ez(gRight, awayC || "#c23a35", awayN, 90, "away");
       under += `<rect x="${grassX.toFixed(1)}" y="${FT}" width="${grassW.toFixed(1)}" height="${FH}" fill="url(#wf-grain)"/>`;
-      lines += `<line x1="${grassX.toFixed(1)}" y1="${FT}" x2="${(gFar + EZ).toFixed(1)}" y2="${FT}" class="wf-side"/><line x1="${grassX.toFixed(1)}" y1="${FB}" x2="${(gFar + EZ).toFixed(1)}" y2="${FB}" class="wf-side"/><line x1="${grassX.toFixed(1)}" y1="${FT}" x2="${grassX.toFixed(1)}" y2="${FB}" class="wf-endline"/><line x1="${(gFar + EZ).toFixed(1)}" y1="${FT}" x2="${(gFar + EZ).toFixed(1)}" y2="${FB}" class="wf-endline"/>`;
+      lines += `<line x1="${grassX.toFixed(1)}" y1="${FT}" x2="${(gRight + EZ).toFixed(1)}" y2="${FT}" class="wf-side"/><line x1="${grassX.toFixed(1)}" y1="${FB}" x2="${(gRight + EZ).toFixed(1)}" y2="${FB}" class="wf-side"/><line x1="${grassX.toFixed(1)}" y1="${FT}" x2="${grassX.toFixed(1)}" y2="${FB}" class="wf-endline"/><line x1="${(gRight + EZ).toFixed(1)}" y1="${FT}" x2="${(gRight + EZ).toFixed(1)}" y2="${FB}" class="wf-endline"/>`;
       const hashFar = watchSideY(31.4), hashNear = watchSideY(66.6);
       for (let abs = 0; abs <= 100; abs++) {
         const x = xOf(abs);
@@ -56057,22 +56518,23 @@ ${renderAutoRecruitLog()}`;
       }
       if (p.down && p.distance != null && fp + p.distance <= 100) {
         const firstX = xOf(fp + p.distance);
-        lines += `<line x1="${firstX.toFixed(1)}" y1="${FT}" x2="${firstX.toFixed(1)}" y2="${FB}" class="wf-first"/>`;
+        lines += `<line x1="${firstX.toFixed(1)}" y1="${FT}" x2="${firstX.toFixed(1)}" y2="${FB}" class="wf-first" data-wf-first="${(fp + p.distance).toFixed(1)}"/>`;
         lines += `<g transform="translate(${firstX.toFixed(1)},${(FB + 1.6).toFixed(1)})"><rect x="-0.5" y="0" width="1.0" height="3.2" class="wf-crew"/><circle cx="0" cy="-1.05" r="1.1" class="wf-chain-disc"/></g>`;
       }
       const sy = FB + 1.6;
       if (p.down) {
         lines += `<g transform="translate(31,${sy.toFixed(1)})"><rect x="-1.1" y="0" width="2.2" height="3.2" class="wf-crew"/><rect x="-1.7" y="-3.5" width="3.4" height="3.6" class="wf-downbox-card"/><text x="0" y="-0.75" class="wf-downbox-num">${p.down}</text></g>`;
       }
-      const bench = (absA, fill) => {
+      const bench = (screenA, fill) => {
         let s = "";
         for (let i = 0; i < 7; i++) {
-          const bx2 = xOf(absA + i * 2.6), lift = i % 3 * 0.22;
+          const bx2 = screenA + i * 2.6 * WATCH_SIDE.ypu * WATCH_SIDE.longitudinal, lift = i % 3 * 0.22;
           s += `<rect x="${(bx2 - 0.55).toFixed(1)}" y="${(sy + 0.5 - lift).toFixed(2)}" width="1.1" height="1.7" class="wf-bench-man" fill="${fill}"/>`;
         }
         return s;
       };
-      under += bench(22, homeC || "#8a94a8") + bench(60, awayC || "#8a94a8");
+      const yardScale = WATCH_SIDE.ypu * WATCH_SIDE.longitudinal;
+      under += bench(gLeft + 22 * yardScale, homeC || "#8a94a8") + bench(gLeft + 60 * yardScale, awayC || "#8a94a8");
     } else {
       under += `<rect x="${X_LEFT}" y="${FT}" width="${X_RIGHT - X_LEFT}" height="${FH}" class="wf-turf"/>`;
       for (let x = X_LEFT; x < X_RIGHT; x += 14) under += `<rect x="${x}" y="${FT}" width="7" height="${FH}" class="wf-mow"/>`;
@@ -56080,7 +56542,8 @@ ${renderAutoRecruitLog()}`;
       for (let x = X_LEFT; x <= X_RIGHT; x += 11.475) lines += `<line x1="${x.toFixed(1)}" y1="${FT}" x2="${x.toFixed(1)}" y2="${FB}" class="wf-yard"/>`;
       lines += `<line x1="${X_LEFT}" y1="${FT}" x2="${X_RIGHT}" y2="${FT}" class="wf-side"/><line x1="${X_LEFT}" y1="${FB}" x2="${X_RIGHT}" y2="${FB}" class="wf-side"/>`;
     }
-    return defs + under + lines + `<line x1="31" y1="${FT}" x2="31" y2="${FB}" class="wf-los"/>`;
+    const dirPath = _watchSideDir > 0 ? "M-2.3 0H2.3M.8-1.35L2.4 0 .8 1.35" : "M2.3 0H-2.3M-.8-1.35L-2.4 0-.8 1.35";
+    return defs + under + lines + `<line x1="31" y1="${FT}" x2="31" y2="${FB}" class="wf-los" data-wf-los="${fp == null ? "" : fp}"/><g class="wf-drive-direction" data-wf-direction="${_watchSideDir > 0 ? "right" : "left"}" transform="translate(31 ${(FT + 2.25).toFixed(1)})"><path d="${dirPath}"/></g>`;
   }
   function watchTick(immediate = false) {
     const w = _watch;
@@ -56203,6 +56666,7 @@ ${renderAutoRecruitLog()}`;
           watchEventFlash(p.turnover ? p.turnoverType === "interception" ? "PICK SIX" : "DEFENSIVE TD" : "TOUCHDOWN", "touchdown", 1450, w.speed);
           stadiumReact("touchdown");
         } else if (p.turnover) {
+          watchBugPossession(item.d.possession === "home" ? "away" : "home");
           watchEventFlash(p.turnoverType === "interception" ? "INTERCEPTED" : "FUMBLE!", "turnover", 1250, w.speed);
           stadiumReact("turnover");
         } else if (p.type === "fg" && p.made) {
@@ -56217,6 +56681,9 @@ ${renderAutoRecruitLog()}`;
         } else if (p.down >= 3 && p.distance != null && (p.yards || 0) >= p.distance) {
           watchEventFlash("FIRST DOWN", "firstdown", 760, w.speed);
           stadiumReact("firstdown");
+        }
+        if (p.type === "punt" && !p.stFake || p.type === "fg" && !p.made) {
+          watchBugPossession(item.d.possession === "home" ? "away" : "home");
         }
       };
       if (w.revealTimer) {
