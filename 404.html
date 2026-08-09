@@ -8100,6 +8100,120 @@ body *::after {
 @keyframes wsp-m12-ball-rake { 0% { transform:translate(.2px,.18px) rotate(22deg); } 58% { transform:translate(-.28px,-.34px) rotate(-35deg) scaleX(1.08); } 100% { transform:translate(-.08px,.04px) rotate(-10deg); } }
 @keyframes wsp-m12-hands-displaced { 0% { transform:translateY(-.1px) rotate(-5deg); } 58% { transform:translate(.3px,.18px) rotate(28deg); } 100% { transform:translate(.16px,.08px) rotate(12deg); } }
 
+/* Milestone 13: quarterback mechanics. watchphys labels the exact snap, mesh,
+   drop, set, pressure, release and follow-through windows already used by the
+   QB track. The poses below add mechanics without changing a footstep or throw. */
+.wp-qb-mechanics.wp-qb-snap .wsp-pose-idle,
+.wp-qb-mechanics.wp-qb-mesh .wsp-pose-idle,
+.wp-qb-mechanics.wp-qb-drop .wsp-pose-idle,
+.wp-qb-mechanics.wp-qb-hitch .wsp-pose-idle,
+.wp-qb-mechanics.wp-qb-reset .wsp-pose-idle { display:none !important; }
+.wp-qb-mechanics.wp-qb-snap .wsp-pose-carry,
+.wp-qb-mechanics.wp-qb-mesh .wsp-pose-carry,
+.wp-qb-mechanics.wp-qb-drop .wsp-pose-carry,
+.wp-qb-mechanics.wp-qb-hitch .wsp-pose-carry,
+.wp-qb-mechanics.wp-qb-reset .wsp-pose-carry { display:block !important; }
+.wp-qb-mechanics.wp-qb-follow .wsp-pose-run,
+.wp-qb-mechanics.wp-qb-follow .wsp-pose-carry,
+.wp-qb-mechanics.wp-qb-follow .wsp-pose-idle,
+.wp-qb-mechanics.wp-qb-follow .wsp-pose-block { display:none !important; }
+.wp-qb-mechanics.wp-qb-follow .wsp-pose-throw { display:block !important; }
+
+#watch-board.watch-qb-mechanics .wp-qb-snap .wsp-shell { animation:wsp-m13-snap-secure .22s cubic-bezier(.2,.8,.3,1) both !important; }
+#watch-board.watch-qb-mechanics .wp-qb-mesh .wsp-shell { animation:wsp-m13-mesh .3s cubic-bezier(.2,.78,.32,1) both !important; }
+#watch-board.watch-qb-mechanics .wp-qb-drop.wp-qb-quick .wsp-shell { animation:wsp-m13-drop-quick .26s steps(2,end) infinite !important; }
+#watch-board.watch-qb-mechanics .wp-qb-drop.wp-qb-three .wsp-shell { animation:wsp-m13-drop-three .4s steps(3,end) infinite !important; }
+#watch-board.watch-qb-mechanics .wp-qb-drop.wp-qb-five .wsp-shell { animation:wsp-m13-drop-five .54s steps(5,end) infinite !important; }
+#watch-board.watch-qb-mechanics .wp-qb-hitch .wsp-shell { animation:wsp-m13-hitch .34s cubic-bezier(.2,.82,.3,1) both !important; }
+#watch-board.watch-qb-mechanics .wp-qb-reset .wsp-shell { animation:wsp-m13-reset .3s steps(2,end) infinite !important; }
+#watch-board.watch-qb-mechanics .wp-qb-load .wsp-shell { animation:wsp-m13-load .22s cubic-bezier(.2,.8,.3,1) both !important; }
+#watch-board.watch-qb-mechanics .wp-qb-follow .wsp-shell { animation:wsp-m13-follow .42s cubic-bezier(.18,.76,.32,1) both !important; }
+@keyframes wsp-m13-snap-secure { 0% { transform:translateY(.12px) scaleY(.94); } 58% { transform:translateY(-.06px) rotate(-3deg) scaleY(1.01); } 100% { transform:translateY(.02px) rotate(0); } }
+@keyframes wsp-m13-mesh { 0% { transform:translate(.08px,.02px) rotate(2deg); } 55% { transform:translate(-.32px,.08px) rotate(-9deg) scaleY(.94); } 100% { transform:translate(-.12px,.02px) rotate(-3deg); } }
+@keyframes wsp-m13-drop-quick { 0%,100% { transform:translateY(.06px) rotate(-2deg) scaleY(.95); } 50% { transform:translateY(.14px) rotate(2deg) scale(1.02,.91); } }
+@keyframes wsp-m13-drop-three { 0% { transform:translateY(.04px) rotate(-3deg); } 50% { transform:translateY(.16px) rotate(3deg) scaleY(.91); } 100% { transform:translateY(.08px) rotate(-1deg) scaleY(.95); } }
+@keyframes wsp-m13-drop-five { 0% { transform:translateY(.02px) rotate(-4deg); } 40% { transform:translateY(.18px) rotate(3deg) scaleY(.9); } 70% { transform:translateY(.1px) rotate(-3deg) scaleY(.94); } 100% { transform:translateY(.16px) rotate(2deg) scaleY(.91); } }
+@keyframes wsp-m13-hitch { 0% { transform:translateY(.1px) scaleY(.94); } 58% { transform:translateY(-.16px) rotate(3deg) scaleY(1.02); } 100% { transform:translateY(-.04px) rotate(1deg); } }
+@keyframes wsp-m13-reset { 0%,100% { transform:translate(-.16px,.1px) rotate(-5deg) scaleY(.92); } 50% { transform:translate(.18px,.12px) rotate(5deg) scaleY(.9); } }
+@keyframes wsp-m13-load { 0% { transform:translateY(.06px) rotate(0); } 65% { transform:translate(-.12px,.12px) rotate(-8deg) scaleY(.92); } 100% { transform:translate(-.05px,.04px) rotate(-3deg); } }
+@keyframes wsp-m13-follow { 0% { transform:translate(-.05px,.04px) rotate(-3deg); } 55% { transform:translate(.34px,-.08px) rotate(13deg) scaleX(1.04); } 100% { transform:translate(.16px,.06px) rotate(6deg) scaleY(.96); } }
+
+/* Distinct feet make quick, three- and five-step drops readable even at game
+   scale. The hitch replaces the retreat cadence with a balanced forward plant. */
+#watch-board .wp-qb-drop.wp-qb-quick .wsp-sd-thigh-f { animation:wsp-m13-foot-quick-f .26s steps(2,end) infinite !important; }
+#watch-board .wp-qb-drop.wp-qb-quick .wsp-sd-thigh-b { animation:wsp-m13-foot-quick-b .26s steps(2,end) infinite !important; }
+#watch-board .wp-qb-drop.wp-qb-three .wsp-sd-thigh-f { animation:wsp-m13-foot-three-f .4s steps(3,end) infinite !important; }
+#watch-board .wp-qb-drop.wp-qb-three .wsp-sd-thigh-b { animation:wsp-m13-foot-three-b .4s steps(3,end) infinite !important; }
+#watch-board .wp-qb-drop.wp-qb-five .wsp-sd-thigh-f { animation:wsp-m13-foot-five-f .54s steps(5,end) infinite !important; }
+#watch-board .wp-qb-drop.wp-qb-five .wsp-sd-thigh-b { animation:wsp-m13-foot-five-b .54s steps(5,end) infinite !important; }
+#watch-board .wp-qb-hitch .wsp-sd-thigh-f { animation:wsp-m13-foot-hitch-f .34s ease-out both !important; }
+#watch-board .wp-qb-hitch .wsp-sd-thigh-b { animation:wsp-m13-foot-hitch-b .34s ease-out both !important; }
+@keyframes wsp-m13-foot-quick-f { 0%,100% { transform:rotate(-10deg); } 50% { transform:rotate(16deg) translateY(.08px); } }
+@keyframes wsp-m13-foot-quick-b { 0%,100% { transform:rotate(14deg); } 50% { transform:rotate(-12deg) translateY(.04px); } }
+@keyframes wsp-m13-foot-three-f { 0% { transform:rotate(-15deg); } 50% { transform:rotate(22deg); } 100% { transform:rotate(-6deg); } }
+@keyframes wsp-m13-foot-three-b { 0% { transform:rotate(18deg); } 50% { transform:rotate(-20deg); } 100% { transform:rotate(8deg); } }
+@keyframes wsp-m13-foot-five-f { 0% { transform:rotate(-18deg); } 40% { transform:rotate(26deg); } 70% { transform:rotate(-14deg); } 100% { transform:rotate(18deg); } }
+@keyframes wsp-m13-foot-five-b { 0% { transform:rotate(20deg); } 40% { transform:rotate(-24deg); } 70% { transform:rotate(16deg); } 100% { transform:rotate(-18deg); } }
+@keyframes wsp-m13-foot-hitch-f { 0% { transform:rotate(-14deg); } 65% { transform:rotate(28deg) translateY(.1px); } 100% { transform:rotate(10deg); } }
+@keyframes wsp-m13-foot-hitch-b { 0% { transform:rotate(16deg); } 65% { transform:rotate(-24deg) translateY(.08px); } 100% { transform:rotate(-8deg); } }
+
+/* Ball handling progresses from two-hand security through the mesh, into the
+   load and finally a full throwing-arm finish. */
+#watch-board .wp-qb-snap .wsp-carry-arm-l,#watch-board .wp-qb-snap .wsp-carry-arm-r,#watch-board .wp-qb-snap .wsp-sd-carry-arm { animation:wsp-m13-two-hands .22s ease-out both !important; }
+#watch-board .wp-qb-mesh .wsp-carry-arm-l,#watch-board .wp-qb-mesh .wsp-sd-carry-arm { animation:wsp-m13-mesh-ball .3s ease-out both !important; }
+#watch-board .wp-qb-load .wsp-throw-arm,#watch-board .wp-qb-load .wsp-sd-throw-arm { animation:wsp-m13-arm-load .22s ease-out both !important; }
+#watch-board .wp-qb-follow .wsp-throw-arm,#watch-board .wp-qb-follow .wsp-sd-throw-arm { animation:wsp-m13-arm-follow .42s cubic-bezier(.18,.76,.3,1) both !important; }
+#watch-board .wp-qb-follow .wsp-throw-guide,#watch-board .wp-qb-follow .wsp-sd-guide-arm { animation:wsp-m13-guide-finish .42s ease-out both !important; }
+@keyframes wsp-m13-two-hands { 0% { transform:translateY(.16px) rotate(10deg); } 100% { transform:translateY(-.08px) rotate(-4deg); } }
+@keyframes wsp-m13-mesh-ball { 0% { transform:translate(0,-.06px) rotate(-3deg); } 58% { transform:translate(-.32px,.08px) rotate(12deg); } 100% { transform:translate(-.14px,.02px) rotate(4deg); } }
+@keyframes wsp-m13-arm-load { 0% { transform:rotate(-8deg); } 100% { transform:rotate(-38deg) translate(-.12px,-.12px); } }
+@keyframes wsp-m13-arm-follow { 0% { transform:rotate(-38deg) translate(-.12px,-.12px); } 58% { transform:rotate(52deg) translate(.16px,.02px); } 100% { transform:rotate(74deg) translate(-.06px,.24px); } }
+@keyframes wsp-m13-guide-finish { 0% { transform:rotate(-5deg) translateY(-.06px); } 62% { transform:rotate(16deg) translate(.1px,.08px); } 100% { transform:rotate(9deg) translateY(.12px); } }
+
+/* Milestone 14: pursuit and tackle setup. The existing tackle cue owns the
+   hitter, carrier, assist, impact side, style and spot; these poses simply make
+   the final six-tenths of a second read like coached open-field tackling. */
+#watch-board.watch-in-play .wp-tk-pursuit.wp-tk-leverage-left .wsp-shell { animation:wsp-m14-pursuit-left .3s ease-in-out infinite !important; }
+#watch-board.watch-in-play .wp-tk-pursuit.wp-tk-leverage-right .wsp-shell { animation:wsp-m14-pursuit-right .3s ease-in-out infinite !important; }
+#watch-board.watch-in-play .wp-tk-breakdown.wp-tk-leverage-left .wsp-shell { animation:wsp-m14-breakdown-left .34s steps(3,end) both !important; }
+#watch-board.watch-in-play .wp-tk-breakdown.wp-tk-leverage-right .wsp-shell { animation:wsp-m14-breakdown-right .34s steps(3,end) both !important; }
+#watch-board.watch-in-play .wp-tk-assist-lane.wp-tk-leverage-left .wsp-shell { animation:wsp-m14-assist-left .38s ease-in-out infinite !important; }
+#watch-board.watch-in-play .wp-tk-assist-lane.wp-tk-leverage-right .wsp-shell { animation:wsp-m14-assist-right .38s ease-in-out infinite !important; }
+@keyframes wsp-m14-pursuit-left { 0%,100% { transform:translate(-.06px,0) rotate(-3deg); } 50% { transform:translate(.14px,-.08px) rotate(5deg) scaleY(1.01); } }
+@keyframes wsp-m14-pursuit-right { 0%,100% { transform:translate(.06px,0) rotate(3deg); } 50% { transform:translate(-.14px,-.08px) rotate(-5deg) scaleY(1.01); } }
+@keyframes wsp-m14-breakdown-left { 0% { transform:translateY(.02px) rotate(-3deg); } 55% { transform:translate(-.2px,.18px) rotate(-8deg) scale(1.06,.86); } 100% { transform:translate(-.08px,.12px) rotate(-4deg) scale(1.03,.9); } }
+@keyframes wsp-m14-breakdown-right { 0% { transform:translateY(.02px) rotate(3deg); } 55% { transform:translate(.2px,.18px) rotate(8deg) scale(1.06,.86); } 100% { transform:translate(.08px,.12px) rotate(4deg) scale(1.03,.9); } }
+@keyframes wsp-m14-assist-left { 0%,100% { transform:translate(-.08px,.02px) rotate(-5deg); } 50% { transform:translate(.18px,-.1px) rotate(6deg); } }
+@keyframes wsp-m14-assist-right { 0%,100% { transform:translate(.08px,.02px) rotate(5deg); } 50% { transform:translate(-.18px,-.1px) rotate(-6deg); } }
+
+/* Breakdown feet shorten from pursuit stride into a square, balanced base. */
+#watch-board .wp-tk-breakdown .wsp-sd-thigh-f { animation:wsp-m14-chop-front .24s steps(2,end) infinite !important; }
+#watch-board .wp-tk-breakdown .wsp-sd-thigh-b { animation:wsp-m14-chop-back .24s steps(2,end) infinite !important; }
+#watch-board .wp-tk-breakdown .wsp-run-arm-l { animation:wsp-m14-ready-left .24s ease-in-out infinite !important; }
+#watch-board .wp-tk-breakdown .wsp-run-arm-r { animation:wsp-m14-ready-right .24s ease-in-out infinite !important; }
+#watch-board .wp-tk-breakdown .wsp-sd-uarm-f { animation:wsp-m14-ready-side .24s ease-in-out infinite !important; }
+@keyframes wsp-m14-chop-front { 0%,100% { transform:rotate(-8deg) translateY(.08px); } 50% { transform:rotate(12deg) translateY(.14px); } }
+@keyframes wsp-m14-chop-back { 0%,100% { transform:rotate(10deg) translateY(.12px); } 50% { transform:rotate(-10deg) translateY(.08px); } }
+@keyframes wsp-m14-ready-left { 0%,100% { transform:rotate(-7deg) translate(.08px,-.02px); } 50% { transform:rotate(8deg) translate(.16px,-.12px); } }
+@keyframes wsp-m14-ready-right { 0%,100% { transform:rotate(7deg) translate(-.08px,-.02px); } 50% { transform:rotate(-8deg) translate(-.16px,-.12px); } }
+@keyframes wsp-m14-ready-side { 0%,100% { transform:rotate(-5deg); } 50% { transform:rotate(10deg) translateY(-.1px); } }
+
+/* The carrier sees the leverage, clamps the ball and lowers the near shoulder
+   before the existing hit and down animations take over. */
+.wp-carrier-brace .wsp-pose-run,.wp-carrier-brace .wsp-pose-idle,.wp-carrier-brace .wsp-pose-block { display:none !important; }
+.wp-carrier-brace .wsp-pose-carry { display:block !important; }
+#watch-board.watch-in-play .wp-carrier-brace.wp-carrier-brace-left .wsp-shell { animation:wsp-m14-brace-left .32s cubic-bezier(.2,.8,.3,1) both !important; }
+#watch-board.watch-in-play .wp-carrier-brace.wp-carrier-brace-right .wsp-shell { animation:wsp-m14-brace-right .32s cubic-bezier(.2,.8,.3,1) both !important; }
+#watch-board .wp-carrier-secure .wsp-carry-arm-l { animation:wsp-m14-clamp-left .32s ease-out both !important; }
+#watch-board .wp-carrier-secure .wsp-carry-arm-r { animation:wsp-m14-clamp-right .32s ease-out both !important; }
+#watch-board .wp-carrier-secure .wsp-sd-carry-arm { animation:wsp-m14-clamp-side .32s ease-out both !important; }
+.wp-carrier-brace .wsp-shadow { fill:rgba(0,0,0,.42); transform:scaleX(1.12); }
+@keyframes wsp-m14-brace-left { 0% { transform:translateY(0) rotate(0); } 60% { transform:translate(-.22px,.14px) rotate(-9deg) scale(1.04,.88); } 100% { transform:translate(-.1px,.08px) rotate(-4deg) scaleY(.93); } }
+@keyframes wsp-m14-brace-right { 0% { transform:translateY(0) rotate(0); } 60% { transform:translate(.22px,.14px) rotate(9deg) scale(1.04,.88); } 100% { transform:translate(.1px,.08px) rotate(4deg) scaleY(.93); } }
+@keyframes wsp-m14-clamp-left { 0% { transform:rotate(-3deg); } 100% { transform:translate(.16px,-.08px) rotate(10deg); } }
+@keyframes wsp-m14-clamp-right { 0% { transform:rotate(3deg); } 100% { transform:translate(-.16px,-.08px) rotate(-10deg); } }
+@keyframes wsp-m14-clamp-side { 0% { transform:rotate(-2deg); } 100% { transform:translate(.1px,-.12px) rotate(8deg); } }
+
   </style>
 </head>
 <body>
@@ -8109,7 +8223,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "39bba9582e";
+globalThis.__BUILD__ = "59468641df";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -50113,7 +50227,7 @@ ${renderAutoRecruitLog()}`;
     let tackleCue = null, moveCue = null;
     const rushCues = [], jamCues = [];
     const routeCues = [], coverageCues = [];
-    let pressCue = null, pumpCue = null, celebrateCue = null;
+    let pressCue = null, pumpCue = null, celebrateCue = null, qbCue = null;
     let _penWhistle = null;
     const missCues = [];
     const pickMove = () => {
@@ -50411,6 +50525,20 @@ ${renderAutoRecruitLog()}`;
       const _setT = _dropStart + _dropDur;
       const _plantT = Math.max(_setT, throwAt - 0.16);
       const _bpSp = _quickSet ? 6.6 : 5.6;
+      qbCue = {
+        family: p.playAction ? "playaction" : _quickSet ? "quick" : t === "pass_deep" ? "five" : "three",
+        hurried: !!p.hurried,
+        start: PRESNAP,
+        secureEnd: SNAP_END,
+        meshEnd: _dropStart,
+        dropStart: _dropStart,
+        setStart: _setT,
+        plantStart: _plantT,
+        releaseStart: throwCue.start,
+        release: throwAt,
+        releaseEnd: throwCue.end,
+        followEnd: Math.min(tCatch, throwAt + 0.48)
+      };
       A.QB.behave = (t2) => {
         if (t2 < PRESNAP) return null;
         if (t2 < SNAP_END) return [qbSlot.bx, qbSlot.by, 3];
@@ -51116,6 +51244,7 @@ ${renderAutoRecruitLog()}`;
       coverageCues,
       pressCue,
       pumpCue,
+      qbCue,
       celebrateCue,
       missCues,
       culpritCue: typeof culpritCue !== "undefined" ? culpritCue : null,
@@ -54728,7 +54857,7 @@ ${renderAutoRecruitLog()}`;
     const svg = document.getElementById("watch-board");
     if (!svg) return null;
     watchStopAnim();
-    svg.classList.remove("watch-presnap", "watch-snap-release", "watch-pass-pocket", "watch-route-live");
+    svg.classList.remove("watch-presnap", "watch-snap-release", "watch-pass-pocket", "watch-route-live", "watch-qb-mechanics");
     svg.classList.toggle("watch-replay", !!opts.replay);
     const cameraBug = document.getElementById("watch-camera-bug");
     const replayBug = document.getElementById("watch-replay-bug");
@@ -54846,6 +54975,10 @@ ${renderAutoRecruitLog()}`;
         cls: "wp-tk-" + tc.style,
         style: tc.style,
         sack: !!tc.sack,
+        approachStart: tc.t - (tc.sack ? 0.34 : 0.62),
+        breakdownStart: tc.t - (tc.sack ? 0.2 : 0.34),
+        braceStart: tc.t - (tc.sack ? 0.14 : 0.32),
+        assistStart: tc.t - 0.48,
         start: tc.t - (tc.sack ? 0.14 : 0.24),
         impact: tc.t,
         end: tc.t + 0.34,
@@ -54872,6 +55005,7 @@ ${renderAutoRecruitLog()}`;
     const coverageCues = script.coverageCues || [];
     const pressCue = script.pressCue || null;
     const pumpCue = script.pumpCue || null;
+    const qbCue = script.qbCue || null;
     const celebrateCue = script.celebrateCue ? { id: script.celebrateCue.id, start: script.celebrateCue.t, end: script.dur } : null;
     let beatenCue = null;
     {
@@ -54932,6 +55066,31 @@ ${renderAutoRecruitLog()}`;
       "wp-catchpoint-secure",
       "wp-catchpoint-breakup"
     ];
+    const qbMechanicCls = [
+      "wp-qb-mechanics",
+      "wp-qb-quick",
+      "wp-qb-three",
+      "wp-qb-five",
+      "wp-qb-playaction",
+      "wp-qb-snap",
+      "wp-qb-mesh",
+      "wp-qb-drop",
+      "wp-qb-hitch",
+      "wp-qb-reset",
+      "wp-qb-load",
+      "wp-qb-follow"
+    ];
+    const tackleSetupCls = [
+      "wp-tk-pursuit",
+      "wp-tk-breakdown",
+      "wp-tk-leverage-left",
+      "wp-tk-leverage-right",
+      "wp-tk-assist-lane",
+      "wp-carrier-brace",
+      "wp-carrier-secure",
+      "wp-carrier-brace-left",
+      "wp-carrier-brace-right"
+    ];
     const liftN = ballN == null ? void 0 : ballN.querySelector(".wab-lift");
     let flightArc = null;
     if (script.throwCue && catchT != null && catchT > script.throwCue.release) {
@@ -54974,6 +55133,7 @@ ${renderAutoRecruitLog()}`;
       svg.classList.toggle("watch-in-play", playOn);
       svg.classList.toggle("watch-pass-pocket", pocketOn);
       svg.classList.toggle("watch-route-live", routeCues.length > 0 && playOn && (catchT == null || t <= catchT + 0.08));
+      svg.classList.toggle("watch-qb-mechanics", !!qbCue && t >= qbCue.start && t <= qbCue.followEnd);
       const actorPts = {};
       for (const a of script.actors) {
         const [wx, wy] = sampleTrack(a.track, script.step, t);
@@ -54994,7 +55154,7 @@ ${renderAutoRecruitLog()}`;
           }
         }
       }
-      Object.values(nodes).forEach((node) => node.classList.remove("wp-near-ball", "wp-blocking", "wp-blocked", ...repCls, ...contactCls, ...passSetCls, ...downfieldCls));
+      Object.values(nodes).forEach((node) => node.classList.remove("wp-near-ball", "wp-blocking", "wp-blocked", ...repCls, ...contactCls, ...passSetCls, ...downfieldCls, ...qbMechanicCls, ...tackleSetupCls));
       if (pocketOn) (_a2 = nodes.QB) == null ? void 0 : _a2.classList.add("wp-pocket-qb");
       if (t > script.presnap && cd < 4.4 && carrierId) (_a2 = nodes[carrierId]) == null ? void 0 : _a2.classList.add("wp-near-ball");
       const throwCue = script.throwCue;
@@ -55002,6 +55162,18 @@ ${renderAutoRecruitLog()}`;
       const pumpOn = !!pumpCue && t >= pumpCue.start && t <= pumpCue.end;
       (_b2 = nodes.QB) == null ? void 0 : _b2.classList.toggle("wp-throwing", throwOn || pumpOn);
       (_c2 = nodes.QB) == null ? void 0 : _c2.classList.toggle("wp-pressed", !!pressCue && !throwOn && t >= pressCue.start && t <= pressCue.end);
+      if (qbCue && t >= qbCue.start && t <= qbCue.followEnd) {
+        const qbNode = nodes.QB;
+        if (qbNode) {
+          qbNode.classList.add("wp-qb-mechanics", "wp-qb-" + qbCue.family);
+          if (t <= qbCue.secureEnd) qbNode.classList.add("wp-qb-snap");
+          else if (qbCue.family === "playaction" && t < qbCue.meshEnd) qbNode.classList.add("wp-qb-mesh");
+          else if (t < qbCue.setStart) qbNode.classList.add("wp-qb-drop");
+          else if (t < qbCue.releaseStart) qbNode.classList.add(qbCue.hurried ? "wp-qb-reset" : "wp-qb-hitch");
+          else if (t < qbCue.release) qbNode.classList.add("wp-qb-load");
+          else qbNode.classList.add("wp-qb-follow");
+        }
+      }
       ballN == null ? void 0 : ballN.classList.toggle("wp-ball-air", !!throwCue && catchT != null && t >= throwCue.release && t < catchT);
       ballN == null ? void 0 : ballN.classList.toggle("wp-ball-loose", !!looseFx && t >= looseFx.t && t <= looseFx.t + 0.38);
       if (liftN) {
@@ -55075,11 +55247,18 @@ ${renderAutoRecruitLog()}`;
         const arrival = t >= tackleCue.impact - 0.1 && t <= tackleCue.impact + 0.16;
         const carrierHit = t >= tackleCue.impact - 0.04 && t <= tackleCue.finish;
         const carrierDown = t >= tackleCue.impact + 0.18 && t <= tackleCue.finish;
+        const pursuit = t >= tackleCue.approachStart && t < tackleCue.breakdownStart;
+        const breakdown = t >= tackleCue.breakdownStart && t < tackleCue.start;
+        const brace = t >= tackleCue.braceStart && t < tackleCue.impact;
         const tacklerPt = actorPts[tackleCue.id];
         const carrierPt = actorPts[tackleCue.carrierId];
         const fromLeft = !!tacklerPt && !!carrierPt && tacklerPt[0] < carrierPt[0];
         const tnode = nodes[tackleCue.id];
         if (tnode) {
+          tnode.classList.toggle("wp-tk-pursuit", pursuit);
+          tnode.classList.toggle("wp-tk-breakdown", breakdown);
+          tnode.classList.toggle("wp-tk-leverage-left", (pursuit || breakdown) && fromLeft);
+          tnode.classList.toggle("wp-tk-leverage-right", (pursuit || breakdown) && !fromLeft);
           tnode.classList.toggle("wp-tackling", on);
           tnode.classList.toggle(tackleCue.cls, on || finish);
           tnode.classList.toggle("wp-tk-assisted", !!tackleCue.assistId && (on || finish));
@@ -55092,6 +55271,9 @@ ${renderAutoRecruitLog()}`;
         if (tackleCue.assistId) {
           const anode = nodes[tackleCue.assistId];
           if (anode) {
+            anode.classList.toggle("wp-tk-assist-lane", t >= tackleCue.assistStart && t < tackleCue.start);
+            anode.classList.toggle("wp-tk-leverage-left", t >= tackleCue.assistStart && t < tackleCue.start && fromLeft);
+            anode.classList.toggle("wp-tk-leverage-right", t >= tackleCue.assistStart && t < tackleCue.start && !fromLeft);
             anode.classList.toggle("wp-tackling", on);
             anode.classList.toggle("wp-tk-gang", on || finish);
             anode.classList.toggle("wp-tk-assist", on || finish);
@@ -55102,6 +55284,10 @@ ${renderAutoRecruitLog()}`;
         }
         const vnode = nodes[tackleCue.carrierId];
         if (vnode) {
+          vnode.classList.toggle("wp-carrier-brace", brace);
+          vnode.classList.toggle("wp-carrier-secure", brace);
+          vnode.classList.toggle("wp-carrier-brace-left", brace && fromLeft);
+          vnode.classList.toggle("wp-carrier-brace-right", brace && !fromLeft);
           vnode.classList.toggle("wp-hit-" + tackleCue.style, carrierHit);
           vnode.classList.toggle("wp-contact-arrival", arrival);
           vnode.classList.toggle("wp-contact-carrier", arrival);
