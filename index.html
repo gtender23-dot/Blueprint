@@ -7772,6 +7772,89 @@ body *::after {
   color: var(--muted, #9c92b4);
 }
 
+/* Milestone 9: contact is a football sequence, not a looping collision icon.
+   app.js derives strike, drive and late-strain windows from each recorded block
+   and a short arrival window from the recorded tackle impact. These transforms
+   never change tracks, timing, winners or the spot. */
+.wp-block-link-space { opacity:.48; stroke-width:.46; stroke-dasharray:.8 .85; }
+.wp-block-link-tight { opacity:.14; stroke-width:.32; stroke-dasharray:none; animation:none; }
+.wp-engage-pads,.wp-engage-core { transform-box:fill-box; transform-origin:center; }
+.wp-engage-strike .wp-engage-pads { animation:wp-m9-pad-strike .2s cubic-bezier(.2,.82,.3,1) both; }
+.wp-engage-strike .wp-engage-core { animation:wp-m9-core-strike .2s ease-out both; }
+.wp-engage-drive .wp-engage-pads { animation:wp-m9-pad-drive .34s steps(2,end) infinite; }
+.wp-engage-drive .wp-engage-core { animation:wp-m9-core-drive .34s steps(2,end) infinite; }
+.wp-engage-strain .wp-engage-pads { animation:wp-m9-pad-strain .46s ease-in-out infinite; }
+.wp-engage-strain .wp-engage-core { animation:wp-m9-core-strain .46s ease-in-out infinite; }
+.wp-engage-tight .wp-engage-shadow { rx:1.15; opacity:.72; }
+.wp-engage-space .wp-engage-pads { opacity:.62; }
+.wp-engage-rep-reach .wp-engage-pads,
+.wp-engage-rep-pull .wp-engage-pads,
+.wp-engage-rep-trap .wp-engage-pads,
+.wp-engage-rep-climb .wp-engage-pads { stroke:var(--px-yellow,#ffd34d); }
+@keyframes wp-m9-pad-strike { 0% { opacity:.3; transform:scaleX(1.42); } 58% { opacity:1; transform:scaleX(.72); } 100% { opacity:.84; transform:scaleX(.92); } }
+@keyframes wp-m9-core-strike { 0% { opacity:0; transform:scale(.3); } 52% { opacity:1; transform:scale(1.65); } 100% { opacity:.65; transform:scale(.9); } }
+@keyframes wp-m9-pad-drive { 0%,100% { transform:translateX(-.08px) scaleX(.9); } 50% { transform:translateX(.08px) scaleX(1.02); } }
+@keyframes wp-m9-core-drive { 0%,100% { opacity:.42; } 50% { opacity:.78; } }
+@keyframes wp-m9-pad-strain { 0%,100% { transform:rotate(-4deg) scaleX(.9); } 50% { transform:rotate(5deg) scaleX(1.03); } }
+@keyframes wp-m9-core-strain { 0%,100% { opacity:.28; transform:scale(.72); } 50% { opacity:.58; transform:scale(.96); } }
+
+/* Blocker and defender carry different pad level, hand use and leverage. Cut
+   blocks keep their existing low-body art. */
+#watch-board.watch-in-play .wp-contact-off.wp-contact-strike:not(.wp-rep-cut) .wsp-shell { animation:wsp-m9-off-strike .2s cubic-bezier(.18,.82,.28,1) both !important; }
+#watch-board.watch-in-play .wp-contact-def.wp-contact-strike:not(.wp-rep-cut) .wsp-shell { animation:wsp-m9-def-strike .2s cubic-bezier(.18,.82,.28,1) both !important; }
+#watch-board.watch-in-play .wp-contact-off.wp-contact-drive:not(.wp-rep-cut) .wsp-shell { animation:wsp-m9-off-drive .34s steps(2,end) infinite !important; }
+#watch-board.watch-in-play .wp-contact-def.wp-contact-drive:not(.wp-rep-cut) .wsp-shell { animation:wsp-m9-def-anchor .34s steps(2,end) infinite !important; }
+#watch-board.watch-in-play .wp-contact-off.wp-contact-strain:not(.wp-rep-cut) .wsp-shell { animation:wsp-m9-off-refit .46s ease-in-out infinite !important; }
+#watch-board.watch-in-play .wp-contact-def.wp-contact-strain:not(.wp-rep-cut) .wsp-shell { animation:wsp-m9-def-shed-ready .46s ease-in-out infinite !important; }
+.wp-contact-tight .wsp-shadow { transform:scaleX(1.16); fill:rgba(0,0,0,.36); }
+.wp-contact-space .wsp-shadow { transform:scaleX(.96); opacity:.72; }
+.wp-contact-strike .wsp-block-arm-l,
+.wp-contact-strike .wsp-block-arm-r,
+.wp-contact-strike .wsp-sd-block-arm { animation:wsp-m9-hands-strike .2s cubic-bezier(.18,.82,.3,1) both !important; }
+.wp-contact-drive.wp-contact-off .wsp-block-arm-l { animation:wsp-m9-hand-fit-l .34s ease-in-out infinite !important; }
+.wp-contact-drive.wp-contact-off .wsp-block-arm-r { animation:wsp-m9-hand-fit-r .34s ease-in-out infinite !important; }
+.wp-contact-drive.wp-contact-def .wsp-block-arm-l { animation:wsp-m9-hand-fight-l .38s ease-in-out infinite !important; }
+.wp-contact-drive.wp-contact-def .wsp-block-arm-r { animation:wsp-m9-hand-fight-r .38s ease-in-out infinite !important; }
+.wp-contact-strain .wsp-block-arm-l { animation:wsp-m9-refit-l .46s ease-in-out infinite !important; }
+.wp-contact-strain .wsp-block-arm-r { animation:wsp-m9-refit-r .46s ease-in-out infinite !important; }
+.wp-contact-drive.wp-contact-off .wsp-sd-block-arm:first-child { animation:wsp-m9-hand-fit-l .34s ease-in-out infinite !important; }
+.wp-contact-drive.wp-contact-off .wsp-sd-block-arm:last-child { animation:wsp-m9-hand-fit-r .34s ease-in-out infinite !important; }
+.wp-contact-drive.wp-contact-def .wsp-sd-block-arm:first-child { animation:wsp-m9-hand-fight-l .38s ease-in-out infinite !important; }
+.wp-contact-drive.wp-contact-def .wsp-sd-block-arm:last-child { animation:wsp-m9-hand-fight-r .38s ease-in-out infinite !important; }
+.wp-contact-strain .wsp-sd-block-arm:first-child { animation:wsp-m9-refit-l .46s ease-in-out infinite !important; }
+.wp-contact-strain .wsp-sd-block-arm:last-child { animation:wsp-m9-refit-r .46s ease-in-out infinite !important; }
+@keyframes wsp-m9-off-strike { 0% { transform:translate(-.18px,.08px) rotate(7deg) scaleY(.94); } 62% { transform:translate(.22px,-.08px) rotate(4deg) scale(1.04,.96); } 100% { transform:translate(.12px,0) rotate(3deg); } }
+@keyframes wsp-m9-def-strike { 0% { transform:translate(.16px,.06px) rotate(-6deg) scaleY(.95); } 62% { transform:translate(-.2px,.06px) rotate(-4deg) scale(1.03,.94); } 100% { transform:translate(-.1px,0) rotate(-3deg); } }
+@keyframes wsp-m9-off-drive { 0%,100% { transform:translate(.12px,.02px) rotate(4deg) scaleY(.96); } 50% { transform:translate(.24px,.08px) rotate(6deg) scale(1.03,.93); } }
+@keyframes wsp-m9-def-anchor { 0%,100% { transform:translate(-.1px,.04px) rotate(-4deg) scaleY(.96); } 50% { transform:translate(-.2px,.1px) rotate(-6deg) scale(1.04,.92); } }
+@keyframes wsp-m9-off-refit { 0%,100% { transform:translate(.16px,.04px) rotate(3deg) scaleY(.95); } 50% { transform:translate(.05px,.12px) rotate(-2deg) scale(.98,.92); } }
+@keyframes wsp-m9-def-shed-ready { 0%,100% { transform:translate(-.12px,.05px) rotate(-3deg) scaleY(.95); } 50% { transform:translate(.04px,.08px) rotate(5deg) scale(.98,.94); } }
+@keyframes wsp-m9-hands-strike { 0% { transform:translateX(-.24px) rotate(12deg); } 70% { transform:translateX(.16px) rotate(-6deg); } 100% { transform:translateX(.06px); } }
+@keyframes wsp-m9-hand-fit-l { 0%,100% { transform:translate(.02px,.05px) rotate(2deg); } 50% { transform:translate(.18px,-.12px) rotate(-7deg); } }
+@keyframes wsp-m9-hand-fit-r { 0%,100% { transform:translate(-.03px,-.04px) rotate(-2deg); } 50% { transform:translate(.14px,.1px) rotate(7deg); } }
+@keyframes wsp-m9-hand-fight-l { 0%,100% { transform:translate(-.05px,.08px) rotate(7deg); } 50% { transform:translate(.12px,-.16px) rotate(-11deg); } }
+@keyframes wsp-m9-hand-fight-r { 0%,100% { transform:translate(.04px,-.04px) rotate(-6deg); } 50% { transform:translate(-.12px,.13px) rotate(10deg); } }
+@keyframes wsp-m9-refit-l { 0%,100% { transform:translate(-.12px,.12px) rotate(10deg); } 50% { transform:translate(.18px,-.18px) rotate(-12deg); } }
+@keyframes wsp-m9-refit-r { 0%,100% { transform:translate(.1px,-.1px) rotate(-9deg); } 50% { transform:translate(-.16px,.17px) rotate(11deg); } }
+
+/* A short shared compression frame binds the hitter, carrier and help body to
+   the same recorded tackle moment before the existing finish takes over. */
+.wp-contact-arrival .wsp-shadow { fill:rgba(0,0,0,.43); transform:scaleX(1.2); }
+#watch-board.watch-in-play .wp-contact-arrival.wp-contact-hitter.wp-contact-from-left .wsp-shell { animation:wsp-m9-hit-left .26s cubic-bezier(.18,.82,.28,1) both !important; }
+#watch-board.watch-in-play .wp-contact-arrival.wp-contact-hitter.wp-contact-from-right .wsp-shell { animation:wsp-m9-hit-right .26s cubic-bezier(.18,.82,.28,1) both !important; }
+#watch-board.watch-in-play .wp-contact-arrival.wp-contact-hitter:not(.wp-contact-from-left):not(.wp-contact-from-right) .wsp-shell { animation:wsp-m9-hit-help .26s cubic-bezier(.18,.82,.28,1) both !important; }
+#watch-board.watch-in-play .wp-contact-arrival.wp-contact-carrier.wp-contact-from-left .wsp-shell { animation:wsp-m9-carrier-left .26s cubic-bezier(.2,.76,.32,1) both !important; }
+#watch-board.watch-in-play .wp-contact-arrival.wp-contact-carrier.wp-contact-from-right .wsp-shell { animation:wsp-m9-carrier-right .26s cubic-bezier(.2,.76,.32,1) both !important; }
+.wp-contact-arrival.wp-contact-hitter .wsp-tkl-arm-l,
+.wp-contact-arrival.wp-contact-hitter .wsp-tkl-arm-r,
+.wp-contact-arrival.wp-contact-hitter .wsp-sd-tkl-arm { animation:wsp-m9-wrap-clamp .26s cubic-bezier(.18,.82,.3,1) both !important; }
+@keyframes wsp-m9-hit-left { 0% { transform:translate(-.32px,.08px) rotate(7deg) scaleY(.96); } 62% { transform:translate(.34px,-.1px) rotate(-5deg) scale(1.06,.92); } 100% { transform:translate(.14px,.05px) rotate(2deg) scaleY(.96); } }
+@keyframes wsp-m9-hit-right { 0% { transform:translate(.32px,.08px) rotate(-7deg) scaleY(.96); } 62% { transform:translate(-.34px,-.1px) rotate(5deg) scale(1.06,.92); } 100% { transform:translate(-.14px,.05px) rotate(-2deg) scaleY(.96); } }
+@keyframes wsp-m9-hit-help { 0% { transform:translateY(.08px) rotate(8deg); } 62% { transform:translate(.18px,-.14px) rotate(-8deg) scaleX(1.05); } 100% { transform:translate(.06px,.04px) rotate(2deg); } }
+@keyframes wsp-m9-carrier-left { 0% { transform:translate(0,0) rotate(0); } 58% { transform:translate(.42px,-.06px) rotate(10deg) scale(.96,.92); } 100% { transform:translate(.2px,.1px) rotate(5deg) scaleY(.95); } }
+@keyframes wsp-m9-carrier-right { 0% { transform:translate(0,0) rotate(0); } 58% { transform:translate(-.42px,-.06px) rotate(-10deg) scale(.96,.92); } 100% { transform:translate(-.2px,.1px) rotate(-5deg) scaleY(.95); } }
+@keyframes wsp-m9-wrap-clamp { 0% { transform:translateX(-.2px) rotate(14deg); } 68% { transform:translateX(.18px) rotate(-12deg); } 100% { transform:translateX(.04px) rotate(-4deg); } }
+
   </style>
 </head>
 <body>
@@ -7781,7 +7864,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "79cc53cceb";
+globalThis.__BUILD__ = "66ecb3fb9d";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -54489,6 +54572,15 @@ ${renderAutoRecruitLog()}`;
     const turnoverFx = (script.fx || []).find((f) => f.kind === "int" || f.kind === "fum") || null;
     const looseFx = (script.fx || []).find((f) => f.kind === "fum") || null;
     const repCls = [...new Set((script.blocks || []).filter((b) => b.rep).map((b) => "wp-rep-" + b.rep))];
+    const contactCls = [
+      "wp-contact-off",
+      "wp-contact-def",
+      "wp-contact-strike",
+      "wp-contact-drive",
+      "wp-contact-strain",
+      "wp-contact-tight",
+      "wp-contact-space"
+    ];
     const liftN = ballN == null ? void 0 : ballN.querySelector(".wab-lift");
     let flightArc = null;
     if (script.throwCue && catchT != null && catchT > script.throwCue.release) {
@@ -54547,7 +54639,7 @@ ${renderAutoRecruitLog()}`;
           }
         }
       }
-      Object.values(nodes).forEach((node) => node.classList.remove("wp-near-ball", "wp-blocking", "wp-blocked", ...repCls));
+      Object.values(nodes).forEach((node) => node.classList.remove("wp-near-ball", "wp-blocking", "wp-blocked", ...repCls, ...contactCls));
       if (t > script.presnap && cd < 4.4 && carrierId) (_a2 = nodes[carrierId]) == null ? void 0 : _a2.classList.add("wp-near-ball");
       const throwCue = script.throwCue;
       const throwOn = !!throwCue && t >= throwCue.start && t <= throwCue.end;
@@ -54591,14 +54683,22 @@ ${renderAutoRecruitLog()}`;
       if (tackleCue) {
         const on = t >= tackleCue.start && t <= tackleCue.end;
         const finish = t > tackleCue.end && t <= tackleCue.finish;
+        const arrival = t >= tackleCue.impact - 0.1 && t <= tackleCue.impact + 0.16;
         const carrierHit = t >= tackleCue.impact - 0.04 && t <= tackleCue.finish;
         const carrierDown = t >= tackleCue.impact + 0.18 && t <= tackleCue.finish;
+        const tacklerPt = actorPts[tackleCue.id];
+        const carrierPt = actorPts[tackleCue.carrierId];
+        const fromLeft = !!tacklerPt && !!carrierPt && tacklerPt[0] < carrierPt[0];
         const tnode = nodes[tackleCue.id];
         if (tnode) {
           tnode.classList.toggle("wp-tackling", on);
           tnode.classList.toggle(tackleCue.cls, on || finish);
           tnode.classList.toggle("wp-tk-assisted", !!tackleCue.assistId && (on || finish));
           tnode.classList.toggle("wp-tackle-finish", finish);
+          tnode.classList.toggle("wp-contact-arrival", arrival);
+          tnode.classList.toggle("wp-contact-hitter", arrival);
+          tnode.classList.toggle("wp-contact-from-left", arrival && fromLeft);
+          tnode.classList.toggle("wp-contact-from-right", arrival && !fromLeft);
         }
         if (tackleCue.assistId) {
           const anode = nodes[tackleCue.assistId];
@@ -54607,11 +54707,17 @@ ${renderAutoRecruitLog()}`;
             anode.classList.toggle("wp-tk-gang", on || finish);
             anode.classList.toggle("wp-tk-assist", on || finish);
             anode.classList.toggle("wp-tackle-finish", finish);
+            anode.classList.toggle("wp-contact-arrival", arrival);
+            anode.classList.toggle("wp-contact-hitter", arrival);
           }
         }
         const vnode = nodes[tackleCue.carrierId];
         if (vnode) {
           vnode.classList.toggle("wp-hit-" + tackleCue.style, carrierHit);
+          vnode.classList.toggle("wp-contact-arrival", arrival);
+          vnode.classList.toggle("wp-contact-carrier", arrival);
+          vnode.classList.toggle("wp-contact-from-left", arrival && fromLeft);
+          vnode.classList.toggle("wp-contact-from-right", arrival && !fromLeft);
           if (tackleCue.sack) vnode.classList.toggle("wp-sacked", carrierHit);
           else {
             vnode.classList.toggle("wp-tackled", carrierHit);
@@ -54669,10 +54775,21 @@ ${renderAutoRecruitLog()}`;
         const line = blockNodes[i], engage = engageNodes[i], op = actorPts[b.offId], dp = actorPts[b.defId];
         const active = t >= b.start && t <= b.end && op && dp;
         if (line) line.style.display = active ? "" : "none";
-        if (engage) engage.style.display = "none";
+        if (line) line.classList.remove("wp-block-link-tight", "wp-block-link-space");
+        if (engage) {
+          engage.style.display = "none";
+          engage.setAttribute("class", "wp-engage");
+        }
         if (!active) return;
-        (_a3 = nodes[b.offId]) == null ? void 0 : _a3.classList.add("wp-blocking");
-        (_b3 = nodes[b.defId]) == null ? void 0 : _b3.classList.add("wp-blocked");
+        const dur = Math.max(0.18, b.end - b.start);
+        const age = t - b.start;
+        const u = Math.max(0, Math.min(1, age / dur));
+        const phase = age < Math.min(0.2, dur * 0.3) ? "strike" : u < 0.72 ? "drive" : "strain";
+        const padD = Math.hypot(dp[0] - op[0], dp[1] - op[1]);
+        const spacing = padD < 4.8 ? "tight" : "space";
+        const offNode = nodes[b.offId], defNode = nodes[b.defId];
+        offNode == null ? void 0 : offNode.classList.add("wp-blocking", "wp-contact-off", "wp-contact-" + phase, "wp-contact-" + spacing);
+        defNode == null ? void 0 : defNode.classList.add("wp-blocked", "wp-contact-def", "wp-contact-" + phase, "wp-contact-" + spacing);
         if (b.rep) {
           (_c3 = nodes[b.offId]) == null ? void 0 : _c3.classList.add("wp-rep-" + b.rep);
           (_d3 = nodes[b.defId]) == null ? void 0 : _d3.classList.add("wp-rep-" + b.rep);
@@ -54681,11 +54798,13 @@ ${renderAutoRecruitLog()}`;
         line.setAttribute("y1", op[1].toFixed(2));
         line.setAttribute("x2", dp[0].toFixed(2));
         line.setAttribute("y2", dp[1].toFixed(2));
-        const padD = Math.hypot(dp[0] - op[0], dp[1] - op[1]);
+        line.classList.add("wp-block-link-" + spacing);
         if (engage && padD < 7.2) {
           const mx = (op[0] + dp[0]) / 2, my = (op[1] + dp[1]) / 2;
           const ang = Math.atan2(dp[1] - op[1], dp[0] - op[0]) * 180 / Math.PI;
           engage.style.display = "";
+          engage.classList.add("wp-engage-" + phase, "wp-engage-" + spacing);
+          if (b.rep) engage.classList.add("wp-engage-rep-" + b.rep);
           engage.setAttribute("transform", `translate(${mx.toFixed(2)},${my.toFixed(2)}) rotate(${ang.toFixed(1)})`);
         }
       });
