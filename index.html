@@ -7855,6 +7855,93 @@ body *::after {
 @keyframes wsp-m9-carrier-right { 0% { transform:translate(0,0) rotate(0); } 58% { transform:translate(-.42px,-.06px) rotate(-10deg) scale(.96,.92); } 100% { transform:translate(-.2px,.1px) rotate(-5deg) scaleY(.95); } }
 @keyframes wsp-m9-wrap-clamp { 0% { transform:translateX(-.2px) rotate(14deg); } 68% { transform:translateX(.18px) rotate(-12deg); } 100% { transform:translateX(.04px) rotate(-4deg); } }
 
+/* Milestone 10: scheme identity inside the contact sequence. M9 established
+   when a block strikes, drives and re-fits; these selectors make the recorded
+   rep explain how it is being executed. The actor tracks still own all actual
+   displacement, so this cannot change a lane, a pocket or a result. */
+#watch-board.watch-in-play .wp-blocking.wp-contact-drive.wp-rep-drive .wsp-shell { animation:wsp-m10-drive .36s steps(2,end) infinite !important; }
+#watch-board.watch-in-play .wp-blocking.wp-contact-drive.wp-rep-down .wsp-shell { animation:wsp-m10-down .4s ease-in-out infinite !important; }
+#watch-board.watch-in-play .wp-blocking.wp-contact-drive.wp-rep-reach .wsp-shell { animation:wsp-m10-reach .42s ease-in-out infinite !important; }
+#watch-board.watch-in-play .wp-blocking.wp-contact-drive.wp-rep-pull .wsp-shell { animation:wsp-m10-pull .38s cubic-bezier(.2,.8,.3,1) infinite !important; }
+#watch-board.watch-in-play .wp-blocking.wp-contact-drive.wp-rep-trap .wsp-shell { animation:wsp-m10-trap .36s cubic-bezier(.2,.82,.3,1) infinite !important; }
+#watch-board.watch-in-play .wp-blocking.wp-contact-drive.wp-rep-climb .wsp-shell { animation:wsp-m10-climb .4s ease-in-out infinite !important; }
+#watch-board.watch-in-play .wp-blocking.wp-contact-drive.wp-rep-chip .wsp-shell { animation:wsp-m10-chip .28s cubic-bezier(.18,.84,.28,1) both !important; }
+#watch-board.watch-in-play .wp-blocking.wp-contact-drive.wp-rep-pickup .wsp-shell { animation:wsp-m10-pickup .42s steps(2,end) infinite !important; }
+#watch-board.watch-in-play .wp-blocked.wp-contact-drive.wp-rep-drive .wsp-shell { animation:wsp-m10-def-drive .36s steps(2,end) infinite !important; }
+#watch-board.watch-in-play .wp-blocked.wp-contact-drive.wp-rep-down .wsp-shell { animation:wsp-m10-def-down .4s ease-in-out infinite !important; }
+#watch-board.watch-in-play .wp-blocked.wp-contact-drive.wp-rep-reach .wsp-shell { animation:wsp-m10-def-reach .42s ease-in-out infinite !important; }
+#watch-board.watch-in-play .wp-blocked.wp-contact-drive.wp-rep-pull .wsp-shell,
+#watch-board.watch-in-play .wp-blocked.wp-contact-drive.wp-rep-trap .wsp-shell { animation:wsp-m10-def-kickout .38s ease-in-out infinite !important; }
+#watch-board.watch-in-play .wp-blocked.wp-contact-drive.wp-rep-climb .wsp-shell { animation:wsp-m10-def-climb .4s ease-in-out infinite !important; }
+#watch-board.watch-in-play .wp-blocked.wp-contact-drive.wp-rep-chip .wsp-shell { animation:wsp-m10-def-chip .28s ease-out both !important; }
+#watch-board.watch-in-play .wp-blocked.wp-contact-drive.wp-rep-pickup .wsp-shell { animation:wsp-m10-def-pickup .42s steps(2,end) infinite !important; }
+@keyframes wsp-m10-drive { 0%,100% { transform:translate(.16px,.1px) rotate(5deg) scale(1.04,.9); } 50% { transform:translate(.3px,.13px) rotate(7deg) scale(1.07,.87); } }
+@keyframes wsp-m10-down { 0%,100% { transform:translate(.14px,.05px) rotate(-8deg) skewX(-4deg) scaleY(.94); } 50% { transform:translate(.3px,.12px) rotate(-14deg) skewX(-7deg) scale(1.03,.9); } }
+@keyframes wsp-m10-reach { 0%,100% { transform:translate(.1px,.02px) rotate(8deg) skewY(-5deg) scaleY(.95); } 50% { transform:translate(.32px,.08px) rotate(14deg) skewY(-8deg) scale(.98,.92); } }
+@keyframes wsp-m10-pull { 0%,100% { transform:translate(-.08px,.02px) rotate(-7deg) scaleY(.96); } 48% { transform:translate(.38px,.04px) rotate(9deg) scaleX(1.05); } 72% { transform:translate(.26px,.12px) rotate(5deg) scaleY(.9); } }
+@keyframes wsp-m10-trap { 0%,100% { transform:translate(-.18px,.04px) rotate(-12deg) scaleY(.95); } 55% { transform:translate(.42px,.12px) rotate(13deg) scale(1.08,.88); } }
+@keyframes wsp-m10-climb { 0%,100% { transform:translate(.08px,-.06px) rotate(3deg) scaleY(1.01); } 50% { transform:translate(.24px,-.18px) rotate(7deg) scale(1.02,1.04); } }
+@keyframes wsp-m10-chip { 0% { transform:translate(-.12px,.04px) rotate(3deg); } 58% { transform:translate(.36px,-.08px) rotate(10deg) scaleX(1.05); } 100% { transform:translate(.08px,0) rotate(-2deg); } }
+@keyframes wsp-m10-pickup { 0%,100% { transform:translate(-.08px,.1px) rotate(-3deg) scale(1.04,.9); } 50% { transform:translate(.08px,.15px) rotate(2deg) scale(1.08,.87); } }
+@keyframes wsp-m10-def-drive { 0%,100% { transform:translate(-.16px,.12px) rotate(-6deg) scale(1.05,.88); } 50% { transform:translate(-.3px,.16px) rotate(-8deg) scale(1.08,.85); } }
+@keyframes wsp-m10-def-down { 0%,100% { transform:translate(-.08px,.06px) rotate(9deg) scaleY(.95); } 50% { transform:translate(-.3px,.14px) rotate(16deg) scale(.98,.9); } }
+@keyframes wsp-m10-def-reach { 0%,100% { transform:translate(-.06px,.05px) rotate(-9deg) skewY(5deg) scaleY(.96); } 50% { transform:translate(-.22px,.12px) rotate(-15deg) skewY(8deg) scale(.98,.91); } }
+@keyframes wsp-m10-def-kickout { 0%,100% { transform:translate(-.1px,.05px) rotate(-5deg); } 52% { transform:translate(-.38px,.14px) rotate(-17deg) scale(.97,.9); } }
+@keyframes wsp-m10-def-climb { 0%,100% { transform:translate(-.04px,-.02px) rotate(-2deg); } 50% { transform:translate(-.18px,.05px) rotate(-8deg) scaleY(.94); } }
+@keyframes wsp-m10-def-chip { 0% { transform:translate(.04px,0) rotate(0); } 62% { transform:translate(-.3px,.08px) rotate(-12deg) scaleY(.94); } 100% { transform:translate(-.08px,.02px) rotate(-3deg); } }
+@keyframes wsp-m10-def-pickup { 0%,100% { transform:translate(.08px,.08px) rotate(3deg) scaleY(.94); } 50% { transform:translate(-.12px,.14px) rotate(-4deg) scale(1.04,.9); } }
+
+/* Hand placement distinguishes torque, cross-face reach, kick-out and pass
+   protection. Side-profile actors are the live view; the front/back selectors
+   keep the same vocabulary intact when a track turns vertically. */
+#watch-board .wp-blocking.wp-rep-down .wsp-block-arm-l,#watch-board .wp-blocking.wp-rep-down .wsp-sd-block-arm:first-child { animation:wsp-m10-hand-torque-l .4s ease-in-out infinite !important; }
+#watch-board .wp-blocking.wp-rep-down .wsp-block-arm-r,#watch-board .wp-blocking.wp-rep-down .wsp-sd-block-arm:last-child { animation:wsp-m10-hand-torque-r .4s ease-in-out infinite !important; }
+#watch-board .wp-blocking.wp-rep-reach .wsp-block-arm-l,#watch-board .wp-blocking.wp-rep-reach .wsp-sd-block-arm:first-child { animation:wsp-m10-hand-reach .42s ease-in-out infinite !important; }
+#watch-board .wp-blocking.wp-rep-reach .wsp-block-arm-r,#watch-board .wp-blocking.wp-rep-reach .wsp-sd-block-arm:last-child { animation:wsp-m10-hand-seal .42s ease-in-out infinite !important; }
+#watch-board .wp-blocking.wp-rep-pull .wsp-block-arm-l,#watch-board .wp-blocking.wp-rep-pull .wsp-block-arm-r,#watch-board .wp-blocking.wp-rep-pull .wsp-sd-block-arm { animation:wsp-m10-hand-kickout .38s ease-in-out infinite !important; }
+#watch-board .wp-blocking.wp-rep-trap .wsp-block-arm-l,#watch-board .wp-blocking.wp-rep-trap .wsp-block-arm-r,#watch-board .wp-blocking.wp-rep-trap .wsp-sd-block-arm { animation:wsp-m10-hand-trap .36s ease-in-out infinite !important; }
+#watch-board .wp-blocking.wp-rep-climb .wsp-block-arm-l,#watch-board .wp-blocking.wp-rep-climb .wsp-block-arm-r,#watch-board .wp-blocking.wp-rep-climb .wsp-sd-block-arm { animation:wsp-m10-hand-climb .4s ease-in-out infinite !important; }
+#watch-board .wp-blocking.wp-rep-chip .wsp-block-arm-l,#watch-board .wp-blocking.wp-rep-chip .wsp-sd-block-arm:first-child { animation:wsp-m10-hand-chip .28s ease-out both !important; }
+#watch-board .wp-blocking.wp-rep-chip .wsp-block-arm-r,#watch-board .wp-blocking.wp-rep-chip .wsp-sd-block-arm:last-child { animation:wsp-m10-hand-chip-tuck .28s ease-out both !important; }
+#watch-board .wp-blocking.wp-rep-pickup .wsp-block-arm-l,#watch-board .wp-blocking.wp-rep-pickup .wsp-sd-block-arm:first-child { animation:wsp-m10-pass-hand-l .42s ease-in-out infinite !important; }
+#watch-board .wp-blocking.wp-rep-pickup .wsp-block-arm-r,#watch-board .wp-blocking.wp-rep-pickup .wsp-sd-block-arm:last-child { animation:wsp-m10-pass-hand-r .42s ease-in-out infinite !important; }
+@keyframes wsp-m10-hand-torque-l { 0%,100% { transform:translate(.02px,.08px) rotate(10deg); } 50% { transform:translate(.22px,-.08px) rotate(-17deg); } }
+@keyframes wsp-m10-hand-torque-r { 0%,100% { transform:translate(-.04px,-.02px) rotate(-8deg); } 50% { transform:translate(.12px,.18px) rotate(16deg); } }
+@keyframes wsp-m10-hand-reach { 0%,100% { transform:translate(.08px,-.04px) rotate(-5deg); } 50% { transform:translate(.3px,-.22px) rotate(-18deg); } }
+@keyframes wsp-m10-hand-seal { 0%,100% { transform:translate(-.08px,.1px) rotate(8deg); } 50% { transform:translate(.18px,.04px) rotate(-4deg); } }
+@keyframes wsp-m10-hand-kickout { 0%,100% { transform:translate(-.12px,.04px) rotate(8deg); } 52% { transform:translate(.3px,-.14px) rotate(-13deg); } }
+@keyframes wsp-m10-hand-trap { 0%,100% { transform:translate(-.18px,.12px) rotate(13deg); } 58% { transform:translate(.34px,-.1px) rotate(-16deg); } }
+@keyframes wsp-m10-hand-climb { 0%,100% { transform:translate(.02px,-.08px) rotate(-4deg); } 50% { transform:translate(.16px,-.3px) rotate(-12deg); } }
+@keyframes wsp-m10-hand-chip { 0% { transform:translate(-.12px,.08px) rotate(10deg); } 64% { transform:translate(.36px,-.18px) rotate(-18deg); } 100% { transform:translate(.08px,-.04px); } }
+@keyframes wsp-m10-hand-chip-tuck { 0%,100% { transform:translate(-.12px,.18px) rotate(15deg) scale(.92); } }
+@keyframes wsp-m10-pass-hand-l { 0%,100% { transform:translate(-.12px,-.05px) rotate(10deg); } 50% { transform:translate(.18px,-.16px) rotate(-8deg); } }
+@keyframes wsp-m10-pass-hand-r { 0%,100% { transform:translate(.12px,.05px) rotate(-10deg); } 50% { transform:translate(-.14px,.14px) rotate(8deg); } }
+
+/* Rep-specific feet: lateral reach, pull/trap redirect, climb and pass-set
+   anchor. The base blocking freeze still pins every unselected leg family. */
+#watch-board.watch-in-play .wp-blocking.wp-rep-reach .wsp-sd-thigh-f { animation:wsp-m10-foot-reach-f .42s ease-in-out infinite !important; }
+#watch-board.watch-in-play .wp-blocking.wp-rep-reach .wsp-sd-thigh-b { animation:wsp-m10-foot-reach-b .42s ease-in-out infinite !important; }
+#watch-board.watch-in-play .wp-blocking.wp-rep-pull .wsp-sd-thigh-f,
+#watch-board.watch-in-play .wp-blocking.wp-rep-trap .wsp-sd-thigh-f { animation:wsp-m10-foot-pull .38s ease-in-out infinite !important; }
+#watch-board.watch-in-play .wp-blocking.wp-rep-climb .wsp-sd-thigh-f { animation:wsp-m10-foot-climb .4s ease-in-out infinite !important; }
+#watch-board.watch-in-play .wp-blocking.wp-rep-pickup .wsp-sd-thigh-b { animation:wsp-m10-foot-set-b .42s ease-in-out infinite !important; }
+#watch-board.watch-in-play .wp-blocking.wp-rep-pickup .wsp-sd-thigh-f { animation:wsp-m10-foot-set-f .42s ease-in-out infinite !important; }
+@keyframes wsp-m10-foot-reach-f { 0%,100% { transform:rotate(-9deg) translateX(0); } 50% { transform:rotate(18deg) translateX(.18px); } }
+@keyframes wsp-m10-foot-reach-b { 0%,100% { transform:rotate(12deg); } 50% { transform:rotate(-16deg) translateX(.12px); } }
+@keyframes wsp-m10-foot-pull { 0%,100% { transform:rotate(-18deg); } 50% { transform:rotate(30deg) translateX(.2px); } }
+@keyframes wsp-m10-foot-climb { 0%,100% { transform:rotate(-16deg) translateY(0); } 50% { transform:rotate(24deg) translateY(-.12px); } }
+@keyframes wsp-m10-foot-set-b { 0%,100% { transform:rotate(14deg) translateX(-.08px); } 50% { transform:rotate(-10deg) translateX(-.2px); } }
+@keyframes wsp-m10-foot-set-f { 0%,100% { transform:rotate(-8deg) translateX(.04px); } 50% { transform:rotate(12deg) translateX(.12px); } }
+
+.wp-engage-rep-drive .wp-engage-pads { transform:scaleY(1.04); }
+.wp-engage-rep-down .wp-engage-pads { transform:rotate(-10deg); }
+.wp-engage-rep-reach .wp-engage-pads { transform:translateY(-.12px) skewY(-8deg); }
+.wp-engage-rep-pull .wp-engage-pads { transform:rotate(10deg) scaleX(1.08); }
+.wp-engage-rep-trap .wp-engage-pads { transform:rotate(-14deg) scaleX(1.12); }
+.wp-engage-rep-climb .wp-engage-pads { transform:translateY(-.22px) scaleY(1.1); }
+.wp-engage-rep-chip .wp-engage-pads { animation-duration:.2s; opacity:.72; }
+.wp-engage-rep-pickup .wp-engage-pads { transform:scaleX(1.18); stroke-width:.5; }
+
   </style>
 </head>
 <body>
@@ -7864,7 +7951,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "66ecb3fb9d";
+globalThis.__BUILD__ = "1f415adb9d";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
