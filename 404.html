@@ -8214,6 +8214,101 @@ body *::after {
 @keyframes wsp-m14-clamp-right { 0% { transform:rotate(3deg); } 100% { transform:translate(-.16px,-.08px) rotate(-10deg); } }
 @keyframes wsp-m14-clamp-side { 0% { transform:rotate(-2deg); } 100% { transform:translate(.1px,-.12px) rotate(8deg); } }
 
+/* Milestone 15: coached special-teams mechanics. The kick renderers own these
+   short phase classes; they never alter a result, distance, clock or track. */
+#watch-board.watch-special-teams .wp-kick-approach .wsp-pose-idle,
+#watch-board.watch-special-teams .wp-kick-plant .wsp-pose-idle,
+#watch-board.watch-special-teams .wp-kick-contact .wsp-pose-idle,
+#watch-board.watch-special-teams .wp-kick-follow .wsp-pose-idle { display:none !important; }
+#watch-board.watch-special-teams .wp-kick-approach .wsp-pose-run,
+#watch-board.watch-special-teams .wp-kick-plant .wsp-pose-run,
+#watch-board.watch-special-teams .wp-kick-contact .wsp-pose-run,
+#watch-board.watch-special-teams .wp-kick-follow .wsp-pose-run { display:block !important; }
+
+/* Approach is compact and accelerating; plant takes the hips over a firm post
+   leg, while contact and follow-through separate the kicking leg from the body. */
+#watch-board.watch-special-teams .wp-kick-approach .wsp-shell { animation:wsp-m15-approach .3s steps(3,end) infinite !important; }
+#watch-board.watch-special-teams .wp-kick-plant .wsp-shell { animation:wsp-m15-plant .17s cubic-bezier(.2,.75,.3,1) both !important; }
+#watch-board.watch-special-teams .wp-kick-contact .wsp-shell { animation:wsp-m15-contact .13s cubic-bezier(.15,.75,.2,1) both !important; }
+#watch-board.watch-special-teams .wp-kick-follow .wsp-shell { animation:wsp-m15-follow .52s cubic-bezier(.18,.72,.28,1) both !important; }
+@keyframes wsp-m15-approach { 0%,100% { transform:translateY(.06px) rotate(2deg); } 50% { transform:translate(.16px,-.1px) rotate(5deg) scaleY(1.02); } }
+@keyframes wsp-m15-plant { 0% { transform:translate(.06px,0) rotate(3deg); } 100% { transform:translate(-.12px,.08px) rotate(-7deg) scale(.98,.94); } }
+@keyframes wsp-m15-contact { 0% { transform:translate(-.12px,.08px) rotate(-7deg) scale(.98,.94); } 100% { transform:translate(.2px,-.16px) rotate(13deg) scale(1.03,1.04); } }
+@keyframes wsp-m15-follow { 0% { transform:translate(.2px,-.16px) rotate(13deg); } 58% { transform:translate(.38px,-.28px) rotate(20deg) scaleY(1.04); } 100% { transform:translate(.18px,.02px) rotate(7deg); } }
+
+#watch-board.watch-special-teams .wp-kick-approach .wsp-sd-thigh-f { animation:wsp-m15-step-front .26s steps(2,end) infinite !important; }
+#watch-board.watch-special-teams .wp-kick-approach .wsp-sd-thigh-b { animation:wsp-m15-step-back .26s steps(2,end) infinite !important; }
+#watch-board.watch-special-teams .wp-kick-plant .wsp-sd-thigh-f { animation:wsp-m15-post-leg .17s ease-out both !important; }
+#watch-board.watch-special-teams .wp-kick-plant .wsp-sd-thigh-b { animation:wsp-m15-load-leg .17s ease-out both !important; }
+#watch-board.watch-special-teams .wp-kick-contact .wsp-sd-thigh-b { animation:wsp-m15-strike-leg .13s ease-out both !important; }
+#watch-board.watch-special-teams .wp-kick-contact .wsp-sd-shin-b { animation:wsp-m15-strike-shin .13s ease-out both !important; }
+#watch-board.watch-special-teams .wp-kick-follow .wsp-sd-thigh-b { animation:wsp-m15-finish-leg .48s ease-out both !important; }
+#watch-board.watch-special-teams .wp-kick-follow .wsp-sd-shin-b { animation:wsp-m15-finish-shin .48s ease-out both !important; }
+@keyframes wsp-m15-step-front { 0%,100% { transform:rotate(-16deg); } 50% { transform:rotate(24deg) translateY(.08px); } }
+@keyframes wsp-m15-step-back { 0%,100% { transform:rotate(22deg); } 50% { transform:rotate(-18deg); } }
+@keyframes wsp-m15-post-leg { from { transform:rotate(-12deg); } to { transform:rotate(9deg) translateY(.12px); } }
+@keyframes wsp-m15-load-leg { from { transform:rotate(18deg); } to { transform:rotate(-30deg) translateY(-.08px); } }
+@keyframes wsp-m15-strike-leg { from { transform:rotate(-30deg); } to { transform:rotate(57deg) translateY(-.22px); } }
+@keyframes wsp-m15-strike-shin { from { transform:rotate(22deg); } to { transform:rotate(-11deg); } }
+@keyframes wsp-m15-finish-leg { 0% { transform:rotate(57deg) translateY(-.22px); } 65% { transform:rotate(72deg) translate(.08px,-.38px); } 100% { transform:rotate(24deg) translateY(-.08px); } }
+@keyframes wsp-m15-finish-shin { 0% { transform:rotate(-11deg); } 60% { transform:rotate(15deg); } 100% { transform:rotate(4deg); } }
+
+/* Punters gather the snap and present the ball before the same plant-contact
+   chain. Holders receive high, pin the spot, and stay compact through contact. */
+#watch-board.watch-kick-punt .wp-kick-gather .wsp-pose-idle { display:none !important; }
+#watch-board.watch-kick-punt .wp-kick-gather .wsp-pose-carry { display:block !important; }
+#watch-board.watch-kick-punt .wp-kick-gather .wsp-carry-arm-l,
+#watch-board.watch-kick-punt .wp-kick-gather .wsp-carry-arm-r,
+#watch-board.watch-kick-punt .wp-kick-gather .wsp-sd-carry-arm { animation:wsp-m15-punt-drop .22s ease-out both !important; }
+#watch-board .wp-hold-receive .wsp-pose-idle,#watch-board .wp-hold-place .wsp-pose-idle { display:none !important; }
+#watch-board .wp-hold-receive .wsp-pose-catch { display:block !important; }
+#watch-board .wp-hold-place .wsp-pose-carry { display:block !important; }
+#watch-board .wp-hold-receive .wsp-shell { animation:wsp-m15-hold-receive .2s ease-out both !important; }
+#watch-board .wp-hold-place .wsp-shell { animation:wsp-m15-hold-place .3s ease-out both !important; }
+@keyframes wsp-m15-punt-drop { from { transform:translateY(-.1px) rotate(-4deg); } to { transform:translate(.22px,.25px) rotate(18deg); } }
+@keyframes wsp-m15-hold-receive { from { transform:translateY(0); } to { transform:translateY(.22px) scaleY(.84); } }
+@keyframes wsp-m15-hold-place { from { transform:translateY(.22px) scaleY(.84); } to { transform:translate(.08px,.34px) rotate(7deg) scaleY(.76); } }
+
+/* Returners find the ball with quiet feet, form a diamond at the catch, secure
+   it to the ribs, then transition into their existing recorded return track. */
+#watch-board .wp-return-track .wsp-pose-idle { display:none !important; }
+#watch-board .wp-return-track .wsp-pose-catch { display:block !important; }
+#watch-board .wp-return-track .wsp-shell { animation:wsp-m15-track .42s steps(2,end) infinite !important; }
+#watch-board .wp-return-secure .wsp-pose-idle,#watch-board .wp-return-secure .wsp-pose-run { display:none !important; }
+#watch-board .wp-return-secure .wsp-pose-carry { display:block !important; }
+#watch-board .wp-return-secure .wsp-shell { animation:wsp-m15-secure .28s cubic-bezier(.2,.8,.3,1) both !important; }
+#watch-board .wp-return-burst .wsp-pose-idle { display:none !important; }
+#watch-board .wp-return-burst .wsp-pose-carry { display:block !important; }
+#watch-board .wp-return-burst .wsp-shell { animation:wsp-m15-burst .3s ease-in-out infinite !important; }
+#watch-board .wp-cover-lane .wsp-shell { animation:wsp-m15-cover .34s steps(2,end) infinite !important; }
+@keyframes wsp-m15-track { 0%,100% { transform:translate(-.08px,.04px) rotate(-2deg); } 50% { transform:translate(.08px,.08px) rotate(2deg) scaleY(.98); } }
+@keyframes wsp-m15-secure { 0% { transform:translateY(-.12px) scaleY(1.03); } 58% { transform:translateY(.16px) scale(1.04,.88); } 100% { transform:translateY(.08px) scaleY(.94); } }
+@keyframes wsp-m15-burst { 0%,100% { transform:translateY(.02px) rotate(3deg); } 50% { transform:translate(.18px,-.16px) rotate(8deg) scaleY(1.04); } }
+@keyframes wsp-m15-cover { 0%,100% { transform:translateY(.04px) rotate(2deg); } 50% { transform:translate(.16px,-.1px) rotate(6deg); } }
+
+/* The same ball coordinates are preserved. Perspective scale, a tightening
+   shadow and a restrained landing reticle make depth and destination legible. */
+#watch-board.watch-special-teams .wp-ball-kick .wab-lift {
+  transform:translateY(calc(var(--kick-height,0) * -1.45px)) scale(calc(.72 + var(--kick-height,0) * .46));
+}
+#watch-board.watch-special-teams .wp-ball-kick .wab-shadow {
+  opacity:calc(.54 - var(--kick-height,0) * .34);
+  transform:scale(calc(1 - var(--kick-height,0) * .42));
+}
+#watch-board.watch-kick-place .wp-ball-place .wab-spin { animation:wab-m15-place .26s linear infinite !important; }
+#watch-board.watch-kick-punt .wp-ball-punt .wab-spin { animation:wab-m15-punt .32s linear infinite !important; }
+#watch-board.watch-kickoff .wp-ball-kickoff .wab-spin { animation:wab-m15-kickoff .3s linear infinite !important; }
+#watch-board.watch-kick-onside .wp-ball-onside .wab-spin { animation:wab-m15-onside .16s linear infinite !important; }
+@keyframes wab-m15-place { to { transform:rotate(360deg) scale(.94,1.04); } }
+@keyframes wab-m15-punt { to { transform:rotate(360deg) scale(1.02,.92); } }
+@keyframes wab-m15-kickoff { to { transform:rotate(360deg) scale(.98,1.02); } }
+@keyframes wab-m15-onside { to { transform:rotate(360deg) scale(1.08,.88); } }
+.wp-kick-landing { opacity:0; pointer-events:none; }
+.wp-kick-landing ellipse { fill:rgba(255,211,77,.035); stroke:var(--px-yellow,#ffd34d); stroke-width:.24; stroke-dasharray:.65 .5; }
+.wp-kick-landing path { fill:none; stroke:var(--px-yellow,#ffd34d); stroke-width:.28; stroke-linecap:square; }
+.wp-kick-landing-live { animation:wp-m15-landing 1s steps(3,end) infinite; }
+@keyframes wp-m15-landing { 0%,100% { opacity:.18; } 50% { opacity:.62; } }
+
   </style>
 </head>
 <body>
@@ -8223,7 +8318,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "59468641df";
+globalThis.__BUILD__ = "7746b7aae8";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -54857,7 +54952,18 @@ ${renderAutoRecruitLog()}`;
     const svg = document.getElementById("watch-board");
     if (!svg) return null;
     watchStopAnim();
-    svg.classList.remove("watch-presnap", "watch-snap-release", "watch-pass-pocket", "watch-route-live", "watch-qb-mechanics");
+    svg.classList.remove(
+      "watch-presnap",
+      "watch-snap-release",
+      "watch-pass-pocket",
+      "watch-route-live",
+      "watch-qb-mechanics",
+      "watch-special-teams",
+      "watch-kick-place",
+      "watch-kick-punt",
+      "watch-kickoff",
+      "watch-kick-onside"
+    );
     svg.classList.toggle("watch-replay", !!opts.replay);
     const cameraBug = document.getElementById("watch-camera-bug");
     const replayBug = document.getElementById("watch-replay-bug");
@@ -55476,14 +55582,16 @@ ${renderAutoRecruitLog()}`;
     const [g1X, g1Y] = watchSidePoint(12, 30), [g2X, g2Y] = watchSidePoint(88, 30);
     const [rushX0, rushY0] = watchSidePoint(30, 29.5);
     const sprites = ((_a = state.settings) == null ? void 0 : _a.spriteWatch) !== false;
+    svg.classList.add("watch-special-teams", isFG ? "watch-kick-place" : "watch-kick-punt");
     if (sprites) svg.classList.add("watch-sprites");
     else svg.classList.remove("watch-sprites");
     const cast = (a) => sprites ? `<g class="wp-actor wp-team-${a.team} wsp-still wsp-face-${a.team === "off" ? "e" : "w"}" data-wpk="${a.id}" transform="translate(${a.x.toFixed(2)},${a.y.toFixed(2)})">${spriteMarkup(a, a.team === "off" ? "e" : "w")}</g>` : "";
-    svg.innerHTML = watchFieldBase(p, board) + cast({ id: "LS", team: "off", label: "LS", x: startX, y: startY }) + (isFG ? cast({ id: "H", team: "off", label: "H", x: holdX, y: holdY }) : "") + cast({ id: "K", team: "off", label: isFG ? "K" : "P", x: isFG ? kickX0 : holdX, y: isFG ? kickY0 : holdY }) + (!isFG && !p.blocked ? cast({ id: "PR", team: "def", label: "PR", x: retX, y: retY }) : "") + (!isFG && !p.blocked && !p.touchback ? cast({ id: "G1", team: "off", label: "G", x: g1X, y: g1Y }) + cast({ id: "G2", team: "off", label: "G", x: g2X, y: g2Y }) : "") + (p.blocked ? cast({ id: "RS", team: "def", label: "LB", x: rushX0, y: rushY0 }) : "") + ballMarkup(startX, startY) + `<g id="wp-fx"></g>`;
-    const ballN = svg.querySelector("#wp-ball"), fxN = svg.querySelector("#wp-fx");
-    const kN = svg.querySelector('[data-wpk="K"]'), prN = svg.querySelector('[data-wpk="PR"]');
+    const landingMarkup = !isFG && !p.blocked ? `<g id="wp-kick-landing" class="wp-kick-landing" transform="translate(${endX.toFixed(2)},${endY.toFixed(2)})"><ellipse rx="2.7" ry="1.05"/><ellipse rx="1.55" ry=".6"/><path d="M0-1.65v3.3M-1.1-.85L0-1.65l1.1.8"/></g>` : "";
+    svg.innerHTML = watchFieldBase(p, board) + landingMarkup + cast({ id: "LS", team: "off", label: "LS", x: startX, y: startY }) + (isFG ? cast({ id: "H", team: "off", label: "H", x: holdX, y: holdY }) : "") + cast({ id: "K", team: "off", label: isFG ? "K" : "P", x: isFG ? kickX0 : holdX, y: isFG ? kickY0 : holdY }) + (!isFG && !p.blocked ? cast({ id: "PR", team: "def", label: "PR", x: retX, y: retY }) : "") + (!isFG && !p.blocked && !p.touchback ? cast({ id: "G1", team: "off", label: "G", x: g1X, y: g1Y }) + cast({ id: "G2", team: "off", label: "G", x: g2X, y: g2Y }) : "") + (p.blocked ? cast({ id: "RS", team: "def", label: "LB", x: rushX0, y: rushY0 }) : "") + ballMarkup(startX, startY) + `<g id="wp-fx"></g>`;
+    const ballN = svg.querySelector("#wp-ball"), ballLiftN = ballN == null ? void 0 : ballN.querySelector(".wab-lift"), fxN = svg.querySelector("#wp-fx");
+    const kN = svg.querySelector('[data-wpk="K"]'), hN = svg.querySelector('[data-wpk="H"]'), prN = svg.querySelector('[data-wpk="PR"]');
     const g1N = svg.querySelector('[data-wpk="G1"]'), g2N = svg.querySelector('[data-wpk="G2"]');
-    const rsN = svg.querySelector('[data-wpk="RS"]');
+    const rsN = svg.querySelector('[data-wpk="RS"]'), landingN = svg.querySelector("#wp-kick-landing");
     const speed = (_watch == null ? void 0 : _watch.speed) || 1;
     const snapT = isFG ? 0.28 : 0.38;
     const placeT = snapT + (isFG ? 0.22 : 0.26);
@@ -55529,17 +55637,37 @@ ${renderAutoRecruitLog()}`;
       }
       ballN == null ? void 0 : ballN.setAttribute("transform", `translate(${bx.toFixed(2)},${by.toFixed(2)})`);
       ballN == null ? void 0 : ballN.classList.toggle("wp-ball-kick", t >= swingT && t < landT);
+      ballN == null ? void 0 : ballN.classList.toggle("wp-ball-place", isFG && t >= swingT && t < landT);
+      ballN == null ? void 0 : ballN.classList.toggle("wp-ball-punt", !isFG && t >= swingT && t < landT);
+      if (ballLiftN && t >= swingT && t < landT) {
+        const fu = Math.max(0, Math.min(1, (t - swingT) / flight));
+        ballLiftN.style.setProperty("--kick-flight", fu.toFixed(3));
+        ballLiftN.style.setProperty("--kick-height", Math.sin(fu * Math.PI).toFixed(3));
+      }
+      landingN == null ? void 0 : landingN.classList.toggle("wp-kick-landing-live", t >= swingT && t < landT + 0.18);
       if (kN && isFG) {
         const u = Math.max(0, Math.min(1, (t - placeT) / Math.max(0.01, swingT - placeT)));
         wspPlace(kN, lerp(kickX0, holdX + 1.2, u), lerp(kickY0, holdY + 0.4, u));
       }
+      const approachStart = isFG ? Math.max(0, placeT - 0.12) : snapT;
+      const plantStart = swingT - (isFG ? 0.14 : 0.16);
+      kN == null ? void 0 : kN.classList.toggle("wp-kick-approach", t >= approachStart && t < plantStart);
+      kN == null ? void 0 : kN.classList.toggle("wp-kick-gather", !isFG && t >= snapT && t < plantStart);
+      kN == null ? void 0 : kN.classList.toggle("wp-kick-plant", t >= plantStart && t < swingT + 0.02);
+      kN == null ? void 0 : kN.classList.toggle("wp-kick-contact", t >= swingT - 0.045 && t < swingT + 0.085);
+      kN == null ? void 0 : kN.classList.toggle("wp-kick-follow", t >= swingT + 0.02 && t <= swingT + 0.54);
       kN == null ? void 0 : kN.classList.toggle("wp-kicking", t >= swingT - 0.06 && t <= swingT + 0.4);
+      hN == null ? void 0 : hN.classList.toggle("wp-hold-receive", t >= snapT - 0.08 && t < placeT);
+      hN == null ? void 0 : hN.classList.toggle("wp-hold-place", t >= placeT && t < swingT + 0.16);
       if (prN && t >= swingT) {
         if (t < landT) {
           const u = Math.min(1, (t - swingT) / flight);
           wspPlace(prN, lerp(retX, endX, u * 0.9), lerp(retY, endY - 1.5, u * 0.9));
         } else wspPlace(prN, bx, by);
       }
+      prN == null ? void 0 : prN.classList.toggle("wp-return-track", t >= swingT && t < landT - 0.1);
+      prN == null ? void 0 : prN.classList.toggle("wp-return-secure", t >= landT - 0.1 && t < landT + 0.28);
+      prN == null ? void 0 : prN.classList.toggle("wp-return-burst", retYds > 0 && t >= landT + 0.16 && t < dur);
       if (g1N && t >= swingT) {
         const u = Math.min(1, (t - swingT) / (flight + Math.max(0.3, retDur)));
         wspPlace(g1N, lerp(g1X, bx - 3.4, u), lerp(g1Y, by - 1.2, u));
@@ -55569,6 +55697,8 @@ ${renderAutoRecruitLog()}`;
     const sprites = ((_a = state.settings) == null ? void 0 : _a.spriteWatch) !== false;
     if (sprites) svg.classList.add("watch-sprites");
     else svg.classList.remove("watch-sprites");
+    svg.classList.add("watch-special-teams", "watch-kickoff");
+    svg.classList.toggle("watch-kick-onside", !!p.onside);
     const [teeX, teeY] = watchSidePoint(50, 31);
     const kickYds = p.onside ? 12 : 58;
     const [endX, endY] = watchSidePoint(p.onside ? 44 : 50, Math.max(2.6, 31 - kickYds * WATCH_SIDE.ypu));
@@ -55576,10 +55706,11 @@ ${renderAutoRecruitLog()}`;
     const [retEndX, retEndY] = watchSidePoint(50, Math.min(58, 31 - kickYds * WATCH_SIDE.ypu + retYds * WATCH_SIDE.ypu));
     const [c1X, c1Y] = watchSidePoint(20, 33), [c2X, c2Y] = watchSidePoint(80, 33);
     const cast = (a) => sprites ? `<g class="wp-actor wp-team-${a.team} wsp-still wsp-face-${a.team === "off" ? "e" : "w"}" data-wpk="${a.id}" transform="translate(${a.x.toFixed(2)},${a.y.toFixed(2)})">${spriteMarkup(a, a.team === "off" ? "e" : "w")}</g>` : "";
-    svg.innerHTML = watchFieldBase(p, board) + cast({ id: "K", team: "off", label: "K", x: teeX - 8, y: teeY }) + cast({ id: "C1", team: "off", label: "CV", x: c1X, y: c1Y }) + cast({ id: "C2", team: "off", label: "CV", x: c2X, y: c2Y }) + (!p.touchback || p.onside ? cast({ id: "PR", team: "def", label: p.onside ? "HANDS" : "PR", x: endX, y: endY - 2 }) : "") + ballMarkup(teeX, teeY) + `<g id="wp-fx"></g>`;
-    const ballN = svg.querySelector("#wp-ball"), fxN = svg.querySelector("#wp-fx");
+    const landingMarkup = `<g id="wp-kick-landing" class="wp-kick-landing" transform="translate(${endX.toFixed(2)},${endY.toFixed(2)})"><ellipse rx="2.7" ry="1.05"/><ellipse rx="1.55" ry=".6"/><path d="M0-1.65v3.3M-1.1-.85L0-1.65l1.1.8"/></g>`;
+    svg.innerHTML = watchFieldBase(p, board) + landingMarkup + cast({ id: "K", team: "off", label: "K", x: teeX - 8, y: teeY }) + cast({ id: "C1", team: "off", label: "CV", x: c1X, y: c1Y }) + cast({ id: "C2", team: "off", label: "CV", x: c2X, y: c2Y }) + (!p.touchback || p.onside ? cast({ id: "PR", team: "def", label: p.onside ? "HANDS" : "PR", x: endX, y: endY - 2 }) : "") + ballMarkup(teeX, teeY) + `<g id="wp-fx"></g>`;
+    const ballN = svg.querySelector("#wp-ball"), ballLiftN = ballN == null ? void 0 : ballN.querySelector(".wab-lift"), fxN = svg.querySelector("#wp-fx");
     const kN = svg.querySelector('[data-wpk="K"]'), prN = svg.querySelector('[data-wpk="PR"]');
-    const c1N = svg.querySelector('[data-wpk="C1"]'), c2N = svg.querySelector('[data-wpk="C2"]');
+    const c1N = svg.querySelector('[data-wpk="C1"]'), c2N = svg.querySelector('[data-wpk="C2"]'), landingN = svg.querySelector("#wp-kick-landing");
     const speed = (_watch == null ? void 0 : _watch.speed) || 1;
     const runT = 0.6, flight = p.onside ? 0.7 : 1.7;
     const boomT = runT + flight;
@@ -55622,10 +55753,21 @@ ${renderAutoRecruitLog()}`;
       }
       ballN == null ? void 0 : ballN.setAttribute("transform", `translate(${bx.toFixed(2)},${by.toFixed(2)})`);
       ballN == null ? void 0 : ballN.classList.toggle("wp-ball-kick", t >= runT && t < boomT);
+      ballN == null ? void 0 : ballN.classList.toggle(p.onside ? "wp-ball-onside" : "wp-ball-kickoff", t >= runT && t < boomT);
+      if (ballLiftN && t >= runT && t < boomT) {
+        const fu = Math.max(0, Math.min(1, (t - runT) / flight));
+        ballLiftN.style.setProperty("--kick-flight", fu.toFixed(3));
+        ballLiftN.style.setProperty("--kick-height", Math.sin(fu * Math.PI).toFixed(3));
+      }
+      landingN == null ? void 0 : landingN.classList.toggle("wp-kick-landing-live", t >= runT && t < boomT + 0.18);
       if (kN) {
         const u = Math.min(1, t / runT);
         wspPlace(kN, lerp(teeX - 8, teeX - 1.4, u), teeY);
       }
+      kN == null ? void 0 : kN.classList.toggle("wp-kick-approach", t >= 0.08 && t < runT - 0.16);
+      kN == null ? void 0 : kN.classList.toggle("wp-kick-plant", t >= runT - 0.16 && t < runT + 0.02);
+      kN == null ? void 0 : kN.classList.toggle("wp-kick-contact", t >= runT - 0.045 && t < runT + 0.085);
+      kN == null ? void 0 : kN.classList.toggle("wp-kick-follow", t >= runT + 0.02 && t <= runT + 0.56);
       kN == null ? void 0 : kN.classList.toggle("wp-kicking", t >= runT - 0.06 && t <= runT + 0.4);
       if (c1N && t >= runT) {
         const u = Math.min(1, (t - runT) / (flight + Math.max(0.4, retDur)));
@@ -55633,6 +55775,11 @@ ${renderAutoRecruitLog()}`;
         wspPlace(c2N, lerp(c2X, bx + 3.2, u), lerp(c2Y, by + 1.1, u));
       }
       if (prN && t >= boomT - 0.2) wspPlace(prN, bx, by);
+      prN == null ? void 0 : prN.classList.toggle("wp-return-track", t >= runT && t < boomT - 0.1);
+      prN == null ? void 0 : prN.classList.toggle("wp-return-secure", t >= boomT - 0.1 && t < boomT + 0.28);
+      prN == null ? void 0 : prN.classList.toggle("wp-return-burst", retYds > 0 && t >= boomT + 0.16 && t < dur);
+      c1N == null ? void 0 : c1N.classList.toggle("wp-cover-lane", t >= runT && t < dur);
+      c2N == null ? void 0 : c2N.classList.toggle("wp-cover-lane", t >= runT && t < dur);
       camX += (watchSideCameraX(p, bx) - camX) * 0.1;
       svg.setAttribute("viewBox", `${camX.toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
       if (t >= dur && fxN && !fxN.childElementCount) {
