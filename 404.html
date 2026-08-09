@@ -5963,9 +5963,9 @@ circle.wsp-skin { transform-box:fill-box; transform-origin:center; transform:sca
 .wsp-still .wsp-pose-run { display:none; }
 .wsp-still .wsp-pose-idle { display:block; }
 .wp-near-ball.wsp-still .wsp-pose-idle,.wp-blocking.wsp-still .wsp-pose-idle,.wp-blocked.wsp-still .wsp-pose-idle,.wp-throwing.wsp-still .wsp-pose-idle,.wp-catching.wsp-still .wsp-pose-idle,.wp-tackling.wsp-still .wsp-pose-idle,.wp-celebrating.wsp-still .wsp-pose-idle,.wp-moving.wsp-still .wsp-pose-idle { display:none; }
-#watch-board.watch-in-play .wp-actor:not(.wp-blocking):not(.wp-blocked):not(.wsp-still) .wsp-shell { animation:wsp-body-bob .34s steps(2,end) infinite; animation-delay:var(--gait,0s); }
-#watch-board.watch-in-play .wp-actor:not(.wsp-still) .wsp-run-arm-l { animation:wsp-arm-pump-l .34s ease-in-out infinite; animation-delay:var(--gait,0s); }
-#watch-board.watch-in-play .wp-actor:not(.wsp-still) .wsp-run-arm-r { animation:wsp-arm-pump-r .34s ease-in-out infinite; animation-delay:var(--gait,0s); }
+#watch-board.watch-in-play .wp-actor:not(.wp-blocking):not(.wp-blocked):not(.wsp-still) .wsp-shell { animation:wsp-body-bob 1s linear infinite paused; animation-delay:calc(var(--ph,0) * -1s); }
+#watch-board.watch-in-play .wp-actor:not(.wsp-still) .wsp-run-arm-l { animation:wsp-arm-pump-l 1s linear infinite paused; animation-delay:calc(var(--ph,0) * -1s); }
+#watch-board.watch-in-play .wp-actor:not(.wsp-still) .wsp-run-arm-r { animation:wsp-arm-pump-r 1s linear infinite paused; animation-delay:calc(var(--ph,0) * -1s); }
 #watch-board.watch-in-play .wsp-carry-arm-l { animation:wsp-cradle-l .38s ease-in-out infinite; animation-delay:var(--gait,0s); }
 #watch-board.watch-in-play .wsp-carry-arm-r { animation:wsp-cradle-r .38s ease-in-out infinite; animation-delay:var(--gait,0s); }
 /* Side-profile limbs (authored facing east; the flip mirrors everything). */
@@ -6033,6 +6033,60 @@ circle.wsp-skin { transform-box:fill-box; transform-origin:center; transform:sca
 @keyframes wsp-catch-r { 0% { transform:rotate(-26deg) translate(-.5px,.7px); } 100% { transform:none; } }
 @keyframes wsp-throw-guide { 0%,28% { transform:rotate(7deg) translateY(0); } 62% { transform:rotate(-8deg) translate(.08px,-.08px); } 100% { transform:rotate(13deg) translate(.03px,.08px); } }
 @keyframes wsp-throw-arm { 0% { transform:rotate(-12deg) translate(0,0); } 30% { transform:rotate(-32deg) translate(-.08px,-.08px); } 62% { transform:rotate(42deg) translate(.12px,.04px); } 100% { transform:rotate(66deg) translate(-.05px,.2px); } }
+
+/* Milestone 19: the jointed side body now sits behind a real locomotion
+   controller. Ground distance still owns phase, while velocity chooses stride
+   size and authored start/plant/brake body language. No track or sim outcome is
+   changed here; this only makes the body explain the movement it already has. */
+#watch-board.watch-sprites .wp-actor.wsp-loco-walk .wsp-sd-thigh-f { animation-name:wsp-m19-walk-thigh-f; }
+#watch-board.watch-sprites .wp-actor.wsp-loco-walk .wsp-sd-thigh-b { animation-name:wsp-m19-walk-thigh-b; }
+#watch-board.watch-sprites .wp-actor.wsp-loco-walk .wsp-sd-shin-f { animation-name:wsp-m19-walk-shin-f; }
+#watch-board.watch-sprites .wp-actor.wsp-loco-walk .wsp-sd-shin-b { animation-name:wsp-m19-walk-shin-b; }
+#watch-board.watch-sprites .wp-actor.wsp-loco-jog .wsp-sd-thigh-f { animation-name:wsp-m19-jog-thigh-f; }
+#watch-board.watch-sprites .wp-actor.wsp-loco-jog .wsp-sd-thigh-b { animation-name:wsp-m19-jog-thigh-b; }
+#watch-board.watch-sprites .wp-actor.wsp-loco-jog .wsp-sd-shin-f { animation-name:wsp-m19-jog-shin-f; }
+#watch-board.watch-sprites .wp-actor.wsp-loco-jog .wsp-sd-shin-b { animation-name:wsp-m19-jog-shin-b; }
+#watch-board.watch-sprites .wp-actor.wsp-backpedal .wsp-sd-thigh-f { animation-name:wsp-m19-pedal-thigh-f; }
+#watch-board.watch-sprites .wp-actor.wsp-backpedal .wsp-sd-thigh-b { animation-name:wsp-m19-pedal-thigh-b; }
+#watch-board.watch-sprites .wp-actor.wsp-backpedal .wsp-sd-shin-f { animation-name:wsp-m19-pedal-shin-f; }
+#watch-board.watch-sprites .wp-actor.wsp-backpedal .wsp-sd-shin-b { animation-name:wsp-m19-pedal-shin-b; }
+
+#watch-board.watch-in-play .wp-actor.wsp-loco-start:not(.wp-blocking):not(.wp-blocked):not(.wp-catching):not(.wp-tackling) .wsp-athlete { animation:wsp-m19-start .2s cubic-bezier(.18,.82,.3,1) both; }
+#watch-board.watch-in-play .wp-actor.wsp-loco-brake:not(.wp-blocking):not(.wp-blocked):not(.wp-catching):not(.wp-tackling) .wsp-athlete { animation:wsp-m19-brake .18s ease-out both; }
+#watch-board.watch-in-play .wp-actor.wsp-loco-plant.wsp-cut-left:not(.wp-catching):not(.wp-tackling) .wsp-athlete { animation:wsp-m19-cut-left .165s cubic-bezier(.18,.8,.3,1) both; }
+#watch-board.watch-in-play .wp-actor.wsp-loco-plant.wsp-cut-right:not(.wp-catching):not(.wp-tackling) .wsp-athlete { animation:wsp-m19-cut-right .165s cubic-bezier(.18,.8,.3,1) both; }
+#watch-board.watch-in-play .wp-actor.wsp-shuffle:not(.wp-blocking):not(.wp-blocked) .wsp-athlete { animation:wsp-m19-shuffle .32s steps(2,end) infinite; }
+
+/* A stop or hard redirect holds one foot under the hip instead of resetting
+   both joint chains to the neutral authored pose. */
+#watch-board.watch-sprites .wp-actor.wsp-loco-plant .wsp-sd-thigh,
+#watch-board.watch-sprites .wp-actor.wsp-loco-plant .wsp-sd-shin { animation:none !important; }
+#watch-board.watch-sprites .wp-actor:is(.wsp-loco-plant,.wsp-loco-still).wsp-plant-a .wsp-sd-thigh-f { transform:rotate(-13deg); }
+#watch-board.watch-sprites .wp-actor:is(.wsp-loco-plant,.wsp-loco-still).wsp-plant-a .wsp-sd-shin-f { transform:rotate(11deg); }
+#watch-board.watch-sprites .wp-actor:is(.wsp-loco-plant,.wsp-loco-still).wsp-plant-a .wsp-sd-thigh-b { transform:rotate(9deg); }
+#watch-board.watch-sprites .wp-actor:is(.wsp-loco-plant,.wsp-loco-still).wsp-plant-a .wsp-sd-shin-b { transform:rotate(26deg); }
+#watch-board.watch-sprites .wp-actor:is(.wsp-loco-plant,.wsp-loco-still).wsp-plant-b .wsp-sd-thigh-f { transform:rotate(9deg); }
+#watch-board.watch-sprites .wp-actor:is(.wsp-loco-plant,.wsp-loco-still).wsp-plant-b .wsp-sd-shin-f { transform:rotate(26deg); }
+#watch-board.watch-sprites .wp-actor:is(.wsp-loco-plant,.wsp-loco-still).wsp-plant-b .wsp-sd-thigh-b { transform:rotate(-13deg); }
+#watch-board.watch-sprites .wp-actor:is(.wsp-loco-plant,.wsp-loco-still).wsp-plant-b .wsp-sd-shin-b { transform:rotate(11deg); }
+
+@keyframes wsp-m19-walk-thigh-f { 0%,100% { transform:rotate(-15deg); } 50% { transform:rotate(13deg); } }
+@keyframes wsp-m19-walk-thigh-b { 0%,100% { transform:rotate(13deg); } 50% { transform:rotate(-15deg); } }
+@keyframes wsp-m19-walk-shin-f { 0%,100% { transform:rotate(7deg); } 55% { transform:rotate(27deg); } 78% { transform:rotate(17deg); } }
+@keyframes wsp-m19-walk-shin-b { 0%,100% { transform:rotate(27deg); } 48% { transform:rotate(7deg); } 82% { transform:rotate(16deg); } }
+@keyframes wsp-m19-jog-thigh-f { 0%,100% { transform:rotate(-25deg); } 50% { transform:rotate(23deg); } }
+@keyframes wsp-m19-jog-thigh-b { 0%,100% { transform:rotate(23deg); } 50% { transform:rotate(-25deg); } }
+@keyframes wsp-m19-jog-shin-f { 0%,100% { transform:rotate(5deg); } 58% { transform:rotate(43deg); } 84% { transform:rotate(20deg); } }
+@keyframes wsp-m19-jog-shin-b { 0%,100% { transform:rotate(43deg); } 48% { transform:rotate(5deg); } 84% { transform:rotate(20deg); } }
+@keyframes wsp-m19-pedal-thigh-f { 0%,100% { transform:rotate(18deg); } 50% { transform:rotate(-16deg); } }
+@keyframes wsp-m19-pedal-thigh-b { 0%,100% { transform:rotate(-16deg); } 50% { transform:rotate(18deg); } }
+@keyframes wsp-m19-pedal-shin-f { 0%,100% { transform:rotate(24deg); } 52% { transform:rotate(8deg); } 82% { transform:rotate(18deg); } }
+@keyframes wsp-m19-pedal-shin-b { 0%,100% { transform:rotate(8deg); } 52% { transform:rotate(24deg); } 82% { transform:rotate(15deg); } }
+@keyframes wsp-m19-start { 0% { transform:translateY(.16px) scale(1.04,.88); } 60% { transform:translate(.16px,-.08px) rotate(4deg) scale(.99,1.04); } 100% { transform:none; } }
+@keyframes wsp-m19-brake { from { transform:translateY(-.05px) rotate(2deg); } to { transform:translate(-.12px,.15px) rotate(-5deg) scale(1.04,.9); } }
+@keyframes wsp-m19-cut-left { 0% { transform:translateY(-.06px); } 58% { transform:translate(-.3px,.16px) rotate(-9deg) scale(1.04,.9); } 100% { transform:translate(-.08px,.06px) rotate(-2deg); } }
+@keyframes wsp-m19-cut-right { 0% { transform:translateY(-.06px); } 58% { transform:translate(.3px,.16px) rotate(9deg) scale(1.04,.9); } 100% { transform:translate(.08px,.06px) rotate(2deg); } }
+@keyframes wsp-m19-shuffle { 0%,100% { transform:translateX(-.08px) rotate(-2deg); } 50% { transform:translateX(.08px) rotate(2deg); } }
 /* ── Group 4 (2026): TACKLES & BALL-CARRIER MOVES ───────────────────────────
    Every look here is a pose class toggled in a short window by watchBoard, from
    the recorded-finish metadata buildPlayScript stamped (gain / field position /
@@ -8309,6 +8363,53 @@ body *::after {
 .wp-kick-landing-live { animation:wp-m15-landing 1s steps(3,end) infinite; }
 @keyframes wp-m15-landing { 0%,100% { opacity:.18; } 50% { opacity:.62; } }
 
+/* Milestone 18: full-unit special teams.  Each phase now owns a football body
+   language: protection anchors, rushers fit and leap, gunners release, jammers
+   punch, wedges climb, coverage throttles down, and onside units attack a pile. */
+#watch-board.watch-special-teams :is(.wp-st-anchor,.wp-st-jam,.wp-st-engage,.wp-st-wedge) :is(.wsp-pose-idle,.wsp-pose-run,.wsp-pose-set) { display:none !important; }
+#watch-board.watch-special-teams :is(.wp-st-anchor,.wp-st-jam,.wp-st-engage,.wp-st-wedge) .wsp-pose-block { display:block !important; }
+#watch-board.watch-special-teams :is(.wp-st-rush,.wp-st-release,.wp-st-lead) .wsp-pose-idle { display:none !important; }
+#watch-board.watch-special-teams :is(.wp-st-rush,.wp-st-release,.wp-st-lead) .wsp-pose-run { display:block !important; }
+#watch-board.watch-special-teams :is(.wp-st-leap,.wp-st-onside-dive,.wp-st-breakdown,.wp-st-pile) :is(.wsp-pose-idle,.wsp-pose-run,.wsp-pose-block) { display:none !important; }
+#watch-board.watch-special-teams :is(.wp-st-leap,.wp-st-onside-dive,.wp-st-breakdown,.wp-st-pile) .wsp-pose-tackle { display:block !important; }
+#watch-board.watch-special-teams :is(.wp-st-hands,.wp-st-faircatch) :is(.wsp-pose-idle,.wsp-pose-run) { display:none !important; }
+#watch-board.watch-special-teams :is(.wp-st-hands,.wp-st-faircatch) .wsp-pose-catch { display:block !important; }
+#watch-board.watch-special-teams .wp-st-snapper .wsp-pose-idle { display:none !important; }
+#watch-board.watch-special-teams .wp-st-snapper .wsp-pose-set { display:block !important; }
+
+#watch-board.watch-special-teams .wp-st-anchor .wsp-shell { animation:wsp-m18-anchor .36s ease-in-out infinite alternate !important; }
+#watch-board.watch-special-teams .wp-st-rush .wsp-shell { animation:wsp-m18-rush .28s steps(2,end) infinite !important; }
+#watch-board.watch-special-teams .wp-st-jam .wsp-shell { animation:wsp-m18-jam .32s ease-in-out infinite alternate !important; }
+#watch-board.watch-special-teams .wp-st-release .wsp-shell { animation:wsp-m18-release .27s steps(2,end) infinite !important; }
+#watch-board.watch-special-teams .wp-st-wedge .wsp-shell { animation:wsp-m18-wedge .38s ease-in-out infinite alternate !important; }
+#watch-board.watch-special-teams .wp-st-engage .wsp-shell { animation:wsp-m18-engage .3s ease-in-out infinite alternate !important; }
+#watch-board.watch-special-teams .wp-st-leap .wsp-shell { animation:wsp-m18-leap .32s cubic-bezier(.18,.76,.25,1) both !important; }
+#watch-board.watch-special-teams .wp-st-breakdown .wsp-shell { animation:wsp-m18-breakdown .24s ease-out both !important; }
+#watch-board.watch-special-teams .wp-st-onside-dive .wsp-shell { animation:wsp-m18-dive .36s cubic-bezier(.2,.72,.2,1) both !important; }
+#watch-board.watch-special-teams .wp-st-pile .wsp-shell { animation:wsp-m18-pile .48s steps(3,end) infinite !important; }
+#watch-board.watch-special-teams .wp-st-faircatch .wsp-shell { animation:wsp-m18-faircatch .62s ease-in-out infinite !important; }
+#watch-board.watch-special-teams .wp-st-snapper .wsp-shell { animation:wsp-m18-snapper .28s ease-out both !important; }
+#watch-board.watch-special-teams .wp-st-lost { opacity:.76; }
+#watch-board.watch-special-teams .wp-st-lost .wsp-shell { animation:wsp-m18-lost .3s ease-out both !important; }
+
+@keyframes wsp-m18-anchor { from { transform:translate(-.08px,.06px) rotate(-3deg) scale(1.03,.94); } to { transform:translate(.1px,.12px) rotate(3deg) scale(.98,.91); } }
+@keyframes wsp-m18-rush { 0%,100% { transform:translate(-.12px,.02px) rotate(-7deg); } 50% { transform:translate(.18px,-.12px) rotate(8deg) scaleY(1.04); } }
+@keyframes wsp-m18-jam { from { transform:translate(-.16px,.04px) rotate(-6deg) scaleX(1.03); } to { transform:translate(.18px,.08px) rotate(7deg) scaleX(.98); } }
+@keyframes wsp-m18-release { 0%,100% { transform:translateY(.03px) rotate(4deg); } 50% { transform:translate(.22px,-.15px) rotate(10deg) scaleY(1.05); } }
+@keyframes wsp-m18-wedge { from { transform:translate(-.1px,.08px) rotate(-5deg) scale(.99,.94); } to { transform:translate(.14px,.04px) rotate(5deg) scale(1.03,.92); } }
+@keyframes wsp-m18-engage { from { transform:translate(-.12px,.1px) rotate(-6deg); } to { transform:translate(.12px,.1px) rotate(6deg); } }
+@keyframes wsp-m18-leap { 0% { transform:translateY(.1px) rotate(-8deg) scaleY(.9); } 58% { transform:translate(.28px,-.72px) rotate(18deg) scaleY(1.08); } 100% { transform:translate(.42px,-.32px) rotate(27deg); } }
+@keyframes wsp-m18-breakdown { from { transform:translate(.15px,-.08px) rotate(8deg); } to { transform:translateY(.18px) rotate(-3deg) scale(1.06,.82); } }
+@keyframes wsp-m18-dive { 0% { transform:translateY(.1px) rotate(-5deg); } 70% { transform:translate(.5px,-.18px) rotate(62deg) scaleX(1.08); } 100% { transform:translate(.62px,.08px) rotate(78deg) scaleY(.82); } }
+@keyframes wsp-m18-pile { 0%,100% { transform:translate(-.08px,.17px) rotate(72deg) scale(1.06,.76); } 50% { transform:translate(.11px,.22px) rotate(78deg) scale(.98,.72); } }
+@keyframes wsp-m18-faircatch { 0%,100% { transform:translateY(.02px); } 50% { transform:translateY(-.1px) scaleY(1.03); } }
+@keyframes wsp-m18-snapper { from { transform:translateY(.12px) rotate(0) scaleY(.88); } to { transform:translate(.2px,.03px) rotate(6deg) scaleY(.96); } }
+@keyframes wsp-m18-lost { from { transform:translateY(.08px); } to { transform:translate(-.28px,.2px) rotate(-16deg) scaleY(.84); } }
+
+#watch-board.watch-special-teams .wp-st-engagements-live::before { content:""; }
+#watch-board.watch-special-teams .wp-st-pile .wsp-shadow { transform:scale(1.35,.72); fill:rgba(0,0,0,.5); }
+#watch-board.watch-special-teams .wp-st-leap .wsp-shadow { opacity:.3; transform:scaleX(.72); }
+
 /* Milestone 16: field-state integrity. The arrow is derived from the same
    possession sign as every field coordinate, so LOS and gain direction share
    a single visual truth. It sits inside the sideline and never covers action. */
@@ -8345,7 +8446,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "0d7a4975bd";
+globalThis.__BUILD__ = "45e41d80ad";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -28238,6 +28339,22 @@ var _CFB = (() => {
       );
       resumeDrive = null;
       if (driveResult.pending) {
+        if (pendingKickoff && driveResult.pending.plays) {
+          const koScore = {
+            scoreOff: possession === "home" ? token.homeScore : token.awayScore,
+            scoreDef: possession === "home" ? token.awayScore : token.homeScore
+          };
+          const koClock = driveResult.pending.sit && driveResult.pending.sit.clock != null ? driveResult.pending.sit.clock : driveResult.pending.clock;
+          for (const ko of pendingKickoff.reverse()) {
+            driveResult.pending.plays.unshift(__spreadProps2(__spreadValues2(__spreadValues2({}, ko), koScore), {
+              clock: koClock,
+              half,
+              down: 0,
+              distance: 0
+            }));
+          }
+          pendingKickoff = null;
+        }
         token.pending = {
           kind: driveResult.pending.kind || "fourth",
           half,
@@ -28372,6 +28489,8 @@ var _CFB = (() => {
             const onside = onsideResult(wantSurprise, ((_koSchool == null ? void 0 : _koSchool._dnaGrades) == null ? void 0 : _koSchool._dnaGrades.specialTeams) || 0, _handsLv);
             pendingKickoff = [{
               type: "kickoff",
+              kickingSide: scoringTeam,
+              receivingSide: scoringTeam === "home" ? "away" : "home",
               onside: true,
               recovered: onside.recovered,
               touchback: false,
@@ -28400,6 +28519,8 @@ var _CFB = (() => {
               fieldPos = clamp2(Math.round(randNorm(38, 4)), 28, 48);
               pendingKickoff = [{
                 type: "kickoff",
+                kickingSide: scoringTeam,
+                receivingSide: receivingTeam,
                 onside: false,
                 squib: true,
                 touchback: false,
@@ -28423,6 +28544,8 @@ var _CFB = (() => {
               }
               pendingKickoff = ko.td ? [] : [{
                 type: "kickoff",
+                kickingSide: scoringTeam,
+                receivingSide: receivingTeam,
                 onside: false,
                 touchback: !!ko.touchback,
                 returnerId: (_i = (_h = ko.returner) == null ? void 0 : _h.id) != null ? _i : null,
@@ -28447,6 +28570,8 @@ var _CFB = (() => {
                 pendingKickoff = [
                   {
                     type: "kickoff",
+                    kickingSide: scoringTeam,
+                    receivingSide: receivingTeam,
                     onside: false,
                     touchback: false,
                     returnerId: (_n = (_m = ko.returner) == null ? void 0 : _m.id) != null ? _n : null,
@@ -28457,6 +28582,8 @@ var _CFB = (() => {
                   },
                   {
                     type: "kickoff",
+                    kickingSide: receivingTeam,
+                    receivingSide: scoringTeam,
                     onside: false,
                     touchback: !!ko2.touchback,
                     returnerId: (_p = (_o = ko2.returner) == null ? void 0 : _o.id) != null ? _p : null,
@@ -51886,22 +52013,37 @@ ${renderAutoRecruitLog()}`;
   function ballMarkup(x, y) {
     return `<g id="wp-ball" class="wa-ballg" transform="translate(${x},${y})"><ellipse class="wab-shadow" cx="0" cy=".48" rx=".78" ry=".2"/><g class="wab-lift"><g class="wab-spin"><g class="wab-model"><path class="wab-core" d="M-1.7 0Q-1.18-.82 0-.82T1.7 0Q1.18.82 0 .82T-1.7 0Z"/><path class="wab-panel" d="M-1.18-.45Q0-.82 1.18-.45Q.72-.66 0-.66T-1.18-.45Z"/><path class="wab-end" d="M-1.7 0q.24-.4.58-.6l.2.24q-.25.17-.43.36.18.2.43.36l-.2.24q-.34-.2-.58-.6ZM1.7 0q-.24-.4-.58-.6l-.2.24q.25.17.43.36-.18.2-.43.36l.2.24q.34-.2.58-.6Z"/><path class="wab-college-stripe" d="M-1.14-.52q-.18.52 0 1.04M1.14-.52q.18.52 0 1.04"/><path class="wab-seam" d="M-.76-.08Q0-.3.76-.08"/><path class="wab-lace" d="M-.58-.1Q0-.25.58-.1M-.36-.28l.08.35M-.12-.33l.04.36M.12-.33l-.04.36M.36-.28l-.08.35"/><path class="wab-highlight" d="M-.92-.42Q-.3-.68.28-.62"/></g></g></g></g>`;
   }
-  var WSP_STILL_V = 1.1;
   var WSP_TURN_V = 4.6;
   var WSP_VERT_V = 1.6;
   var WSP_STRIDE = 0.85;
   var WSP_CYCLE = WSP_STRIDE * 2;
   var WSP_FACES = ["e", "w", "n", "s"];
-  function spriteMotionTick(node, x, y) {
+  var WSP_LOCO_CLASSES = ["wsp-loco-still", "wsp-loco-start", "wsp-loco-walk", "wsp-loco-jog", "wsp-loco-sprint", "wsp-loco-brake", "wsp-loco-plant"];
+  var WSP_ENTER_MOVE_V = 1.35;
+  var WSP_ENTER_STILL_V = 0.72;
+  function setLocoClass(node, m, next) {
+    if (m.loco === next) return;
+    for (const cls of WSP_LOCO_CLASSES) node.classList.remove(cls);
+    node.classList.add(`wsp-loco-${next}`);
+    m.loco = next;
+    if (node.dataset) node.dataset.locomotion = next;
+  }
+  function setPlantFoot(node, m, plantB) {
+    m.plantB = !!plantB;
+    node.classList.toggle("wsp-plant-a", !m.plantB);
+    node.classList.toggle("wsp-plant-b", m.plantB);
+  }
+  function spriteMotionTick(node, x, y, sampleNow = performance.now()) {
     if (!node) return;
     let m = node._wsm;
     if (!m) {
       const face = WSP_FACES.find((f) => node.classList.contains("wsp-face-" + f)) || "e";
-      node._wsm = { x, y, t: performance.now(), face, fwd: face, odo: 0, step: false, ph: 0, lean: 0, q: 0, vx: 0, vy: 0, flip: node.querySelector(".wsp-flip"), still: true };
-      node.classList.add("wsp-face-" + face, "wsp-still");
+      node._wsm = { x, y, t: sampleNow, face, fwd: face, faceCandidate: face, faceAt: sampleNow, odo: 0, step: false, ph: 0, lean: 0, q: 0, vx: 0, vy: 0, accel: 0, rawDirX: 0, rawDirY: 0, movingAt: sampleNow, plantUntil: 0, cut: "", backpedal: false, shuffle: false, plantB: false, loco: "still", flip: node.querySelector(".wsp-flip"), still: true };
+      node.classList.add("wsp-face-" + face, "wsp-still", "wsp-loco-still", "wsp-plant-a");
+      if (node.dataset) node.dataset.locomotion = "still";
       return;
     }
-    const now = performance.now();
+    const now = sampleNow;
     const dt = (now - m.t) / 1e3;
     if (dt <= 0) return;
     m.t = now;
@@ -51910,29 +52052,69 @@ ${renderAutoRecruitLog()}`;
     m.x = x;
     m.y = y;
     const k = Math.min(1, idt * 9);
+    const prevV = Math.hypot(m.vx, m.vy);
+    const rawV = Math.hypot(dx, dy) / dt;
     m.vx += (dx / dt - m.vx) * k;
     m.vy += (dy / dt - m.vy) * k;
     const v = Math.hypot(m.vx, m.vy);
-    const still = v < WSP_STILL_V;
+    const instAccel = (v - prevV) / Math.max(1e-3, dt);
+    m.accel += (instAccel - m.accel) * Math.min(1, idt * 8);
+    const wasStill = m.still;
+    const still = wasStill ? v < WSP_ENTER_MOVE_V : v < WSP_ENTER_STILL_V;
     if (still !== m.still) {
       m.still = still;
       node.classList.toggle("wsp-still", still);
+      if (!still) m.movingAt = now;
+      else {
+        const plantB = m.ph >= 0.25 && m.ph < 0.75;
+        setPlantFoot(node, m, plantB);
+      }
     }
+    let cut = "";
+    if (!still && rawV > 1.8) {
+      const rdx = dx / Math.max(1e-4, Math.hypot(dx, dy));
+      const rdy = dy / Math.max(1e-4, Math.hypot(dx, dy));
+      if (m.rawDirX || m.rawDirY) {
+        const dot = m.rawDirX * rdx + m.rawDirY * rdy;
+        const cross = m.rawDirX * rdy - m.rawDirY * rdx;
+        if ((dot < 0.58 || Math.abs(cross) > 0.7) && now >= m.plantUntil) {
+          m.plantUntil = now + 165;
+          cut = cross >= 0 ? "right" : "left";
+          m.cut = cut;
+          setPlantFoot(node, m, m.ph >= 0.25 && m.ph < 0.75);
+        }
+      }
+      m.rawDirX = rdx;
+      m.rawDirY = rdy;
+    }
+    if (now >= m.plantUntil) m.cut = "";
+    node.classList.toggle("wsp-cut-left", m.cut === "left");
+    node.classList.toggle("wsp-cut-right", m.cut === "right");
     if (!still) {
-      const ax = Math.abs(m.vx), ay = Math.abs(m.vy);
+      const ax2 = Math.abs(m.vx), ay2 = Math.abs(m.vy);
       let nf = m.face;
-      if (ax >= ay) {
+      if (ax2 >= ay2) {
         const f = m.vx > 0 ? "e" : "w";
         nf = f === m.fwd || v > WSP_TURN_V ? f : m.fwd;
-      } else if (ay > ax * 1.35 && v > WSP_VERT_V) nf = m.vy > 0 ? "s" : "n";
+      } else if (ay2 > ax2 * 1.35 && v > WSP_VERT_V) nf = m.vy > 0 ? "s" : "n";
       if (nf !== m.face) {
-        node.classList.remove("wsp-face-" + m.face);
-        node.classList.add("wsp-face-" + nf);
-        m.face = nf;
-        if (m.flip) {
-          if (nf === "w") m.flip.setAttribute("transform", "scale(-1,1)");
-          else m.flip.removeAttribute("transform");
+        if (m.faceCandidate !== nf) {
+          m.faceCandidate = nf;
+          m.faceAt = now;
         }
+        const faceHold = v > 5.5 ? 42 : 82;
+        if (now - m.faceAt >= faceHold) {
+          node.classList.remove("wsp-face-" + m.face);
+          node.classList.add("wsp-face-" + nf);
+          m.face = nf;
+          if (m.flip) {
+            if (nf === "w") m.flip.setAttribute("transform", "scale(-1,1)");
+            else m.flip.removeAttribute("transform");
+          }
+        }
+      } else {
+        m.faceCandidate = nf;
+        m.faceAt = now;
       }
       m.odo += Math.hypot(dx, dy);
       const step = Math.floor(m.odo / WSP_STRIDE) % 2 === 1;
@@ -51946,7 +52128,30 @@ ${renderAutoRecruitLog()}`;
         node.style.setProperty("--ph", ph);
       }
     }
-    const tgt = still ? 0 : m.face === "e" ? Math.min(11, v * 1.55) : m.face === "w" ? -Math.min(11, v * 1.55) : Math.max(-7, Math.min(7, m.vx * 1.2));
+    const ax = Math.abs(m.vx), ay = Math.abs(m.vy);
+    const travelFace = m.vx >= 0 ? "e" : "w";
+    const backpedal = !still && ax >= ay * 0.72 && travelFace !== m.fwd && m.face === m.fwd;
+    const shuffle2 = !still && !backpedal && m.face === m.fwd && ay > ax * 0.72;
+    if (backpedal !== m.backpedal) {
+      m.backpedal = backpedal;
+      node.classList.toggle("wsp-backpedal", backpedal);
+    }
+    if (shuffle2 !== m.shuffle) {
+      m.shuffle = shuffle2;
+      node.classList.toggle("wsp-shuffle", shuffle2);
+    }
+    const planting = !still && now < m.plantUntil;
+    const movingFor = (now - m.movingAt) / 1e3;
+    const loco = still ? "still" : planting ? "plant" : m.accel < -4.8 ? "brake" : movingFor < 0.2 || m.accel > 6.5 && v < 5.2 ? "start" : v >= 5.35 ? "sprint" : v >= 2.65 ? "jog" : "walk";
+    setLocoClass(node, m, loco);
+    const sq = Math.round(v * 10) / 10;
+    const aq = Math.round(Math.max(-16, Math.min(16, m.accel)) * 10) / 10;
+    node.style.setProperty("--wsp-speed", sq);
+    node.style.setProperty("--wsp-accel", aq);
+    let tgt = still ? 0 : m.face === "e" ? Math.min(11, v * 1.55) : m.face === "w" ? -Math.min(11, v * 1.55) : Math.max(-7, Math.min(7, m.vx * 1.2));
+    if (backpedal) tgt *= 0.48;
+    if (loco === "brake") tgt *= -0.28;
+    if (planting) tgt += m.cut === "right" ? 3.5 : m.cut === "left" ? -3.5 : 0;
     m.lean += (tgt - m.lean) * Math.min(1, idt * 10);
     const q = Math.round(m.lean * 2) / 2;
     if (q !== m.q) {
@@ -56027,8 +56232,6 @@ ${renderAutoRecruitLog()}`;
     const retYds = !isFG && !p.blocked && !p.touchback && p.returnerId ? Math.max(0, p.returnYds || 0) : 0;
     const retDur = retYds > 0 ? Math.max(0.45, Math.min(3.2, retYds / 8)) : 0;
     const [retEndX, retEndY] = watchSidePoint(worldEndX, Math.min(58, worldEndY + retYds * WATCH_SIDE.ypu));
-    const [g1X, g1Y] = watchSidePoint(12, 30), [g2X, g2Y] = watchSidePoint(88, 30);
-    const [rushX0, rushY0] = watchSidePoint(30, 29.5);
     const sprites = ((_a = state.settings) == null ? void 0 : _a.spriteWatch) !== false;
     svg.classList.add("watch-special-teams", isFG ? "watch-kick-place" : "watch-kick-punt");
     if (sprites) svg.classList.add("watch-sprites");
@@ -56037,12 +56240,31 @@ ${renderAutoRecruitLog()}`;
       const face = watchSideFacing(a.team);
       return sprites ? `<g class="wp-actor wp-team-${a.team} wsp-still wsp-face-${face}" data-wpk="${a.id}" transform="translate(${a.x.toFixed(2)},${a.y.toFixed(2)})">${spriteMarkup(a, face)}</g>` : "";
     };
+    const point = (wx, wy) => {
+      const [x, y] = watchSidePoint(wx, wy);
+      return { x, y, wx, wy };
+    };
+    const protectCount = isFG ? 8 : 7;
+    const protectUnit = Array.from({ length: protectCount }, (_, i) => {
+      const wx = isFG ? 18 + i * 64 / 7 : 23 + i * 54 / 6;
+      return __spreadProps2(__spreadValues2({ id: `PP${i}`, team: "off", label: i < 2 || i >= protectCount - 2 ? "W" : "P" }, point(wx, 31 + 0.72 * WATCH_SIDE.ypu)), { lane: wx });
+    });
+    const rushCount = isFG ? 11 : 8;
+    const rushUnit = Array.from({ length: rushCount }, (_, i) => {
+      const wx = isFG ? 14 + i * 72 / 10 : 22 + i * 56 / 7;
+      return __spreadProps2(__spreadValues2({ id: p.blocked && i === (isFG ? 1 : 0) ? "RS" : `KR${i}`, team: "def", label: i === 0 || i === rushCount - 1 ? "E" : "R" }, point(wx, 31 - 0.78 * WATCH_SIDE.ypu)), { lane: wx });
+    });
+    const gunnerUnit = isFG ? [] : [7, 93].map((wx, i) => __spreadValues2({ id: `G${i + 1}`, team: "off", label: "G" }, point(wx, 31 + 0.42 * WATCH_SIDE.ypu)));
+    const jammerUnit = isFG ? [] : [7, 93].map((wx, i) => __spreadValues2({ id: `J${i + 1}`, team: "def", label: "J" }, point(wx, 31 - 0.82 * WATCH_SIDE.ypu)));
     const landingMarkup = !isFG && !p.blocked ? `<g id="wp-kick-landing" class="wp-kick-landing" transform="translate(${endX.toFixed(2)},${endY.toFixed(2)})"><ellipse rx="2.7" ry="1.05"/><ellipse rx="1.55" ry=".6"/><path d="M0-1.65v3.3M-1.1-.85L0-1.65l1.1.8"/></g>` : "";
-    svg.innerHTML = watchFieldBase(p, board) + landingMarkup + cast({ id: "LS", team: "off", label: "LS", x: startX, y: startY }) + (isFG ? cast({ id: "H", team: "off", label: "H", x: holdX, y: holdY }) : "") + cast({ id: "K", team: "off", label: isFG ? "K" : "P", x: isFG ? kickX0 : holdX, y: isFG ? kickY0 : holdY }) + (!isFG && !p.blocked ? cast({ id: "PR", team: "def", label: "PR", x: retX, y: retY }) : "") + (!isFG && !p.blocked && !p.touchback ? cast({ id: "G1", team: "off", label: "G", x: g1X, y: g1Y }) + cast({ id: "G2", team: "off", label: "G", x: g2X, y: g2Y }) : "") + (p.blocked ? cast({ id: "RS", team: "def", label: "LB", x: rushX0, y: rushY0 }) : "") + ballMarkup(startX, startY) + `<g id="wp-fx"></g>`;
+    svg.innerHTML = watchFieldBase(p, board) + landingMarkup + protectUnit.map(cast).join("") + gunnerUnit.map(cast).join("") + cast({ id: "LS", team: "off", label: "LS", x: startX, y: startY }) + (isFG ? cast({ id: "H", team: "off", label: "H", x: holdX, y: holdY }) : "") + cast({ id: "K", team: "off", label: isFG ? "K" : "P", x: isFG ? kickX0 : holdX, y: isFG ? kickY0 : holdY }) + rushUnit.map(cast).join("") + jammerUnit.map(cast).join("") + (!isFG ? cast({ id: "PR", team: "def", label: "PR", x: retX, y: retY }) : "") + ballMarkup(startX, startY) + `<g id="wp-st-engagements"></g><g id="wp-fx"></g>`;
     const ballN = svg.querySelector("#wp-ball"), ballLiftN = ballN == null ? void 0 : ballN.querySelector(".wab-lift"), fxN = svg.querySelector("#wp-fx");
-    const kN = svg.querySelector('[data-wpk="K"]'), hN = svg.querySelector('[data-wpk="H"]'), prN = svg.querySelector('[data-wpk="PR"]');
-    const g1N = svg.querySelector('[data-wpk="G1"]'), g2N = svg.querySelector('[data-wpk="G2"]');
-    const rsN = svg.querySelector('[data-wpk="RS"]'), landingN = svg.querySelector("#wp-kick-landing");
+    const kN = svg.querySelector('[data-wpk="K"]'), hN = svg.querySelector('[data-wpk="H"]'), prN = svg.querySelector('[data-wpk="PR"]'), lsN = svg.querySelector('[data-wpk="LS"]');
+    const protectNodes = protectUnit.map((a) => svg.querySelector(`[data-wpk="${a.id}"]`));
+    const rushNodes = rushUnit.map((a) => svg.querySelector(`[data-wpk="${a.id}"]`));
+    const gunnerNodes = gunnerUnit.map((a) => svg.querySelector(`[data-wpk="${a.id}"]`));
+    const jammerNodes = jammerUnit.map((a) => svg.querySelector(`[data-wpk="${a.id}"]`));
+    const rsN = svg.querySelector('[data-wpk="RS"]'), engagementN = svg.querySelector("#wp-st-engagements"), landingN = svg.querySelector("#wp-kick-landing");
     const speed = (_watch == null ? void 0 : _watch.speed) || 1;
     const snapT = isFG ? 0.28 : 0.38;
     const placeT = snapT + (isFG ? 0.22 : 0.26);
@@ -56108,6 +56330,7 @@ ${renderAutoRecruitLog()}`;
       kN == null ? void 0 : kN.classList.toggle("wp-kick-contact", t >= swingT - 0.045 && t < swingT + 0.085);
       kN == null ? void 0 : kN.classList.toggle("wp-kick-follow", t >= swingT + 0.02 && t <= swingT + 0.54);
       kN == null ? void 0 : kN.classList.toggle("wp-kicking", t >= swingT - 0.06 && t <= swingT + 0.4);
+      lsN == null ? void 0 : lsN.classList.toggle("wp-st-snapper", t < snapT + 0.16);
       hN == null ? void 0 : hN.classList.toggle("wp-hold-receive", t >= snapT - 0.08 && t < placeT);
       hN == null ? void 0 : hN.classList.toggle("wp-hold-place", t >= placeT && t < swingT + 0.16);
       if (prN && t >= swingT) {
@@ -56119,15 +56342,60 @@ ${renderAutoRecruitLog()}`;
       prN == null ? void 0 : prN.classList.toggle("wp-return-track", t >= swingT && t < landT - 0.1);
       prN == null ? void 0 : prN.classList.toggle("wp-return-secure", t >= landT - 0.1 && t < landT + 0.28);
       prN == null ? void 0 : prN.classList.toggle("wp-return-burst", retYds > 0 && t >= landT + 0.16 && t < dur);
-      if (g1N && t >= swingT) {
-        const u = Math.min(1, (t - swingT) / (flight + Math.max(0.3, retDur)));
-        wspPlace(g1N, lerp(g1X, bx - 3.4, u), lerp(g1Y, by - 1.2, u));
-        wspPlace(g2N, lerp(g2X, bx + 3.4, u), lerp(g2Y, by + 1.2, u));
+      const engageU = Math.max(0, Math.min(1, (t - 0.04) / Math.max(0.2, snapT + 0.18)));
+      protectNodes.forEach((node, i) => {
+        if (!node) return;
+        const a = protectUnit[i];
+        const mate = rushUnit[Math.round(i * (rushUnit.length - 1) / Math.max(1, protectUnit.length - 1))];
+        const tx = mate ? (a.x + mate.x) / 2 + _watchSideDir * 0.35 : a.x;
+        const ty = mate ? (a.y + mate.y) / 2 : a.y;
+        wspPlace(node, lerp(a.x, tx, engageU), lerp(a.y, ty, engageU));
+        node.classList.toggle("wp-st-anchor", t >= 0.05 && t < swingT + 0.42);
+        node.classList.toggle("wp-st-lost", !!p.blocked && (i === 0 || i === protectNodes.length - 1) && t >= placeT);
+      });
+      rushNodes.forEach((node, i) => {
+        if (!node) return;
+        const a = rushUnit[i];
+        const mate = protectUnit[Math.round(i * (protectUnit.length - 1) / Math.max(1, rushUnit.length - 1))];
+        let tx = mate ? (a.x + mate.x) / 2 - _watchSideDir * 0.28 : a.x;
+        let ty = mate ? (a.y + mate.y) / 2 : a.y;
+        if (node === rsN) {
+          const winU = Math.max(engageU, Math.min(1, t / Math.max(0.01, swingT + 0.06)));
+          tx = holdX - _watchSideDir * 1.1;
+          ty = holdY - 0.35;
+          wspPlace(node, lerp(a.x, tx, winU), lerp(a.y, ty, winU));
+        } else {
+          wspPlace(node, lerp(a.x, tx, engageU), lerp(a.y, ty, engageU));
+        }
+        node.classList.toggle("wp-st-rush", t >= 0.04 && t < swingT + 0.24);
+        node.classList.toggle("wp-st-leap", node === rsN && t >= swingT - 0.16 && t < swingT + 0.22);
+      });
+      if (!isFG) {
+        const chaseU = Math.max(0, Math.min(1, (t - snapT) / Math.max(0.4, flight + retDur)));
+        const kickSign = Math.sign(endX - holdX) || -1;
+        gunnerNodes.forEach((node, i) => {
+          if (!node) return;
+          const a = gunnerUnit[i];
+          const targetY = by + (i ? 2.8 : -2.8);
+          wspPlace(node, lerp(a.x, bx - kickSign * 2.8, chaseU), lerp(a.y, targetY, chaseU));
+          node.classList.toggle("wp-st-release", t >= snapT && t < dur);
+          node.classList.toggle("wp-st-breakdown", t >= landT + Math.max(0, retDur - 0.24));
+        });
+        jammerNodes.forEach((node, i) => {
+          if (!node) return;
+          const a = jammerUnit[i];
+          const gun = gunnerUnit[i];
+          const jamU = Math.max(0, Math.min(1, (t - 0.04) / 0.55));
+          const releaseU = Math.max(0, Math.min(1, (t - swingT) / Math.max(0.45, flight + retDur)));
+          const jamX = gun ? (a.x + gun.x) / 2 : a.x;
+          const jamY = gun ? (a.y + gun.y) / 2 : a.y;
+          wspPlace(node, lerp(lerp(a.x, jamX, jamU), bx - kickSign * 5.3, releaseU), lerp(lerp(a.y, jamY, jamU), by + (i ? 4 : -4), releaseU));
+          node.classList.toggle("wp-st-jam", t >= 0.04 && t < swingT + 0.14);
+          node.classList.toggle("wp-st-wedge", t >= swingT + 0.14 && t < dur);
+        });
+        engagementN == null ? void 0 : engagementN.classList.toggle("wp-st-engagements-live", t >= 0.05 && t < swingT + 0.45 || t >= landT + 0.1 && t < dur);
       }
-      if (rsN) {
-        const u = Math.min(1, t / Math.max(0.01, swingT + 0.08));
-        wspPlace(rsN, lerp(rushX0, holdX - 1.6, u), lerp(rushY0, holdY - 0.6, u));
-      }
+      prN == null ? void 0 : prN.classList.toggle("wp-st-faircatch", !p.blocked && !p.touchback && retYds === 0 && !!p.returnerId && t >= landT - 0.12);
       camX += (watchSideCameraX(p, bx) - camX) * 0.1;
       svg.setAttribute("viewBox", `${camX.toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
       if (t >= dur && fxN && !fxN.childElementCount) {
@@ -56152,23 +56420,43 @@ ${renderAutoRecruitLog()}`;
     svg.classList.toggle("watch-kick-onside", !!p.onside);
     const [teeX, teeY] = watchSidePoint(50, 31);
     const kickYds = p.onside ? 12 : 58;
-    const kickTeam = p.returnTD || p.onside && p.recovered ? "off" : "def";
+    const driveSide = (board == null ? void 0 : board.possession) || "home";
+    const kickTeam = p.kickingSide ? p.kickingSide === driveSide ? "off" : "def" : p.returnTD || p.onside && p.recovered ? "off" : "def";
     const returnTeam = kickTeam === "off" ? "def" : "off";
     const kickEndWorldY = 31 + kickYds * WATCH_SIDE.ypu;
     const [endX, endY] = watchSidePoint(p.onside ? 44 : 50, kickEndWorldY);
     const retYds = !p.onside && !p.touchback ? Math.max(0, p.retYds || 0) : 0;
     const [retEndX, retEndY] = watchSidePoint(50, kickEndWorldY - retYds * WATCH_SIDE.ypu);
-    const [c1X, c1Y] = watchSidePoint(20, 33), [c2X, c2Y] = watchSidePoint(80, 33);
     const cast = (a) => {
       const face = watchSideFacing(a.team);
       return sprites ? `<g class="wp-actor wp-team-${a.team} wsp-still wsp-face-${face}" data-wpk="${a.id}" transform="translate(${a.x.toFixed(2)},${a.y.toFixed(2)})">${spriteMarkup(a, face)}</g>` : "";
     };
     const landingMarkup = `<g id="wp-kick-landing" class="wp-kick-landing" transform="translate(${endX.toFixed(2)},${endY.toFixed(2)})"><ellipse rx="2.7" ry="1.05"/><ellipse rx="1.55" ry=".6"/><path d="M0-1.65v3.3M-1.1-.85L0-1.65l1.1.8"/></g>`;
     const kickStartX = teeX + _watchSideDir * 8;
-    svg.innerHTML = watchFieldBase(p, board) + landingMarkup + cast({ id: "K", team: kickTeam, label: "K", x: kickStartX, y: teeY }) + cast({ id: "C1", team: kickTeam, label: "CV", x: c1X, y: c1Y }) + cast({ id: "C2", team: kickTeam, label: "CV", x: c2X, y: c2Y }) + (!p.touchback || p.onside ? cast({ id: "PR", team: returnTeam, label: p.onside ? "HANDS" : "PR", x: endX, y: endY - 2 }) : "") + ballMarkup(teeX, teeY) + `<g id="wp-fx"></g>`;
+    const kickUnit = Array.from({ length: 10 }, (_, i) => {
+      const wx = 8 + i * 84 / 9;
+      const wy = p.onside ? 31 + 1.2 * WATCH_SIDE.ypu : 31 + 2.1 * WATCH_SIDE.ypu;
+      const [x, y] = watchSidePoint(wx, wy);
+      return { id: `KO${i}`, team: kickTeam, label: i === 0 || i === 9 ? "G" : "CV", x, y, wx, wy, lane: wx };
+    });
+    const returnWall = Array.from({ length: 9 }, (_, i) => {
+      const wx = 10 + i * 80 / 8;
+      const wy = p.onside ? 31 + 6.5 * WATCH_SIDE.ypu : kickEndWorldY - (10 + i % 3 * 2.2) * WATCH_SIDE.ypu;
+      const [x, y] = watchSidePoint(wx, wy);
+      return { id: `KB${i}`, team: returnTeam, label: p.onside ? "H" : "B", x, y, wx, wy };
+    });
+    const [kr2X, kr2Y] = watchSidePoint(64, p.onside ? 31 + 7.5 * WATCH_SIDE.ypu : kickEndWorldY + 2.5 * WATCH_SIDE.ypu);
+    const returners = [
+      { id: "PR", team: returnTeam, label: p.onside ? "HANDS" : "KR", x: endX, y: endY - 2 },
+      { id: "KR2", team: returnTeam, label: p.onside ? "HANDS" : "KR", x: kr2X, y: kr2Y }
+    ];
+    svg.innerHTML = watchFieldBase(p, board) + landingMarkup + cast({ id: "K", team: kickTeam, label: "K", x: kickStartX, y: teeY }) + kickUnit.map(cast).join("") + returnWall.map(cast).join("") + returners.map(cast).join("") + ballMarkup(teeX, teeY) + `<g id="wp-st-engagements"></g><g id="wp-fx"></g>`;
     const ballN = svg.querySelector("#wp-ball"), ballLiftN = ballN == null ? void 0 : ballN.querySelector(".wab-lift"), fxN = svg.querySelector("#wp-fx");
     const kN = svg.querySelector('[data-wpk="K"]'), prN = svg.querySelector('[data-wpk="PR"]');
-    const c1N = svg.querySelector('[data-wpk="C1"]'), c2N = svg.querySelector('[data-wpk="C2"]'), landingN = svg.querySelector("#wp-kick-landing");
+    const kr2N = svg.querySelector('[data-wpk="KR2"]');
+    const coverNodes = kickUnit.map((a) => svg.querySelector(`[data-wpk="${a.id}"]`));
+    const wallNodes = returnWall.map((a) => svg.querySelector(`[data-wpk="${a.id}"]`));
+    const engagementN = svg.querySelector("#wp-st-engagements"), landingN = svg.querySelector("#wp-kick-landing");
     const speed = (_watch == null ? void 0 : _watch.speed) || 1;
     const runT = 0.6, flight = p.onside ? 0.7 : 1.7;
     const boomT = runT + flight;
@@ -56227,17 +56515,67 @@ ${renderAutoRecruitLog()}`;
       kN == null ? void 0 : kN.classList.toggle("wp-kick-contact", t >= runT - 0.045 && t < runT + 0.085);
       kN == null ? void 0 : kN.classList.toggle("wp-kick-follow", t >= runT + 0.02 && t <= runT + 0.56);
       kN == null ? void 0 : kN.classList.toggle("wp-kicking", t >= runT - 0.06 && t <= runT + 0.4);
-      if (c1N && t >= runT) {
-        const u = Math.min(1, (t - runT) / (flight + Math.max(0.4, retDur)));
-        wspPlace(c1N, lerp(c1X, bx - 3.2, u), lerp(c1Y, by - 1.1, u));
-        wspPlace(c2N, lerp(c2X, bx + 3.2, u), lerp(c2Y, by + 1.1, u));
+      const kickSign = Math.sign(endX - teeX) || -1;
+      if (p.onside) {
+        const crashU = Math.max(0, Math.min(1, (t - runT + 0.12) / (flight + 0.32)));
+        coverNodes.forEach((node, i) => {
+          if (!node) return;
+          const a = kickUnit[i];
+          const spread = (i - 4.5) * 0.34 * (1 - crashU);
+          wspPlace(node, lerp(a.x, bx - kickSign * (0.7 + i % 3 * 0.22), crashU), lerp(a.y, by + spread, crashU));
+          node.classList.toggle("wp-cover-lane", t >= 0.08 && t < boomT);
+          node.classList.toggle("wp-st-onside-dive", t >= boomT - 0.12 && t < boomT + 0.42);
+          node.classList.toggle("wp-st-pile", t >= boomT + 0.18);
+        });
+        wallNodes.forEach((node, i) => {
+          if (!node) return;
+          const a = returnWall[i];
+          const spread = (i - 4) * 0.38 * (1 - crashU);
+          wspPlace(node, lerp(a.x, bx + kickSign * (0.65 + i % 2 * 0.25), crashU), lerp(a.y, by + spread, crashU));
+          node.classList.toggle("wp-st-hands", t < boomT + 0.1);
+          node.classList.toggle("wp-st-onside-dive", t >= boomT - 0.1 && t < boomT + 0.44);
+          node.classList.toggle("wp-st-pile", t >= boomT + 0.18);
+        });
+        if (prN) wspPlace(prN, lerp(endX, bx + kickSign * 0.4, crashU), lerp(endY - 2, by - 0.55, crashU));
+        if (kr2N) wspPlace(kr2N, lerp(kr2X, bx + kickSign * 1.1, crashU), lerp(kr2Y, by + 0.65, crashU));
+        prN == null ? void 0 : prN.classList.toggle("wp-st-pile", t >= boomT + 0.18);
+        kr2N == null ? void 0 : kr2N.classList.toggle("wp-st-pile", t >= boomT + 0.18);
+      } else {
+        const covU = Math.max(0, Math.min(1, (t - runT) / (flight + Math.max(0.55, retDur))));
+        coverNodes.forEach((node, i) => {
+          if (!node) return;
+          const a = kickUnit[i];
+          const laneY = watchSideY(a.lane);
+          const wave = i % 3 * 0.55;
+          const targetX = bx - kickSign * (3.2 + wave);
+          wspPlace(node, lerp(a.x, targetX, covU), lerp(a.y, laneY + (by - laneY) * covU * 0.72, covU));
+          node.classList.toggle("wp-cover-lane", t >= runT && t < dur);
+          node.classList.toggle("wp-st-breakdown", t >= boomT + Math.max(0, retDur - 0.3));
+        });
+        const wallU = Math.max(0, Math.min(1, (t - runT) / Math.max(0.35, flight + retDur * 0.75)));
+        wallNodes.forEach((node, i) => {
+          if (!node) return;
+          const a = returnWall[i];
+          const rank = i % 3;
+          const side = Math.floor(i / 3) - 1;
+          const wedgeX = bx - kickSign * (4.5 + rank * 2.1);
+          const wedgeY = by + side * (2.2 + rank * 0.65);
+          wspPlace(node, lerp(a.x, wedgeX, wallU), lerp(a.y, wedgeY, wallU));
+          node.classList.toggle("wp-st-wedge", t >= runT + 0.18 && t < boomT + retDur);
+          node.classList.toggle("wp-st-engage", t >= boomT + 0.18 && t < dur - 0.08);
+        });
+        if (prN && t >= boomT - 0.2) wspPlace(prN, bx, by);
+        if (kr2N) {
+          const leadU = Math.max(0, Math.min(1, (t - boomT + 0.12) / Math.max(0.3, retDur)));
+          wspPlace(kr2N, lerp(kr2X, bx - kickSign * 3.4, leadU), lerp(kr2Y, by + 2.5, leadU));
+          kr2N.classList.toggle("wp-st-lead", retYds > 0 && t >= boomT);
+        }
       }
-      if (prN && t >= boomT - 0.2) wspPlace(prN, bx, by);
       prN == null ? void 0 : prN.classList.toggle("wp-return-track", t >= runT && t < boomT - 0.1);
       prN == null ? void 0 : prN.classList.toggle("wp-return-secure", t >= boomT - 0.1 && t < boomT + 0.28);
       prN == null ? void 0 : prN.classList.toggle("wp-return-burst", retYds > 0 && t >= boomT + 0.16 && t < dur);
-      c1N == null ? void 0 : c1N.classList.toggle("wp-cover-lane", t >= runT && t < dur);
-      c2N == null ? void 0 : c2N.classList.toggle("wp-cover-lane", t >= runT && t < dur);
+      prN == null ? void 0 : prN.classList.toggle("wp-st-faircatch", !p.onside && !p.touchback && retYds === 0 && t >= boomT - 0.12);
+      engagementN == null ? void 0 : engagementN.classList.toggle("wp-st-engagements-live", !p.onside && t >= boomT + 0.18 && t < dur);
       camX += (watchSideCameraX(p, bx) - camX) * 0.1;
       svg.setAttribute("viewBox", `${camX.toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
       if (t >= dur && fxN && !fxN.childElementCount) {
