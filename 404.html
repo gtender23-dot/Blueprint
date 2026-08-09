@@ -5898,6 +5898,30 @@ circle.wsp-skin { transform-box:fill-box; transform-origin:center; transform:sca
 .wsp-cage-mask { stroke-width:.16; opacity:.94; }
 .wsp-neck-pad { fill:#1a2330; opacity:.82; }
 .wsp-number { fill:#fff; stroke:rgba(0,0,0,.7); stroke-width:.12; paint-order:stroke; text-anchor:middle; font-size:.68px; font-weight:900; font-family:var(--font-pixel,monospace); }
+.wsp-side-number { font-size:.5px; stroke-width:.1; }
+/* M7 uniform identity: the assignment stays outside the body as the coach's
+   read, while the uniform itself carries a stable numeric jersey. Pants and
+   helmet stripes use the team's secondary/primary pairing so two schools no
+   longer look like generic light and dark practice squads. */
+.wp-team-off .wsp-number { fill:var(--wsp-off-hl,#f4f0d8); }
+.wp-team-def .wsp-number { fill:var(--wsp-def-hl,#f4f0d8); }
+.wp-team-off .wsp-pants-panel { fill:var(--wsp-off-hl,#f4f0d8); opacity:.78; }
+.wp-team-def .wsp-pants-panel { fill:var(--wsp-def-hl,#f4f0d8); opacity:.78; }
+.wp-team-off .wsp-stripe-line { stroke:var(--wsp-off,#172033); }
+.wp-team-def .wsp-stripe-line { stroke:var(--wsp-def,#172033); }
+/* The reference skeleton already has separate upper/forearm paths. Exposing
+   the lower arm as skin removes the last toy-like solid-color tube; a stable
+   subset of players retain full compression sleeves for believable variety. */
+.wsp-reference-athlete .wsp-limb > path.wsp-arm:nth-of-type(2),
+.wsp-reference-athlete .wsp-rb-arm-chain > path.wsp-arm:nth-of-type(2),
+.wsp-reference-athlete .wsp-sd-farm path.wsp-arm { fill:var(--wsp-skin,#d8a06a); }
+.wp-team-off .wsp-gear-arm-sleeves .wsp-limb > path.wsp-arm:nth-of-type(2),
+.wp-team-off .wsp-gear-arm-sleeves .wsp-rb-arm-chain > path.wsp-arm:nth-of-type(2),
+.wp-team-off .wsp-gear-arm-sleeves .wsp-sd-farm path.wsp-arm { fill:var(--wsp-off); }
+.wp-team-def .wsp-gear-arm-sleeves .wsp-limb > path.wsp-arm:nth-of-type(2),
+.wp-team-def .wsp-gear-arm-sleeves .wsp-rb-arm-chain > path.wsp-arm:nth-of-type(2),
+.wp-team-def .wsp-gear-arm-sleeves .wsp-sd-farm path.wsp-arm { fill:var(--wsp-def); }
+.wsp-gear-knee-brace .wsp-knee { fill:#273244; stroke:#eef1f5; stroke-width:.11; }
 .wsp-pose-carry,.wsp-pose-block,.wsp-pose-throw { display:none; }
 .wp-team-off.wp-near-ball .wsp-pose-run { display:none; }
 .wp-team-off.wp-near-ball .wsp-pose-carry { display:block; }
@@ -7701,7 +7725,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "0f9a46a0ad";
+globalThis.__BUILD__ = "7502649d56";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -50666,8 +50690,25 @@ ${renderAutoRecruitLog()}`;
 
   // js/ui/sprite.js
   init_utils();
+  function uniformNumber(room, id, supplied) {
+    const explicit = String(supplied != null ? supplied : "").match(/^\d{1,2}$/);
+    if (explicit) return Number(explicit[0]);
+    const key = `${room}:${id}`;
+    let hash = 2166136261;
+    for (let i = 0; i < key.length; i++) hash = Math.imul(hash ^ key.charCodeAt(i), 16777619) >>> 0;
+    const pick2 = (lo, hi, salt = 0) => lo + (hash + salt) % (hi - lo + 1);
+    if (/^(OL|C|G|T)$/.test(room)) return pick2(50, 79);
+    if (room === "LS") return pick2(40, 59);
+    if (/^(DL|DE|DT|NT)$/.test(room)) return pick2(50, 99);
+    if (/^(LB|ILB|OLB)$/.test(room)) return hash % 4 ? pick2(0, 59) : pick2(90, 99, 11);
+    if (room === "QB") return pick2(0, 19);
+    if (/^(WR|PR|KR)$/.test(room)) return hash % 3 ? pick2(0, 19) : pick2(80, 89, 7);
+    if (room === "TE") return hash % 2 ? pick2(0, 49) : pick2(80, 89, 5);
+    if (/^(RB|FB|CB|S|FS|SS|K|P)$/.test(room)) return pick2(0, 49);
+    return pick2(0, 99);
+  }
   function spriteMarkup(a, face) {
-    var _a;
+    var _a, _b, _c;
     const off = a.team === "off";
     const c = off ? "wsp-off" : "wsp-def";
     const hl = off ? "wsp-off-hl" : "wsp-def-hl";
@@ -50679,6 +50720,8 @@ ${renderAutoRecruitLog()}`;
     const taperedBody = /^(QB|RB|WR|CB|S|FS|SS|K|P|PR|KR)$/.test(room);
     const gloveClass = gh % 3 === 0 ? " wsp-gear-gloves" : "";
     const visorClass = gh % 4 === 0 && profile !== "line" ? " wsp-gear-visor" : "";
+    const armSleeveClass = gh % 4 === 1 ? " wsp-gear-arm-sleeves" : "";
+    const kneeBraceClass = gh % 5 === 2 && profile !== "skill" ? " wsp-gear-knee-brace" : "";
     const cageMask = profile === "line" || profile === "power";
     const build = /^(OL|DL|DT|NT)$/.test(room) ? "line" : /^(WR|CB|S|K|P)$/.test(room) ? "skill" : /^(QB|RB|FB|TE|DE|LB|ILB|OLB)$/.test(room) ? "balanced" : "balanced";
     const skinTones = [
@@ -50690,7 +50733,11 @@ ${renderAutoRecruitLog()}`;
     ];
     const [skin, skinShadow] = skinTones[gh % skinTones.length];
     const gait = (-(gh % 8 * 0.045)).toFixed(3);
-    const num = `<text class="wsp-number" x="0" y="-2.43">${escapeHtml(String(a.label || "").slice(0, 2))}</text>`;
+    const jersey = uniformNumber(room, a.id, (_b = (_a = a.jerseyNumber) != null ? _a : a.jersey) != null ? _b : a.number);
+    const jerseyText = escapeHtml(String(jersey));
+    const num = `<text class="wsp-number" x="0" y="-2.43">${jerseyText}</text>`;
+    const sideNumberTransform = face === "w" ? ` transform="translate(.25 0) scale(-1 1) translate(-.25 0)"` : "";
+    const sideNum = `<text class="wsp-number wsp-side-number" x=".25" y="-2.55"${sideNumberTransform}>${jerseyText}</text>`;
     const legsA = `<g class="wsp-leg-chain"><path class="wsp-leg wsp-thigh" d="M-1.01-2.02h.72l.05.55-.17.47-.58-.02-.15-.5z"/><ellipse class="wsp-knee" cx="-.69" cy="-1" rx=".31" ry=".24"/><path class="wsp-leg wsp-calf" d="M-.96-.94l.55-.02-.03.5-.18.33h-.48l.12-.42z"/><path class="wsp-sock" d="M-1.1-.38h.49l-.03.26h-.52z"/><path class="wsp-shoe" d="M-1.18-.18h.59l.31.18h-1.06z"/></g><g class="wsp-leg-chain"><path class="wsp-leg wsp-thigh" d="M.29-2.02h.72l.13.52-.12.5-.58.02-.19-.46z"/><ellipse class="wsp-knee" cx=".73" cy="-1" rx=".31" ry=".24"/><path class="wsp-leg wsp-calf" d="M.45-.96H1l.12.42-.04.42H.56L.49-.5z"/><path class="wsp-sock" d="M.56-.38h.52l.06.26H.6z"/><path class="wsp-shoe" d="M.58-.18h.59l.35.18H.48z"/></g>`;
     const legsB = `<g class="wsp-leg-chain"><path class="wsp-leg wsp-thigh" d="M-1.01-2.02h.72l-.1.53-.31.42-.55-.14.08-.5z"/><ellipse class="wsp-knee" cx="-.96" cy="-1.1" rx=".31" ry=".24" transform="rotate(20 -.96 -1.1)"/><path class="wsp-leg wsp-calf" d="M-1.18-1.06l.52.15-.22.42-.34.28-.45-.2.3-.35z"/><path class="wsp-sock" d="M-1.55-.54l.45.2-.13.22-.48-.2z"/><path class="wsp-shoe" d="M-1.7-.38l.53.22.29.25-1.05-.31z"/></g><g class="wsp-leg-chain"><path class="wsp-leg wsp-thigh" d="M.29-2.02h.72l.13.52-.12.5-.58.02-.19-.46z"/><ellipse class="wsp-knee" cx=".73" cy="-1" rx=".31" ry=".24"/><path class="wsp-leg wsp-calf" d="M.45-.96H1l.12.42-.04.42H.56L.49-.5z"/><path class="wsp-sock" d="M.56-.38h.52l.06.26H.6z"/><path class="wsp-shoe" d="M.58-.18h.59l.35.18H.48z"/></g>`;
     const rbLegsA = `<g class="wsp-leg-chain wsp-reference-leg-chain"><path class="wsp-leg wsp-thigh" d="M-.86-2.18h.56l.03.63-.17.5-.45-.03-.1-.57z"/><ellipse class="wsp-knee" cx="-.66" cy="-1.02" rx=".25" ry=".19"/><path class="wsp-leg wsp-calf" d="M-.86-.96l.42-.02.02.55-.17.31h-.39l.11-.45z"/><path class="wsp-sock" d="M-.98-.38h.4l-.02.26h-.43z"/><path class="wsp-shoe" d="M-1.04-.18h.48l.3.18h-.94z"/></g><g class="wsp-leg-chain wsp-reference-leg-chain"><path class="wsp-leg wsp-thigh" d="M.3-2.18h.56l.1.6-.1.53-.45.03-.14-.54z"/><ellipse class="wsp-knee" cx=".65" cy="-1.02" rx=".25" ry=".19"/><path class="wsp-leg wsp-calf" d="M.43-.98h.43l.1.47-.04.39H.52l-.07-.47z"/><path class="wsp-sock" d="M.52-.38h.4l.04.26H.54z"/><path class="wsp-shoe" d="M.54-.18h.48l.31.18H.47z"/></g>`;
@@ -50720,7 +50767,7 @@ ${renderAutoRecruitLog()}`;
     const rbDome = `<path class="wsp-helmet ${hl}" d="M-.68-3.91l-.04-.32q.04-.59.35-.88Q0-5.39.37-5.11q.31.29.35.88l-.04.32-.27.24h-.82z"/><path class="wsp-helmet-shadow" d="M.11-5.29q.47.14.59 1.01l-.04.33-.25.23H.16z"/><path class="wsp-helmet-hi" d="M-.42-4.93q.22-.27.51-.27l-.13.21q-.23.04-.38.22z"/><path class="wsp-shell-ridge" d="M-.5-4.62Q0-4.85.5-4.62"/>`;
     const helmetDome = rbDome;
     const frontMaskExtra = cageMask ? `<path class="wsp-facemask wsp-modern-mask wsp-cage-mask" d="M-.48-4.03h.96M-.37-3.84h.74M-.48-4.03l.11.19M.48-4.03l-.11.19"/>` : "";
-    const frontHelmet = `<g class="wsp-head">${helmetDome}<path class="wsp-face-opening" d="M-.49-4.42q.49-.17.98 0l-.07.47q-.42.22-.84 0z"/><circle class="wsp-earhole" cx=".52" cy="-4.08" r=".11"/><path class="wsp-visor" d="M-.5-4.4q.5-.17 1 0l-.09.25q-.41.13-.82 0z"/><path class="wsp-facemask wsp-modern-mask" d="M-.53-4.14h1.06M-.42-3.93h.84M-.35-4.15v.29M.35-4.15v.29"/>${frontMaskExtra}<path class="wsp-chinstrap" d="M-.34-3.88q.34.27.68 0"/></g>`;
+    const frontHelmet = `<g class="wsp-head">${helmetDome}<path class="wsp-stripe-line" d="M0-5.2v.62"/><path class="wsp-face-opening" d="M-.49-4.42q.49-.17.98 0l-.07.47q-.42.22-.84 0z"/><circle class="wsp-earhole" cx=".52" cy="-4.08" r=".11"/><path class="wsp-visor" d="M-.5-4.4q.5-.17 1 0l-.09.25q-.41.13-.82 0z"/><path class="wsp-facemask wsp-modern-mask" d="M-.53-4.14h1.06M-.42-3.93h.84M-.35-4.15v.29M.35-4.15v.29"/>${frontMaskExtra}<path class="wsp-chinstrap" d="M-.34-3.88q.34.27.68 0"/></g>`;
     const backHelmet = `<g class="wsp-head">${helmetDome}<path class="wsp-stripe-line" d="M0-5.22v1.5"/><path class="wsp-neck-pad" d="M-.48-3.7q.48.25.96 0v.28H-.48z"/></g>`;
     const poses = rbRunPose + rbCarryPose + rbBlockPose + rbCatchPose + (a.qb ? referenceThrowPose : "") + (off ? rbStiffPose : referenceTacklePose) + rbIdlePose;
     const vf = `<g class="wsp-vf"><g class="wsp-fA">${frontLegsA}</g><g class="wsp-fB">${frontLegsB}</g><g class="wsp-torso">${torsoArt}</g>${poses}${num}${frontHelmet}</g>`;
@@ -50731,7 +50778,7 @@ ${renderAutoRecruitLog()}`;
     const rbSideTorso = `<path class="wsp-pants" d="M-.3-2.32q.48-.09.94 0l-.07.65-.78.01z"/><path class="wsp-pants-shadow" d="M.17-2.35q.24-.02.47.03l-.07.65-.37.01z"/><path class="wsp-pants-panel" d="M-.16-2.22l.16-.01-.01.49-.18.01z"/><path class="wsp-jersey ${c}" d="M-.5-3.76l1.1-.08.28.52-.14.7-.13.25-.88.04-.33-.66z"/><path class="wsp-fabric-shadow" d="M.16-3.81l.42-.03.28.52-.13.68-.13.23-.36.02z"/><path class="wsp-shoulder ${c}" d="M-.66-3.61q.07-.4.38-.55l.66-.07q.36.1.46.47l-.1.36-1.4.08z"/><path class="wsp-pad-seam" d="M.43-4.08q-.1.32-.02.59"/><path class="wsp-waist-seam" d="M-.27-2.42q.41.07.82-.02"/><path class="wsp-sleeve-trim ${hl}" d="M.55-3.78l.25.1-.08.28-.26-.1z"/><path class="wsp-band ${hl}" d="M-.4-2.65l1.1-.04-.06.29-.97.04z"/><path class="wsp-belt" d="M-.28-2.34l.92-.03-.01.16-.9.03z"/><rect class="wsp-neck" x="-.04" y="-4.05" width=".35" height=".36" rx=".13"/>`;
     const sideTorsoArt = taperedBody ? rbSideTorso : sTorso;
     const sHelmet = `<g class="wsp-head"><path class="wsp-helmet ${hl}" d="M-.6-4.06q-.04-.77.43-1.18.43-.35 1-.12.48.24.58.86l-.08.53-.36.3-.91.04z"/><path class="wsp-helmet-shadow" d="M.48-5.36q.68.2.82.86l-.07.49-.34.29-.36.02z"/><path class="wsp-helmet-hi" d="M-.28-5.05q.36-.35.78-.27"/><path class="wsp-stripe-line" d="M-.3-5.23q.63-.33 1.2-.04"/><circle class="wsp-earhole" cx=".45" cy="-4.36" r=".14"/><path class="wsp-face-opening" d="M.69-4.74q.42.14.55.43l-.24.23-.39-.25z"/><path class="wsp-visor" d="M.67-4.73q.38.12.53.38l-.22.18-.38-.23z"/><path class="wsp-facemask" d="M.92-4.42h.63M.88-4.16h.7M1.48-4.52v.48"/><path class="wsp-chinstrap" d="M.5-3.91q.37.17.66-.08"/></g>`;
-    const rbSideHelmet = `<g class="wsp-head"><path class="wsp-helmet ${hl}" d="M-.48-4.08q-.03-.67.37-1.03.38-.31.88-.11.42.2.5.74l-.06.44-.31.26-.79.03z"/><path class="wsp-helmet-shadow" d="M.42-5.22q.58.18.7.74l-.06.4-.29.25-.3.02z"/><path class="wsp-helmet-hi" d="M-.2-4.96q.31-.3.67-.23"/><path class="wsp-shell-ridge" d="M-.13-5.18q.53-.25 1.01 0"/><circle class="wsp-earhole" cx=".38" cy="-4.37" r=".11"/><path class="wsp-face-opening" d="M.63-4.69q.35.12.47.36l-.2.19-.34-.2z"/><path class="wsp-visor" d="M.62-4.68q.33.1.45.32l-.19.15-.32-.19z"/><path class="wsp-facemask wsp-modern-mask" d="M.82-4.4h.54M.79-4.18h.59M1.3-4.48v.41"/><path class="wsp-chinstrap" d="M.43-3.93q.32.15.56-.07"/></g>`;
+    const rbSideHelmet = `<g class="wsp-head"><path class="wsp-helmet ${hl}" d="M-.48-4.08q-.03-.67.37-1.03.38-.31.88-.11.42.2.5.74l-.06.44-.31.26-.79.03z"/><path class="wsp-helmet-shadow" d="M.42-5.22q.58.18.7.74l-.06.4-.29.25-.3.02z"/><path class="wsp-helmet-hi" d="M-.2-4.96q.31-.3.67-.23"/><path class="wsp-stripe-line" d="M-.13-5.18q.53-.25 1.01 0"/><circle class="wsp-earhole" cx=".38" cy="-4.37" r=".11"/><path class="wsp-face-opening" d="M.63-4.69q.35.12.47.36l-.2.19-.34-.2z"/><path class="wsp-visor" d="M.62-4.68q.33.1.45.32l-.19.15-.32-.19z"/><path class="wsp-facemask wsp-modern-mask" d="M.82-4.4h.54M.79-4.18h.59M1.3-4.48v.41"/><path class="wsp-chinstrap" d="M.43-3.93q.32.15.56-.07"/></g>`;
     const sideMaskExtra = cageMask ? `<path class="wsp-facemask wsp-modern-mask wsp-cage-mask" d="M.82-4.27h.5M.85-4.14h.48M1.26-4.42v.36"/>` : "";
     const sideHelmetArt = rbSideHelmet.replace("</g>", `${sideMaskExtra}</g>`);
     const sArm = (side) => `<g class="wsp-sd-uarm wsp-sd-uarm-${side}${side === "b" ? " wsp-sd-far" : ""}"><path class="wsp-arm ${c}" d="M-.08-3.55h.4l.09.67-.1.2h-.36l-.12-.64z"/><ellipse class="wsp-elbow" cx=".17" cy="-2.68" rx=".21" ry=".17"/><g class="wsp-sd-farm wsp-sd-farm-${side}"><path class="wsp-arm ${c}" d="M-.04-2.65h.35l.1.51-.08.19H0l-.1-.48z"/><circle class="wsp-skin" cx=".2" cy="-1.84" r=".23"/></g></g>`;
@@ -50746,11 +50793,11 @@ ${renderAutoRecruitLog()}`;
     const sStiff = `<g class="wsp-pose-stiff"><g class="wsp-limb wsp-sd-stiff-arm"><path class="wsp-arm wsp-rb-arm ${c}" d="M.05-3.35l.28-.1.48.28.05.23-.2.16-.45-.19z"/><ellipse class="wsp-elbow" cx=".9" cy="-3.02" rx=".15" ry=".12"/><path class="wsp-arm wsp-rb-arm ${c}" d="M.85-2.99l.2-.16.58.09.11.2-.15.19-.55-.02z"/><circle class="wsp-skin" cx="1.82" cy="-2.73" r=".22"/></g>${sCarryArm}</g>`;
     const sIdle = `<g class="wsp-pose-idle"><g class="wsp-rb-arm-chain"><path class="wsp-arm wsp-rb-arm ${c}" d="M.03-3.45l.31-.02.13.75-.11.25-.28-.04-.06-.62z"/><ellipse class="wsp-elbow" cx=".3" cy="-2.48" rx=".15" ry=".12"/><path class="wsp-arm wsp-rb-arm ${c}" d="M.23-2.45l.25-.04.1.68-.1.4-.26-.02-.03-.57z"/><circle class="wsp-skin" cx=".47" cy="-1.34" r=".21"/></g></g>`;
     const sPoses = sRun + sCarry + sBlock + sCatch + (a.qb ? sThrow : "") + (off ? sStiff : sTackle) + sIdle;
-    const vs = `<g class="wsp-vs"><g class="wsp-sd-legs">${sLegs}</g>${sRunFar}<g class="wsp-torso">${sideTorsoArt}</g>${sPoses}${sideHelmetArt}</g>`;
+    const vs = `<g class="wsp-vs"><g class="wsp-sd-legs">${sLegs}</g>${sRunFar}<g class="wsp-torso">${sideTorsoArt}</g>${sideNum}${sPoses}${sideHelmetArt}</g>`;
     const flip = `<g class="wsp-flip"${face === "w" ? ' transform="scale(-1,1)"' : ""}>${vf}${vb}${vs}</g>`;
     const body = `<ellipse class="wsp-shadow" cx="0" cy="-.12" rx="1.38" ry=".3"/><g class="wsp-shell">${flip}</g>`;
-    const tag = `<text class="${off ? "wo-lbl" : "wd-lbl"} wsp-tag" x="0" y="${off ? "2.1" : "-7.35"}">${escapeHtml(String((_a = a.label) != null ? _a : ""))}</text>`;
-    return `<g class="wsp wsp-build-${build} wsp-modern-athlete wsp-reference-athlete wsp-profile-${profile}${rbPrototype ? " wsp-prototype-rb" : ""}${a.qb ? " wsp-qb" : ""}${gloveClass}${visorClass}" style="--gait:${gait}s;--wsp-skin:${skin};--wsp-skin-shadow:${skinShadow}"><g class="wsp-athlete">${body}</g></g>${tag}`;
+    const tag = `<text class="${off ? "wo-lbl" : "wd-lbl"} wsp-tag" x="0" y="${off ? "2.1" : "-7.35"}">${escapeHtml(String((_c = a.label) != null ? _c : ""))}</text>`;
+    return `<g class="wsp wsp-build-${build} wsp-modern-athlete wsp-reference-athlete wsp-uniform-authentic wsp-profile-${profile}${rbPrototype ? " wsp-prototype-rb" : ""}${a.qb ? " wsp-qb" : ""}${gloveClass}${visorClass}${armSleeveClass}${kneeBraceClass}" data-jersey="${jerseyText}" style="--gait:${gait}s;--wsp-skin:${skin};--wsp-skin-shadow:${skinShadow}"><g class="wsp-athlete">${body}</g></g>${tag}`;
   }
   function ballMarkup(x, y) {
     return `<g id="wp-ball" class="wa-ballg" transform="translate(${x},${y})"><ellipse class="wab-shadow" cx="0" cy=".48" rx=".78" ry=".2"/><g class="wab-lift"><g class="wab-spin"><g class="wab-model"><path class="wab-core" d="M-1.7 0Q-1.18-.82 0-.82T1.7 0Q1.18.82 0 .82T-1.7 0Z"/><path class="wab-panel" d="M-1.18-.45Q0-.82 1.18-.45Q.72-.66 0-.66T-1.18-.45Z"/><path class="wab-end" d="M-1.7 0q.24-.4.58-.6l.2.24q-.25.17-.43.36.18.2.43.36l-.2.24q-.34-.2-.58-.6ZM1.7 0q-.24-.4-.58-.6l-.2.24q.25.17.43.36-.18.2-.43.36l.2.24q.34-.2.58-.6Z"/><path class="wab-college-stripe" d="M-1.14-.52q-.18.52 0 1.04M1.14-.52q.18.52 0 1.04"/><path class="wab-seam" d="M-.76-.08Q0-.3.76-.08"/><path class="wab-lace" d="M-.58-.1Q0-.25.58-.1M-.36-.28l.08.35M-.12-.33l.04.36M.12-.33l-.04.36M.36-.28l-.08.35"/><path class="wab-highlight" d="M-.92-.42Q-.3-.68.28-.62"/></g></g></g></g>`;
