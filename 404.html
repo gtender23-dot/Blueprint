@@ -6785,6 +6785,29 @@ body *::after {
 /* Carry dial value: never wrap the runner glyph off its number */
 .do-carry-pct { white-space: nowrap; }
 
+/* ── Identity (Pass 4.5): trait chips + frame line ───────────────────────── */
+.trait-chip-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.trait-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600; letter-spacing: .02em;
+  padding: 2px 8px; border-radius: 999px;
+  background: var(--raised, #262033); border: 1px solid var(--border, #3a3150);
+  color: var(--text, #e8e2f4); white-space: nowrap;
+}
+.trait-chip .trait-pips { font-size: 8px; letter-spacing: 2px; opacity: .85; color: var(--accent, #c778f0); }
+.trait-chip.trait-bridge { border-color: var(--gold, #e8c05a); color: var(--gold, #e8c05a); font-weight: 700; }
+.trait-chip.trait-flaw { border-color: #c05a5a; color: #d98080; }
+.trait-chip.trait-flaw .trait-pips { color: #d98080; }
+.trait-chip.trait-fogged { opacity: .75; font-style: italic; }
+.frame-line strong { font-weight: 700; }
+.frame-jobs { display: inline-flex; gap: 3px; align-items: baseline; margin-left: 2px; }
+.frame-job-chip {
+  font-size: 10px; font-weight: 700; letter-spacing: .05em;
+  padding: 1px 6px; border-radius: 6px;
+  background: var(--raised, #262033); border: 1px solid var(--border, #3a3150);
+  color: var(--muted, #9c92b4);
+}
+
   </style>
 </head>
 <body>
@@ -6794,7 +6817,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "b8c2db1a1b";
+globalThis.__BUILD__ = "1f136f16cc";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -9983,6 +10006,444 @@ var _CFB = (() => {
     }
   });
 
+  // js/engine/traits.js
+  function _live() {
+    return !globalThis.__noTraits;
+  }
+  function traitLv(p, key) {
+    var _a;
+    if (!_live()) return 0;
+    const list = (_a = p == null ? void 0 : p.traits) == null ? void 0 : _a.play;
+    if (!list) return 0;
+    for (const t of list) if (t.k === key) return t.lv || 1;
+    return 0;
+  }
+  function flawLv(p, key) {
+    var _a;
+    if (!_live()) return 0;
+    const list = (_a = p == null ? void 0 : p.traits) == null ? void 0 : _a.flaws;
+    if (!list) return 0;
+    for (const t of list) if (t.k === key) return t.lv || 1;
+    return 0;
+  }
+  function traitMult(p, key, per) {
+    const lv = traitLv(p, key);
+    return lv ? 1 + per * lv : 1;
+  }
+  function flawMult(p, key, per) {
+    const lv = flawLv(p, key);
+    return lv ? 1 + per * lv : 1;
+  }
+  function bridgeOf(p) {
+    var _a;
+    if (!_live()) return null;
+    const k = (_a = p == null ? void 0 : p.traits) == null ? void 0 : _a.bridge;
+    return k && BRIDGE_CATALOG[k] ? BRIDGE_CATALOG[k] : null;
+  }
+  function bridgeCoversSlot(p, slot) {
+    const b = bridgeOf(p);
+    if (!b || !slot) return false;
+    if (slot.mesh && b.mesh.includes(slot.mesh)) return true;
+    if (slot.label && b.jobs.includes(slot.label)) return true;
+    return false;
+  }
+  function bridgeWaivesRole(p, role) {
+    const b = bridgeOf(p);
+    return !!(b && role && b.roles.includes(role));
+  }
+  function bridgeWaivesBucket(p, bucket) {
+    const b = bridgeOf(p);
+    return !!(b && bucket && b.buckets.includes(bucket));
+  }
+  function sizeFitFromWindow(weight, win) {
+    if (!win || weight == null) return 1;
+    const [lo, hi] = win;
+    const out = weight < lo ? lo - weight : weight > hi ? weight - hi : 0;
+    if (!out) return 1;
+    return 1 - Math.min(SIZE_FIT_CAP, out * SIZE_FIT_FALLOFF);
+  }
+  function sizeFitForSlot(p, slot) {
+    if (globalThis.__noSizeFit || !p || !slot) return 1;
+    if (bridgeCoversSlot(p, slot)) return 1;
+    const win = slot.label && JOB_SIZE_WINDOWS[slot.label];
+    return sizeFitFromWindow(p.weight, win);
+  }
+  function sizeFitForRole(p, role, SIZE_BANDS2) {
+    var _a;
+    if (globalThis.__noSizeFit || !p || !role) return 1;
+    if (bridgeWaivesRole(p, role)) return 1;
+    const band = SIZE_BANDS2 == null ? void 0 : (_a = SIZE_BANDS2.byArchetype) == null ? void 0 : _a[role];
+    if (!band) return 1;
+    return sizeFitFromWindow(p.weight, [band[2] - 10, band[3] + 10]);
+  }
+  function isTweenerFrame(position, weight, SIZE_BANDS2) {
+    var _a;
+    const band = (_a = SIZE_BANDS2 == null ? void 0 : SIZE_BANDS2.byPos) == null ? void 0 : _a[posBandKey(position)];
+    if (!band || weight == null) return false;
+    return weight <= band[2] - 8 || weight >= band[3] + 8;
+  }
+  function posBandKey(position) {
+    if (position === "DE" || position === "DT") return "DL";
+    if (position === "CB" || position === "S") return "DB";
+    if (position === "OLB") return "LB";
+    return position;
+  }
+  function _rollLv() {
+    const r = Math.random();
+    return r < LV_ODDS[0] ? 1 : r < LV_ODDS[0] + LV_ODDS[1] ? 2 : 3;
+  }
+  function _pickFrom(pool, n) {
+    const out = [];
+    const bag = pool.slice();
+    while (out.length < n && bag.length) {
+      out.push(bag.splice(Math.floor(Math.random() * bag.length), 1)[0]);
+    }
+    return out;
+  }
+  function rollTraits(position, weight, SIZE_BANDS2) {
+    const tweener = isTweenerFrame(position, weight, SIZE_BANDS2);
+    let bridge = null;
+    if (Math.random() < (tweener ? BRIDGE_TWEENER_ODDS : BRIDGE_BASE_ODDS)) {
+      const eligible = Object.keys(BRIDGE_CATALOG).filter((k) => BRIDGE_CATALOG[k].pos.includes(position));
+      if (eligible.length) bridge = eligible[Math.floor(Math.random() * eligible.length)];
+    }
+    const playPool = Object.keys(PLAY_CATALOG).filter((k) => PLAY_CATALOG[k].pos.includes(position));
+    const nPlay = Math.min(playPool.length, 1 + (Math.random() < 0.55 ? 1 : 0) + (Math.random() < 0.2 ? 1 : 0));
+    const play = _pickFrom(playPool, nPlay).map((k) => ({ k, lv: _rollLv(), xp: 0 }));
+    const flawPool = Object.keys(FLAW_CATALOG).filter((k) => FLAW_CATALOG[k].pos.includes(position));
+    const fr = Math.random();
+    const nFlaw = Math.min(flawPool.length, fr < FLAW_ODDS[0] ? 0 : fr < FLAW_ODDS[0] + FLAW_ODDS[1] ? 1 : 2);
+    const flaws = _pickFrom(flawPool, nFlaw).map((k) => ({ k, lv: _rollLv(), xp: 0 }));
+    return { bridge, play, flaws, earned: false };
+  }
+  function creditTrait(p, key, n = 1) {
+    var _a;
+    const list = (_a = p == null ? void 0 : p.traits) == null ? void 0 : _a.play;
+    if (!list) return false;
+    for (const t of list) {
+      if (t.k !== key || t.lv >= 3) continue;
+      t.xp = (t.xp || 0) + n;
+      if (t.xp >= XP_THRESHOLDS[t.lv]) {
+        t.lv += 1;
+        t.xp = 0;
+        t.pend = true;
+        return true;
+      }
+    }
+    return false;
+  }
+  function growFlaw(p, key, n = 1) {
+    var _a;
+    const list = (_a = p == null ? void 0 : p.traits) == null ? void 0 : _a.flaws;
+    if (!list) return false;
+    for (const t of list) {
+      if (t.k !== key || t.lv >= 3) continue;
+      t.xp = (t.xp || 0) + n;
+      if (t.xp >= XP_THRESHOLDS[t.lv]) {
+        t.lv += 1;
+        t.xp = 0;
+        t.pendUp = true;
+        return true;
+      }
+    }
+    return false;
+  }
+  function shrinkFlaw(p, key) {
+    var _a;
+    const list = (_a = p == null ? void 0 : p.traits) == null ? void 0 : _a.flaws;
+    if (!list) return null;
+    for (let i = 0; i < list.length; i++) {
+      const t = list[i];
+      if (t.k !== key) continue;
+      if (t.lv > 1) {
+        t.lv -= 1;
+        t.xp = 0;
+        t.pendDown = true;
+        return "down";
+      }
+      list.splice(i, 1);
+      return "gone";
+    }
+    return null;
+  }
+  function growthFromGameStats(p, gs) {
+    var _a;
+    if (!((_a = p == null ? void 0 : p.traits) == null ? void 0 : _a.play) || !gs) return [];
+    const ups = [];
+    const credit = (key, n) => {
+      if (n > 0 && creditTrait(p, key, n)) ups.push(key);
+    };
+    credit("stripArtist", gs.forcedFumbles || 0);
+    credit("bigHitter", gs.forcedFumbles || 0);
+    credit("ballHawk", gs.ints || 0);
+    credit("sticky", gs.passBreakups || 0);
+    credit("highPoint", gs.passBreakups || 0);
+    credit("pressJam", gs.passBreakups || 0);
+    credit("wrapTackler", Math.floor((gs.tackles || 0) / 6));
+    credit("openField", Math.floor((gs.tackles || 0) / 6));
+    credit("angles", Math.floor((gs.tackles || 0) / 6));
+    credit("zoneEyes", Math.floor((gs.tackles || 0) / 8));
+    credit("patternMatcher", Math.floor((gs.tackles || 0) / 8));
+    credit("trigger", gs.tacklesForLoss || 0);
+    credit("gapShooter", gs.tacklesForLoss || 0);
+    credit("edgeSetter", gs.tacklesForLoss || 0);
+    credit("screenSniffer", gs.tacklesForLoss || 0);
+    credit("bend", (gs.sacks || 0) + Math.floor((gs.pressures || 0) / 4));
+    credit("powerMove", (gs.sacks || 0) + Math.floor((gs.pressures || 0) / 4));
+    credit("motor", gs.sacks || 0);
+    credit("gamesRunner", gs.sacks || 0);
+    credit("greenDogT", gs.sacks || 0);
+    credit("batRadar", gs.batted || 0);
+    credit("robber", gs.ints || 0);
+    credit("routeTech", Math.floor((gs.recComp || 0) / 4));
+    credit("releaseArtist", Math.floor((gs.recComp || 0) / 4));
+    credit("doubleMove", Math.floor((gs.recComp || 0) / 5));
+    credit("contestedCatch", gs.contestedRec || 0);
+    credit("chainMover", Math.floor((gs.recComp || 0) / 4));
+    credit("yacMonster", Math.floor((gs.yardsAfterContact || 0) / 30));
+    credit("deepTracker", Math.floor((gs.recYds || 0) / 60));
+    credit("homeRunThreat", Math.floor(((gs.rushYds || 0) + (gs.recYds || 0)) / 80));
+    credit("oneCut", Math.floor((gs.rushYds || 0) / 60));
+    credit("patientRunner", Math.floor((gs.rushYds || 0) / 60));
+    credit("secureBag", Math.floor((gs.rushAtt || 0) / 15));
+    credit("blitzBeater", Math.floor((gs.passYds || 0) / 150));
+    credit("rhythmPasser", Math.floor((gs.passYds || 0) / 150));
+    credit("fieldGeneral", gs.passTD || 0);
+    credit("pocketPresence", Math.floor((gs.passYds || 0) / 150));
+    credit("scrambleDrill", Math.floor((gs.rushYds || 0) / 25));
+    credit("iceVeins", gs.fgMade || 0);
+    return ups;
+  }
+  var BRIDGE_CATALOG, PLAY_CATALOG, FLAW_CATALOG, JOB_SIZE_WINDOWS, SIZE_FIT_FALLOFF, SIZE_FIT_CAP, LV_ODDS, XP_THRESHOLDS, BRIDGE_BASE_ODDS, BRIDGE_TWEENER_ODDS, FLAW_ODDS;
+  var init_traits = __esm({
+    "js/engine/traits.js"() {
+      BRIDGE_CATALOG = {
+        spaceBacker: {
+          name: "Space Backer",
+          pos: ["OLB", "LB"],
+          mesh: ["SPACE"],
+          jobs: ["ROVER", "WAR", "DB", "NB"],
+          roles: ["S-Hybrid", "S-Ball", "OLB-Cover", "LB-Cover", "LB-Sideline"],
+          buckets: ["S"],
+          desc: "Space jobs at full rate \u2014 the Parsons/tweener trait."
+        },
+        slotStar: {
+          name: "Slot Star",
+          pos: ["S", "CB"],
+          mesh: ["NB"],
+          jobs: ["NB", "SL"],
+          roles: ["CB-Nickel"],
+          buckets: ["CB"],
+          desc: "The NB slot at corner rate (2010 Woodson)."
+        },
+        boxGeneral: {
+          name: "Box General",
+          pos: ["S"],
+          mesh: ["STACKER"],
+          jobs: ["SS", "STK", "WILL", "SAM"],
+          roles: ["LB-Cover", "LB-Hybrid", "OLB-Cover"],
+          buckets: ["LB", "OLB"],
+          desc: "Walked-down jobs: 46 SS, 4-4 run duties (Dawkins)."
+        },
+        edgeBender: {
+          name: "Edge Bender",
+          pos: ["DE", "OLB"],
+          mesh: ["OVERHANG"],
+          jobs: ["JACK", "EDGE", "JOKER", "CHAR", "SPUR", "BANDIT"],
+          roles: ["OLB-Rush", "OLB-Blitz", "DE-Speed"],
+          buckets: ["OLB", "DE"],
+          desc: "Stand-up rush jobs, both directions."
+        },
+        twoGapper: {
+          name: "Two-Gapper",
+          pos: ["DT", "DE"],
+          mesh: [],
+          jobs: ["NT", "DT"],
+          roles: ["DT-NT", "DT-Balanced", "DE-Base"],
+          buckets: ["DT"],
+          desc: "NT / 4i jobs despite a penetrator profile."
+        },
+        poleRunner: {
+          name: "Pole Runner",
+          pos: ["LB"],
+          mesh: [],
+          jobs: ["MIKE", "ILB"],
+          roles: ["LB-Cover"],
+          buckets: [],
+          desc: "The deep-middle carry job (the Tampa 2 pole)."
+        },
+        // Offense mirrors
+        moveTE: {
+          name: "Move TE",
+          pos: ["TE"],
+          mesh: [],
+          jobs: ["SL"],
+          roles: ["TE-Move", "TE-Receiving"],
+          buckets: ["WR", "SLOT"],
+          desc: "Flexes to the slot at receiver rate."
+        },
+        backfieldWeapon: {
+          name: "Backfield Weapon",
+          pos: ["RB"],
+          mesh: [],
+          jobs: [],
+          roles: ["RB-Scat", "RB-Elusive"],
+          buckets: ["WR", "SLOT"],
+          desc: "Splits wide at receiver rate."
+        },
+        hBack: {
+          name: "H-Back",
+          pos: ["RB", "TE"],
+          mesh: [],
+          jobs: ["FB", "U"],
+          roles: ["TE-Blocking"],
+          buckets: ["FB", "TE", "RB"],
+          desc: "The FB/TE bridge body."
+        },
+        swingTackle: {
+          name: "Swing Tackle",
+          pos: ["OL"],
+          mesh: [],
+          jobs: [],
+          roles: [],
+          buckets: ["OL"],
+          desc: "All five spots, no drop-off."
+        },
+        wildcatEngine: {
+          name: "Wildcat Engine",
+          pos: ["RB"],
+          mesh: [],
+          jobs: ["WC"],
+          roles: [],
+          buckets: ["QB", "WILDCAT"],
+          desc: "Takes the snap; the package is his."
+        }
+      };
+      PLAY_CATALOG = {
+        // DEFENSE — pursuit & tackling
+        wrapTackler: { name: "Wrap Tackler", pos: ["LB", "OLB", "S", "CB", "DE", "DT"], hook: "breaksTackle chance" },
+        openField: { name: "Open-Field Tackler", pos: ["S", "CB", "LB", "OLB"], hook: "geoYAC pMake" },
+        bigHitter: { name: "Big Hitter", pos: ["S", "LB", "OLB"], hook: "runOutcome ffChance (hit power)" },
+        stripArtist: { name: "Strip Artist", pos: ["DE", "OLB", "LB", "CB", "S"], hook: "strip-style ffChance + strip sack" },
+        motor: { name: "Motor", pos: ["DE", "DT", "OLB"], hook: "fatigueMultiplier onset (rush persistence)" },
+        trigger: { name: "Trigger", pos: ["LB", "S"], hook: "run2geo second-level fill react" },
+        // Rush
+        bend: { name: "Bend", pos: ["DE", "OLB"], hook: "blockRep speedPath" },
+        powerMove: { name: "Power Move", pos: ["DE", "DT"], hook: "blockRep powerPath" },
+        batRadar: { name: "Bat Radar", pos: ["DT", "DE"], hook: "BAT_* batted-pass chance" },
+        greenDogT: { name: "Green Dog", pos: ["LB", "OLB"], hook: "man-gate blitz convert rate" },
+        gapShooter: { name: "Gap Shooter", pos: ["LB", "OLB"], hook: "run-blitz penetrator react" },
+        gamesRunner: { name: "Games Runner", pos: ["LB", "OLB"], hook: "cross-dog pickP (Pass 4 hook rule)" },
+        // Coverage
+        sticky: { name: "Sticky", pos: ["CB", "S"], hook: "sepgeo man react/keep" },
+        zoneEyes: { name: "Zone Eyes", pos: ["LB", "S", "CB", "OLB"], hook: "assignCoverage bust reduction" },
+        pressJam: { name: "Press Jam", pos: ["CB"], hook: "sepgeo jam term" },
+        ballHawk: { name: "Ball Hawk", pos: ["S", "CB", "LB"], hook: "tipped-ball INT pick weight" },
+        highPoint: { name: "High Point", pos: ["CB", "S"], hook: "SIZE_MISMATCH contested term (def)" },
+        spyEyes: { name: "Spy Eyes", pos: ["LB", "OLB"], hook: "spyQB scramble containment" },
+        filmJunkie: { name: "Film Junkie", pos: ["S", "LB", "CB"], hook: "paBite discipline / disguise read" },
+        disguiseArtist: { name: "Disguise Artist", pos: ["S", "CB"], hook: "pDisguise craft (seller side)" },
+        patternMatcher: { name: "Pattern Matcher", pos: ["LB", "S", "CB"], hook: "awrSqueeze zone-void" },
+        robber: { name: "Robber", pos: ["S"], hook: "robStrength undercut" },
+        screenSniffer: { name: "Screen Sniffer", pos: ["DT", "DE", "LB"], hook: "screen sniffChance" },
+        edgeSetter: { name: "Edge Setter", pos: ["DE", "OLB"], hook: "edgeTec contain vs jets/outside" },
+        optionSound: { name: "Option Sound", pos: ["DE", "OLB", "LB"], hook: "resolveOptionPlay readWinP (def side)" },
+        angles: { name: "Angles", pos: ["LB", "S", "CB"], hook: "geoYAC pursuit convergence" },
+        // Special teams
+        gunner: { name: "Gunner", pos: ["S", "CB", "LB", "WR"], hook: "st_coverage coverageStrength" },
+        returnVision: { name: "Return Vision", pos: ["WR", "RB", "CB", "S"], hook: "returner rating / breakChance" },
+        iceVeins: { name: "Ice Veins", pos: ["K"], hook: "attemptFG late/pressure context" },
+        coffinCorner: { name: "Coffin Corner", pos: ["P"], hook: "punt placement inside-20" },
+        hangTime: { name: "Hang Time", pos: ["P"], hook: "return coverage / fair catches" },
+        handsTeam: { name: "Hands Team", pos: ["TE", "LB"], hook: "onsideResult recovery" },
+        // OFFENSE — QB room (v1.5)
+        blitzBeater: { name: "Blitz Beater", pos: ["QB"], hook: "hotChance" },
+        eyeManipulator: { name: "Eye Manipulator", pos: ["QB"], hook: "robber lookoff term" },
+        fieldGeneral: { name: "Field General", pos: ["QB"], hook: "seeIt/pAud kill-call machinery" },
+        rhythmPasser: { name: "Rhythm Passer", pos: ["QB"], hook: "inRhythm first-read bonus" },
+        slidesEarly: { name: "Slides Early", pos: ["QB"], hook: "qbContactResult (two-sided)" },
+        pocketPresence: { name: "Pocket Presence", pos: ["QB"], hook: "covSack escape / sack-avoid" },
+        scrambleDrill: { name: "Scramble Drill", pos: ["QB"], hook: "off-schedule throw comp" },
+        // RB
+        passProBack: { name: "Pass-Pro Back", pos: ["RB"], hook: "blitzer pickupProb" },
+        chipper: { name: "Chipper", pos: ["RB", "TE"], hook: "chip bump machinery" },
+        patientRunner: { name: "Patient Runner", pos: ["RB"], hook: "run2geo lane-commit entry" },
+        oneCut: { name: "One-Cut", pos: ["RB"], hook: "runFit read/bend cut quality" },
+        homeRunThreat: { name: "Home-Run Threat", pos: ["RB", "WR"], hook: "breakaway breakP" },
+        secureBag: { name: "Secure Bag", pos: ["RB", "WR", "QB"], hook: "carry-fumble mult" },
+        yacMonster: { name: "YAC Monster", pos: ["WR", "RB", "TE"], hook: "geoYAC wiggle/openTackle" },
+        // WR/TE
+        routeTech: { name: "Route Technician", pos: ["WR", "TE"], hook: "sepgeo receiver duel" },
+        contestedCatch: { name: "Contested Catch", pos: ["WR", "TE"], hook: "contested catchProb term" },
+        chainMover: { name: "Chain Mover", pos: ["WR", "TE"], hook: "catchResolution on 3rd down (situational)" },
+        releaseArtist: { name: "Release Artist", pos: ["WR"], hook: "sepgeo release vs jam" },
+        doubleMove: { name: "Double-Move Artist", pos: ["WR"], hook: "sepgeo dblLag sell" },
+        motionWeapon: { name: "Motion Weapon", pos: ["WR", "RB"], hook: "motionGain" },
+        deepTracker: { name: "Deep Tracker", pos: ["WR"], hook: "vdeep over-the-shoulder" },
+        blockingWR: { name: "Blocking Receiver", pos: ["WR", "TE"], hook: "stalk-block blockScore" },
+        paSeller: { name: "Play-Action Seller", pos: ["RB", "QB"], hook: "PA credibility" },
+        leadBlocker: { name: "Lead Blocker", pos: ["RB", "TE"], hook: "FB-lead run blockRep" },
+        // OL
+        lineGeneral: { name: "Line General", pos: ["OL"], hook: "centerAwr half-slide + stunt counter (center)" },
+        anchor: { name: "Anchor", pos: ["OL"], hook: "blockRep powerPath resistance" },
+        mirror: { name: "Mirror", pos: ["OL"], hook: "blockRep speedPath ride" },
+        puller: { name: "Puller", pos: ["OL"], hook: "pull mobility bonus" },
+        peopleMover: { name: "People Mover", pos: ["OL"], hook: "run-branch blockRep drive" }
+      };
+      FLAW_CATALOG = {
+        grabby: { name: "Grabby", pos: ["CB", "S"], hook: "PENALTY_CATALOG Pass Interference weight" },
+        jumpy: { name: "Jumpy", pos: ["DE", "DT", "OLB", "OL"], hook: "offside/false-start weight" },
+        gambler: { name: "Gambler", pos: ["CB", "S"], hook: "INTs up AND burned-deep up (two-sided)" },
+        headhunter: { name: "Headhunter", pos: ["S", "LB"], hook: "splash hits + personal fouls" },
+        freelancer: { name: "Freelancer", pos: ["LB", "S", "CB", "OLB"], hook: "busts up + splash up (two-sided)" },
+        drops: { name: "Drops", pos: ["WR", "TE", "RB"], hook: "dropProb" },
+        fumbler: { name: "Fumbler", pos: ["RB", "WR", "QB"], hook: "carry-fumble mult" },
+        happyFeet: { name: "Happy Feet", pos: ["QB"], hook: "hurried read pool / HURRY_PENALTY" },
+        slowStarter: { name: "Slow Starter", pos: ["QB", "RB", "WR", "K"], hook: "form dip, front half of games" },
+        telegraph: { name: "Telegraph", pos: ["QB"], hook: "robber/forced-ball INT term" },
+        heroBall: { name: "Hero Ball", pos: ["QB"], hook: "covSack branch weights (two-sided)" },
+        dancer: { name: "Dancer", pos: ["RB"], hook: "One-Cut reversed: bounces everything (two-sided)" },
+        bodyCatcher: { name: "Body Catcher", pos: ["WR", "TE"], hook: "contested term reversed" },
+        bitesHard: { name: "Bites Hard", pos: ["LB", "S"], hook: "paBite discipline reversed + dbl victim (two-sided)" },
+        laneDrifter: { name: "Lane Drifter", pos: ["DT", "DE"], hook: "gap-integrity / stunt-align" },
+        holdingHabit: { name: "Holding Habit", pos: ["OL"], hook: "Offensive Holding weight" },
+        shanks: { name: "Shanks", pos: ["K", "P"], hook: "pressure variance on the kick roll" },
+        muffs: { name: "Muffs", pos: ["WR", "RB", "CB", "S"], hook: "muffP machinery (returns/pitches)" }
+      };
+      JOB_SIZE_WINDOWS = {
+        NB: [178, 208],
+        SL: [170, 200],
+        DB: [190, 218],
+        ROVER: [215, 235],
+        WAR: [205, 232],
+        SPUR: [205, 232],
+        BANDIT: [212, 242],
+        JOKER: [222, 250],
+        JACK: [238, 268],
+        CHAR: [232, 262],
+        EDGE: [242, 275],
+        STK: [220, 250],
+        ILB: [226, 256],
+        MIKE: [230, 260],
+        WILL: [218, 248],
+        SAM: [228, 258],
+        NT: [305, 350],
+        FB: [228, 262],
+        WC: [190, 228],
+        A: [180, 212],
+        W: [198, 238],
+        U: [235, 268]
+      };
+      SIZE_FIT_FALLOFF = 4e-3;
+      SIZE_FIT_CAP = 0.1;
+      LV_ODDS = [0.78, 0.18, 0.04];
+      XP_THRESHOLDS = [0, 14, 36];
+      BRIDGE_BASE_ODDS = 0.1;
+      BRIDGE_TWEENER_ODDS = 0.18;
+      FLAW_ODDS = [0.55, 0.35, 0.1];
+    }
+  });
+
   // js/utils.js
   function randNorm(mean, sd) {
     const u1 = Math.random(), u2 = Math.random();
@@ -10795,20 +11256,28 @@ var _CFB = (() => {
     var _a;
     return (_a = C.DIV_BASE_BY_TIER[tier]) != null ? _a : 26;
   }
-  function rollSize(position, archetype, attrs) {
+  function rollFrame(position, archetype) {
     const band = archetype && SIZE_BANDS.byArchetype[archetype] || SIZE_BANDS.byPos[position] || SIZE_BANDS.byPos.WR;
     const [hMin, hMax, wMin, wMax] = band;
-    const hFrac = clamp2(randNorm(0.5, 0.22), 0, 1);
+    const hFrac = clamp2(randNorm(0.5, 0.26), -0.25, 1.25);
     const inches = Math.round(hMin + hFrac * (hMax - hMin));
-    let w = wMin + hFrac * (wMax - wMin);
-    const strSkew = (attrs.STR - 50) * 0.35;
-    const leanSkew = (attrs.SPD - 50 + (attrs.AGI - 50)) * 0.18;
-    w = w + strSkew - leanSkew;
-    const weight = clamp2(Math.round(w), wMin - 12, wMax + 18);
+    let wFrac = clamp2(hFrac * 0.5 + randNorm(0.25, 0.24), -0.3, 1.3);
+    if (Math.random() < 0.09) wFrac = clamp2(wFrac + (Math.random() < 0.5 ? -1 : 1) * (0.4 + Math.random() * 0.55), -0.65, 1.9);
+    const weight = Math.round(wMin + wFrac * (wMax - wMin));
     const ft = Math.floor(inches / 12);
-    const inch = inches % 12;
+    const inch = (inches % 12 + 12) % 12;
     const height = `${ft}'${inch}"`;
-    return { height, weight, heightInches: inches };
+    const bulk = (weight - (wMin + wMax) / 2) / (wMax - wMin);
+    return { height, weight, heightInches: inches, _bulk: bulk, _hFrac: hFrac };
+  }
+  function applyFramePriors(attrs, frame) {
+    const b = frame._bulk || 0;
+    const h = (frame._hFrac || 0.5) - 0.5;
+    attrs.STR = clamp2(Math.round(attrs.STR + b * 7), 1, 99);
+    attrs.PWR = clamp2(Math.round(attrs.PWR + b * 5), 1, 99);
+    attrs.SPD = clamp2(Math.round(attrs.SPD - b * 6), 1, 99);
+    attrs.AGI = clamp2(Math.round(attrs.AGI - b * 5), 1, 99);
+    if (attrs.JMP != null) attrs.JMP = clamp2(Math.round(attrs.JMP + h * 4), 1, 99);
   }
   function createRecruit(position, tier = 1, schoolLat = 40, schoolLng = -82, prestigeBonus = 0) {
     var _a, _b;
@@ -10818,6 +11287,8 @@ var _CFB = (() => {
     const isStar = Math.random() < clamp2(starBase + prestigeBonus * C.PRESTIGE_STAR_W, 0.02, 0.45);
     const threshold = isStar ? coreInfo.star : coreInfo.solid;
     const coreCap = (_b = C.CORE_CAP_BY_TIER[tier]) != null ? _b : 88;
+    const archetype = rollArchetype(position);
+    const frame = rollFrame(position, archetype);
     const attrs = {};
     for (const attr of ATTRIBUTES) {
       const coreIdx = coreInfo.core.indexOf(attr);
@@ -10834,7 +11305,7 @@ var _CFB = (() => {
       }
       attrs[attr] = clamp2(Math.round(randNorm(mean, sd)), 1, 99);
     }
-    const archetype = rollArchetype(position);
+    applyFramePriors(attrs, frame);
     if (archetype && ROLE_WEIGHTS[archetype]) {
       const ranked = Object.entries(ROLE_WEIGHTS[archetype]).sort((a, b) => b[1] - a[1]);
       for (const [a] of ranked.slice(0, 3)) {
@@ -10929,7 +11400,8 @@ var _CFB = (() => {
       position
     );
     const name = randomName();
-    const { height, weight, heightInches } = rollSize(position, archetype, attrs);
+    const { height, weight, heightInches } = frame;
+    const traits = rollTraits(position, weight, SIZE_BANDS);
     const gpa = Math.round((1.5 + Math.random() * 2.5) * 10) / 10;
     return __spreadProps2(__spreadValues2({
       id: uuid(),
@@ -10939,6 +11411,7 @@ var _CFB = (() => {
       height,
       weight,
       heightInches,
+      traits,
       gpa,
       hometown: loc,
       distanceFromSchool: Math.round(distance),
@@ -11001,6 +11474,9 @@ var _CFB = (() => {
       height: r.height,
       weight: r.weight,
       heightInches: r.heightInches,
+      // identity: the trait block survives the whitelist copy (world-gen rosters
+      // must match signed recruits — see IDENTITY_DESIGN §7)
+      traits: r.traits,
       gpa: r.gpa,
       hometown: r.hometown,
       promises: { frStart: false, soStart: false, pctPlays: null },
@@ -11150,6 +11626,7 @@ var _CFB = (() => {
       init_spread();
       init_constants();
       init_data_combine();
+      init_traits();
       init_utils();
       INJURY_CATALOG = {
         minor: { label: "Minor", types: ["Bruised Ribs", "Ankle Tweak", "Hip Pointer", "Jammed Finger", "Stinger", "Cramps"] },
@@ -13606,9 +14083,9 @@ var _CFB = (() => {
     const roleVal = roleRating(player, assignedRole);
     const natural = derivedArchetype(player) || assignedRole;
     const distTable = (_a = ARCHETYPE_DISTANCE[pos]) == null ? void 0 : _a[natural];
-    const dist = distTable ? (_b = distTable[assignedRole]) != null ? _b : 0 : 0;
+    const dist = bridgeWaivesRole(player, assignedRole) ? 0 : distTable ? (_b = distTable[assignedRole]) != null ? _b : 0 : 0;
     const fitMult = 1 - dist * C.SCHEME_FIT_MOD;
-    return roleVal * fitMult;
+    return roleVal * fitMult * sizeFitForRole(player, assignedRole, SIZE_BANDS);
   }
   function getMatchupEdge(offFormation, defFront) {
     var _a, _b;
@@ -13650,6 +14127,7 @@ var _CFB = (() => {
     "js/engine/formations.js"() {
       init_constants();
       init_player();
+      init_traits();
       FRONT_PRESSURE_SIGNATURE = {
         "4-3": "secondLevel",
         // SAM/WILL downhill — backer heat is the 4-3's language
@@ -13959,7 +14437,7 @@ var _CFB = (() => {
     };
   }
   function generateRivalries(schools, distanceMiles2) {
-    const byId = new Map(schools.map((s) => [s.id, s]));
+    const byId2 = new Map(schools.map((s) => [s.id, s]));
     const taken = /* @__PURE__ */ new Set();
     const pairs = [];
     const candidateFor = (s) => {
@@ -14423,10 +14901,10 @@ var _CFB = (() => {
     return (C.PORTAL_AI_VAL_BASE + over * C.PORTAL_AI_VAL_PER_PT) * roleMult;
   }
   function frontRunner(state2, entry) {
-    const byId = new Map(state2.world.schools.map((s) => [s.id, s]));
+    const byId2 = new Map(state2.world.schools.map((s) => [s.id, s]));
     let best = null, bestAdj = -Infinity;
     for (const b of entry.suitors || []) {
-      const s = byId.get(b.schoolId);
+      const s = byId2.get(b.schoolId);
       if (!s) continue;
       const adj = adjustedOffer(s, entry, b.money);
       if (adj > bestAdj) {
@@ -14606,11 +15084,11 @@ var _CFB = (() => {
   }
   function checkPortalCommits(state2, events) {
     const portal = state2.portal;
-    const byId = new Map(state2.world.schools.map((s) => [s.id, s]));
+    const byId2 = new Map(state2.world.schools.map((s) => [s.id, s]));
     for (const e of portal.players) {
       if (e.signedTo || (e.suitors || []).length === 0) continue;
       const ranked = e.suitors.map((b) => {
-        const s = byId.get(b.schoolId);
+        const s = byId2.get(b.schoolId);
         return s ? { s, adj: adjustedOffer(s, e, b.money) } : null;
       }).filter(Boolean).sort((a, b) => b.adj - a.adj);
       if (!ranked.length) continue;
@@ -14659,13 +15137,13 @@ var _CFB = (() => {
     const portal = state2.portal;
     if (!portal || portal.resolved) return;
     portal.resolved = true;
-    const byId = new Map(state2.world.schools.map((s) => [s.id, s]));
+    const byId2 = new Map(state2.world.schools.map((s) => [s.id, s]));
     const signedPerSchool = {};
     for (const s of portal.signings) signedPerSchool[s.toSchoolId] = (signedPerSchool[s.toSchoolId] || 0) + 1;
     for (const entry of portal.players) {
       if (entry.signedTo) continue;
       const ranked = entry.suitors.map((b) => {
-        const s = byId.get(b.schoolId);
+        const s = byId2.get(b.schoolId);
         if (!s) return null;
         if (b.schoolId !== state2.playerSchoolId && (signedPerSchool[b.schoolId] || 0) >= C.PORTAL_AI_MAX_SIGNINGS) return null;
         return { s, adj: adjustedOffer(s, entry, b.money) };
@@ -19749,6 +20227,24 @@ var _CFB = (() => {
     var _a, _b;
     return (_b = (_a = school.positionPlans) == null ? void 0 : _a[position]) != null ? _b : school.practiceMinutes;
   }
+  function campFlawPass(player, plan, school) {
+    var _a;
+    const flaws = (_a = player.traits) == null ? void 0 : _a.flaws;
+    if (!flaws || !flaws.length) return;
+    const minutes = plan && typeof plan === "object" ? Object.values(plan).reduce((s, v) => s + (Number(v) || 0), 0) : Number(plan) || 0;
+    const we = (player.attributes == null ? void 0 : player.attributes.WE) != null ? player.attributes.WE : 50;
+    const shrinkP = Math.min(0.4, 0.1 + Math.min(1.4, minutes / 100) * 0.08 + (we - 50) * 12e-4 + devMultFor(school.coach, school) * 0.05);
+    const t = flaws[Math.floor(Math.random() * flaws.length)];
+    if (Math.random() < shrinkP) {
+      const out = shrinkFlaw(player, t.k);
+      if (out === "gone") {
+        const tl = player.traits;
+        (tl._gone || (tl._gone = [])).push(t.k);
+      }
+    } else if (minutes < 50 && Math.random() < 0.35) {
+      growFlaw(player, t.k, 3);
+    }
+  }
   function runSeasonDevelopment(school, focus = null) {
     var _a, _b;
     const coach = school.coach;
@@ -19761,6 +20257,7 @@ var _CFB = (() => {
         }
         developPlayer(player, plan, coach, mult, school);
       }
+      campFlawPass(player, plan, school);
       developPotentialAndPerformance(player, coach, school);
       {
         const we = player.attributes.WE || 50;
@@ -19847,6 +20344,7 @@ var _CFB = (() => {
       init_constants();
       init_coach();
       init_player();
+      init_traits();
       init_utils();
     }
   });
@@ -19898,7 +20396,7 @@ var _CFB = (() => {
   });
 
   // js/engine/fieldassign.js
-  function resolveSlots(slots, assignments, activeDepth, ratingById = null, playerPos = null) {
+  function resolveSlots(slots, assignments, activeDepth, ratingById = null, playerPos = null, playerById = null) {
     var _a, _b;
     const bySlot = {};
     const byPos = {};
@@ -19917,7 +20415,8 @@ var _CFB = (() => {
       const eligKey = s.mesh || s.pos;
       if (SLOT_ELIGIBLE_POS[eligKey]) {
         const p = playerPos == null ? void 0 : playerPos(want);
-        if (p && !SLOT_ELIGIBLE_POS[eligKey].includes(p)) continue;
+        const bridged = playerById && bridgeCoversSlot(playerById(want), s);
+        if (p && !bridged && !SLOT_ELIGIBLE_POS[eligKey].includes(p)) continue;
       }
       bySlot[s.id] = want;
       used.add(want);
@@ -19962,13 +20461,17 @@ var _CFB = (() => {
           let tail = MESH_AUTO_POOL[s.mesh](activeDepth).filter((id) => seen2.has(id) ? false : (seen2.add(id), true)).filter((id) => !used.has(id) && allActive.has(id));
           if (playerPos && SLOT_ELIGIBLE_POS[s.mesh]) tail = tail.filter((id) => {
             const p = playerPos(id);
+            if (playerById && bridgeCoversSlot(playerById(id), s)) return true;
             return !p || SLOT_ELIGIBLE_POS[s.mesh].includes(p);
           });
           if (ratingById) {
             const multOf = (id) => {
               var _m;
+              const pl = playerById == null ? void 0 : playerById(id);
+              if (pl && bridgeCoversSlot(pl, s)) return 1;
               const p = playerPos == null ? void 0 : playerPos(id);
-              return p ? (_m = (SLOT_ELIGIBILITY[s.pos] || {})[p]) != null ? _m : 1 : 1;
+              const elig = p ? (_m = (SLOT_ELIGIBILITY[s.pos] || {})[p]) != null ? _m : 1 : 1;
+              return elig * (pl ? sizeFitForSlot(pl, s) : 1);
             };
             tail.sort((a, b) => (ratingById[b] || 0) * multOf(b) - (ratingById[a] || 0) * multOf(a));
           }
@@ -20006,10 +20509,10 @@ var _CFB = (() => {
     }
     return { bySlot, byPos };
   }
-  function resolveOffField(formationId, assignments, shares, activeDepth, ratingById = null, playerPos = null) {
+  function resolveOffField(formationId, assignments, shares, activeDepth, ratingById = null, playerPos = null, playerById = null) {
     const layout = OFF_FIELD_LAYOUTS[formationId];
     if (!layout) return null;
-    const { bySlot, byPos } = resolveSlots(layout.slots, assignments, activeDepth, ratingById, playerPos);
+    const { bySlot, byPos } = resolveSlots(layout.slots, assignments, activeDepth, ratingById, playerPos, playerById);
     const fbSlotIds = new Set(layout.slots.filter((s) => s.role === "FB-Lead").map((s) => s.id));
     const fbFromSlots = [];
     for (const s of layout.slots) {
@@ -20048,10 +20551,10 @@ var _CFB = (() => {
     }
     return { personnel, shareByPlayerId, bySlot, roleBySlotPlayer };
   }
-  function resolveDefField(frontId, assignments, blitzShares, activeDepth, ratingById = null, playerPos = null) {
+  function resolveDefField(frontId, assignments, blitzShares, activeDepth, ratingById = null, playerPos = null, playerById = null) {
     const layout = DEF_FIELD_LAYOUTS[frontId];
     if (!layout) return null;
-    const { bySlot, byPos } = resolveSlots(layout.slots, assignments, activeDepth, ratingById, playerPos);
+    const { bySlot, byPos } = resolveSlots(layout.slots, assignments, activeDepth, ratingById, playerPos, playerById);
     const DE = byPos.DE || [], DT = byPos.DT || [], OLB = byPos.OLB || [], LB = byPos.LB || [], CB = byPos.CB || [], S = byPos.S || [];
     const olbRush = frontId === "3-4" || frontId === "Penny";
     const blitzShareByPlayerId = {};
@@ -20133,6 +20636,7 @@ var _CFB = (() => {
     "js/engine/fieldassign.js"() {
       init_constants_field();
       init_constants();
+      init_traits();
       SLOT_ELIGIBLE_POS = {
         WR: ["WR"],
         // X and Z: split end / flanker — receivers only
@@ -20237,7 +20741,7 @@ var _CFB = (() => {
     const laneX = (Math.random() - 0.5) * 9;
     const laneShift = (lane - 0.6) * (lane < 0.6 ? 0.26 : 0.19);
     const car = { x: laneX * 0.35, y: -3.92 - LANE_RECENTER + laneShift, top: spdYps2(ra.SPD), acc: accel2(ra.AGI), vx: 0, vy: 0 };
-    const entry = 0.712 + (lane - 0.6) * 0.028 + (Math.random() - 0.5) * 0.18 + Math.min(0.12, Math.max(-0.12, vision * 0.05));
+    const entry = (0.712 + (lane - 0.6) * 0.028 + (Math.random() - 0.5) * 0.18 + Math.min(0.12, Math.max(-0.12, vision * 0.05))) * traitMult(carrier, "patientRunner", -8e-3);
     car.vx = (laneX - car.x) * 0.3;
     car.vy = car.top * entry;
     const chasers = [];
@@ -20285,7 +20789,8 @@ var _CFB = (() => {
           y: -0.2 - Math.random() * 0.9,
           top: dSpd(da.SPD) * 0.93,
           acc: dAcc(da.AGI),
-          react: 0.15,
+          // identity stage 3: Gap Shooter — shoots the point quicker
+          react: 0.15 * traitMult(src, "gapShooter", -0.08),
           tkl: finishOf2(da),
           burned: 0,
           vx: 0,
@@ -20312,7 +20817,8 @@ var _CFB = (() => {
         // where 3-5 yard runs come from; an instant fill would stuff the sport).
         // Wide react/depth variance is the point — the fit is never the same
         // twice, and that spread IS the 1-7 yard band's texture.
-        react: blocked ? 0.85 + Math.random() * 0.85 : Math.max(0.05, 0.18 + Math.random() * 0.7 + reactS2(da.AWR) - climbHere * 0.6),
+        // identity stage 3: Trigger — the downhill fill fires a beat sooner
+        react: (blocked ? 0.85 + Math.random() * 0.85 : Math.max(0.05, 0.18 + Math.random() * 0.7 + reactS2(da.AWR) - climbHere * 0.6)) * traitMult(lb, "trigger", -0.03),
         shed: blocked,
         tkl: finishOf2(da),
         burned: 0,
@@ -20445,7 +20951,7 @@ var _CFB = (() => {
         }
       }
       const v = hyp(car.vx, car.vy) || 1e-6;
-      const cap = clearedDeep ? car.top : Math.min(car.top, 8.05);
+      const cap = clearedDeep ? car.top * (1 + 6e-3 * Math.max(traitLv(carrier, "homeRunThreat"), flawLv(carrier, "dancer"))) : Math.min(car.top, 8.05);
       const want = Math.min(cap, v + car.acc * TICK2);
       if (car.y < 0.5) {
         let tx = laneX;
@@ -20460,7 +20966,7 @@ var _CFB = (() => {
           }
         }
         if (nearest) {
-          const readMult = 1 + readBend;
+          const readMult = 1 + readBend + 0.015 * traitLv(carrier, "oneCut") - 0.02 * flawLv(carrier, "dancer");
           const bend = Math.max(0.5, Math.min(
             1.4,
             0.7 + (((_b = ra.AWR) != null ? _b : 50) - 41) * 4e-3 + (((_c = ra.AGI) != null ? _c : 50) - 50) * 4e-3
@@ -20594,6 +21100,7 @@ var _CFB = (() => {
   var finishOf2, TICK2, MAX_T2, MAX_Y2, MIN_Y, RADIUS2, LANE_RECENTER, hyp, spdYps2, accel2, dSpd, dAcc, reactS2;
   var init_run2geo = __esm({
     "js/engine/run2geo.js"() {
+      init_traits();
       finishOf2 = (a) => {
         var _a, _b, _c, _d;
         return ((_a = a.STR) != null ? _a : 50) * 0.34 + ((_b = a.PWR) != null ? _b : 50) * 0.28 + ((_c = a.TEC) != null ? _c : 50) * 0.2 + ((_d = a.AWR) != null ? _d : 50) * 0.18;
@@ -20649,6 +21156,7 @@ var _CFB = (() => {
       } else {
         const margin = rep.b ? rPow(a) - bPow(rep.b) : 12;
         shed = D.SHED_BASE - margin * D.SHED_SLOPE - (rep.power ? D.POWER_FLUSH : 0) + randNorm2(0, D.SHED_JIT);
+        if (rep.motor) shed -= 0.03 * rep.motor;
       }
       shed = clamp3(shed, D.SHED_MIN, D.SHED_MAX);
       const arr = shed + traverse - collapse;
@@ -20763,11 +21271,11 @@ var _CFB = (() => {
     }
     if (rt && rt.dbl) {
       const rTec = ra.TEC != null ? ra.TEC : 50, dAwr = da.AWR != null ? da.AWR : 50;
-      dblLag = Math.max(0, Math.min(0.22, 0.11 + (rTec - dAwr) * 3e-3));
+      dblLag = Math.max(0, Math.min(0.26, 0.11 + (rTec - dAwr) * 3e-3 + 0.015 * traitLv(receiver, "doubleMove") + 0.02 * flawLv(defender, "bitesHard") + 0.012 * flawLv(defender, "gambler")));
     }
     const breakDir = Math.random() < 0.5 ? -1 : 1;
     const breakLat = passDepth === "deep" ? breakDir * 0.8 : breakDir * (3 + Math.random() * 0.2);
-    const cutQ = 1 + (((_a = ra.TEC) != null ? _a : 50) - 50) * 45e-4 + (((_b = ra.AGI) != null ? _b : 50) - 50) * 32e-4;
+    const cutQ = (1 + (((_a = ra.TEC) != null ? _a : 50) - 50) * 45e-4 + (((_b = ra.AGI) != null ? _b : 50) - 50) * 32e-4) * traitMult(receiver, "routeTech", 8e-3);
     const rec = { x: 0, y: 0, vx: 0, vy: 0, top: spd(ra.SPD), acc: acc(ra.AGI) };
     const sell = Math.max(-0.2, Math.min(0.2, (((_c = ra.TEC) != null ? _c : 50) - ((_d = da.TEC) != null ? _d : 50)) * 4e-3));
     const def = {
@@ -20777,13 +21285,14 @@ var _CFB = (() => {
       vy: 0,
       top: spd(da.SPD),
       acc: acc(da.AGI),
-      react: Math.max(0.02, rctMan(da.AWR) + sell + levBias),
+      // identity stage 3: Sticky — the man-mirror reaction, a touch earlier
+      react: Math.max(0.02, rctMan(da.AWR) + sell + levBias - 0.012 * traitLv(defender, "sticky")),
       lag: 0
     };
     let recDelay = 0;
     if (coverageType === "press") {
-      const jam = ((_e = da.STR) != null ? _e : 50) * 0.4 + ((_f = da.TEC) != null ? _f : 50) * 0.35 + ((_g = da.AGI) != null ? _g : 50) * 0.25 + 1;
-      const release = ((_h = ra.AGI) != null ? _h : 50) * 0.4 + ((_i = ra.TEC) != null ? _i : 50) * 0.35 + ((_j = ra.STR) != null ? _j : 50) * 0.25;
+      const jam = (((_e = da.STR) != null ? _e : 50) * 0.4 + ((_f = da.TEC) != null ? _f : 50) * 0.35 + ((_g = da.AGI) != null ? _g : 50) * 0.25 + 1) * traitMult(defender, "pressJam", 0.015);
+      const release = (((_h = ra.AGI) != null ? _h : 50) * 0.4 + ((_i = ra.TEC) != null ? _i : 50) * 0.35 + ((_j = ra.STR) != null ? _j : 50) * 0.25) * traitMult(receiver, "releaseArtist", 0.015);
       const jamGap = (jam - release) * (pressHot ? 1.08 : 1);
       if (jamGap >= 0) {
         recDelay = Math.min(0.42, 0.14 + jamGap * 75e-4);
@@ -20882,6 +21391,7 @@ var _CFB = (() => {
   var TICK3, spd, acc, rctMan, rctZone, ROUTES, QMAP, SEP_RECENTER, qsep;
   var init_sepgeo = __esm({
     "js/engine/sepgeo.js"() {
+      init_traits();
       TICK3 = 0.1;
       spd = (s) => 6.4 + (s != null ? s : 50) * 0.028;
       acc = (a) => 7 + (a != null ? a : 50) * 0.05;
@@ -20929,7 +21439,7 @@ var _CFB = (() => {
     const lean = (Math.random() - 0.5) * 0.6;
     car.vx = car.top * 0.45 * lean;
     car.vy = car.top * 0.45;
-    const wiggle = ((_a = ra.AGI) != null ? _a : 50) * 0.7 + ((_b = ra.TEC) != null ? _b : 50) * 0.3;
+    const wiggle = (((_a = ra.AGI) != null ? _a : 50) * 0.7 + ((_b = ra.TEC) != null ? _b : 50) * 0.3) * traitMult(receiver, "yacMonster", 0.012);
     const open = Math.max(0, (sep != null ? sep : 0.4) - 0.25) / 0.75;
     const depthRoom = depthKey === "short" ? 1.6 : depthKey === "medium" ? 0.4 : depthKey === "vdeep" ? -1.4 : -0.8;
     const openY = Math.max(0, open * open * 9 + depthRoom);
@@ -21031,7 +21541,7 @@ var _CFB = (() => {
     const spdEdge = (car.top - rallyTop) / 2.2;
     const breakP = globalThis.__noBreakaway ? 0 : Math.max(0, Math.min(
       0.34,
-      open * (0.22 + Math.max(0, spdEdge) * 0.4 + (wiggle - 55) * 4e-3)
+      open * (0.22 + Math.max(0, spdEdge) * 0.4 + (wiggle - 55) * 4e-3) * traitMult(receiver, "homeRunThreat", 0.05)
     ));
     const breakaway = Math.random() < breakP;
     let noCavalry = false;
@@ -21137,14 +21647,14 @@ var _CFB = (() => {
         const rawClose = -(((car.vx - d.vx) * gx + (car.vy - d.vy) * gy) / gap0);
         const behind = gy > 0.5;
         const closing = behind ? Math.max(-3, rawClose) : Math.max(2, rawClose);
-        const lead = Math.min(0.6, gap0 / Math.max(0.5, closing));
+        const lead = Math.min(0.6 + 0.05 * traitLv(d.ref, "angles"), gap0 / Math.max(0.5, closing));
         if (d.backstop && gap0 > 3.5) driveTo(d, car.x + car.vx * 0.15, d.y - 1.2, TICK);
         else driveTo(d, car.x + car.vx * lead, car.y + car.vy * lead, TICK);
         const gap = Math.hypot(d.x - car.x, d.y - car.y);
         const reach = RADIUS + Math.min(0.9, closing * 0.05);
         if (gap < reach) {
           const openTackle = breakaway && d.backstop ? -0.14 : 0;
-          const pMake = 0.74 + (d.tkl - wiggle) * 5e-3 - (((_f = ra.AWR) != null ? _f : 50) - 41) * 16e-4 + openTackle;
+          const pMake = 0.74 + (d.tkl - wiggle) * 5e-3 - (((_f = ra.AWR) != null ? _f : 50) - 41) * 16e-4 + openTackle + 0.02 * traitLv(d.ref, "openField");
           if (_trace) _trace.push({ finish: d.cover ? "C" : d.backstop ? "S" : "R", p: +pMake.toFixed(2), gap: +gap.toFixed(2), reach: +reach.toFixed(2) });
           if (Math.random() < Math.max(0.25, Math.min(0.95, pMake))) {
             tackler = d;
@@ -21182,6 +21692,7 @@ var _CFB = (() => {
   var finishOf, TICK, MAX_T, MAX_Y, RADIUS, spdYps, accel, reactS;
   var init_yacgeo = __esm({
     "js/engine/yacgeo.js"() {
+      init_traits();
       finishOf = (a) => {
         var _a, _b, _c, _d;
         return ((_a = a.STR) != null ? _a : 50) * 0.34 + ((_b = a.PWR) != null ? _b : 50) * 0.28 + ((_c = a.TEC) != null ? _c : 50) * 0.2 + ((_d = a.AWR) != null ? _d : 50) * 0.18;
@@ -21433,7 +21944,7 @@ var _CFB = (() => {
     var _a, _b, _c;
     const dfind = (id) => defRoster.find((p) => p.id === id);
     const edge2 = dfind((defPersonnel.OLB || [])[0]) || dfind((defPersonnel.S || [])[0]) || dfind((defPersonnel.LB || [])[0]) || null;
-    const edgeTec = (((_a = edge2 == null ? void 0 : edge2.attributes.TEC) != null ? _a : 50) - 50) * 12e-4;
+    const edgeTec = (((_a = edge2 == null ? void 0 : edge2.attributes.TEC) != null ? _a : 50) - 50) * 12e-4 + 15e-4 * traitLv(edge2, "edgeSetter");
     const edgeAdj = (defPlan == null ? void 0 : defPlan.edgePlayEff) === "contain" ? clamp2(0.07 + edgeTec + 0.03, 0.03, 0.16) : (defPlan == null ? void 0 : defPlan.edgePlayEff) === "crash" ? -0.08 : 0;
     const sniffP = clamp2(0.2 + (((_b = edge2 == null ? void 0 : edge2.attributes.AWR) != null ? _b : 50) - 50) * 4e-3 + (((defPlan == null ? void 0 : defPlan.runCommitEff) || 0) > 0 ? 0.06 : 0) + edgeAdj + Math.min(0.15, ((defPlan == null ? void 0 : defPlan._seenJets) || 0) * 0.03), 0.08, 0.6);
     const sniffed = Math.random() < sniffP;
@@ -21465,10 +21976,11 @@ var _CFB = (() => {
   }
   function blockRep(blocker, rusher, speedRush, contextBoost = 0, powerPass = false, isPass = false, mobilityBonus = 0) {
     var _a, _b, _c;
-    const blkVal = (isPass ? blocker.attributes.STR * 0.3 + blocker.attributes.TEC * 0.28 + blocker.attributes.PWR * 0.22 + blocker.attributes.AWR * 0.2 + C.PASSPRO_CENTER_ADJ + (((_a = blocker.attributes.AGI) != null ? _a : C.OL_MOBILITY_PIVOT) - C.OL_MOBILITY_PIVOT) * C.OL_PASS_MIRROR_SCALE * (speedRush ? 1 : 0.4) : blocker.attributes.PWR * 0.3 + blocker.attributes.AWR * 0.28 + blocker.attributes.STR * 0.22 + blocker.attributes.TEC * 0.2 + C.RUNBLOCK_CENTER_ADJ) + (blocker._olContBonus || 0) + mobilityBonus;
-    const speedPath = rusher.attributes.SPD * 0.3 + rusher.attributes.AGI * 0.3 + rusher.attributes.TEC * 0.18 + rusher.attributes.STR * 0.14 + rusher.attributes.JMP * 0.08 + C.RUSH_SPEED_CENTER_ADJ;
-    const powerPath = rusher.attributes.PWR * 0.34 + rusher.attributes.STR * 0.28 + rusher.attributes.TEC * 0.2 + rusher.attributes.SPD * 0.12 + rusher.attributes.JMP * 0.06 + C.RUSH_POWER_CENTER_ADJ;
-    const shedVal = rusher.attributes.STR * 0.34 + rusher.attributes.AWR * 0.28 + rusher.attributes.PWR * 0.22 + rusher.attributes.TEC * 0.16 + C.SHED_CENTER_ADJ;
+    const blkTrait = isPass ? speedRush ? traitMult(blocker, "mirror", 0.01) : traitMult(blocker, "anchor", 0.01) : blocker.position === "OL" ? traitMult(blocker, "peopleMover", 0.01) : traitMult(blocker, "leadBlocker", 0.012);
+    const blkVal = ((isPass ? blocker.attributes.STR * 0.3 + blocker.attributes.TEC * 0.28 + blocker.attributes.PWR * 0.22 + blocker.attributes.AWR * 0.2 + C.PASSPRO_CENTER_ADJ + (((_a = blocker.attributes.AGI) != null ? _a : C.OL_MOBILITY_PIVOT) - C.OL_MOBILITY_PIVOT) * C.OL_PASS_MIRROR_SCALE * (speedRush ? 1 : 0.4) : blocker.attributes.PWR * 0.3 + blocker.attributes.AWR * 0.28 + blocker.attributes.STR * 0.22 + blocker.attributes.TEC * 0.2 + C.RUNBLOCK_CENTER_ADJ) + (blocker._olContBonus || 0) + mobilityBonus) * blkTrait;
+    const speedPath = (rusher.attributes.SPD * 0.3 + rusher.attributes.AGI * 0.3 + rusher.attributes.TEC * 0.18 + rusher.attributes.STR * 0.14 + rusher.attributes.JMP * 0.08 + C.RUSH_SPEED_CENTER_ADJ) * traitMult(rusher, "bend", 0.012);
+    const powerPath = (rusher.attributes.PWR * 0.34 + rusher.attributes.STR * 0.28 + rusher.attributes.TEC * 0.2 + rusher.attributes.SPD * 0.12 + rusher.attributes.JMP * 0.06 + C.RUSH_POWER_CENTER_ADJ) * traitMult(rusher, "powerMove", 0.012);
+    const shedVal = (rusher.attributes.STR * 0.34 + rusher.attributes.AWR * 0.28 + rusher.attributes.PWR * 0.22 + rusher.attributes.TEC * 0.16 + C.SHED_CENTER_ADJ) * flawMult(rusher, "laneDrifter", -0.012);
     const rushVal = !isPass ? shedVal : speedRush ? Math.max(speedPath, powerPath) - C.RUSH_S2P_CENTER_ADJ : powerPath;
     const dampedRushVal = powerPass ? rushVal * C.POWER_PASS_DAMP : rushVal;
     const sizeMute = speedRush ? C.BLOCK_SIZE_EDGE_MUTE : 1;
@@ -21495,8 +22007,10 @@ var _CFB = (() => {
             mugDog = true;
             pickupProb = Math.max(0, pickupProb - C.PRESS_FLAVOR.mugPickupDock);
           }
-          if (late) pickupProb *= C.PRESS_FLAVOR.dogLatePickup;
+          if (late) pickupProb *= C.PRESS_FLAVOR.dogLatePickup * traitMult(rusher, "greenDogT", -0.04);
         }
+        const picker2 = availBlockers[availBlockers.length - 1];
+        if (picker2) pickupProb = Math.min(0.8, pickupProb * traitMult(picker2, "passProBack", 0.03));
         const pickedUp = Math.random() < pickupProb;
         const blocker2 = pickedUp ? availBlockers.splice(availBlockers.length - 1, 1)[0] : null;
         reps.push({ rusher, blocker: blocker2, isEdge: edgeAlign, speedRush, powerPass, blitzer: !pickedUp, mugDog });
@@ -21516,7 +22030,8 @@ var _CFB = (() => {
         const protId2 = scheme.protId || "halfSlide";
         const redirect2 = protId2 === "bob" ? pf.crossBob : protId2 === "quick" ? pf.crossQuick : protId2 === "maxProtect" ? pf.crossMaxProt : 1;
         const olAwr2 = scheme.olAwr != null ? scheme.olAwr : 50;
-        const pickP = clamp2((pf.crossBase + (blitzDesign - 50) * pf.crossDesign - (olAwr2 - 50) * pf.crossAwr) * redirect2, 0, pf.crossCap);
+        const grTrait = crossReps.reduce((m, rp) => Math.max(m, traitLv(rp.rusher, "gamesRunner")), 0);
+        const pickP = clamp2((pf.crossBase + (blitzDesign - 50) * pf.crossDesign - (olAwr2 - 50) * pf.crossAwr) * redirect2 * (1 + 0.03 * grTrait), 0, pf.crossCap);
         if (Math.random() < pickP) {
           const grade = (p) => (p.attributes.SPD + p.attributes.PWR) / 2;
           const best = crossReps.reduce((a, b) => grade(a.rusher) >= grade(b.rusher) ? a : b);
@@ -21592,7 +22107,7 @@ var _CFB = (() => {
       const _pool = edgePens.length > 0 ? edgePens : penetrators;
       const target = scheme.chipCalled ? _pool.slice().sort((a2, b2) => (b2.compositeRating || 0) - (a2.compositeRating || 0))[0] : _pool[0];
       if (target) {
-        const bump = clamp2((C.CHIP_BASE + ((((_a = chipper.STR) != null ? _a : 50) + (chipper.AWR != null ? chipper.AWR : 50)) / 2 - 50) * C.CHIP_SKILL - (target.attributes.PWR - 50) * C.CHIP_VS_PWR) * (scheme.chipCalled ? 1.35 : 1), 0, C.CHIP_CAP);
+        const bump = clamp2((C.CHIP_BASE + ((((_a = chipper.STR) != null ? _a : 50) + (chipper.AWR != null ? chipper.AWR : 50)) / 2 - 50) * C.CHIP_SKILL - (target.attributes.PWR - 50) * C.CHIP_VS_PWR) * (scheme.chipCalled ? 1.35 : 1) * (1 + 0.03 * (scheme.chipTraitLv || 0)), 0, C.CHIP_CAP);
         if (Math.random() < bump) {
           const idx = penetrators.indexOf(target);
           if (idx >= 0) penetrators.splice(idx, 1);
@@ -21624,6 +22139,9 @@ var _CFB = (() => {
             pos: rp.rusher.position,
             r: rp.rusher.attributes,
             b: rp.blocker ? rp.blocker.attributes : null,
+            // identity stage 3: Motor — pressure persistence; his shed keeps
+            // coming (rushgeo trims the shed clock by this level)
+            motor: traitLv(rp.rusher, "motor"),
             // PASS 4: a free MUG dog started the snap standing IN the A-gap —
             // no distance to make up, the snap count timed (shed discount in
             // the pocket geometry; SHED_FREE's hot-throw logic still applies).
@@ -21816,17 +22334,19 @@ var _CFB = (() => {
       const contestWeight = clamp2(1 - sep, 0, 1);
       const jumpGap = (receiver.attributes.JMP - defender.attributes.JMP) * 0.5 + (((_c = receiver.attributes.HND) != null ? _c : 50) - ((_d = defender.attributes.AWR) != null ? _d : 50)) * 0.15 + (receiver.attributes.TEC - defender.attributes.TEC) * 0.1;
       sizeMismatch = (heightGap * C.SIZE_MISMATCH_SCALE + jumpGap * C.JUMP_BALL_SCALE) * contestWeight;
+      sizeMismatch += (0.03 * traitLv(receiver, "contestedCatch") - 0.03 * traitLv(defender, "highPoint") - 0.03 * flawLv(receiver, "bodyCatcher")) * contestWeight;
       contested = contestWeight > 0.65;
     }
     const qbExec = Math.min(
       (qb.attributes.TEC * 0.5 + qb.attributes.AWR * 0.5 - C.COMP_QB_EXEC_CENTER) * C.COMP_QB_EXEC_SCALE + C.COMP_RECENTER,
       C.COMP_RECENTER + C.COMP_QB_EXEC_CAP
     );
+    const chainEdge = _situDown >= 3 ? 0.02 * traitLv(receiver, "chainMover") : 0;
     const armAttr = passDepth === "short" ? qb.attributes.PWR : passDepth === "deep" ? qb.attributes.STR : (qb.attributes.STR + qb.attributes.PWR) / 2;
     const armFactor = ((armAttr != null ? armAttr : 50) - 50) * C.COMP_ARM_SCALE;
     const dnaAirBoost = passDepth === "deep" ? (_passCtx.dnaAir || 0) * 0.01 : 0;
     const catchProb = clamp2(
-      logistic((sep - 0.42) * 5 + qbExec + armFactor + sizeMismatch - (hurried ? C.HURRY_PENALTY : 0) - (bracketed ? 0.12 : 0) - (forced ? 0.45 : 0)) * (1 + dnaAirBoost),
+      logistic((sep - 0.42) * 5 + qbExec + armFactor + sizeMismatch + chainEdge - (hurried ? C.HURRY_PENALTY * flawMult(qb, "happyFeet", 0.15) : 0) - (bracketed ? 0.12 : 0) - (forced ? 0.45 : 0)) * (1 + dnaAirBoost),
       // forcing into coverage: harder completion; airAttack DNA lifts deep-ball accuracy
       0.04,
       0.97
@@ -21849,7 +22369,9 @@ var _CFB = (() => {
     const dnaBallHawkMult = contested ? 1 + (_passCtx.dnaBallHawk || 0) * 0.01 : 1;
     const armIntMult = passDepth === "deep" ? clamp2(1 + (50 - ((qb == null ? void 0 : qb.attributes.STR) != null ? qb.attributes.STR : 50)) * C.INT_ARM_SCALE, 0.9, 1.45) : 1;
     const intProb = clamp2(
-      C.INT_READ_SCALE * (1 - sep) * defReadAbility / 55 * depthMult * qbIntMult * forcedIntMult * passKeyIntMult * styleIntMult * aggrIntMult * dnaBallSecMult * dnaBallHawkMult * armIntMult,
+      // identity stage 3: Gambler (flaw, two-sided) — the INT half; the
+      // burned-deep half lives in the sepgeo route duel
+      C.INT_READ_SCALE * (1 - sep) * defReadAbility / 55 * depthMult * qbIntMult * forcedIntMult * passKeyIntMult * styleIntMult * aggrIntMult * dnaBallSecMult * dnaBallHawkMult * armIntMult * flawMult(defender, "gambler", 0.12) * flawMult(qb, "telegraph", 0.08),
       3e-3,
       0.19
     );
@@ -21903,7 +22425,8 @@ var _CFB = (() => {
       C.BROKEN_TKL_BASE + gap * C.BROKEN_TKL_SCALE + weightOver * C.BROKEN_TKL_WEIGHT_SCALE * 0.5 + (((_b = carrier.attributes.AWR) != null ? _b : 50) - 41) * C.BROKEN_TKL_AWR_SCALE,
       0,
       C.BROKEN_TKL_CAP
-    );
+      // Identity stage 3: Wrap Tackler — broken-tackle resistance, this one roll.
+    ) * traitMult(defender, "wrapTackler", -0.03);
     const broke = Math.random() < chance2;
     if (broke && styleOut) styleOut.style = truck > evade ? "truck" : "evade";
     return broke;
@@ -21970,6 +22493,8 @@ var _CFB = (() => {
       const hndMult = clamp2(1 - (carrier.attributes.SEC * 0.85 + carrier.attributes.TEC * 0.15 - 50) * C.FUMBLE_HND_SCALE, 0.45, 1.3);
       const weightMult = clamp2(1 - (((_c = carrier.weight) != null ? _c : 210) - 210) * C.WEIGHT_FF_SCALE, 0.7, 1.3);
       ffChance *= hndMult * weightMult * (_tkStyle === "strip" ? clamp2(1.25 + (tackler.attributes.TEC - 50) * 8e-3, 1.1, 1.8) : _tkStyle === "wrap" ? 0.6 : 1);
+      ffChance *= traitMult(tackler, "bigHitter", 0.04) * traitMult(tackler, "stripArtist", 0.05);
+      ffChance *= traitMult(carrier, "secureBag", -0.04) * flawMult(carrier, "fumbler", 0.06);
       if (Math.random() < ffChance) ffId = tackler.id;
     }
     if (tackler && !fit.breakaway) {
@@ -22126,10 +22651,15 @@ var _CFB = (() => {
           sep = clamp2(sep - 0.02, 0, 1);
         } else if (_zs === "match") {
           const _dIQ = (coverEntry.player.attributes.AWR != null ? coverEntry.player.attributes.AWR : 50) * 0.7 + (coverEntry.player.attributes.TEC != null ? coverEntry.player.attributes.TEC : 50) * 0.3;
-          if (_dIQ < 50 && Math.random() < (50 - _dIQ) * 8e-3) {
+          const _bustMult = traitMult(coverEntry.player, "zoneEyes", -0.1) * flawMult(coverEntry.player, "freelancer", 0.15);
+          if (_dIQ < 50 && Math.random() < (50 - _dIQ) * 8e-3 * _bustMult) {
             sep = clamp2(sep + 0.22, 0, 1);
             busted = true;
           }
+        }
+        if (!busted) {
+          const _flLv = flawLv(coverEntry.player, "freelancer");
+          if (_flLv) sep = clamp2(sep - 4e-3 * _flLv, 0, 1);
         }
       }
       assigned.push({
@@ -22166,7 +22696,7 @@ var _CFB = (() => {
         const _zsV = (_passCtx == null ? void 0 : _passCtx.zoneStyle) === "match" ? 0.55 : (_passCtx == null ? void 0 : _passCtx.zoneStyle) === "spot" ? 1.45 : 1;
         for (const a of grp) {
           const dAwr = a.defender.attributes.AWR != null ? a.defender.attributes.AWR : 50;
-          const awrSqueeze = Math.max(0.25, 1 - Math.max(0, dAwr - 50) * 0.013);
+          const awrSqueeze = Math.max(0.25, 1 - Math.max(0, dAwr - 50) * 0.013) * traitMult(a.defender, "patternMatcher", -0.08);
           const voidGain = Math.min(0.14, overload * 0.05) * awrSqueeze * _zsV;
           a.separation = clamp2(a.separation + voidGain, 0, 1);
           a.voided = true;
@@ -22238,10 +22768,12 @@ var _CFB = (() => {
         const rb = rbId ? offRoster.find((p) => p.id === rbId) : null;
         const runLean = 1 - ((_i = PASS_TENDENCY[offPlan.tendency || "Balanced"]) != null ? _i : 0.5);
         const rbCred = rb ? (rb.compositeRating - 45) / 60 : 0;
-        const credibility = clamp2(0.25 + (runLean - 0.5) * 2 + rbCred * 0.5 + (((_j = qb == null ? void 0 : qb.attributes.TEC) != null ? _j : 50) - 55) * 4e-3, 0.03, 1.2);
+        const paSell = 0.03 * Math.max(traitLv(rb, "paSeller"), traitLv(qb, "paSeller"));
+        const credibility = clamp2(0.25 + (runLean - 0.5) * 2 + rbCred * 0.5 + (((_j = qb == null ? void 0 : qb.attributes.TEC) != null ? _j : 50) - 55) * 4e-3 + paSell, 0.03, 1.2);
         const lbs = (defPersonnel.LB || []).map((id) => defRoster.find((p) => p.id === id)).filter(Boolean);
         const lbAWR = lbs.length ? lbs.reduce((s, p) => s + p.attributes.AWR, 0) / lbs.length : 50;
-        const discipline = clamp2((lbAWR - 45) / 90, 0, 0.6);
+        const _fjAdj = lbs.length ? lbs.reduce((s, p) => s + 1.5 * traitLv(p, "filmJunkie") - 2 * flawLv(p, "bitesHard"), 0) / lbs.length : 0;
+        const discipline = clamp2((lbAWR + _fjAdj - 45) / 90, 0, 0.6);
         const commitAmp = 1 + Math.max(0, defPlan.runCommitEff || 0) * 0.02;
         const shellBiteMult = (defPlan == null ? void 0 : defPlan.covShellEff) === "single" ? 1.15 : (defPlan == null ? void 0 : defPlan.covShellEff) === "two" ? 0.8 : 1;
         paBite = clamp2(credibility * commitAmp * (1 - discipline) * shellBiteMult, 0, 1.2);
@@ -22471,15 +23003,17 @@ var _CFB = (() => {
       var _a2;
       const cid = (offPersonnel.OL || [])[2];
       const cpl = cid ? offRoster.find((p) => p.id === cid) : null;
-      return (_a2 = cpl == null ? void 0 : cpl.attributes.AWR) != null ? _a2 : 50;
+      const base = (_a2 = cpl == null ? void 0 : cpl.attributes.AWR) != null ? _a2 : 50;
+      return base + 2 * traitLv(cpl, "lineGeneral");
     })();
     const _cAwrEff = mugCall && result.blitzFired ? 50 + (_cAwr - 50) * _pfC.mugCawrMute : _cAwr;
     const protFactor = protectionFactor({ protId, identity: result.blitzFired ? result.pressCall || null : null, playType, blitzFired: result.blitzFired === true, centerAwr: _cAwrEff });
     const chipAttrs = rbReleased && (protId === "halfSlide" || protId === "bob") && rbPlayers.length > 0 ? rbPlayers[0].attributes : null;
+    const chipTraitLv = chipAttrs ? traitLv(rbPlayers[0], "chipper") : 0;
     const chipCalled = (offPlan == null ? void 0 : offPlan.chipHelp) === "chip" && !!chipAttrs;
     const sigAdj = result.blitzFired ? result.sigPress ? C.PRESS_SIG_BONUS : -C.PRESS_SIG_DOCK : 0;
     const _amoebaPocket = amoebaCall && !result.blitzFired ? _pfC.amoebaUnfiredPocket : 1;
-    const rushResult = resolvePassRush(passRushers, blockers, blitzPct, defContextBoost, clamp2(((_p = defPlan.blitzDesign) != null ? _p : 50) + fzBonus + sigAdj, 0, 100), defPlan._dnaPressure || 0, ((offPlan == null ? void 0 : offPlan._h2Protect) ? 1 - offPlan._h2Protect.eff : 1) * edgeRushMult * protFactor * _amoebaPocket, paBite, Math.max(0, -(defPlan.runCommitEff || 0)), { olAwr: _cAwrEff, protId, chip: chipAttrs, chipCalled, mug: result.mug === "fired", game: result.crossDog ? "cross" : null, crossIds: result._crossIds || null });
+    const rushResult = resolvePassRush(passRushers, blockers, blitzPct, defContextBoost, clamp2(((_p = defPlan.blitzDesign) != null ? _p : 50) + fzBonus + sigAdj, 0, 100), defPlan._dnaPressure || 0, ((offPlan == null ? void 0 : offPlan._h2Protect) ? 1 - offPlan._h2Protect.eff : 1) * edgeRushMult * protFactor * _amoebaPocket, paBite, Math.max(0, -(defPlan.runCommitEff || 0)), { olAwr: _cAwrEff, protId, chip: chipAttrs, chipTraitLv, chipCalled, mug: result.mug === "fired", game: result.crossDog ? "cross" : null, crossIds: result._crossIds || null });
     if (rushResult.crossFree) result.crossFree = true;
     if (!isScreen && !rushResult.sacked) {
       const depthMult = playType === "pass_short" ? C.BAT_SHORT_MULT : playType === "pass_deep" ? C.BAT_DEEP_MULT : 1;
@@ -22492,7 +23026,8 @@ var _CFB = (() => {
           (C.BAT_BASE + Math.max(0, p.attributes.JMP - 50) * C.BAT_JMP_SCALE + Math.max(0, p.attributes.AWR - 50) * C.BAT_AWR_SCALE + Math.max(0, ht - 74) * C.BAT_HEIGHT_SCALE) * depthMult,
           0,
           C.BAT_CAP
-        );
+          // identity stage 3: Bat Radar — the BAT_* machinery, this one roll
+        ) * traitMult(p, "batRadar", 0.05);
         if (Math.random() < chance2) {
           batter = p;
           break;
@@ -22506,7 +23041,17 @@ var _CFB = (() => {
         result.yards = 0;
         if (Math.random() < C.BAT_TIP_INT) {
           const pool = passRushers.map((r) => r.player).filter(Boolean);
-          const picker2 = pool[Math.floor(Math.random() * pool.length)];
+          const wts0 = pool.map((pp) => 1 + 0.35 * traitLv(pp, "ballHawk"));
+          let r0 = Math.random() * wts0.reduce((s, w) => s + w, 0);
+          let pickIdx = 0;
+          for (let wi = 0; wi < wts0.length; wi++) {
+            r0 -= wts0[wi];
+            if (r0 <= 0) {
+              pickIdx = wi;
+              break;
+            }
+          }
+          const picker2 = pool[pickIdx];
           if (picker2) {
             result.turnover = true;
             result.turnoverType = "interception";
@@ -22523,7 +23068,8 @@ var _CFB = (() => {
       const dl = passRushers.map((r) => r.player).filter(Boolean);
       const dlAWR = dl.length ? dl.reduce((s, p) => s + p.attributes.AWR, 0) / dl.length : 50;
       const scrEdgeAdj = ((defPlan == null ? void 0 : defPlan.edgePlayEff) === "contain" ? 0.05 : (defPlan == null ? void 0 : defPlan.edgePlayEff) === "crash" ? -0.04 : 0) + ((defPlan == null ? void 0 : defPlan.covStyleEff) === "zone" ? 0.03 : (defPlan == null ? void 0 : defPlan.covStyleEff) === "man" ? -0.02 : 0) + (!globalThis.__noCovFamilies && (defPlan == null ? void 0 : defPlan.rotationEff) === "cloud" ? 0.04 : 0);
-      const sniffChance = clamp2((jackpot ? 0.03 : 0.09) + (dlAWR - 50) * 22e-4 + scrEdgeAdj, 0.02, 0.27);
+      const _snLv = dl.reduce((m, p) => Math.max(m, traitLv(p, "screenSniffer")), 0);
+      const sniffChance = clamp2((jackpot ? 0.03 : 0.09) + (dlAWR - 50) * 22e-4 + scrEdgeAdj + 0.012 * _snLv, 0.02, 0.27);
       const rbId = (offPersonnel.RB || [])[0];
       const wrId = (offPersonnel.WR || [])[0];
       const scrTarget = forcedScreen === "rb" ? offRoster.find((p) => p.id === rbId) || offRoster.find((p) => p.id === wrId) : forcedScreen === "bubble" || forcedScreen === "tunnel" ? offRoster.find((p) => p.id === wrId) || offRoster.find((p) => p.id === rbId) : rbId && Math.random() < 0.72 ? offRoster.find((p) => p.id === rbId) : offRoster.find((p) => p.id === wrId);
@@ -22550,7 +23096,7 @@ var _CFB = (() => {
         const base = jackpot ? randNorm(9.5, 6.5) : randNorm(4.5, 4);
         let yds = Math.max(-2, Math.round(base + (scrTarget.attributes.AGI - 55) * 0.06));
         const blockers2 = (offPersonnel.WR || []).concat(offPersonnel.TE || []).map((id) => offRoster.find((p) => p.id === id)).filter((p) => p && p.id !== scrTarget.id);
-        const blockScore = blockers2.length ? blockers2.reduce((s, p) => s + (p.attributes.STR * 0.4 + p.attributes.TEC * 0.35 + p.attributes.AWR * 0.25), 0) / blockers2.length : 50;
+        const blockScore = blockers2.length ? blockers2.reduce((s, p) => s + (p.attributes.STR * 0.4 + p.attributes.TEC * 0.35 + p.attributes.AWR * 0.25) * traitMult(p, "blockingWR", 0.015), 0) / blockers2.length : 50;
         const forceDef = pursuers.length ? pursuers.reduce((s, p) => s + (p.attributes.STR * 0.5 + p.attributes.AWR * 0.5), 0) / pursuers.length : 50;
         const blockEdge = (blockScore - forceDef) * 0.075;
         yds += Math.round(blockEdge);
@@ -22648,19 +23194,23 @@ var _CFB = (() => {
     }
     if (rushResult.sacked) {
       const spyActive = defPlan.spyQB === true;
+      const _spyLv2 = spyActive ? (defPersonnel.LB || []).reduce((m, id) => {
+        const p = defRoster.find((pl) => pl.id === id);
+        return Math.max(m, traitLv(p, "spyEyes"));
+      }, 0) : 0;
       const styleScrMult = ((defPlan == null ? void 0 : defPlan.covStyleEff) === "zone" ? 0.85 : (defPlan == null ? void 0 : defPlan.covStyleEff) === "man" ? 1.1 : 1) * ((defPlan == null ? void 0 : defPlan.optionKeyEff) === "qb" ? 0.85 : 1) * (!globalThis.__noCovFamilies && (defPlan == null ? void 0 : defPlan.covFamilyEff) === "Cover 2-Man" ? 1.15 : 1);
-      const scrambleChance = (spyActive ? qbScrambleChance(qb) * 0.55 : qbScrambleChance(qb)) * styleScrMult;
+      const scrambleChance = (spyActive ? qbScrambleChance(qb) * 0.55 * (1 - 0.05 * _spyLv2) : qbScrambleChance(qb)) * styleScrMult;
       if (qb && Math.random() < scrambleChance) {
         if (!globalThis.__noScrThrow && (offPersonnel.WR || []).length) {
           const _scrAggr = _passCtx.qbAggr != null ? _passCtx.qbAggr : 50;
-          const _scrThrowP = clamp2(0.18 + ((qb.attributes.AWR || 50) - 50) / 100 * 0.3 + (_scrAggr - 50) / 100 * 0.3, 0.05, 0.5);
+          const _scrThrowP = clamp2(0.18 + ((qb.attributes.AWR || 50) - 50) / 100 * 0.3 + (_scrAggr - 50) / 100 * 0.3 + 0.03 * traitLv(qb, "scrambleDrill"), 0.05, 0.5);
           if (Math.random() < _scrThrowP) {
             const _scrWr = (offPersonnel.WR || []).map((id) => offRoster.find((p) => p.id === id)).filter(Boolean).sort((a, b) => (b.compositeRating || 0) - (a.compositeRating || 0))[0];
             const _scrDb = (defPersonnel.DB || []).map((id) => defRoster.find((p) => p.id === id)).filter(Boolean).sort((a, b) => (b.attributes.SPD || 0) - (a.attributes.SPD || 0))[0];
             if (_scrWr) {
               const _scrQb = (qb.attributes.TEC || 50) * 0.5 + (qb.attributes.AWR || 50) * 0.5;
               const _scrCov = _scrDb ? (_scrDb.attributes.AWR || 50) * 0.5 + (_scrDb.attributes.SPD || 50) * 0.5 : 50;
-              const _scrCompP = clamp2(0.4 + (_scrQb - _scrCov) * 6e-3 + (_scrAggr - 50) / 100 * 0.05, 0.15, 0.68);
+              const _scrCompP = clamp2(0.4 + (_scrQb - _scrCov) * 6e-3 + (_scrAggr - 50) / 100 * 0.05 + 0.02 * traitLv(qb, "scrambleDrill"), 0.15, 0.68);
               result.targetId = _scrWr.id;
               result.passDepth = "deep";
               result.isScrambleThrow = true;
@@ -22712,7 +23262,7 @@ var _CFB = (() => {
       result.sackerId = (_C = rushResult.sackerIds[0]) != null ? _C : null;
       result.sackerId2 = (_D = rushResult.sackerIds[1]) != null ? _D : null;
       result.pressureIds = rushResult.sackerIds.slice(0, 2);
-      const qbHndMult = clamp2(1 - (qb.attributes.SEC * 0.85 + qb.attributes.TEC * 0.15 - 50) * C.FUMBLE_HND_SCALE, 0.45, 1.3);
+      const qbHndMult = clamp2(1 - (qb.attributes.SEC * 0.85 + qb.attributes.TEC * 0.15 - 50) * C.FUMBLE_HND_SCALE, 0.45, 1.3) * traitMult(qb, "secureBag", -0.04) * flawMult(qb, "fumbler", 0.06);
       if (Math.random() < C.STRIP_SACK_RATE * qbHndMult) {
         result.turnover = Math.random() < 0.4;
         result.turnoverType = result.turnover ? "fumble" : null;
@@ -22849,7 +23399,7 @@ var _CFB = (() => {
       if ((calledMotion || Math.random() < motionEff) && coverageAssigned.length > 1) {
         const mover = coverageAssigned[1] || coverageAssigned[0];
         const styleMotionMult = (defPlan == null ? void 0 : defPlan.covStyleEff) === "man" ? 1.35 : (defPlan == null ? void 0 : defPlan.covStyleEff) === "zone" ? 0.65 : 1;
-        const motionGain = (0.035 + (calledMotion ? 0.02 : 0) + (mover.coverageType === "press" ? 0.035 : 0)) * styleMotionMult;
+        const motionGain = (0.035 + (calledMotion ? 0.02 : 0) + (mover.coverageType === "press" ? 0.035 : 0)) * styleMotionMult * (mover.receiver ? traitMult(mover.receiver, "motionWeapon", 0.06) : 1);
         mover.separation = clamp2(mover.separation + motionGain, 0, 1);
         const dbs = coverageAssigned.map((c) => c.defender).filter(Boolean);
         const dbAWR = dbs.length ? dbs.reduce((s, p) => s + p.attributes.AWR, 0) / dbs.length : 50;
@@ -23053,7 +23603,7 @@ var _CFB = (() => {
       const _qbHot = ((qb.attributes.AWR || 50) * 0.6 + (qb.attributes.TEC || 50) * 0.4 - 50) / 50;
       const _quick = protId === "quick" ? 0.18 : protId === "bob" ? 0.06 : 0;
       const _disg = (((defPlan == null ? void 0 : defPlan.blitzDesign) != null ? defPlan.blitzDesign : 50) - 50) / 200 + (mugCall ? _pfC.mugHotDisg : amoebaCall ? _pfC.amoebaHot : 0);
-      const hotChance = clamp2(0.3 + _qbHot * 0.42 + _quick - _disg, 0.05, 0.85);
+      const hotChance = clamp2(0.3 + _qbHot * 0.42 + _quick - _disg + 0.03 * traitLv(qb, "blitzBeater"), 0.05, 0.85);
       if (Math.random() < hotChance) {
         hotThrow = true;
         let hotMan = null, hotSep = -1;
@@ -23076,8 +23626,12 @@ var _CFB = (() => {
     const _covCovered = chosen._bestSep != null ? chosen._bestSep < C.COVSACK_COVERED_SEP : chosen._readCollapsed;
     if (!globalThis.__noCovSack && qb && hurried && _covCovered && !hotThrow) {
       const _escSpy = defPlan.spyQB === true;
+      const _spyLv = _escSpy ? (defPersonnel.LB || []).reduce((m, id) => {
+        const p = defRoster.find((pl) => pl.id === id);
+        return Math.max(m, traitLv(p, "spyEyes"));
+      }, 0) : 0;
       const _escStyle = ((defPlan == null ? void 0 : defPlan.covStyleEff) === "zone" ? 0.85 : (defPlan == null ? void 0 : defPlan.covStyleEff) === "man" ? 1.1 : 1) * ((defPlan == null ? void 0 : defPlan.optionKeyEff) === "qb" ? 0.85 : 1) * (!globalThis.__noCovFamilies && (defPlan == null ? void 0 : defPlan.covFamilyEff) === "Cover 2-Man" ? 1.15 : 1);
-      const _escChance = qbScrambleChance(qb) * C.COVSACK_SCRAMBLE_MULT * _escStyle * (_escSpy ? 0.5 : 1);
+      const _escChance = qbScrambleChance(qb) * C.COVSACK_SCRAMBLE_MULT * _escStyle * (_escSpy ? 0.5 * (1 - 0.05 * _spyLv) : 1) * traitMult(qb, "pocketPresence", 0.05) * flawMult(qb, "heroBall", 0.05);
       if (Math.random() < _escChance) {
         const _escLane = (_escSpy ? 0.2 : 0.32) + Math.random() * 0.2;
         const _escLbBox = (defPersonnel.LB || []).slice(0, Math.ceil((defPersonnel.LB || []).length / 2));
@@ -23103,7 +23657,7 @@ var _CFB = (() => {
         return result;
       }
       const _awr = qb.attributes.AWR != null ? qb.attributes.AWR : 50;
-      const _throwAwayP = clamp2(0.5 + (_awr - C.COVSACK_AWR_PIVOT) * C.COVSACK_AWR_SCALE, 0.05, 0.95);
+      const _throwAwayP = clamp2(0.5 + (_awr - C.COVSACK_AWR_PIVOT) * C.COVSACK_AWR_SCALE + 0.03 * traitLv(qb, "pocketPresence") - 0.06 * flawLv(qb, "heroBall"), 0.05, 0.95);
       if (Math.random() < _throwAwayP) {
         result.complete = false;
         result.passDepth = passDepthKey;
@@ -23149,7 +23703,7 @@ var _CFB = (() => {
     const avgShare = 15;
     const chosenShare = (_$ = chosen.shareWeight) != null ? _$ : avgShare;
     const forced = covSackForce && !result.forcedCheckdown || chosenShare > avgShare * 1.6 && (chosen.bracketed || chosen.separation < 0.4);
-    const dropProb = clamp2(C.DROP_BASE - receiverObj.attributes.HND * C.DROP_HND_SCALE, 0.015, 0.08);
+    const dropProb = clamp2(C.DROP_BASE - receiverObj.attributes.HND * C.DROP_HND_SCALE, 0.015, 0.08) * flawMult(receiverObj, "drops", 0.15);
     let helper = null;
     if (passDepthKey !== "short" && defPersonnel) {
       let best = 0;
@@ -23165,14 +23719,14 @@ var _CFB = (() => {
       }
     }
     const inRhythm = !hurried && chosen._firstRead && !offPlan._fooled;
-    let rhythmSep = inRhythm ? clamp2(sep + (qb.attributes.TEC - 50) * 12e-4, 0, 1) : sep;
+    let rhythmSep = inRhythm ? clamp2(sep + (qb.attributes.TEC - 50) * 12e-4 + 4e-3 * traitLv(qb, "rhythmPasser"), 0, 1) : sep;
     const robCall = (defPlan == null ? void 0 : defPlan.robberCallEff) || "auto";
     let robber = null;
     if (!globalThis.__noRobber && robCall !== "overtop" && (defPlan == null ? void 0 : defPlan.covShellEff) === "two" && chosen.breakIn && helper) {
       const twoVert = robCall === "rob" || !globalThis.__noCovFamilies && (defPlan == null ? void 0 : defPlan.covFamilyEff) === "Cover 6" && chosen._qtrRob === true || targets.some((t) => t !== chosen && (t.passDepth === "deep" || t.passDepth === "medium" && t.routeShape === "speed"));
       if (twoVert) {
-        const rob = helper.attributes.AWR * 0.6 + helper.attributes.SPD * 0.4;
-        const lookoff = (qb.attributes.AWR - 50) * 0.5;
+        const rob = (helper.attributes.AWR * 0.6 + helper.attributes.SPD * 0.4) * traitMult(helper, "robber", 0.02);
+        const lookoff = (qb.attributes.AWR - 50) * 0.5 + 2.5 * traitLv(qb, "eyeManipulator") - 3 * flawLv(qb, "telegraph");
         const robStrength = clamp2((rob - 55 - lookoff) / 100 * (robCall === "rob" ? 1.6 : 1), 0, 0.5);
         if (robStrength > 0.02) {
           robber = helper;
@@ -23215,7 +23769,7 @@ var _CFB = (() => {
       result.throwerId = (_aa = qb == null ? void 0 : qb.id) != null ? _aa : null;
       return result;
     }
-    const useVdeep = passDepthKey === "deep" && sep > C.VDEEP_SEP_THRESHOLD && receiverObj._gameArch === "WR-Deep" && Math.random() < C.VDEEP_PROB && !(!globalThis.__noCovFamilies && (defPlan == null ? void 0 : defPlan.covFamilyEff) === "Prevent");
+    const useVdeep = passDepthKey === "deep" && sep > C.VDEEP_SEP_THRESHOLD && (receiverObj._gameArch === "WR-Deep" || traitLv(receiverObj, "deepTracker") > 0) && Math.random() < C.VDEEP_PROB * (receiverObj._gameArch === "WR-Deep" ? 1 : 0.4 * traitLv(receiverObj, "deepTracker")) && !(!globalThis.__noCovFamilies && (defPlan == null ? void 0 : defPlan.covFamilyEff) === "Prevent");
     const depthBand = useVdeep ? "vdeep" : passDepthKey === "short" ? "short" : passDepthKey === "medium" ? "medium" : "deep";
     const routeYds = Math.max(0, Math.round(randNorm(
       C.PASS_YARDS[depthBand].mean,
@@ -23255,9 +23809,9 @@ var _CFB = (() => {
   function qbContactResult(qb, outcome) {
     if (!outcome.tacklerId) return { yards: outcome.yards, qbInjured: false, injuryGamesOut: 0, slid: false };
     const avoidance = clamp2(
-      (qb.attributes.AWR - 70) / 100 + (qb.attributes.TEC - 70) / 100,
+      (qb.attributes.AWR - 70) / 100 + (qb.attributes.TEC - 70) / 100 + 0.06 * traitLv(qb, "slidesEarly"),
       -0.4,
-      0.4
+      0.46
     );
     const slidePenalty = avoidance > 0 ? Math.max(0, Math.round(randNorm(avoidance * 2.5, 0.8))) : 0;
     const adjYards = Math.max(outcome.yards - slidePenalty, 0);
@@ -23311,7 +23865,7 @@ var _CFB = (() => {
     const readWinP = (keyDef) => {
       var _a2;
       return clamp2(
-        0.55 + (qbRead2 - ((_a2 = keyDef == null ? void 0 : keyDef.attributes.AWR) != null ? _a2 : 50)) * 6e-3,
+        0.55 + (qbRead2 - (((_a2 = keyDef == null ? void 0 : keyDef.attributes.AWR) != null ? _a2 : 50) + 2 * traitLv(keyDef, "optionSound"))) * 6e-3,
         0.25,
         0.85
       );
@@ -23328,7 +23882,7 @@ var _CFB = (() => {
       const cType = called === "dive" ? "run_inside" : "run_outside";
       if (called === "pitch" && cCarrier && cCarrier !== qb) {
         const secure = (cCarrier.attributes.HND || 50) * 0.5 + (cCarrier.attributes.SEC || 50) * 0.5;
-        const muffP = clamp2((0.03 - (qb.attributes.TEC - 55) * 35e-5 - (secure - 55) * 3e-4 + pitchAggr * 0.014) * 0.5, 3e-3, 0.04);
+        const muffP = clamp2((0.03 - (qb.attributes.TEC - 55) * 35e-5 - (secure - 55) * 3e-4 + pitchAggr * 0.014) * 0.5, 3e-3, 0.04) * flawMult(cCarrier, "muffs", 0.2);
         if (Math.random() < muffP) {
           const result = {
             type: cType,
@@ -23403,7 +23957,7 @@ var _CFB = (() => {
           forcePenetrator = forceDef;
         }
         const secure = (pitchBack.attributes.HND || 50) * 0.5 + (pitchBack.attributes.SEC || 50) * 0.5;
-        const muffP = clamp2(0.03 - (qb.attributes.TEC - 55) * 35e-5 - (secure - 55) * 3e-4 + pitchAggr * 0.014, 6e-3, 0.075);
+        const muffP = clamp2(0.03 - (qb.attributes.TEC - 55) * 35e-5 - (secure - 55) * 3e-4 + pitchAggr * 0.014, 6e-3, 0.075) * flawMult(pitchBack, "muffs", 0.2);
         if (Math.random() < muffP) {
           const result = {
             type: effType,
@@ -23578,7 +24132,7 @@ var _CFB = (() => {
       const poaDef = (_n = dlPlayers[di]) == null ? void 0 : _n.player;
       const puller = allBlockers[pullIdx];
       if (poaDef && puller) {
-        const pMob = ((((_o = puller.attributes.AGI) != null ? _o : C.OL_MOBILITY_PIVOT) - C.OL_MOBILITY_PIVOT) * 0.6 + (((_p = puller.attributes.SPD) != null ? _p : C.OL_MOBILITY_PIVOT) - C.OL_MOBILITY_PIVOT) * 0.4) * C.OL_MOBILITY_SCALE;
+        const pMob = ((((_o = puller.attributes.AGI) != null ? _o : C.OL_MOBILITY_PIVOT) - C.OL_MOBILITY_PIVOT) * 0.6 + (((_p = puller.attributes.SPD) != null ? _p : C.OL_MOBILITY_PIVOT) - C.OL_MOBILITY_PIVOT) * 0.4) * C.OL_MOBILITY_SCALE + 0.6 * traitLv(puller, "puller");
         if (blockRep(puller, poaDef, false, contextBoost, false, false, pMob)) repWinsWeighted += 3;
         repTotWeighted += 3;
       }
@@ -23642,7 +24196,7 @@ var _CFB = (() => {
       result.turnoverType = result.turnover ? "fumble" : null;
     }
     const dnaBallSecFumbleMult = 1 - ((gameplan == null ? void 0 : gameplan._dnaBallSec) || 0) * 0.01;
-    const carryHndMult = clamp2(1 - (carrier.attributes.SEC * 0.85 + carrier.attributes.TEC * 0.15 - 50) * C.FUMBLE_HND_SCALE, 0.45, 1.3) * dnaBallSecFumbleMult;
+    const carryHndMult = clamp2(1 - (carrier.attributes.SEC * 0.85 + carrier.attributes.TEC * 0.15 - 50) * C.FUMBLE_HND_SCALE, 0.45, 1.3) * dnaBallSecFumbleMult * traitMult(carrier, "secureBag", -0.04) * flawMult(carrier, "fumbler", 0.06);
     if (!useQBCarrier && !result.turnover && Math.random() < C.CARRY_FUMBLE_BASE * carryHndMult) {
       result.turnover = Math.random() < 0.4;
       result.turnoverType = result.turnover ? "fumble" : null;
@@ -23707,6 +24261,7 @@ var _CFB = (() => {
   }
   function applyOutOfPos(p, slotPos) {
     if (!p || p.position === slotPos) return p;
+    if (bridgeWaivesBucket(p, slotPos)) return p;
     const adjacent = (SUB_ADJACENT[slotPos] || []).includes(p.position);
     const coachedKeep = Math.min(1, OUT_OF_POS.COACHED_KEEP + (adjacent ? OUT_OF_POS.ADJACENT_BONUS : 0));
     const attrs = {};
@@ -23719,7 +24274,7 @@ var _CFB = (() => {
     }
     return __spreadProps2(__spreadValues2({}, p), { attributes: attrs, _outOfPos: slotPos });
   }
-  function makeEffectiveRoster(onFieldIds, roster, fatigueMap, slotOf = null, formPts = 0) {
+  function makeEffectiveRoster(onFieldIds, roster, fatigueMap, slotOf = null, formPts = 0, earlyGame = false) {
     var _a;
     const overrides = /* @__PURE__ */ new Map();
     for (const id of onFieldIds) {
@@ -23731,6 +24286,10 @@ var _CFB = (() => {
       const fat = fatigueMap[id] || 0;
       if (fat > C.FATIGUE_DEGRADE_ONSET) eff = applyFatigueMult(eff, fatigueMultiplier(fat));
       if (formPts) eff = applyFormPts(eff, formPts);
+      if (earlyGame) {
+        const _ssLv = flawLv(p, "slowStarter");
+        if (_ssLv) eff = applyFormPts(eff, -0.4 * _ssLv);
+      }
       if (eff !== p) overrides.set(id, eff);
     }
     if (overrides.size === 0) return roster;
@@ -23809,10 +24368,10 @@ var _CFB = (() => {
   function slotSpeedMap(bySlot, roster) {
     var _a, _b, _c, _d;
     if (!bySlot || !roster) return null;
-    const byId = rosterById(roster);
+    const byId2 = rosterById(roster);
     const out = {};
     for (const sid in bySlot) {
-      const pl = byId.get(bySlot[sid]);
+      const pl = byId2.get(bySlot[sid]);
       if (pl) out[sid] = { s: (_b = (_a = pl.attributes) == null ? void 0 : _a.SPD) != null ? _b : 55, a: (_d = (_c = pl.attributes) == null ? void 0 : _c.AGI) != null ? _d : 55 };
     }
     return out;
@@ -23868,13 +24427,14 @@ var _CFB = (() => {
     const needy = scoreMargin < 0 && scoreMargin >= -3;
     return needy && secsLeft <= 150 ? C.FG_LATE_STRETCH : needy && secsLeft <= 300 ? Math.round(C.FG_LATE_STRETCH / 2) : 0;
   }
-  function attemptFG(kRoster, depth, kickDistance, dnaSpecialGrade = 0) {
+  function attemptFG(kRoster, depth, kickDistance, dnaSpecialGrade = 0, pressureKick = false) {
     const kId = (depth["K"] || [])[0];
     const k = kId ? kRoster.find((p) => p.id === kId) : null;
     const leg = k ? 0.5 * (k.attributes.STR || 0) + 0.5 * (k.attributes.PWR || 0) : 40;
     const acc2 = k ? 0.5 * (k.attributes.TEC || 0) + 0.5 * (k.attributes.AWR || 0) : 40;
     const rangeCenter = 48 + (leg - 50) * 0.22 + (dnaSpecialGrade || 0) * 0.4;
-    const accBonus = (acc2 - 50) * C.FG_TECH_SCALE + (dnaSpecialGrade || 0) * 0.01;
+    const clutchAdj = pressureKick ? 0.05 * traitLv(k, "iceVeins") - 0.07 * flawLv(k, "shanks") : 0;
+    const accBonus = (acc2 - 50) * C.FG_TECH_SCALE + (dnaSpecialGrade || 0) * 0.01 + clutchAdj;
     const prob = clamp2(logistic((rangeCenter - kickDistance) / 10.5 + accBonus), 0.01, 0.985);
     return Math.random() < prob;
   }
@@ -23922,9 +24482,13 @@ var _CFB = (() => {
     if (distFromGoal <= 38 && !canFG) return "go";
     return "punt";
   }
-  function puntResult(fieldPos, puntYds) {
+  function puntResult(fieldPos, puntYds, punter = null) {
     const ballAt = fieldPos + puntYds;
-    if (ballAt >= 100) return 20;
+    if (ballAt >= 100) {
+      const pinLv = traitLv(punter, "coffinCorner");
+      if (pinLv && Math.random() < 0.1 * pinLv) return 4 + Math.floor(Math.random() * 6);
+      return 20;
+    }
     const defStart = clamp2(100 - ballAt, 20, 99);
     return clamp2(defStart, 6, 99);
   }
@@ -23932,14 +24496,14 @@ var _CFB = (() => {
     if (returnerOverride) {
       const chosen = roster.find((p) => p.id === returnerOverride && ["RB", "WR", "CB", "S"].includes(p.position));
       if (chosen) {
-        const rv = roleRating(chosen, "Returner");
+        const rv = roleRating(chosen, "Returner") * traitMult(chosen, "returnVision", 0.02);
         return { player: chosen, rating: rv > 0 ? rv : 55 };
       }
     }
     let best = null, bestVal = -1;
     for (const p of roster) {
       if (!["RB", "WR", "CB", "S"].includes(p.position)) continue;
-      const rv = roleRating(p, "Returner");
+      const rv = roleRating(p, "Returner") * traitMult(p, "returnVision", 0.02);
       if (rv > bestVal) {
         bestVal = rv;
         best = p;
@@ -23949,7 +24513,7 @@ var _CFB = (() => {
   }
   function coverageStrength(roster, stGrade = 0) {
     const cov = roster.filter((p) => ["LB", "S", "CB"].includes(p.position)).slice(0, 8);
-    const base = cov.length ? cov.reduce((s, p) => s + (p.attributes.SPD + p.attributes.STR) / 2, 0) / cov.length : 55;
+    const base = cov.length ? cov.reduce((s, p) => s + (p.attributes.SPD + p.attributes.STR) / 2 + 1.2 * traitLv(p, "gunner"), 0) / cov.length : 55;
     return base * (1 + (stGrade || 0) * 0.01);
   }
   function returnOutcome(retRating, cov, startLine, base) {
@@ -23981,8 +24545,8 @@ var _CFB = (() => {
     const r = returnOutcome(rating, cov, 3, C.KICKOFF_RETURN_BASE);
     return { touchback: false, td: r.td, fieldPos: r.startLine, returner: player, retYds: r.yards };
   }
-  function onsideResult(surprise = false, stGrade = 0) {
-    const rate = (surprise ? C.ONSIDE_SURPRISE : C.ONSIDE_EXPECTED) + (stGrade || 0) * 3e-3;
+  function onsideResult(surprise = false, stGrade = 0, handsLv = 0) {
+    const rate = ((surprise ? C.ONSIDE_SURPRISE : C.ONSIDE_EXPECTED) + (stGrade || 0) * 3e-3) * (1 - 0.05 * (handsLv || 0));
     const recovered = Math.random() < clamp2(rate, 0.02, 0.85);
     return { recovered, fieldPos: recovered ? 50 : clamp2(Math.round(randNorm(48, 4)), 40, 60) };
   }
@@ -24005,13 +24569,21 @@ var _CFB = (() => {
     const candidates = roster.filter((p) => penalty.posGroup.includes(p.position));
     let player = null;
     if (candidates.length) {
+      const flawWeight = (p) => {
+        const n = penalty.name;
+        if (n === "Pass Interference" || n === "Defensive Holding") return flawMult(p, "grabby", 0.35);
+        if (n === "Offside" || n === "Encroachment" || n === "False Start") return flawMult(p, "jumpy", 0.35);
+        if (n === "Offensive Holding") return flawMult(p, "holdingHabit", 0.35);
+        if (n === "Facemask" || n === "Roughing the Passer") return flawMult(p, "headhunter", 0.35);
+        return 1;
+      };
       const wts = candidates.map((p) => {
         var _a;
         return clamp2(
           (C.PENALTY_DISC_PIVOT - ((_a = p.attributes[penalty.attr]) != null ? _a : 60)) / C.PENALTY_DISC_DIV,
           0.1,
           2
-        );
+        ) * flawWeight(p);
       });
       const wsum = wts.reduce((s, w) => s + w, 0);
       let rr = Math.random() * wsum;
@@ -24195,7 +24767,7 @@ var _CFB = (() => {
             log.push(`\u23F1\uFE0F Timeout \u2014 ${defSchool.name} ices the kicker (${gameState.timeouts[gameState.defSide]} left)`);
           }
           const _fgBlocked = Math.random() < C.FG_BLOCK_RATE;
-          const made = !_fgBlocked && attemptFG(offRoster, offDepth, fgKickDist, ((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.specialTeams) || 0) && !(_iced && Math.random() < C.ICE_KICKER_EFF);
+          const made = !_fgBlocked && attemptFG(offRoster, offDepth, fgKickDist, ((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.specialTeams) || 0, _fgClutch || _iced) && !(_iced && Math.random() < C.ICE_KICKER_EFF);
           plays.push({
             type: "fg",
             made,
@@ -24231,8 +24803,13 @@ var _CFB = (() => {
             return { plays, result: "safety", points: 2, finalFieldPos: "safety_kick", pen };
           }
           const puntYds = puntDistance(offRoster, offDepth);
+          const _punter = (() => {
+            const id = (offDepth["P"] || [])[0];
+            return id ? offRoster.find((pl) => pl.id === id) : null;
+          })();
           const touchback = fieldPos + puntYds >= 100;
-          let puntStart = puntResult(fieldPos, puntYds);
+          let puntStart = puntResult(fieldPos, puntYds, _punter);
+          if (touchback && puntStart !== 20) log.push("Coffin corner \u2014 downed inside the 10!");
           let returner = null, retYds = 0, puntRetTD = false;
           const puntDef = defPlan.puntDef || "balanced";
           const rushers = [...defRoster.filter((pl) => pl.position === "DE" || pl.position === "OLB")];
@@ -24264,7 +24841,8 @@ var _CFB = (() => {
             };
           }
           if (!touchback) {
-            if (Math.random() >= C.PUNT_FAIR_CATCH) {
+            const _fairP = clamp2(C.PUNT_FAIR_CATCH * (1 + 0.08 * traitLv(_punter, "hangTime")), 0, 0.95);
+            if (Math.random() >= _fairP) {
               const { player, rating } = pickReturner(defRoster, (((_d = defSchool == null ? void 0 : defSchool.depthOrder) == null ? void 0 : _d.RET) || [])[0]);
               const cov = coverageStrength(offRoster, ((_e = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : _e.specialTeams) || 0);
               const r = returnOutcome(rating, cov, puntStart, C.PUNT_RETURN_BASE);
@@ -24717,6 +25295,8 @@ var _CFB = (() => {
         var _a2;
         return ((_a2 = defRoster.find((p) => p.id === id)) == null ? void 0 : _a2.position) || null;
       };
+      const offById = (id) => offRoster.find((p) => p.id === id) || null;
+      const defById = (id) => defRoster.find((p) => p.id === id) || null;
       const MESH_DEPTH_KEYS = ["SLOT", "FB", "WING", "ABACK", "WILDCAT", "JETMAN"];
       let offDepthWithSlot = activeOffDepth;
       for (const key of MESH_DEPTH_KEYS) {
@@ -24725,9 +25305,9 @@ var _CFB = (() => {
         const live = named.filter((id) => offRoster.some((p) => p.id === id && p.injuryGamesOut === 0));
         if (live.length) offDepthWithSlot = __spreadProps2(__spreadValues2({}, offDepthWithSlot), { [key]: live });
       }
-      const offField = resolveOffField(offFormationId, offFA == null ? void 0 : offFA.slots, offFA == null ? void 0 : offFA.shares, offDepthWithSlot, null, offPosOf);
+      const offField = resolveOffField(offFormationId, offFA == null ? void 0 : offFA.slots, offFA == null ? void 0 : offFA.shares, offDepthWithSlot, null, offPosOf, offById);
       const defHasPins = !!defFA && (Object.keys(defFA.slots || {}).length > 0 || Object.values(defFA.blitzShares || {}).some((v) => v > 0));
-      const defBaseField = defFrontId === baseFront || defHasPins ? resolveDefField(defFrontId, defFA == null ? void 0 : defFA.slots, defFA == null ? void 0 : defFA.blitzShares, activeDefDepth, null, defPosOf) : null;
+      const defBaseField = defFrontId === baseFront || defHasPins ? resolveDefField(defFrontId, defFA == null ? void 0 : defFA.slots, defFA == null ? void 0 : defFA.blitzShares, activeDefDepth, null, defPosOf, defById) : null;
       const offPersonnel = offField ? offField.personnel : resolvePersonnel(offFormationId, activeOffDepth);
       const defPersonnel = defBaseField ? defBaseField.personnel : resolveDefPersonnel(defFrontId, activeDefDepth, defRoster);
       const qb0 = (() => {
@@ -24756,10 +25336,11 @@ var _CFB = (() => {
       let shownFam = covFam, fooled = false;
       const _pfLook = !globalThis.__noPressFlavors && defEff.pressLook ? defEff.pressLook : null;
       if ((playType.startsWith("pass") || playType.startsWith("run")) && qb0) {
-        const pDisguise = clamp2(0.1 + (((_L = defPlanEff.blitzDesign) != null ? _L : 50) - 50) * 4e-3 + (sAwr0 - 50) * 2e-3 + Math.min(0.1, (oppMemPre.audibles || 0) * 0.012) + (_pfLook === "mug" ? C.PRESS_FLAVOR.mugDisguise : _pfLook === "amoeba" ? C.PRESS_FLAVOR.amoebaDisguise : 0), 0.04, _pfLook === "amoeba" ? C.PRESS_FLAVOR.amoebaDisguiseCap : 0.45);
+        const _daLv = sPl0.reduce((m, pl) => Math.max(m, traitLv(pl, "disguiseArtist")), 0);
+        const pDisguise = clamp2(0.1 + (((_L = defPlanEff.blitzDesign) != null ? _L : 50) - 50) * 4e-3 + (sAwr0 - 50) * 2e-3 + 0.012 * _daLv + Math.min(0.1, (oppMemPre.audibles || 0) * 0.012) + (_pfLook === "mug" ? C.PRESS_FLAVOR.mugDisguise : _pfLook === "amoeba" ? C.PRESS_FLAVOR.amoebaDisguise : 0), 0.04, _pfLook === "amoeba" ? C.PRESS_FLAVOR.amoebaDisguiseCap : 0.45);
         if (Math.random() < pDisguise) {
           shownFam = (_M = DISGUISE_SHOW[covFam]) != null ? _M : covFam;
-          const craft = ((_N = defPlanEff.blitzDesign) != null ? _N : 50) * 0.5 + sAwr0 * 0.5;
+          const craft = ((_N = defPlanEff.blitzDesign) != null ? _N : 50) * 0.5 + sAwr0 * 0.5 + 1.5 * _daLv;
           const read = ((_O = qb0.attributes.AWR) != null ? _O : 50) * 0.7 + ((_P = qb0.attributes.TEC) != null ? _P : 50) * 0.3;
           fooled = Math.random() < clamp2(0.5 + (craft - read) * 0.01, 0.15, 0.85);
         }
@@ -24769,7 +25350,7 @@ var _CFB = (() => {
       if (qb0 && losFree !== "never" && !familyPinned) {
         const shellSeen = fooled && defEff.covShell !== "balanced" && defEff.covShell != null ? ["Cover 2", "Cover 4", "Cover 2-Man", "Cover 6", "Tampa 2", "Prevent"].includes(shownFam) ? -1 : 1 : defEff.covShell === "single" ? 1 : defEff.covShell === "two" ? -1 : 0;
         const boxScore = shellSeen + (defEff.runCommit || 0) / 12;
-        const seeIt = clamp2((((_Q = qb0.attributes.AWR) != null ? _Q : 50) - 55) * 8e-3 * (losFree === "free" ? 1.5 : 1), 0, 0.25) * (_pfLook === "amoeba" ? C.PRESS_FLAVOR.amoebaSeeIt : 1);
+        const seeIt = clamp2((((_Q = qb0.attributes.AWR) != null ? _Q : 50) - 55) * 8e-3 * (losFree === "free" ? 1.5 : 1) + 6e-3 * traitLv(qb0, "fieldGeneral"), 0, 0.25) * (_pfLook === "amoeba" ? C.PRESS_FLAVOR.amoebaSeeIt : 1);
         if ((playType === "run_inside" || playType === "run_outside") && boxScore >= 1 && Math.random() < seeIt) {
           playType = "pass_short";
           killCall = "toPass";
@@ -24804,7 +25385,7 @@ var _CFB = (() => {
       let audible = false;
       if (concept.name && playType.startsWith("pass") && qb0 && losFree !== "never" && audiblesUsed < (losFree === "free" ? 2 : 1)) {
         const calledVs = (_U = (_T = (_S = PASS_CONCEPTS[concept.name]) == null ? void 0 : _S.vs) == null ? void 0 : _T[believedFam]) != null ? _U : 0;
-        const pAud = clamp2((((_V = qb0.attributes.AWR) != null ? _V : 50) - 55) * 0.012, 0, 0.35) * (losFree === "free" ? 1.4 : 1);
+        const pAud = clamp2((((_V = qb0.attributes.AWR) != null ? _V : 50) - 55) * 0.012 + 8e-3 * traitLv(qb0, "fieldGeneral"), 0, 0.35) * (losFree === "free" ? 1.4 : 1);
         if (calledVs <= -0.02 && Math.random() < pAud) {
           const depth = playType.replace("pass_", "");
           const wrN = ((offPersonnel == null ? void 0 : offPersonnel.WR) || []).length;
@@ -24875,14 +25456,16 @@ var _CFB = (() => {
         offRoster,
         offCtx.fatigueMap,
         slotMap(offPersonnel),
-        (((_ka = offense.form) != null ? _ka : 1) * ((_la = offense.execMult) != null ? _la : 1) - 1) * C.FORM_ATTR_SCALE
+        (((_ka = offense.form) != null ? _ka : 1) * ((_la = offense.execMult) != null ? _la : 1) - 1) * C.FORM_ATTR_SCALE,
+        gameState.half === 1
       );
       const effDefRoster = makeEffectiveRoster(
         onFieldDef,
         defRoster,
         defCtx.fatigueMap,
         slotMap(defPersonnel),
-        (((_ma = defense.form) != null ? _ma : 1) * ((_na = defense.execMult) != null ? _na : 1) - 1) * C.FORM_ATTR_SCALE
+        (((_ma = defense.form) != null ? _ma : 1) * ((_na = defense.execMult) != null ? _na : 1) - 1) * C.FORM_ATTR_SCALE,
+        gameState.half === 1
       );
       const qbId = ((offPersonnel == null ? void 0 : offPersonnel.QB) || activeOffDepth["QB"] || [])[0];
       let qb = qbId ? effOffRoster.find((p) => p.id === qbId) : null;
@@ -24940,6 +25523,7 @@ var _CFB = (() => {
           rpoFlip = true;
         } else if (calledRPO) rpoKept = true;
       }
+      _situDown = down;
       let jetMan = null;
       if (forcedGadget === "jet" && (offField == null ? void 0 : offField.bySlot)) {
         jetMan = (JET_SLOTS[offFormationId] || []).map((sid) => offField.bySlot[sid]).map((id) => id && effOffRoster.find((p) => p.id === id)).filter(Boolean).sort((a, b) => (b.attributes.SPD || 0) - (a.attributes.SPD || 0))[0] || null;
@@ -25640,7 +26224,9 @@ var _CFB = (() => {
           if (wantOnside || wantSurprise) {
             if (wantSurprise) token._surpriseUsed[scoringTeam] = true;
             const _koSchool = scoringTeam === "home" ? homeSchool : awaySchool;
-            const onside = onsideResult(wantSurprise, ((_koSchool == null ? void 0 : _koSchool._dnaGrades) == null ? void 0 : _koSchool._dnaGrades.specialTeams) || 0);
+            const _recvRoster = scoringTeam === "home" ? awayRoster : homeRoster;
+            const _handsLv = (_recvRoster || []).reduce((m, pl) => pl.position === "TE" || pl.position === "LB" ? Math.max(m, traitLv(pl, "handsTeam")) : m, 0);
+            const onside = onsideResult(wantSurprise, ((_koSchool == null ? void 0 : _koSchool._dnaGrades) == null ? void 0 : _koSchool._dnaGrades.specialTeams) || 0, _handsLv);
             pendingKickoff = [{
               type: "kickoff",
               onside: true,
@@ -26357,7 +26943,7 @@ var _CFB = (() => {
       twoPtMade: 0
     };
   }
-  var OPENERS_YIELDS, FAMILY_SHELL, COV_FAMILY_IMPLIES, QB_RUN_BASE, OPTION_CAPABLE, CALL_CATEGORIES, SPEED_OPTION, JET_CAPABLE, DRAW_DEFAULT, JET_SLOTS, _passCtx, _tkStyle, _optKey, _conceptCtx, FATIGUE_PHYSICAL, REAL_SLOTS, _rosterByIdCache, _penaltyScale, TYPE_BASELINE, DIFFICULTY_EDGE;
+  var OPENERS_YIELDS, FAMILY_SHELL, COV_FAMILY_IMPLIES, QB_RUN_BASE, OPTION_CAPABLE, CALL_CATEGORIES, SPEED_OPTION, JET_CAPABLE, DRAW_DEFAULT, JET_SLOTS, _passCtx, _tkStyle, _optKey, _conceptCtx, _situDown, FATIGUE_PHYSICAL, REAL_SLOTS, _rosterByIdCache, _penaltyScale, TYPE_BASELINE, DIFFICULTY_EDGE;
   var init_sim = __esm({
     "js/engine/sim.js"() {
       init_spread();
@@ -26372,6 +26958,7 @@ var _CFB = (() => {
       init_sepgeo();
       init_situations();
       init_staff();
+      init_traits();
       init_yacgeo();
       init_utils();
       OPENERS_YIELDS = /* @__PURE__ */ new Set(["goal_line", "backed_up", "two_min_trail", "four_min_lead", "red_zone"]);
@@ -26443,6 +27030,7 @@ var _CFB = (() => {
         "Power-I": ["WR_X"]
       };
       _passCtx = { covStyle: "balanced", qbAggr: 50 };
+      _situDown = 1;
       _tkStyle = "balanced";
       _optKey = "balanced";
       _conceptCtx = null;
@@ -27424,7 +28012,7 @@ var _CFB = (() => {
     return w + l > 0 ? w / (w + l) : 0.5;
   }
   function computeSOS(schools, schedule) {
-    const byId = new Map((schools || []).map((s) => [s.id, s]));
+    const byId2 = new Map((schools || []).map((s) => [s.id, s]));
     const { byTeam } = indexGames(schedule);
     const winPctOf = /* @__PURE__ */ new Map();
     for (const s of schools || []) winPctOf.set(s.id, winPctFromRecord(s));
@@ -27438,14 +28026,14 @@ var _CFB = (() => {
       let oppSum = 0, oppCount = 0;
       let ooSum = 0, ooCount = 0;
       for (const g of myGames) {
-        const opp = byId.get(g.oppId);
+        const opp = byId2.get(g.oppId);
         if (opp == null) continue;
         oppSum += winPctOf.has(opp.id) ? winPctOf.get(opp.id) : winPctFromRecord(opp);
         oppCount++;
         const oppGames = byTeam.get(opp.id) || [];
         for (const og of oppGames) {
           if (og.oppId === s.id) continue;
-          const oo = byId.get(og.oppId);
+          const oo = byId2.get(og.oppId);
           if (oo == null) continue;
           ooSum += winPctOf.has(oo.id) ? winPctOf.get(oo.id) : winPctFromRecord(oo);
           ooCount++;
@@ -27462,7 +28050,7 @@ var _CFB = (() => {
     const pool = schools.filter((s) => s.division === division);
     if (!pool.length) return [];
     const { byTeam, h2h } = indexGames(schedule);
-    const byId = new Map(pool.map((s) => [s.id, s]));
+    const byId2 = new Map(pool.map((s) => [s.id, s]));
     const winPctOf = /* @__PURE__ */ new Map();
     for (const s of pool) {
       const w = ((_a = s.record) == null ? void 0 : _a.wins) || 0, l = ((_b = s.record) == null ? void 0 : _b.losses) || 0;
@@ -27479,7 +28067,7 @@ var _CFB = (() => {
       let resume = 0;
       const myGames = byTeam.get(s.id) || [];
       for (const g of myGames) {
-        const opp = byId.get(g.oppId);
+        const opp = byId2.get(g.oppId);
         if (!opp) continue;
         const oppStr = opponentStrength(opp, winPctOf);
         const marginBonus = Math.min(g.margin, MARGIN_CAP) / MARGIN_CAP * 0.15;
@@ -27991,10 +28579,42 @@ var _CFB = (() => {
         for (const player of school.roster) {
           const plan = getEffectivePracticePlan(school, player.position);
           if (plan) developPlayer(player, plan, school.coach, C.INSEASON_DEV_MULT, school);
+          coachFlawTick(player, plan, school);
         }
         school.depthChart = buildDepthChart(school.roster, school.gameplan, school.depthOrder || {});
       }
       if (state2.playerSchoolId) events.push({ type: "info", text: "\u{1F3CB}\uFE0F Practice checkpoint \u2014 the week's work shows: your practice plan just developed the roster." });
+    }
+    {
+      const mySchool = state2.playerSchoolId ? state2.world.schools.find((sc2) => sc2.id === state2.playerSchoolId) : null;
+      if (mySchool) {
+        for (const p of mySchool.roster) {
+          const tl = p.traits;
+          if (!tl) continue;
+          for (const t of tl.play || []) {
+            if (!t.pend) continue;
+            t.pend = false;
+            const nm = PLAY_CATALOG[t.k] ? PLAY_CATALOG[t.k].name : t.k;
+            events.push({ type: "info", text: `\u2B50 ${p.name.first} ${p.name.last}'s ${nm} hit level ${"I".repeat(t.lv)}.` });
+          }
+          for (const t of tl.flaws || []) {
+            if (t.pendUp) {
+              t.pendUp = false;
+              events.push({ type: "warning", text: `\u26A0\uFE0F ${p.name.first} ${p.name.last}'s ${flawName(t.k)} is getting worse (level ${"I".repeat(t.lv)}).` });
+            }
+            if (t.pendDown) {
+              t.pendDown = false;
+              events.push({ type: "info", text: `\u{1F4C8} Coaching shows \u2014 ${p.name.first} ${p.name.last}'s ${flawName(t.k)} shrank to level ${"I".repeat(t.lv)}.` });
+            }
+            if (t.pendGone) {
+              t.pendGone = false;
+            }
+          }
+          if (tl._gone && tl._gone.length) {
+            for (const nm of tl._gone.splice(0)) events.push({ type: "info", text: `\u{1F389} ${p.name.first} ${p.name.last} has shaken his ${flawName(nm)} flaw \u2014 the coaching arc pays off.` });
+          }
+        }
+      }
     }
     resolveStaleGames(state2, day, events);
     const dayGames = (state2.schedule || []).filter((g) => g.day === day && !g.result);
@@ -28590,6 +29210,30 @@ var _CFB = (() => {
     if (result.homePlayerStats) applyPlayerGameStats(home.roster, result.homePlayerStats);
     if (result.awayPlayerStats) applyPlayerGameStats(away.roster, result.awayPlayerStats);
   }
+  function flawName(k) {
+    return FLAW_NAMES[k] || k;
+  }
+  function coachFlawTick(player, plan, school, scale = 1) {
+    var _a, _b;
+    const flaws = (_a = player.traits) == null ? void 0 : _a.flaws;
+    if (!flaws || !flaws.length) return;
+    const minutes = plan && typeof plan === "object" ? Object.values(plan).reduce((s, v) => s + (Number(v) || 0), 0) : Number(plan) || 0;
+    const attention = Math.min(1.4, minutes / 100);
+    const _coord = ["QB", "RB", "WR", "TE", "OL"].includes(player.position) ? (_b = school.staff) == null ? void 0 : _b.oc : school.staff == null ? void 0 : school.staff.dc;
+    const coordQ = _coord ? coordRatingAvg(_coord) : 50;
+    const we = (player.attributes == null ? void 0 : player.attributes.WE) != null ? player.attributes.WE : 50;
+    const shrinkP = Math.min(0.28, (0.03 + attention * 0.05 + (coordQ - 50) * 15e-4 + (we - 50) * 8e-4) * scale);
+    const t = flaws[Math.floor(Math.random() * flaws.length)];
+    if (Math.random() < shrinkP) {
+      const out = shrinkFlaw(player, t.k);
+      if (out === "gone") {
+        const tl = player.traits;
+        (tl._gone || (tl._gone = [])).push(flawName(t.k));
+      }
+    } else if (attention < 0.5 && Math.random() < 0.3) {
+      growFlaw(player, t.k, 2);
+    }
+  }
   function applyPlayerGameStats(roster, gameStats) {
     const KEYS = ["passAtt", "passComp", "passYds", "passTD", "passInt", "rushAtt", "rushYds", "rushTD", "recComp", "recYds", "recTD", "targets", "tackles", "solo", "assists", "tacklesForLoss", "sacks", "ints", "passBreakups", "forcedFumbles", "batted", "brokenTackles", "missedTackles", "pressures", "contestedTgt", "contestedRec", "penalties", "penaltyYds", "fgMade", "fgAtt", "xpMade", "xpAtt", "puntNo", "puntYds", "retNo", "retYds", "retTD"];
     for (const [id, gs] of Object.entries(gameStats)) {
@@ -28612,6 +29256,7 @@ var _CFB = (() => {
         player.stats.fgLong = Math.max(player.stats.fgLong || 0, gs.fgLong);
         player.careerStats.fgLong = Math.max(player.careerStats.fgLong || 0, gs.fgLong);
       }
+      growthFromGameStats(player, gs);
     }
   }
   function accumTeamStats(teamStats, gameStats, pf, pa, oppGameStats = null) {
@@ -29922,7 +30567,7 @@ var _CFB = (() => {
     }
     school._olLastFive = five;
   }
-  var PHASES, RECRUITING_OPEN, REG_WEEK_1_DAY, REG_WEEK_COUNT, weekLabel, weekShort, AUTO_BOARD_MAX, PLAYOFF_DIVS, RECORD_CATS, GRADE_LETTERS;
+  var FLAW_NAMES, PHASES, RECRUITING_OPEN, REG_WEEK_1_DAY, REG_WEEK_COUNT, weekLabel, weekShort, AUTO_BOARD_MAX, PLAYOFF_DIVS, RECORD_CATS, GRADE_LETTERS;
   var init_season = __esm({
     "js/engine/season.js"() {
       init_spread();
@@ -29935,6 +30580,7 @@ var _CFB = (() => {
       init_development();
       init_offseason();
       init_player();
+      init_traits();
       init_tree();
       init_rankings();
       init_recruiting();
@@ -29944,6 +30590,7 @@ var _CFB = (() => {
       init_starts();
       init_world();
       init_utils();
+      FLAW_NAMES = { grabby: "Grabby", jumpy: "Jumpy", gambler: "Gambler", headhunter: "Headhunter", freelancer: "Freelancer", drops: "Drops", fumbler: "Fumbler", happyFeet: "Happy Feet", slowStarter: "Slow Starter", telegraph: "Telegraph", heroBall: "Hero Ball", dancer: "Dancer", bodyCatcher: "Body Catcher", bitesHard: "Bites Hard", laneDrifter: "Lane Drifter", holdingHabit: "Holding Habit", shanks: "Shanks", muffs: "Muffs" };
       PHASES = {
         PRESEASON: { days: [1, 4], label: "Preseason" },
         NONCONF: { days: [5, 8], label: "Non-Conference" },
@@ -36424,6 +37071,7 @@ var _CFB = (() => {
   // js/ui/app.js
   init_persistence();
   init_player();
+  init_traits();
   init_season();
   init_sim();
   init_situations();
@@ -39735,7 +40383,7 @@ var _CFB = (() => {
     if (!played.length || !school) return "";
     const lastDay = Math.max(...played.map((g) => g.day));
     const dayGames = played.filter((g) => g.day === lastDay);
-    const byId = (id) => state.world.schools.find((s) => s.id === id);
+    const byId2 = (id) => state.world.schools.find((s) => s.id === id);
     const ranks = rankMap(state, school.division);
     const items = [];
     const wk = (state.awardsLog || []).filter((a) => a.scope === "weekly" && a.season === state.season).pop();
@@ -39746,8 +40394,8 @@ var _CFB = (() => {
     }
     let upset = null;
     for (const g of dayGames) {
-      const winner = byId(g.result.winner);
-      const loser = byId(g.result.winner === g.homeId ? g.awayId : g.homeId);
+      const winner = byId2(g.result.winner);
+      const loser = byId2(g.result.winner === g.homeId ? g.awayId : g.homeId);
       if (!winner || !loser || winner.division !== school.division) continue;
       const wR = ranks.get(winner.id) || 99, lR = ranks.get(loser.id) || 99;
       const gap = wR - lR;
@@ -39761,10 +40409,10 @@ var _CFB = (() => {
     const rivId = (_a = state.rivalry) == null ? void 0 : _a.schoolId;
     if (rivId && rivId !== school.id) {
       const rg = dayGames.find((g) => g.homeId === rivId || g.awayId === rivId);
-      const riv = byId(rivId);
+      const riv = byId2(rivId);
       if (rg && riv) {
         const won = rg.result.winner === rivId;
-        const oppSch = byId(rg.homeId === rivId ? rg.awayId : rg.homeId);
+        const oppSch = byId2(rg.homeId === rivId ? rg.awayId : rg.homeId);
         const rs = rg.homeId === rivId ? rg.result.homeScore : rg.result.awayScore;
         const os = rg.homeId === rivId ? rg.result.awayScore : rg.result.homeScore;
         items.push(`\u{1F525} Rival watch: <span class="team-link" data-scout-team="${riv.id}">${escapeHtml(riv.name)}</span> ${won ? "beat" : "fell to"} ${oppSch ? `<span class="team-link" data-scout-team="${oppSch.id}">${escapeHtml(oppSch.name)}</span>` : "?"}, ${rs}\u2013${os}`);
@@ -41285,6 +41933,7 @@ var _CFB = (() => {
   init_constants_field();
   init_constants();
   init_fieldassign();
+  init_traits();
   init_player();
   init_world();
   init_state();
@@ -41388,7 +42037,7 @@ var _CFB = (() => {
     const entry = gp.fieldAssignments.offense[fid] || { slots: {}, shares: {} };
     const activeDepth = buildActiveDepth(school);
     const ratingById = buildRatingById(school);
-    const resolved = resolveOffField(fid, entry.slots, entry.shares, activeDepth, ratingById, posById(school));
+    const resolved = resolveOffField(fid, entry.slots, entry.shares, activeDepth, ratingById, posById(school), byId(school));
     const bySlot = (resolved == null ? void 0 : resolved.bySlot) || {};
     const catchSlots = layout.slots.filter((s) => s.catch);
     if (!entry.shares) entry.shares = {};
@@ -41582,7 +42231,7 @@ var _CFB = (() => {
       const layout = OFF_FIELD_LAYOUTS[fid];
       const e = gp.fieldAssignments.offense[fid] || (gp.fieldAssignments.offense[fid] = { slots: {}, shares: {} });
       if (!e.shares) e.shares = {};
-      const resolved = resolveOffField(fid, e.slots, e.shares, activeDepth, ratingById, posById(school));
+      const resolved = resolveOffField(fid, e.slots, e.shares, activeDepth, ratingById, posById(school), byId(school));
       const bySlot = resolved && resolved.bySlot || {};
       const catchSlots = layout.slots.filter((s) => s.catch);
       const wById = {};
@@ -41630,7 +42279,7 @@ var _CFB = (() => {
     de.blitzShares = de.blitzShares || {};
     for (const k of Object.keys(de.blitzShares)) delete de.blitzShares[k];
     const eligible = DEF_BLITZ_ELIGIBLE[front] || [];
-    const dr = resolveDefField(front, de.slots, {}, activeDepth, ratingById, posById(school));
+    const dr = resolveDefField(front, de.slots, {}, activeDepth, ratingById, posById(school), byId(school));
     const dBySlot = dr && dr.bySlot || {};
     const aggr = sg.blitzAggr || "balanced";
     const nBlitz = aggr === "conservative" ? 0 : aggr === "aggressive" ? 3 : 1;
@@ -41738,7 +42387,7 @@ var _CFB = (() => {
         const layout = OFF_FIELD_LAYOUTS[fid];
         const entry = (_b = (_a = gp == null ? void 0 : gp.fieldAssignments) == null ? void 0 : _a.offense) == null ? void 0 : _b[fid];
         if (!layout) return out;
-        const r = resolveOffField(fid, entry == null ? void 0 : entry.slots, entry == null ? void 0 : entry.shares, buildActiveDepth(school), buildRatingById(school), posById(school));
+        const r = resolveOffField(fid, entry == null ? void 0 : entry.slots, entry == null ? void 0 : entry.shares, buildActiveDepth(school), buildRatingById(school), posById(school), byId(school));
         for (const s of layout.slots) {
           const pid = (_c = r == null ? void 0 : r.bySlot) == null ? void 0 : _c[s.id];
           if (pid) out[pid] = { label: s.label, pos: s.pos, role: s.role };
@@ -41748,7 +42397,7 @@ var _CFB = (() => {
         const layout = DEF_FIELD_LAYOUTS[front];
         const entry = (_e = (_d = gp == null ? void 0 : gp.fieldAssignments) == null ? void 0 : _d.defense) == null ? void 0 : _e[front];
         if (!layout) return out;
-        const r = resolveDefField(front, entry == null ? void 0 : entry.slots, entry == null ? void 0 : entry.blitzShares, buildActiveDepth(school), buildRatingById(school), posById(school));
+        const r = resolveDefField(front, entry == null ? void 0 : entry.slots, entry == null ? void 0 : entry.blitzShares, buildActiveDepth(school), buildRatingById(school), posById(school), byId(school));
         for (const s of layout.slots) {
           const pid = (_f = r == null ? void 0 : r.bySlot) == null ? void 0 : _f[s.id];
           if (pid) out[pid] = { label: s.label, pos: s.pos, role: s.role };
@@ -41874,7 +42523,7 @@ var _CFB = (() => {
     const entry = gp.fieldAssignments.defense[baseFront] || { slots: {}, blitzShares: {} };
     const activeDepth = buildActiveDepth(school);
     const ratingById = buildRatingById(school);
-    const resolved = resolveDefField(baseFront, entry.slots, entry.blitzShares, activeDepth, ratingById);
+    const resolved = resolveDefField(baseFront, entry.slots, entry.blitzShares, activeDepth, ratingById, posById(school), byId(school));
     const bySlot = (resolved == null ? void 0 : resolved.bySlot) || {};
     const eligible = new Set(DEF_BLITZ_ELIGIBLE[baseFront] || []);
     const dropEligible = new Set(DEF_DROP_ELIGIBLE[baseFront] || []);
@@ -42230,7 +42879,7 @@ var _CFB = (() => {
     const entry = side === "offense" ? school.gameplan.fieldAssignments.offense[containerId] : school.gameplan.fieldAssignments.defense[containerId];
     const activeDepth = buildActiveDepth(school);
     const ratingById = buildRatingById(school);
-    const resolved = side === "offense" ? resolveOffField(containerId, entry.slots, entry.shares, activeDepth, ratingById) : resolveDefField(containerId, entry.slots, entry.blitzShares || {}, activeDepth, ratingById);
+    const resolved = side === "offense" ? resolveOffField(containerId, entry.slots, entry.shares, activeDepth, ratingById, posById(school), byId(school)) : resolveDefField(containerId, entry.slots, entry.blitzShares || {}, activeDepth, ratingById, posById(school), byId(school));
     const bySlot = (resolved == null ? void 0 : resolved.bySlot) || {};
     const currentId = bySlot[slotId] || null;
     const takenElsewhere = new Set(
@@ -42258,9 +42907,12 @@ var _CFB = (() => {
     const posList = isFbSlot ? ["RB", "TE"] : meshPool || SHARED_POS[pos] || [pos];
     const jobFitMult = (p) => {
       var _a2;
-      return meshPool ? (_a2 = (SLOT_ELIGIBILITY[slot.pos] || {})[p.position]) != null ? _a2 : 1 : 1;
+      if (slot && bridgeCoversSlot(p, slot)) return 1;
+      const elig = meshPool ? (_a2 = (SLOT_ELIGIBILITY[slot.pos] || {})[p.position]) != null ? _a2 : 1 : 1;
+      return elig * sizeFitForSlot(p, slot);
     };
-    const candidates = roster.filter((p) => posList.includes(p.position)).map((p) => ({ p, rat: Math.round(slotRating(p, slot) * jobFitMult(p)) })).sort((a, b) => b.rat - a.rat);
+    const listed = (p) => posList.includes(p.position) || slot && bridgeCoversSlot(p, slot);
+    const candidates = roster.filter(listed).map((p) => ({ p, rat: Math.round(slotRating(p, slot) * jobFitMult(p)) })).sort((a, b) => b.rat - a.rat);
     return `
   <div class="picker-overlay" data-picker-close="bg">
     <div class="picker-panel" data-picker-stop="1">
@@ -42308,11 +42960,11 @@ var _CFB = (() => {
   function buildActiveDepth(school) {
     var _a, _b, _c;
     const roster = (school == null ? void 0 : school.roster) || [];
-    const byId = new Map(roster.map((p) => [p.id, p]));
+    const byId2 = new Map(roster.map((p) => [p.id, p]));
     const eligible = (p) => p && p.injuryGamesOut === 0 && !(p.redshirted && p.redshirtYear === state.season);
     const depth = {};
     for (const [pos, ids] of Object.entries((school == null ? void 0 : school.depthChart) || {})) {
-      const kept = (ids || []).filter((id) => eligible(byId.get(id)));
+      const kept = (ids || []).filter((id) => eligible(byId2.get(id)));
       if (kept.length) depth[pos] = kept;
     }
     for (const p of roster) {
@@ -42321,11 +42973,11 @@ var _CFB = (() => {
       if (!list.includes(p.id)) list.push(p.id);
     }
     const slotPool = roster.filter((p) => eligible(p) && SLOT_ELIGIBLE.includes(p.position)).map((p) => ({ id: p.id, fit: roleRating(p, "WR-Slot") })).sort((a, b) => b.fit - a.fit).slice(0, SLOT_DEPTH_SHOWN).map((x) => x.id);
-    const slotRanked = (((_b = school == null ? void 0 : school.depthOrder) == null ? void 0 : _b.SLOT) || []).filter((id) => eligible(byId.get(id)));
+    const slotRanked = (((_b = school == null ? void 0 : school.depthOrder) == null ? void 0 : _b.SLOT) || []).filter((id) => eligible(byId2.get(id)));
     const slotSet = new Set(slotRanked);
     depth.SLOT = [...slotRanked, ...slotPool.filter((id) => !slotSet.has(id))];
     for (const upos of ["FB", "ABACK", "WING", "WILDCAT", "JETMAN"]) {
-      const ov = (((school == null ? void 0 : school.depthOrder) || {})[upos] || []).filter((id) => eligible(byId.get(id)));
+      const ov = (((school == null ? void 0 : school.depthOrder) || {})[upos] || []).filter((id) => eligible(byId2.get(id)));
       if (ov.length) depth[upos] = ov;
     }
     for (const pos of Object.keys(depth)) {
@@ -42334,7 +42986,7 @@ var _CFB = (() => {
       const ranked = depth[pos].filter((id) => listed.has(id));
       const extras = depth[pos].filter((id) => !listed.has(id)).sort((a, b) => {
         var _a2, _b2;
-        return (((_a2 = byId.get(b)) == null ? void 0 : _a2.compositeRating) || 0) - (((_b2 = byId.get(a)) == null ? void 0 : _b2.compositeRating) || 0);
+        return (((_a2 = byId2.get(b)) == null ? void 0 : _a2.compositeRating) || 0) - (((_b2 = byId2.get(a)) == null ? void 0 : _b2.compositeRating) || 0);
       });
       depth[pos] = [...ranked, ...extras];
     }
@@ -42342,6 +42994,10 @@ var _CFB = (() => {
   }
   function posById(school) {
     const m = new Map(((school == null ? void 0 : school.roster) || []).map((p) => [p.id, p.position]));
+    return (id) => m.get(id) || null;
+  }
+  function byId(school) {
+    const m = new Map(((school == null ? void 0 : school.roster) || []).map((p) => [p.id, p]));
     return (id) => m.get(id) || null;
   }
   function buildRatingById(school) {
@@ -43602,6 +44258,7 @@ var _CFB = (() => {
   init_constants();
   init_coach();
   init_player();
+  init_traits();
   init_portal();
   init_recruiting();
   init_season();
@@ -43937,11 +44594,11 @@ var _CFB = (() => {
     var _a, _b;
     if (!school) return "";
     const recruits = ((_a = state.world) == null ? void 0 : _a.recruits) || [];
-    const byId = new Map(recruits.map((r) => [r.id, r]));
+    const byId2 = new Map(recruits.map((r) => [r.id, r]));
     const boardByPos = {};
     for (const e of ((_b = state.playerCoach) == null ? void 0 : _b.recruitBoard) || []) {
       if (e.eliminated) continue;
-      const r = byId.get(e.recruitId);
+      const r = byId2.get(e.recruitId);
       if (r && !r.committed) boardByPos[r.position] = (boardByPos[r.position] || 0) + 1;
     }
     const chips = POSITIONS.map((pos) => {
@@ -44442,6 +45099,48 @@ var _CFB = (() => {
   </div>
 `;
   }
+  var FRAME_JOB_POS = {
+    NB: ["CB", "S"],
+    ROVER: ["S", "LB", "OLB"],
+    WAR: ["S", "LB"],
+    SPUR: ["S", "OLB"],
+    BANDIT: ["S", "OLB"],
+    JOKER: ["OLB", "DE", "LB"],
+    JACK: ["OLB", "DE"],
+    EDGE: ["DE", "OLB"],
+    STK: ["LB", "OLB"],
+    MIKE: ["LB"],
+    WILL: ["OLB", "LB"],
+    NT: ["DT"],
+    FB: ["RB", "TE"],
+    SL: ["WR", "TE", "RB"]
+  };
+  function frameJobLabel(r) {
+    if (!r || r.weight == null) return "";
+    const fits = [];
+    for (const [job, poss] of Object.entries(FRAME_JOB_POS)) {
+      if (!poss.includes(r.position)) continue;
+      const win = JOB_SIZE_WINDOWS[job];
+      if (win && r.weight >= win[0] && r.weight <= win[1]) fits.push(job);
+    }
+    if (!fits.length) return "";
+    return `<span class="frame-jobs">${fits.slice(0, 3).map((j) => `<span class="frame-job-chip">${j}</span>`).join("")} frame</span>`;
+  }
+  function recruitTraitRow(r) {
+    const tl = r == null ? void 0 : r.traits;
+    if (!tl) return "";
+    const n = (tl.play || []).length + (tl.flaws || []).length + (tl.bridge ? 1 : 0);
+    if (!n) return "";
+    if (!isScouted(r.id)) {
+      return `<span class="trait-chip-row"><span class="trait-chip trait-fogged" title="Scout him to reveal how he plays">${n} trait${n === 1 ? "" : "s"} \u2014 <span class="fog">?</span></span></span>`;
+    }
+    const pips = (lv) => "\u25CF".repeat(lv || 1);
+    const chips = [];
+    if (tl.bridge && BRIDGE_CATALOG[tl.bridge]) chips.push(`<span class="trait-chip trait-bridge" title="${escapeHtml(BRIDGE_CATALOG[tl.bridge].desc || "")}">\u2726 ${escapeHtml(BRIDGE_CATALOG[tl.bridge].name)}</span>`);
+    for (const t of tl.play || []) if (PLAY_CATALOG[t.k]) chips.push(`<span class="trait-chip">${escapeHtml(PLAY_CATALOG[t.k].name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
+    for (const t of tl.flaws || []) if (FLAW_CATALOG[t.k]) chips.push(`<span class="trait-chip trait-flaw">${escapeHtml(FLAW_CATALOG[t.k].name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
+    return chips.length ? `<span class="trait-chip-row">${chips.join("")}</span>` : "";
+  }
   function renderProfile(recruitId, school, isOpen) {
     var _a, _b;
     const recruit = state.world.recruits.find((r) => r.id === recruitId);
@@ -44459,7 +45158,8 @@ var _CFB = (() => {
         <h2 class="profile-name">${escapeHtml(fullName(recruit))}${buildTag(recruit)}</h2>
         <div class="profile-details">
           ${derivedArchetype(recruit) ? `<span class="arch-chip arch-chip-lg">${archetypeLabel(derivedArchetype(recruit))}</span>` : ""}
-          <span>${recruit.height} &middot; ${recruit.weight} lbs &middot; GPA ${recruit.gpa}</span>
+          <span class="frame-line"><strong>${recruit.height} &middot; ${recruit.weight} lbs</strong>${frameJobLabel(recruit) ? ` \u2014 ${frameJobLabel(recruit)}` : ""} &middot; GPA ${recruit.gpa}</span>
+          ${recruitTraitRow(recruit)}
           ${recruit.measurables ? `<span class="testing-sheet">40yd ${recruit.measurables.forty} &middot; Vert ${recruit.measurables.vert}&quot; &middot; Shuttle ${recruit.measurables.shuttle} &middot; Bench ${recruit.measurables.bench}</span>` : ""}
           ${((_a = recruit.hometown) == null ? void 0 : _a.city) ? `<span>${escapeHtml(recruit.hometown.city)}, ${escapeHtml(recruit.hometown.state || "")}</span>` : ""}
           ${Number.isFinite(dist) && dist < 9999 ? `<span>${dist} miles from ${escapeHtml((school == null ? void 0 : school.name) || "")}</span>` : ""}
@@ -44989,8 +45689,8 @@ ${renderAutoRecruitLog()}`;
   function getOrder(tableId, cols) {
     const stored = _orders[tableId];
     if (!stored) return cols;
-    const byId = Object.fromEntries(cols.map((c) => [c.id, c]));
-    const ordered = stored.map((id) => byId[id]).filter(Boolean);
+    const byId2 = Object.fromEntries(cols.map((c) => [c.id, c]));
+    const ordered = stored.map((id) => byId2[id]).filter(Boolean);
     const knownIds = new Set(stored);
     cols.forEach((c) => {
       if (!knownIds.has(c.id)) ordered.push(c);
@@ -49806,6 +50506,28 @@ ${renderAutoRecruitLog()}`;
     if (pe) return { p: pe.player, school: null };
     return null;
   }
+  function renderTraitChips(p) {
+    const tl = p == null ? void 0 : p.traits;
+    if (!tl) return "";
+    const pips = (lv) => "\u25CF".repeat(lv || 1);
+    const chips = [];
+    if (tl.bridge && BRIDGE_CATALOG[tl.bridge]) {
+      const b = BRIDGE_CATALOG[tl.bridge];
+      chips.push(`<span class="trait-chip trait-bridge" title="${escapeHtml(b.desc || "Bridge trait")}">\u2726 ${escapeHtml(b.name)}</span>`);
+    }
+    for (const t of tl.play || []) {
+      const cat = PLAY_CATALOG[t.k];
+      if (!cat) continue;
+      chips.push(`<span class="trait-chip" title="${escapeHtml(cat.hook || "")}">${escapeHtml(cat.name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
+    }
+    for (const t of tl.flaws || []) {
+      const cat = FLAW_CATALOG[t.k];
+      if (!cat) continue;
+      chips.push(`<span class="trait-chip trait-flaw" title="${escapeHtml(cat.hook || "")}">${escapeHtml(cat.name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
+    }
+    if (!chips.length) return "";
+    return `<span class="trait-chip-row">${chips.join("")}</span>`;
+  }
   function renderPlayerCardModal() {
     var _a, _b, _c;
     const id = state.ui.pcardId;
@@ -49844,6 +50566,7 @@ ${renderAutoRecruitLog()}`;
         ${derivedArchetype(p) ? `<span class="arch-chip arch-chip-lg" data-tip="archetype" title="What is an archetype?">${archetypeLabel(derivedArchetype(p))}</span>` : ""}
         <span>${school ? `<span class="team-link" data-scout-team="${school.id}">${escapeHtml(school.name)} ${escapeHtml(school.nick || "")}</span>` : '<span class="muted">Transfer portal</span>'}</span>
         ${p.height || p.weight ? `<span>${p.height ? escapeHtml(String(p.height)) : ""}${p.height && p.weight ? " \xB7 " : ""}${p.weight ? `${p.weight} lbs` : ""}</span>` : ""}
+        ${renderTraitChips(p)}
         ${m ? `<span class="testing-sheet">40yd ${m.forty} \xB7 Vert ${m.vert}&quot; \xB7 Shuttle ${m.shuttle} \xB7 Bench ${m.bench}</span>` : ""}
         ${((_a = p.hometown) == null ? void 0 : _a.city) ? `<span>${escapeHtml(p.hometown.city)}, ${escapeHtml(p.hometown.state || "")}</span>` : ""}
       </div>
