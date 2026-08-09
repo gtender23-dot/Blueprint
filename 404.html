@@ -7942,6 +7942,164 @@ body *::after {
 .wp-engage-rep-chip .wp-engage-pads { animation-duration:.2s; opacity:.72; }
 .wp-engage-rep-pickup .wp-engage-pads { transform:scaleX(1.18); stroke-width:.5; }
 
+/* Milestone 11: standard pass protection. Rush cues already pair each rusher
+   with the responsible blocker and record whether/when leverage is lost. The
+   viewer now consumes that truth from snap to release instead of leaving pass
+   setters in a run or idle pose. */
+.wp-pass-set .wsp-pose-run,
+.wp-pass-set .wsp-pose-carry,
+.wp-pass-set .wsp-pose-idle,
+.wp-pass-engaged .wsp-pose-run,
+.wp-pass-engaged .wsp-pose-carry,
+.wp-pass-engaged .wsp-pose-idle { display:none !important; }
+.wp-pass-set .wsp-pose-block,
+.wp-pass-engaged .wsp-pose-block { display:block !important; }
+.wp-pass-set.wsp-still .wsp-pose-idle,
+.wp-pass-engaged.wsp-still .wsp-pose-idle { display:none !important; }
+.wp-pocket-qb .wsp-pose-idle { display:none !important; }
+.wp-pocket-qb .wsp-pose-carry { display:block !important; }
+
+/* Edge protection is a kick-slide with independent punches; power protection
+   drops a wide anchor; counters force the blocker to re-square his hips. */
+#watch-board.watch-pass-pocket .wp-pass-set.wp-pass-anchor.wp-pass-edge .wsp-shell { animation:wsp-m11-set-edge .46s ease-in-out infinite !important; }
+#watch-board.watch-pass-pocket .wp-pass-set.wp-pass-anchor.wp-pass-power .wsp-shell { animation:wsp-m11-set-power .42s steps(2,end) infinite !important; }
+#watch-board.watch-pass-pocket .wp-pass-set.wp-pass-anchor.wp-pass-counter .wsp-shell { animation:wsp-m11-set-counter .5s ease-in-out infinite !important; }
+#watch-board.watch-pass-pocket .wp-pass-engaged:not(.wp-rushing).wp-pass-edge .wsp-shell { animation:wsp-m11-rush-edge-fit .46s ease-in-out infinite !important; }
+#watch-board.watch-pass-pocket .wp-pass-engaged:not(.wp-rushing).wp-pass-power .wsp-shell { animation:wsp-m11-rush-power-fit .42s steps(2,end) infinite !important; }
+#watch-board.watch-pass-pocket .wp-pass-engaged:not(.wp-rushing).wp-pass-counter .wsp-shell { animation:wsp-m11-rush-counter-fit .5s ease-in-out infinite !important; }
+@keyframes wsp-m11-set-edge { 0%,100% { transform:translate(-.1px,.08px) rotate(-4deg) scaleY(.94); } 50% { transform:translate(-.28px,.14px) rotate(-7deg) scale(1.03,.9); } }
+@keyframes wsp-m11-set-power { 0%,100% { transform:translate(.02px,.14px) rotate(1deg) scale(1.08,.86); } 50% { transform:translate(-.08px,.18px) rotate(-2deg) scale(1.12,.83); } }
+@keyframes wsp-m11-set-counter { 0%,100% { transform:translate(-.16px,.1px) rotate(-5deg) scaleY(.92); } 45% { transform:translate(.14px,.14px) rotate(5deg) scale(1.05,.88); } 72% { transform:translate(-.04px,.08px) rotate(-2deg) scaleY(.94); } }
+@keyframes wsp-m11-rush-edge-fit { 0%,100% { transform:translate(.1px,.05px) rotate(5deg) scaleY(.95); } 50% { transform:translate(.24px,.1px) rotate(8deg) scale(1.03,.91); } }
+@keyframes wsp-m11-rush-power-fit { 0%,100% { transform:translate(-.02px,.1px) rotate(-1deg) scale(1.08,.88); } 50% { transform:translate(.1px,.15px) rotate(2deg) scale(1.12,.84); } }
+@keyframes wsp-m11-rush-counter-fit { 0%,100% { transform:translate(.12px,.08px) rotate(5deg) scaleY(.94); } 45% { transform:translate(-.14px,.12px) rotate(-6deg) scale(1.04,.9); } 72% { transform:translate(.04px,.06px) rotate(2deg) scaleY(.95); } }
+
+#watch-board .wp-pass-set.wp-pass-edge .wsp-block-arm-l,#watch-board .wp-pass-set.wp-pass-edge .wsp-sd-block-arm:first-child { animation:wsp-m11-edge-hand-l .46s ease-in-out infinite !important; }
+#watch-board .wp-pass-set.wp-pass-edge .wsp-block-arm-r,#watch-board .wp-pass-set.wp-pass-edge .wsp-sd-block-arm:last-child { animation:wsp-m11-edge-hand-r .46s ease-in-out infinite !important; }
+#watch-board .wp-pass-set.wp-pass-power .wsp-block-arm-l,#watch-board .wp-pass-set.wp-pass-power .wsp-block-arm-r,#watch-board .wp-pass-set.wp-pass-power .wsp-sd-block-arm { animation:wsp-m11-power-hands .42s steps(2,end) infinite !important; }
+#watch-board .wp-pass-set.wp-pass-counter .wsp-block-arm-l,#watch-board .wp-pass-set.wp-pass-counter .wsp-sd-block-arm:first-child { animation:wsp-m11-counter-hand-l .5s ease-in-out infinite !important; }
+#watch-board .wp-pass-set.wp-pass-counter .wsp-block-arm-r,#watch-board .wp-pass-set.wp-pass-counter .wsp-sd-block-arm:last-child { animation:wsp-m11-counter-hand-r .5s ease-in-out infinite !important; }
+@keyframes wsp-m11-edge-hand-l { 0%,100% { transform:translate(-.12px,-.02px) rotate(9deg); } 50% { transform:translate(.2px,-.18px) rotate(-10deg); } }
+@keyframes wsp-m11-edge-hand-r { 0%,100% { transform:translate(.06px,.1px) rotate(-5deg); } 50% { transform:translate(-.08px,-.04px) rotate(6deg); } }
+@keyframes wsp-m11-power-hands { 0%,100% { transform:translate(.04px,.08px) rotate(2deg); } 50% { transform:translate(.18px,-.08px) rotate(-5deg); } }
+@keyframes wsp-m11-counter-hand-l { 0%,100% { transform:translate(-.14px,.12px) rotate(11deg); } 42% { transform:translate(.22px,-.18px) rotate(-13deg); } 72% { transform:translate(.02px,.04px); } }
+@keyframes wsp-m11-counter-hand-r { 0%,100% { transform:translate(.12px,-.08px) rotate(-9deg); } 42% { transform:translate(-.18px,.16px) rotate(12deg); } 72% { transform:translate(.03px,.02px); } }
+
+#watch-board.watch-pass-pocket .wp-pass-set.wp-pass-edge .wsp-sd-thigh-b { animation:wsp-m11-kick-back .46s ease-in-out infinite !important; }
+#watch-board.watch-pass-pocket .wp-pass-set.wp-pass-edge .wsp-sd-thigh-f { animation:wsp-m11-kick-post .46s ease-in-out infinite !important; }
+#watch-board.watch-pass-pocket .wp-pass-set.wp-pass-power .wsp-sd-thigh-b { animation:wsp-m11-anchor-back .42s steps(2,end) infinite !important; }
+#watch-board.watch-pass-pocket .wp-pass-set.wp-pass-power .wsp-sd-thigh-f { animation:wsp-m11-anchor-post .42s steps(2,end) infinite !important; }
+#watch-board.watch-pass-pocket .wp-pass-set.wp-pass-counter .wsp-sd-thigh-b { animation:wsp-m11-square-back .5s ease-in-out infinite !important; }
+#watch-board.watch-pass-pocket .wp-pass-set.wp-pass-counter .wsp-sd-thigh-f { animation:wsp-m11-square-post .5s ease-in-out infinite !important; }
+@keyframes wsp-m11-kick-back { 0%,100% { transform:rotate(14deg) translateX(-.06px); } 50% { transform:rotate(-18deg) translateX(-.24px); } }
+@keyframes wsp-m11-kick-post { 0%,100% { transform:rotate(-8deg); } 50% { transform:rotate(14deg) translateX(.08px); } }
+@keyframes wsp-m11-anchor-back { 0%,100% { transform:rotate(18deg) translate(-.12px,.08px); } 50% { transform:rotate(22deg) translate(-.18px,.12px); } }
+@keyframes wsp-m11-anchor-post { 0%,100% { transform:rotate(-18deg) translate(.12px,.08px); } 50% { transform:rotate(-22deg) translate(.18px,.12px); } }
+@keyframes wsp-m11-square-back { 0%,100% { transform:rotate(12deg) translateX(-.12px); } 45% { transform:rotate(-10deg) translateX(.06px); } }
+@keyframes wsp-m11-square-post { 0%,100% { transform:rotate(-10deg) translateX(.1px); } 45% { transform:rotate(12deg) translateX(-.05px); } }
+
+/* When the recorded rush wins, the blocker opens the corresponding gate while
+   the existing rusher move remains responsible for the winner's finish. */
+#watch-board.watch-pass-pocket .wp-pass-set.wp-pass-lost.wp-pass-edge .wsp-shell { animation:wsp-m11-lose-edge .48s ease-out both !important; }
+#watch-board.watch-pass-pocket .wp-pass-set.wp-pass-lost.wp-pass-power .wsp-shell { animation:wsp-m11-lose-power .5s ease-out both !important; }
+#watch-board.watch-pass-pocket .wp-pass-set.wp-pass-lost.wp-pass-counter .wsp-shell { animation:wsp-m11-lose-counter .5s ease-out both !important; }
+#watch-board .wp-pass-set.wp-pass-lost .wsp-block-arm-l,#watch-board .wp-pass-set.wp-pass-lost .wsp-block-arm-r,#watch-board .wp-pass-set.wp-pass-lost .wsp-sd-block-arm { animation:wsp-m11-hands-cleared .44s ease-out both !important; }
+@keyframes wsp-m11-lose-edge { 0% { transform:translate(-.1px,.08px) rotate(-4deg); } 55% { transform:translate(.34px,.12px) rotate(16deg) scaleY(.9); } 100% { transform:translate(.22px,.08px) rotate(9deg) scaleY(.93); } }
+@keyframes wsp-m11-lose-power { 0% { transform:translateY(.12px) scale(1.08,.88); } 55% { transform:translate(-.42px,.2px) rotate(-9deg) scale(1.12,.82); } 100% { transform:translate(-.28px,.12px) rotate(-5deg) scaleY(.88); } }
+@keyframes wsp-m11-lose-counter { 0% { transform:translate(-.08px,.08px) rotate(-3deg); } 42% { transform:translate(.28px,.12px) rotate(12deg) scaleY(.9); } 72% { transform:translate(-.24px,.16px) rotate(-11deg) scaleY(.86); } 100% { transform:translate(-.12px,.08px) rotate(-5deg) scaleY(.92); } }
+@keyframes wsp-m11-hands-cleared { 0% { transform:translate(0,0) rotate(0); } 58% { transform:translate(-.28px,.2px) rotate(22deg); } 100% { transform:translate(-.12px,.08px) rotate(8deg); } }
+
+#watch-board.watch-pass-pocket .wp-pocket-qb:not(.wp-throwing) .wsp-shell { animation:wsp-m11-qb-pocket .58s ease-in-out infinite !important; }
+@keyframes wsp-m11-qb-pocket { 0%,100% { transform:translateY(.02px) scaleY(.98); } 50% { transform:translate(-.06px,.08px) scaleY(.95); } }
+
+/* Milestone 12: route and coverage leverage. The physics layer exports the
+   called route shape, its target flag and the real cover pairing. These poses
+   ride those recorded tracks; they never redirect an actor or change a result. */
+#watch-board.watch-route-live .wp-route-release:not(.wp-blocking):not(.wp-catching) .wsp-shell {
+  animation:wsp-m12-release .24s cubic-bezier(.18,.82,.28,1) both !important;
+}
+#watch-board.watch-route-live .wp-route-stem:not(.wp-blocking):not(.wp-catching) .wsp-shell {
+  animation:wsp-m12-stem .38s ease-in-out infinite !important;
+}
+#watch-board.watch-route-live .wp-route-break.wp-route-left:not(.wp-blocking):not(.wp-catching) .wsp-shell {
+  animation:wsp-m12-cut-left .36s cubic-bezier(.18,.82,.3,1) both !important;
+}
+#watch-board.watch-route-live .wp-route-break.wp-route-right:not(.wp-blocking):not(.wp-catching) .wsp-shell {
+  animation:wsp-m12-cut-right .36s cubic-bezier(.18,.82,.3,1) both !important;
+}
+#watch-board.watch-route-live .wp-route-break.wp-route-double:not(.wp-blocking):not(.wp-catching) .wsp-shell {
+  animation:wsp-m12-double .46s cubic-bezier(.2,.78,.3,1) both !important;
+}
+#watch-board.watch-route-live .wp-route-break.wp-route-settle:not(.wp-blocking):not(.wp-catching) .wsp-shell {
+  animation:wsp-m12-settle .38s cubic-bezier(.2,.78,.32,1) both !important;
+}
+@keyframes wsp-m12-release { 0% { transform:translateY(.1px) rotate(0) scaleY(.95); } 52% { transform:translate(.18px,-.08px) rotate(7deg) scale(1.02,.97); } 100% { transform:translate(.08px,-.04px) rotate(3deg); } }
+@keyframes wsp-m12-stem { 0%,100% { transform:translateY(.01px) rotate(-1deg); } 50% { transform:translateY(-.08px) rotate(2deg) scaleY(1.01); } }
+@keyframes wsp-m12-cut-left { 0% { transform:translate(.08px,0) rotate(2deg); } 48% { transform:translate(-.28px,.12px) rotate(-12deg) scale(.98,.9); } 100% { transform:translate(-.16px,-.04px) rotate(-5deg); } }
+@keyframes wsp-m12-cut-right { 0% { transform:translate(-.08px,0) rotate(-2deg); } 48% { transform:translate(.28px,.12px) rotate(12deg) scale(.98,.9); } 100% { transform:translate(.16px,-.04px) rotate(5deg); } }
+@keyframes wsp-m12-double { 0% { transform:translate(0,0) rotate(0); } 30% { transform:translate(-.22px,.1px) rotate(-9deg) scaleY(.92); } 58% { transform:translate(.2px,.08px) rotate(10deg) scaleY(.9); } 100% { transform:translate(.08px,-.06px) rotate(3deg); } }
+@keyframes wsp-m12-settle { 0% { transform:translateY(-.06px) scaleY(1.02); } 62% { transform:translateY(.18px) rotate(5deg) scale(1.03,.88); } 100% { transform:translateY(.08px) rotate(1deg) scaleY(.94); } }
+
+/* A cut has a visible speed-cut plant before the body exits. The left/right
+   families deliberately load opposite legs instead of mirroring one generic
+   wobble over the route track. */
+#watch-board .wp-route-break.wp-route-left .wsp-sd-thigh-f,
+#watch-board .wp-route-break.wp-route-left .wsp-leg-chain:first-child { animation:wsp-m12-plant-left .36s cubic-bezier(.2,.82,.3,1) both !important; }
+#watch-board .wp-route-break.wp-route-right .wsp-sd-thigh-b,
+#watch-board .wp-route-break.wp-route-right .wsp-leg-chain:last-child { animation:wsp-m12-plant-right .36s cubic-bezier(.2,.82,.3,1) both !important; }
+#watch-board .wp-route-break.wp-route-double .wsp-sd-thigh-f { animation:wsp-m12-stutter-front .46s steps(3,end) both !important; }
+#watch-board .wp-route-break.wp-route-double .wsp-sd-thigh-b { animation:wsp-m12-stutter-back .46s steps(3,end) both !important; }
+@keyframes wsp-m12-plant-left { 0% { transform:rotate(-12deg); } 55% { transform:rotate(30deg) translate(-.12px,.1px); } 100% { transform:rotate(8deg); } }
+@keyframes wsp-m12-plant-right { 0% { transform:rotate(12deg); } 55% { transform:rotate(-30deg) translate(.12px,.1px); } 100% { transform:rotate(-8deg); } }
+@keyframes wsp-m12-stutter-front { 0% { transform:rotate(-18deg); } 50% { transform:rotate(24deg) translateX(.12px); } 100% { transform:rotate(-8deg); } }
+@keyframes wsp-m12-stutter-back { 0% { transform:rotate(16deg); } 50% { transform:rotate(-22deg) translateX(-.12px); } 100% { transform:rotate(7deg); } }
+
+/* The target gathers his hands late in the flight while keeping the run pose;
+   the actual catch pose still belongs exclusively to the recorded catch cue. */
+#watch-board .wp-route-hands:not(.wp-catching) .wsp-run-arm-l { animation:wsp-m12-gather-left .26s ease-in-out infinite !important; }
+#watch-board .wp-route-hands:not(.wp-catching) .wsp-run-arm-r { animation:wsp-m12-gather-right .26s ease-in-out infinite !important; }
+#watch-board .wp-route-hands:not(.wp-catching) .wsp-sd-uarm-f { animation:wsp-m12-gather-side .26s ease-in-out infinite !important; }
+@keyframes wsp-m12-gather-left { 0%,100% { transform:rotate(-8deg) translate(.06px,-.05px); } 50% { transform:rotate(10deg) translate(.18px,-.22px); } }
+@keyframes wsp-m12-gather-right { 0%,100% { transform:rotate(8deg) translate(-.06px,-.05px); } 50% { transform:rotate(-10deg) translate(-.18px,-.22px); } }
+@keyframes wsp-m12-gather-side { 0%,100% { transform:rotate(-6deg) translateY(-.04px); } 50% { transform:rotate(12deg) translate(.1px,-.18px); } }
+
+/* Coverage now reads as a sequence: square pedal, hip turn, then trail. Press
+   contact keeps the existing jam art and therefore never gets overwritten. */
+#watch-board.watch-route-live .wp-cov-pedal:not(.wp-blocking):not(.wp-contesting) .wsp-shell { animation:wsp-m12-pedal .34s steps(2,end) infinite !important; }
+#watch-board.watch-route-live .wp-cov-turn.wp-cov-left:not(.wp-contesting) .wsp-shell { animation:wsp-m12-turn-left .34s cubic-bezier(.2,.8,.3,1) both !important; }
+#watch-board.watch-route-live .wp-cov-turn.wp-cov-right:not(.wp-contesting) .wsp-shell { animation:wsp-m12-turn-right .34s cubic-bezier(.2,.8,.3,1) both !important; }
+#watch-board.watch-route-live .wp-cov-trail:not(.wp-contesting) .wsp-shell { animation:wsp-m12-trail .36s ease-in-out infinite !important; }
+#watch-board .wp-cov-pedal .wsp-sd-thigh-f { animation:wsp-m12-pedal-front .34s steps(2,end) infinite !important; }
+#watch-board .wp-cov-pedal .wsp-sd-thigh-b { animation:wsp-m12-pedal-back .34s steps(2,end) infinite !important; }
+#watch-board .wp-cov-target .wsp-shadow { fill:rgba(0,0,0,.4); transform:scaleX(1.08); }
+@keyframes wsp-m12-pedal { 0%,100% { transform:translateY(.08px) rotate(-2deg) scaleY(.95); } 50% { transform:translateY(.12px) rotate(2deg) scale(1.02,.92); } }
+@keyframes wsp-m12-turn-left { 0% { transform:translateY(.08px) rotate(0) scaleY(.94); } 55% { transform:translate(-.24px,.08px) rotate(-14deg) scaleY(.91); } 100% { transform:translate(-.1px,-.04px) rotate(-5deg); } }
+@keyframes wsp-m12-turn-right { 0% { transform:translateY(.08px) rotate(0) scaleY(.94); } 55% { transform:translate(.24px,.08px) rotate(14deg) scaleY(.91); } 100% { transform:translate(.1px,-.04px) rotate(5deg); } }
+@keyframes wsp-m12-trail { 0%,100% { transform:translateY(.02px) rotate(3deg); } 50% { transform:translate(.1px,-.08px) rotate(6deg) scaleY(1.01); } }
+@keyframes wsp-m12-pedal-front { 0%,100% { transform:rotate(16deg) translateY(.02px); } 50% { transform:rotate(-12deg) translateY(.1px); } }
+@keyframes wsp-m12-pedal-back { 0%,100% { transform:rotate(-14deg) translateY(.08px); } 50% { transform:rotate(12deg) translateY(.02px); } }
+
+/* At the catch point both bodies now finish the same football event. A secure
+   catch attacks and clamps the ball; a breakup plays through the receiver's
+   hands and visibly rakes them apart. */
+.wp-catchpoint .wsp-shadow { fill:rgba(0,0,0,.44); transform:scaleX(1.16); }
+#watch-board .wp-catchpoint-receiver.wp-catchpoint-secure .wsp-catch-arm-l,
+#watch-board .wp-catchpoint-receiver.wp-catchpoint-secure .wsp-catch-arm-r,
+#watch-board .wp-catchpoint-receiver.wp-catchpoint-secure .wsp-sd-catch-arm { animation:wsp-m12-strong-hands .42s cubic-bezier(.18,.82,.3,1) both !important; }
+#watch-board .wp-catchpoint-defender.wp-catchpoint-secure .wsp-tkl-arm-l,
+#watch-board .wp-catchpoint-defender.wp-catchpoint-secure .wsp-tkl-arm-r,
+#watch-board .wp-catchpoint-defender.wp-catchpoint-secure .wsp-sd-tkl-arm { animation:wsp-m12-play-through .42s cubic-bezier(.18,.8,.3,1) both !important; }
+#watch-board .wp-catchpoint-defender.wp-catchpoint-breakup .wsp-tkl-arm-l,
+#watch-board .wp-catchpoint-defender.wp-catchpoint-breakup .wsp-tkl-arm-r,
+#watch-board .wp-catchpoint-defender.wp-catchpoint-breakup .wsp-sd-tkl-arm { animation:wsp-m12-ball-rake .42s cubic-bezier(.16,.84,.28,1) both !important; }
+#watch-board .wp-catchpoint-receiver.wp-catchpoint-breakup .wsp-catch-arm-l,
+#watch-board .wp-catchpoint-receiver.wp-catchpoint-breakup .wsp-catch-arm-r,
+#watch-board .wp-catchpoint-receiver.wp-catchpoint-breakup .wsp-sd-catch-arm { animation:wsp-m12-hands-displaced .42s cubic-bezier(.2,.74,.34,1) both !important; }
+@keyframes wsp-m12-strong-hands { 0% { transform:translateY(.16px) rotate(13deg); } 58% { transform:translateY(-.18px) rotate(-10deg) scale(1.05); } 100% { transform:translateY(.02px) rotate(-2deg); } }
+@keyframes wsp-m12-play-through { 0% { transform:translate(.16px,.12px) rotate(18deg); } 62% { transform:translate(-.18px,-.3px) rotate(-22deg); } 100% { transform:translate(-.04px,-.08px) rotate(-6deg); } }
+@keyframes wsp-m12-ball-rake { 0% { transform:translate(.2px,.18px) rotate(22deg); } 58% { transform:translate(-.28px,-.34px) rotate(-35deg) scaleX(1.08); } 100% { transform:translate(-.08px,.04px) rotate(-10deg); } }
+@keyframes wsp-m12-hands-displaced { 0% { transform:translateY(-.1px) rotate(-5deg); } 58% { transform:translate(.3px,.18px) rotate(28deg); } 100% { transform:translate(.16px,.08px) rotate(12deg); } }
+
   </style>
 </head>
 <body>
@@ -7951,7 +8109,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "1f415adb9d";
+globalThis.__BUILD__ = "39bba9582e";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -49954,6 +50112,7 @@ ${renderAutoRecruitLog()}`;
     const blocks = [];
     let tackleCue = null, moveCue = null;
     const rushCues = [], jamCues = [];
+    const routeCues = [], coverageCues = [];
     let pressCue = null, pumpCue = null, celebrateCue = null;
     let _penWhistle = null;
     const missCues = [];
@@ -50094,6 +50253,22 @@ ${renderAutoRecruitLog()}`;
           const _isTgt = traceOpts && c.id === traceOpts.tgtId;
           const _cush = _isTgt ? clamp6(0.5 + traceOpts.sep * 4.2, 0.6, 3.8) : 1.8;
           if (_isTgt) _covActorId = best.id;
+          const _route = routeCues.find((cue2) => cue2.id === c.id) || null;
+          if (_route) {
+            const turnStart = _route.family === "vertical" ? Math.max(_route.releaseEnd, breakAt - 0.2) : _route.breakStart - 0.08;
+            coverageCues.push({
+              id: best.id,
+              receiverId: c.id,
+              target: !!_isTgt,
+              press,
+              zone: false,
+              start: PRESNAP,
+              pedalEnd: Math.max(PRESNAP + 0.18, turnStart),
+              turnStart,
+              turnEnd: turnStart + 0.3,
+              end: _route.end
+            });
+          }
           const _breakPt = _isTgt && traceOpts.tgtPt ? () => traceOpts.tgtPt : breakTo;
           best.behave = (t2) => t2 < PRESNAP ? null : press && t2 < PRESNAP + 0.35 ? [wr.x, wr.y - 0.5, 4.4] : breakAt != null && t2 >= breakAt ? [_breakPt()[0], _breakPt()[1], best.speed] : [wr.x, wr.y - _cush, best.speed * 0.97];
         }
@@ -50102,6 +50277,18 @@ ${renderAutoRecruitLog()}`;
         if (d.behave || taken.has(d.id)) continue;
         const land = d.slot.pos === "CB" ? p.coverage === "Cover 2" ? [d.slot.bx, 20] : p.coverage === "Cover 4" ? [d.slot.bx, 7] : [d.slot.bx, 9] : d.slot.pos === "S" ? d.home || [d.slot.bx, 8] : [clamp6(d.slot.bx * 0.6 + 20, 20, 80), 21];
         d.behave = (t2) => t2 < PRESNAP ? null : breakAt != null && t2 >= breakAt ? [breakTo()[0], breakTo()[1], d.speed] : [land[0], land[1], d.speed * 0.8];
+        if (routeCues.length && breakAt != null) coverageCues.push({
+          id: d.id,
+          receiverId: null,
+          target: false,
+          press: false,
+          zone: true,
+          start: PRESNAP,
+          pedalEnd: Math.max(PRESNAP + 0.28, breakAt - 0.2),
+          turnStart: Math.max(PRESNAP + 0.28, breakAt - 0.2),
+          turnEnd: breakAt + 0.14,
+          end: breakAt + 0.55
+        });
       }
     };
     if (isPen) {
@@ -50242,6 +50429,38 @@ ${renderAutoRecruitLog()}`;
         const shape0 = isScreenTgt ? screenShape : shapes[i % shapes.length];
         const shape = s === tgtSlot && tr && tr.dbl && DBL_SHAPE[shape0] ? DBL_SHAPE[shape0] : shape0;
         const wps = routeWaypoints(shape, s.bx, s.by, mid);
+        const vertical = ["go", "seam", "fade", "deepfade"].includes(shape);
+        const double = ["sluggo", "postcorner", "outandup", "whip", "pivot"].includes(shape);
+        const settle = ["curl", "comeback", "hitch", "stick"].includes(shape);
+        let turnIdx = Math.min(1, wps.length - 1), turnScore = -1;
+        for (let wi = 1; wi < wps.length - 1; wi++) {
+          const ax = wps[wi][0] - wps[wi - 1][0], ay = wps[wi][1] - wps[wi - 1][1];
+          const bx = wps[wi + 1][0] - wps[wi][0], by = wps[wi + 1][1] - wps[wi][1];
+          const score = 1 - (ax * bx + ay * by) / ((Math.hypot(ax, ay) || 1) * (Math.hypot(bx, by) || 1));
+          if (score > turnScore) {
+            turnScore = score;
+            turnIdx = wi;
+          }
+        }
+        const turnPt = wps[turnIdx] || wps[0] || [s.bx, s.by];
+        const nextPt = wps[Math.min(turnIdx + 1, wps.length - 1)] || turnPt;
+        const turnDist = Math.hypot(turnPt[0] - s.bx, turnPt[1] - s.by);
+        const breakAt2 = PRESNAP + clamp6(turnDist / Math.max(3.8, A[s.id].speed), 0.28, Math.max(0.3, throwAt - PRESNAP - 0.1));
+        const family = vertical ? "vertical" : double ? "double" : settle ? "settle" : "cut";
+        const direction = nextPt[0] < turnPt[0] ? "left" : nextPt[0] > turnPt[0] ? "right" : "straight";
+        routeCues.push({
+          id: s.id,
+          shape,
+          family,
+          direction,
+          target: s === tgtSlot,
+          start: PRESNAP,
+          releaseEnd: PRESNAP + (shape === "slant" || shape === "quickout" ? 0.16 : 0.24),
+          breakStart: breakAt2 - 0.12,
+          breakEnd: breakAt2 + (double ? 0.34 : 0.22),
+          handsStart: s === tgtSlot && !_throwAway ? throwAt + flight * 0.38 : null,
+          end: tCatch
+        });
         const base = waypointBehavior(wps, A[s.id].speed, PRESNAP);
         A[s.id].behave = s === tgtSlot && !_throwAway && (!screen || screenShape) ? (t2, w2, a2) => t2 < PRESNAP ? null : t2 >= tCatch && p.complete && !p.turnover ? [catchPt[0], endY, schedSp(a2, [catchPt[0], endY], t2, tEnd, a2.speed)] : t2 >= (isScreenTgt ? throwAt : throwAt * 0.9) ? [catchPt[0], catchPt[1], a2.speed] : base(t2, w2, a2) : base;
       });
@@ -50893,6 +51112,8 @@ ${renderAutoRecruitLog()}`;
       moveCue,
       rushCues,
       jamCues,
+      routeCues,
+      coverageCues,
       pressCue,
       pumpCue,
       celebrateCue,
@@ -54507,7 +54728,7 @@ ${renderAutoRecruitLog()}`;
     const svg = document.getElementById("watch-board");
     if (!svg) return null;
     watchStopAnim();
-    svg.classList.remove("watch-presnap", "watch-snap-release");
+    svg.classList.remove("watch-presnap", "watch-snap-release", "watch-pass-pocket", "watch-route-live");
     svg.classList.toggle("watch-replay", !!opts.replay);
     const cameraBug = document.getElementById("watch-camera-bug");
     const replayBug = document.getElementById("watch-replay-bug");
@@ -54647,6 +54868,8 @@ ${renderAutoRecruitLog()}`;
     }
     const rushCues = script.rushCues || [];
     const jamCues = script.jamCues || [];
+    const routeCues = script.routeCues || [];
+    const coverageCues = script.coverageCues || [];
     const pressCue = script.pressCue || null;
     const pumpCue = script.pumpCue || null;
     const celebrateCue = script.celebrateCue ? { id: script.celebrateCue.id, start: script.celebrateCue.t, end: script.dur } : null;
@@ -54667,6 +54890,47 @@ ${renderAutoRecruitLog()}`;
       "wp-contact-strain",
       "wp-contact-tight",
       "wp-contact-space"
+    ];
+    const passSetCls = [
+      "wp-pass-set",
+      "wp-pass-anchor",
+      "wp-pass-lost",
+      "wp-pass-engaged",
+      "wp-pass-won",
+      "wp-pass-edge",
+      "wp-pass-power",
+      "wp-pass-counter",
+      "wp-pocket-qb"
+    ];
+    const downfieldCls = [
+      "wp-route-active",
+      "wp-route-target",
+      "wp-route-release",
+      "wp-route-stem",
+      "wp-route-break",
+      "wp-route-cut",
+      "wp-route-double",
+      "wp-route-settle",
+      "wp-route-vertical",
+      "wp-route-left",
+      "wp-route-right",
+      "wp-route-straight",
+      "wp-route-hands",
+      "wp-cov-active",
+      "wp-cov-target",
+      "wp-cov-man",
+      "wp-cov-zone",
+      "wp-cov-press",
+      "wp-cov-pedal",
+      "wp-cov-turn",
+      "wp-cov-trail",
+      "wp-cov-left",
+      "wp-cov-right",
+      "wp-catchpoint",
+      "wp-catchpoint-receiver",
+      "wp-catchpoint-defender",
+      "wp-catchpoint-secure",
+      "wp-catchpoint-breakup"
     ];
     const liftN = ballN == null ? void 0 : ballN.querySelector(".wab-lift");
     let flightArc = null;
@@ -54703,9 +54967,13 @@ ${renderAutoRecruitLog()}`;
       let cx = null, cy = null, cd = 1e9, carrierId = null;
       const possessionTeam = turnoverFx && t >= turnoverFx.t + (turnoverFx.kind === "fum" ? 0.32 : 0) ? "def" : "off";
       const playOn = t >= script.presnap;
+      const pocketEnd = script.throwCue ? script.throwCue.release + 0.08 : tackleCue && tackleCue.sack ? tackleCue.impact + 0.08 : script.presnap;
+      const pocketOn = rushCues.length > 0 && playOn && t <= pocketEnd;
       svg.classList.toggle("watch-presnap", !playOn);
       svg.classList.toggle("watch-snap-release", playOn && t < script.presnap + 0.18);
       svg.classList.toggle("watch-in-play", playOn);
+      svg.classList.toggle("watch-pass-pocket", pocketOn);
+      svg.classList.toggle("watch-route-live", routeCues.length > 0 && playOn && (catchT == null || t <= catchT + 0.08));
       const actorPts = {};
       for (const a of script.actors) {
         const [wx, wy] = sampleTrack(a.track, script.step, t);
@@ -54726,7 +54994,8 @@ ${renderAutoRecruitLog()}`;
           }
         }
       }
-      Object.values(nodes).forEach((node) => node.classList.remove("wp-near-ball", "wp-blocking", "wp-blocked", ...repCls, ...contactCls));
+      Object.values(nodes).forEach((node) => node.classList.remove("wp-near-ball", "wp-blocking", "wp-blocked", ...repCls, ...contactCls, ...passSetCls, ...downfieldCls));
+      if (pocketOn) (_a2 = nodes.QB) == null ? void 0 : _a2.classList.add("wp-pocket-qb");
       if (t > script.presnap && cd < 4.4 && carrierId) (_a2 = nodes[carrierId]) == null ? void 0 : _a2.classList.add("wp-near-ball");
       const throwCue = script.throwCue;
       const throwOn = !!throwCue && t >= throwCue.start && t <= throwCue.end;
@@ -54741,12 +55010,41 @@ ${renderAutoRecruitLog()}`;
           liftN.style.transform = `translateY(${(-Math.sin(u2 * Math.PI) * flightArc.loft).toFixed(2)}px)`;
         } else if (liftN.style.transform) liftN.style.transform = "";
       }
+      for (const rc of routeCues) {
+        if (t < rc.start || t > rc.end) continue;
+        const routeNode = nodes[rc.id];
+        if (!routeNode) continue;
+        routeNode.classList.add("wp-route-active", "wp-route-" + rc.family, "wp-route-" + rc.direction);
+        if (rc.target) routeNode.classList.add("wp-route-target");
+        if (t <= rc.releaseEnd) routeNode.classList.add("wp-route-release");
+        else if (rc.handsStart != null && t >= rc.handsStart) routeNode.classList.add("wp-route-hands");
+        else if (rc.family !== "vertical" && t >= rc.breakStart && t <= rc.breakEnd) routeNode.classList.add("wp-route-break");
+        else routeNode.classList.add("wp-route-stem");
+      }
+      for (const cc of coverageCues) {
+        if (t < cc.start || t > cc.end) continue;
+        const coverNode = nodes[cc.id];
+        if (!coverNode) continue;
+        coverNode.classList.add("wp-cov-active", cc.zone ? "wp-cov-zone" : "wp-cov-man");
+        if (cc.target) coverNode.classList.add("wp-cov-target");
+        if (cc.press && t <= cc.start + 0.42) coverNode.classList.add("wp-cov-press");
+        else if (t < cc.pedalEnd) coverNode.classList.add("wp-cov-pedal");
+        else if (t <= cc.turnEnd) coverNode.classList.add("wp-cov-turn");
+        else coverNode.classList.add("wp-cov-trail");
+        const receiverPt = cc.receiverId ? actorPts[cc.receiverId] : null;
+        const coverPt = actorPts[cc.id];
+        if (receiverPt && coverPt) coverNode.classList.add(coverPt[0] < receiverPt[0] ? "wp-cov-left" : "wp-cov-right");
+      }
       if (catchCue) {
         const on = t >= catchCue.start && t <= catchCue.end;
         const cnode = nodes[catchCue.id];
         if (cnode) {
           cnode.classList.toggle("wp-catching", on);
           for (const cls of catchCue.classes) cnode.classList.toggle(cls, on);
+          cnode.classList.toggle("wp-catchpoint", on);
+          cnode.classList.toggle("wp-catchpoint-receiver", on);
+          cnode.classList.toggle("wp-catchpoint-secure", on && !catchCue.breakup);
+          cnode.classList.toggle("wp-catchpoint-breakup", on && catchCue.breakup);
           if (on) cnode.classList.remove("wp-near-ball");
         }
         if (catchCue.contestId) {
@@ -54754,6 +55052,10 @@ ${renderAutoRecruitLog()}`;
           if (contestNode) {
             contestNode.classList.toggle("wp-contesting", on);
             contestNode.classList.toggle("wp-breakup", on && catchCue.breakup);
+            contestNode.classList.toggle("wp-catchpoint", on);
+            contestNode.classList.toggle("wp-catchpoint-defender", on);
+            contestNode.classList.toggle("wp-catchpoint-breakup", on && catchCue.breakup);
+            contestNode.classList.toggle("wp-catchpoint-secure", on && !catchCue.breakup);
           }
         }
       }
@@ -54821,10 +55123,22 @@ ${renderAutoRecruitLog()}`;
       for (const rc of rushCues) {
         const on = t >= rc.t && t <= rc.t + 0.6;
         const rn = nodes[rc.id];
+        const family = rc.move === "bend" || rc.move === "rip" ? "edge" : rc.move === "bull" ? "power" : "counter";
+        const protectionOn = t >= script.presnap + 0.04 && t <= pocketEnd;
+        const lost = protectionOn && !!rc.win && t >= rc.t;
         if (rn) {
           rn.classList.toggle("wp-rushing", on);
           rn.classList.toggle("wp-rush-" + rc.move, on);
           rn.classList.toggle("wp-rush-win", !!rc.win && on);
+          if (protectionOn) rn.classList.add("wp-pass-engaged", "wp-pass-" + family);
+          if (lost) rn.classList.add("wp-pass-won");
+        }
+        if (rc.blockerId && protectionOn) {
+          const blocker = nodes[rc.blockerId];
+          if (blocker) {
+            blocker.classList.add("wp-pass-set", "wp-pass-" + family);
+            blocker.classList.add(lost ? "wp-pass-lost" : "wp-pass-anchor");
+          }
         }
         if (rc.win && rc.blockerId) {
           const shedOn = t >= rc.t && t <= rc.t + 0.7;
