@@ -6320,6 +6320,46 @@ circle.wsp-skin { transform-box:fill-box; transform-origin:center; transform:sca
 }
 @keyframes wf-ribbon-live { 0%,100% { opacity:.68; } 50% { opacity:.96; } }
 @keyframes wf-fan-bob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(var(--wf-bob)); } }
+/* ── M24: variation + optimization ──────────────────────────────────────── */
+/* Celebration variants — the style class rides the existing celebrate
+   machinery; the default bounce stays the fallback. */
+#watch-board .wp-celebrating.wp-celeb-spike .wsp-shell { animation:wsp-celeb-spike .6s ease-in-out infinite !important; }
+@keyframes wsp-celeb-spike {
+  0%,100% { transform:none; } 28% { transform:translateY(-1.5px); }
+  52% { transform:translateY(.35px) rotate(15deg); } 70% { transform:translateY(.1px) rotate(6deg); }
+}
+#watch-board .wp-celebrating.wp-celeb-leap .wsp-shell { animation:wsp-celeb-leap .7s cubic-bezier(.3,.6,.4,1) infinite !important; }
+@keyframes wsp-celeb-leap {
+  0%,100% { transform:none; } 38% { transform:translateY(-2.6px) scaleY(1.07); }
+  58% { transform:translateY(-2.1px) scaleY(1.05); } 82% { transform:translateY(-.2px) scaleY(.97); }
+}
+#watch-board .wp-celebrating.wp-celeb-flex .wsp-shell { animation:wsp-celeb-flex .8s ease-in-out infinite !important; }
+@keyframes wsp-celeb-flex {
+  0%,100% { transform:scale(1.05,.97) rotate(-4deg); } 50% { transform:scale(1.08,.96) rotate(4deg); }
+}
+/* teammates mob the celebrant — they join the bounce */
+#watch-board .wp-celeb-mob .wsp-shell { animation:wsp-celebrate .62s ease-in-out infinite !important; }
+.wp-celeb-mob .wsp-pose-run, .wp-celeb-mob .wsp-pose-carry { display:none; }
+.wp-celeb-mob .wsp-pose-catch { display:block; }
+/* Exhaustion: bent over, hands-on-knees breathing through the linger. */
+#watch-board .wp-winded:not(.wp-down):not(.wp-tackled) .wsp-shell { animation:wsp-winded 1.7s ease-in-out infinite !important; }
+@keyframes wsp-winded {
+  0%,100% { transform:rotate(7deg) translateY(.22px) scaleY(.955); }
+  50% { transform:rotate(5deg) translateY(.3px) scaleY(.93); }
+}
+/* Heads to the ball: a slight eyes-up back-lean composed into the M19 lean
+   variable (no animation conflicts — the bob lives on the shell child). */
+.wp-ball-watch .wsp { transform:rotate(calc(var(--wsp-lean, 0deg) - 4deg)); }
+/* The bench joins its crowd on the M23 roar classes. */
+.wf-bench-man { transform-box:fill-box; transform-origin:50% 100%; }
+#watch-board.watch-roar-home .wf-bench-home, #watch-board.watch-roar-away .wf-bench-away { animation:wf-bench-roar .3s steps(2,end) infinite; }
+@keyframes wf-bench-roar { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-.55px); } }
+/* Perf: crowd micro-animations pause while the camera pans hard; lite mode
+   (sticky, auto) drops the decoration price — structure stays in the DOM. */
+#watch-board.watch-panning .wf-fan-motion { animation-play-state:paused; }
+#watch-board.watch-lite .wf-crowd-life { display:none; }
+#watch-board.watch-lite .wf-stadium-ribbon { animation:none; }
+#watch-board.watch-lite .wf-fan-motion { animation:none; }
 /* ── M23: stadium life + broadcast presentation ─────────────────────────── */
 /* Section-based crowd reactions: the scoring side's people ERUPT (fast, tall
    bounce), the other side sags still. Neutral fans join every roar. */
@@ -8596,7 +8636,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "3dc35a2328";
+globalThis.__BUILD__ = "77479ac27d";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -52365,7 +52405,23 @@ ${renderAutoRecruitLog()}`;
         moveCue = { id: carrier.id, style: mv, t: mvT };
       }
     }
-    if (p.td && endInfo && endInfo.actor) celebrateCue = { id: endInfo.actor.id, t: endInfo.at + 0.15 };
+    if (p.td && endInfo && endInfo.actor) {
+      const styleRnd = rnd();
+      const short = (p.yards || 0) <= 3;
+      const deep = (p.yards || 0) >= 25;
+      const style = short ? styleRnd < 0.6 ? "spike" : "flex" : deep ? styleRnd < 0.55 ? "leap" : "flex" : styleRnd < 0.4 ? "spike" : styleRnd < 0.75 ? "bounce" : "flex";
+      const iEndC = Math.round(endInfo.at / STEP);
+      const epc = endInfo.pt;
+      const mobIds = offs.filter((a2) => a2 !== endInfo.actor).map((a2) => {
+        const tr = a2.track[Math.min(iEndC, a2.track.length - 1)];
+        return { id: a2.id, d: tr ? Math.hypot(tr[0] - epc[0], tr[1] - epc[1]) : 1e9 };
+      }).sort((x, y) => x.d - y.d).slice(0, 2).filter((m) => m.d < 18).map((m) => m.id);
+      celebrateCue = { id: endInfo.actor.id, t: endInfo.at + 0.15, style, mobIds };
+    }
+    var windedCue = null;
+    if (endInfo && carrier && !p.td && ((p.yards || 0) >= 25 || endInfo.at >= 5.2)) {
+      windedCue = { ids: [carrier.id, tackleCue ? tackleCue.id : null].filter(Boolean), t: endInfo.at + 1.6 };
+    }
     var injuryCue = p.qbInjured && endInfo ? { id: "QB", t: endInfo.at + 0.3, x: endInfo.pt[0], y: endInfo.pt[1] } : null;
     if (injuryCue) fx.push({ t: injuryCue.t + 0.25, kind: "hurt", x: injuryCue.x, y: injuryCue.y });
     if (ballEnd.pt) constrainTrack(
@@ -52547,6 +52603,7 @@ ${renderAutoRecruitLog()}`;
       pumpCue,
       qbCue,
       celebrateCue,
+      windedCue: typeof windedCue !== "undefined" ? windedCue : null,
       missCues,
       culpritCue: typeof culpritCue !== "undefined" ? culpritCue : null,
       injuryCue: typeof injuryCue !== "undefined" ? injuryCue : null,
@@ -56625,7 +56682,7 @@ ${renderAutoRecruitLog()}`;
     const pressCue = script.pressCue || null;
     const pumpCue = script.pumpCue || null;
     const qbCue = script.qbCue || null;
-    const celebrateCue = script.celebrateCue ? { id: script.celebrateCue.id, start: script.celebrateCue.t, end: script.dur } : null;
+    const celebrateCue = script.celebrateCue ? { id: script.celebrateCue.id, start: script.celebrateCue.t, end: script.dur, style: script.celebrateCue.style || "bounce", mobIds: script.celebrateCue.mobIds || [] } : null;
     let beatenCue = null;
     {
       const bf = (script.fx || []).find((f) => f.kind === "beaten");
@@ -56726,6 +56783,7 @@ ${renderAutoRecruitLog()}`;
     const camPlan = buildCameraPlan(script, p, { wideH: WIDE_H, closeH: CLOSE_H, longitudinal: WATCH_SIDE.longitudinal });
     const t0 = performance.now();
     let _tWarp = 0, _lastWall = t0;
+    let _frameEma = null, _lastFrameWall = t0;
     const shown = /* @__PURE__ */ new Set();
     const trail = [];
     let lastTrail = null;
@@ -56783,7 +56841,7 @@ ${renderAutoRecruitLog()}`;
           }
         }
       }
-      Object.values(nodes).forEach((node) => node.classList.remove("wp-near-ball", "wp-blocking", "wp-blocked", ...repCls, ...contactCls, ...passSetCls, ...downfieldCls, ...qbMechanicCls, ...tackleSetupCls));
+      Object.values(nodes).forEach((node) => node.classList.remove("wp-near-ball", "wp-ball-watch", "wp-blocking", "wp-blocked", ...repCls, ...contactCls, ...passSetCls, ...downfieldCls, ...qbMechanicCls, ...tackleSetupCls));
       if (pocketOn) (_a2 = nodes.QB) == null ? void 0 : _a2.classList.add("wp-pocket-qb");
       if (t > script.presnap && cd < 4.4 && carrierId) (_a2 = nodes[carrierId]) == null ? void 0 : _a2.classList.add("wp-near-ball");
       const throwCue = script.throwCue;
@@ -56981,7 +57039,18 @@ ${renderAutoRecruitLog()}`;
       }
       for (const jc of jamCues) (_e2 = nodes[jc.id]) == null ? void 0 : _e2.classList.toggle("wp-blocking", t >= jc.start && t <= jc.end);
       if (beatenCue) (_f = nodes[beatenCue.id]) == null ? void 0 : _f.classList.toggle("wp-stumbled", t >= beatenCue.start && t <= beatenCue.end);
-      if (celebrateCue) (_g = nodes[celebrateCue.id]) == null ? void 0 : _g.classList.toggle("wp-celebrating", t >= celebrateCue.start && t <= celebrateCue.end);
+      if (celebrateCue) {
+        const on = t >= celebrateCue.start && t <= celebrateCue.end;
+        const cn2 = nodes[celebrateCue.id];
+        if (cn2) {
+          cn2.classList.toggle("wp-celebrating", on);
+          cn2.classList.toggle("wp-celeb-" + celebrateCue.style, on);
+        }
+        for (const mid of celebrateCue.mobIds) (_g = nodes[mid]) == null ? void 0 : _g.classList.toggle("wp-celeb-mob", on);
+      }
+      if (script.windedCue) for (const wid of script.windedCue.ids) {
+        (_g = nodes[wid]) == null ? void 0 : _g.classList.toggle("wp-winded", t >= script.windedCue.t);
+      }
       for (const mc of script.missCues || []) {
         const on = t >= mc.t && t <= mc.t + 0.35;
         const n2 = nodes[mc.id];
@@ -57158,6 +57227,14 @@ ${renderAutoRecruitLog()}`;
         ballN == null ? void 0 : ballN.classList.toggle("wp-ball-tipped", deflectOn && t <= dc.t + 0.62);
         ballN == null ? void 0 : ballN.setAttribute("transform", `translate(${rbx.toFixed(2)},${rby.toFixed(2)})`);
         if (ballN) ballN.dataset.possess = carriedOn ? cc.id : attach ? attach[0] : "";
+        if (inAir && catchCue && actorPts[catchCue.id]) {
+          const cp2 = actorPts[catchCue.id];
+          for (const a of script.actors) {
+            if (a.team !== "def") continue;
+            const n3 = nodes[a.id], pt3 = actorPts[a.id];
+            if (n3 && pt3 && Math.hypot(pt3[0] - cp2[0], pt3[1] - cp2[1]) < 16) n3.classList.add("wp-ball-watch");
+          }
+        }
       }
       if (officialNodes.length) {
         const pos = offPlan.at(t);
@@ -57201,6 +57278,14 @@ ${renderAutoRecruitLog()}`;
       }
       setCam();
       if (parN) parN.setAttribute("transform", `translate(${((camX - camX0Par) * 0.12).toFixed(2)},0)`);
+      svg.classList.toggle("watch-panning", Math.abs(camVX) > 0.55);
+      {
+        const dtW = Math.min(300, _wallNow - _lastFrameWall);
+        _lastFrameWall = _wallNow;
+        _frameEma = _frameEma == null ? 16 : _frameEma * 0.94 + dtW * 0.06;
+        if (_frameEma > 95) _watchLiteMode = true;
+        svg.classList.toggle("watch-lite", _watchLiteMode);
+      }
       if (t > script.presnap && (!lastTrail || Math.hypot(bx - lastTrail[0], by - lastTrail[1]) > 0.6)) {
         lastTrail = [bx, by];
         trail.push(`${bx.toFixed(1)},${by.toFixed(1)}`);
@@ -57838,6 +57923,7 @@ ${renderAutoRecruitLog()}`;
   function watchOfficialMarkup(id, x, y) {
     return `<g class="wp-official" data-wpo="${id}" transform="translate(${x.toFixed(2)},${y.toFixed(2)})"><ellipse class="wpo-shadow" cx="0" cy="0" rx=".95" ry=".22"/><g class="wpo-body"><rect class="wpo-legs" x="-.48" y="-1.45" width=".96" height="1.45"/><rect class="wpo-torso" x="-.66" y="-3.05" width="1.32" height="1.6"/><path class="wpo-stripes" d="M-.44-3.05v1.6M-.15-3.05v1.6M.15-3.05v1.6M.44-3.05v1.6"/><g class="wpo-arm wpo-arm-l"><rect x="-1" y="-2.95" width=".3" height="1.05"/></g><g class="wpo-arm wpo-arm-r"><rect x=".7" y="-2.95" width=".3" height="1.05"/></g><circle class="wpo-head" cx="0" cy="-3.5" r=".4"/><rect class="wpo-cap" x="-.4" y="-3.95" width=".8" height=".28"/></g></g>`;
   }
+  var _watchLiteMode = false;
   function watchCrowdReact(svg, side) {
     if (!svg) return;
     const other = side === "home" ? "away" : "home";
@@ -57961,16 +58047,16 @@ ${renderAutoRecruitLog()}`;
       if (p.down) {
         lines += `<g class="wf-down-gang" transform="translate(31,${sy.toFixed(1)})"><rect x="-1.1" y="0" width="2.2" height="3.2" class="wf-crew"/><rect x="-1.7" y="-3.5" width="3.4" height="3.6" class="wf-downbox-card"/><text x="0" y="-0.75" class="wf-downbox-num" data-wf-down="${p.down}">${p.down}</text></g>`;
       }
-      const bench = (screenA, fill) => {
+      const bench = (screenA, fill, side) => {
         let s = "";
         for (let i = 0; i < 7; i++) {
           const bx2 = screenA + i * 2.6 * WATCH_SIDE.ypu * WATCH_SIDE.longitudinal, lift = i % 3 * 0.22;
-          s += `<rect x="${(bx2 - 0.55).toFixed(1)}" y="${(sy + 0.5 - lift).toFixed(2)}" width="1.1" height="1.7" class="wf-bench-man" fill="${fill}"/>`;
+          s += `<rect x="${(bx2 - 0.55).toFixed(1)}" y="${(sy + 0.5 - lift).toFixed(2)}" width="1.1" height="1.7" class="wf-bench-man wf-bench-${side}" fill="${fill}"/>`;
         }
         return s;
       };
       const yardScale = WATCH_SIDE.ypu * WATCH_SIDE.longitudinal;
-      under += bench(gLeft + 22 * yardScale, homeC || "#8a94a8") + bench(gLeft + 60 * yardScale, awayC || "#8a94a8");
+      under += bench(gLeft + 22 * yardScale, homeC || "#8a94a8", "home") + bench(gLeft + 60 * yardScale, awayC || "#8a94a8", "away");
     } else {
       under += `<rect x="${X_LEFT}" y="${FT}" width="${X_RIGHT - X_LEFT}" height="${FH}" class="wf-turf"/>`;
       for (let x = X_LEFT; x < X_RIGHT; x += 14) under += `<rect x="${x}" y="${FT}" width="7" height="${FH}" class="wf-mow"/>`;
