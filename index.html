@@ -8523,7 +8523,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "b849355765";
+globalThis.__BUILD__ = "a0650ce12d";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -52480,6 +52480,95 @@ ${renderAutoRecruitLog()}`;
       fx: fx.filter((f) => f.kind !== "pitch")
     };
   }
+  function buildCameraPlan(script, p, opts = {}) {
+    const WIDE_H = opts.wideH != null ? opts.wideH : 53;
+    const CLOSE_H = opts.closeH != null ? opts.closeH : 44;
+    const LONG = opts.longitudinal != null ? opts.longitudinal : 1.35;
+    const dur = script.dur;
+    const S = script.step;
+    const bt = script.ball.track;
+    const fx = script.fx || [];
+    const catchFx = fx.find((f) => f.kind === "catch" || f.kind === "inc" || f.kind === "int") || null;
+    const endFx = fx.find((f) => f.kind === "td" || f.kind === "tackle" || f.kind === "sack") || null;
+    const toFx = fx.find((f) => f.kind === "int" || f.kind === "fum") || null;
+    const tc = script.tackleCue, th = script.throwCue;
+    const presnap = script.presnap;
+    const ballAt = (t) => sampleTrack(bt, S, t);
+    const endPt = tc ? [tc.x, tc.y] : endFx ? [endFx.x, endFx.y] : null;
+    const catchPt = catchFx ? [catchFx.x, catchFx.y] : null;
+    const catchT = catchFx ? catchFx.t : null;
+    const settle = toFx ? { start: toFx.t, end: toFx.t + 0.8 } : null;
+    const hold = p && p.td && script.celebrateCue ? { start: script.celebrateCue.t, pt: endPt || ballAt(dur) } : null;
+    const cl01 = (v) => Math.max(0, Math.min(1, v));
+    const anchorAt = (t) => {
+      if (t < presnap) return ballAt(0);
+      const b = ballAt(t);
+      if (hold && t >= hold.start) return hold.pt;
+      if (settle && t >= settle.start && t < settle.start + 0.45) return [toFx.x, toFx.y];
+      if (th && catchPt && catchT != null && t >= th.start && t < catchT) {
+        const w = 0.35 + 0.4 * cl01((t - th.start) / Math.max(0.2, catchT - th.start));
+        return [b[0] + (catchPt[0] - b[0]) * w, b[1] + (catchPt[1] - b[1]) * w];
+      }
+      if (endPt && t > presnap + 0.25) {
+        const dx = endPt[0] - b[0], dy = endPt[1] - b[1];
+        const d = Math.hypot(dx, dy);
+        if (d > 0.1) {
+          const lead = Math.min(8, d * 0.35);
+          return [b[0] + dx / d * lead, b[1] + dy / d * lead];
+        }
+      }
+      return b;
+    };
+    const goalNear = p && p.fieldPos != null && p.fieldPos >= 92;
+    const hAt = (t, replay) => {
+      if (t <= presnap + 0.15) return WIDE_H;
+      const b = ballAt(t);
+      const travel = Math.abs(31 - b[1]) * LONG;
+      let h = CLOSE_H + cl01((travel - 13) / 34) * 8;
+      if (th && catchPt && catchT != null && t >= th.release && t < catchT) {
+        const spread = Math.abs(catchPt[1] - b[1]) * LONG;
+        h = Math.max(h, Math.min(56, CLOSE_H + spread * 0.58));
+      }
+      if (settle && t >= settle.start && t <= settle.end) h = Math.max(h, CLOSE_H + 3);
+      if (catchFx && t >= catchFx.t - 0.18 && t <= catchFx.t + 0.36) h = Math.min(h, replay ? 39.5 : 42);
+      if (tc && t >= tc.t - 0.24) h = Math.min(h, replay ? 39 : 41.5);
+      if (goalNear && t > presnap + 0.4) h = Math.min(h, 42.5);
+      if (hold && t >= hold.start) h = Math.min(h, 40);
+      return h;
+    };
+    const raw = [];
+    const addW = (c, half) => {
+      if (c == null) return;
+      raw.push([Math.max(0, c - half), Math.min(dur, c + half)]);
+    };
+    if (catchFx) addW(catchFx.t, 0.28);
+    if (tc) addW(tc.t, 0.42);
+    if (script.breakCue) addW(script.breakCue.t, 0.32);
+    if (script.stripCue) addW(script.stripCue.t, 0.3);
+    if (toFx) addW(toFx.t, 0.3);
+    raw.sort((a, b) => a[0] - b[0]);
+    const warpSegs = [];
+    for (const s of raw) {
+      const m = warpSegs[warpSegs.length - 1];
+      if (m && s[0] <= m[1]) m[1] = Math.max(m[1], s[1]);
+      else warpSegs.push([s[0], s[1]]);
+    }
+    let slowRate = 0.45, baseRate = 1;
+    const inW = warpSegs.reduce((s, m) => s + (m[1] - m[0]), 0);
+    const outW = dur - inW;
+    if (inW > 0.01) {
+      baseRate = outW / Math.max(0.05, dur - inW / slowRate);
+      if (!(baseRate > 0) || baseRate > 1.35) {
+        slowRate = Math.min(0.999, Math.max(0.45, inW / Math.max(0.05, dur - outW / 1.35)));
+        baseRate = outW / Math.max(0.05, dur - inW / slowRate);
+      }
+    }
+    const warpAt = (t) => {
+      for (const m of warpSegs) if (t >= m[0] && t < m[1]) return slowRate;
+      return baseRate;
+    };
+    return { anchorAt, hAt, warpAt, warpSegs, slowRate, baseRate, settle, hold, dur };
+  }
   function sampleTrack(track, step, t) {
     if (!track.length) return [0, 0];
     const f = t / step;
@@ -56267,7 +56356,7 @@ ${renderAutoRecruitLog()}`;
     let camH = WIDE_H;
     let camW = camH * CAM_ASPECT;
     let camY = (WATCH_SIDE.viewH - camH) / 2;
-    let camX = watchSideCameraX(p, 31, camW);
+    let camX = watchSideCameraX(p, watchSidePoint(script.ball.track[0][0], script.ball.track[0][1])[0], camW);
     let camVX = 0, camVH = 0;
     const CAM_PAN_ACCEL = 0.055, CAM_PAN_VMAX = 1.9, CAM_ZOOM_ACCEL = 0.03, CAM_ZOOM_VMAX = 0.85, CAM_DEAD = 0.35;
     const setCam = () => svg.setAttribute("viewBox", `${camX.toFixed(2)} ${camY.toFixed(2)} ${camW.toFixed(2)} ${camH.toFixed(2)}`);
@@ -56473,7 +56562,9 @@ ${renderAutoRecruitLog()}`;
       flightArc = { rel, end: catchT, loft: Math.max(0.8, Math.min(5.2, fdist * 0.16 * armM)) };
     }
     const speed = ((_watch == null ? void 0 : _watch.speed) || 1) * ((board == null ? void 0 : board.divMult) || 1) * (opts.replay ? 0.68 : 1);
+    const camPlan = buildCameraPlan(script, p, { wideH: WIDE_H, closeH: CLOSE_H, longitudinal: WATCH_SIDE.longitudinal });
     const t0 = performance.now();
+    let _tWarp = 0, _lastWall = t0;
     const shown = /* @__PURE__ */ new Set();
     const trail = [];
     let lastTrail = null;
@@ -56486,7 +56577,13 @@ ${renderAutoRecruitLog()}`;
         watchStopAnim();
         return;
       }
-      const t = Math.min(script.dur, (performance.now() - t0) / 1e3 * speed);
+      const _wallNow = performance.now();
+      let t;
+      if (opts.replay) {
+        _tWarp += Math.max(0, _wallNow - _lastWall) / 1e3 * speed * camPlan.warpAt(_tWarp);
+        t = Math.min(script.dur, _tWarp);
+      } else t = Math.min(script.dur, (_wallNow - t0) / 1e3 * speed);
+      _lastWall = _wallNow;
       if (!opts.replay && !snapHeard && t >= script.presnap) {
         snapHeard = true;
         stadiumReact("snap");
@@ -56907,29 +57004,12 @@ ${renderAutoRecruitLog()}`;
           spotN.style.opacity = "1";
         } else spotN.style.opacity = "0";
       }
-      const inPlay = t > script.presnap + 0.15;
-      const travel = Math.abs(bx - 31);
-      let focusX = bx;
-      let hTarget = inPlay ? CLOSE_H + Math.max(0, Math.min(1, (travel - 13) / 34)) * 8 : WIDE_H;
-      if (ballN == null ? void 0 : ballN.classList.contains("wp-ball-air")) {
-        const targetPt = catchCue ? actorPts[catchCue.id] : null;
-        if (targetPt) {
-          const spread = Math.abs(targetPt[0] - bx);
-          focusX = bx * 0.56 + targetPt[0] * 0.44;
-          hTarget = Math.max(hTarget, Math.min(WATCH_SIDE.viewH, CLOSE_H + spread * 0.58));
-        } else hTarget = Math.max(hTarget, 49);
-      }
-      if (catchCue && t >= catchCue.impact - 0.18 && t <= catchCue.end) {
-        const catchPt = actorPts[catchCue.id];
-        if (catchPt) focusX = catchPt[0];
-        hTarget = Math.min(hTarget, opts.replay ? 39.5 : 42);
-      }
-      if (tackleCue && t >= tackleCue.start && t <= tackleCue.finish) {
-        focusX = tackleCue.point[0];
-        hTarget = Math.min(hTarget, opts.replay ? 39 : 41.5);
-      }
-      if (p.td && t > script.dur - 0.9) hTarget = Math.min(hTarget, 43);
+      const [awx, awy] = camPlan.anchorAt(t);
+      let focusX = watchSidePoint(awx, awy)[0];
+      let hTarget = camPlan.hAt(t, !!opts.replay);
       {
+        const _settleOn = camPlan.settle && t >= camPlan.settle.start && t <= camPlan.settle.end;
+        const _vmax = _settleOn ? CAM_PAN_VMAX * 0.5 : CAM_PAN_VMAX;
         const hPull = hTarget - camH;
         camVH += Math.max(-CAM_ZOOM_ACCEL, Math.min(CAM_ZOOM_ACCEL, hPull * 0.06 - camVH));
         camVH = Math.max(-CAM_ZOOM_VMAX, Math.min(CAM_ZOOM_VMAX, camVH));
@@ -56940,7 +57020,7 @@ ${renderAutoRecruitLog()}`;
         const tX = watchSideCameraX(p, focusX, camW);
         const xPull = tX - camX;
         camVX += Math.max(-CAM_PAN_ACCEL, Math.min(CAM_PAN_ACCEL, xPull * 0.12 - camVX));
-        camVX = Math.max(-CAM_PAN_VMAX, Math.min(CAM_PAN_VMAX, camVX));
+        camVX = Math.max(-_vmax, Math.min(_vmax, camVX));
         if (Math.abs(xPull) < CAM_DEAD && Math.abs(camVX) < 0.08) camVX = 0;
         camX += camVX;
       }
@@ -56954,7 +57034,7 @@ ${renderAutoRecruitLog()}`;
         if (t >= f.t && !shown.has(f)) {
           shown.add(f);
           if (f.kind === "beaten") (_j = (_i = nodes[f.actorId]) == null ? void 0 : _i.querySelector(".wd-x")) == null ? void 0 : _j.classList.add("wd-beaten");
-          else fxN == null ? void 0 : fxN.insertAdjacentHTML("beforeend", watchFxMarkup(f));
+          else fxN == null ? void 0 : fxN.insertAdjacentHTML("beforeend", watchFxMarkup(f, { x: camX, y: camY, w: camW, h: camH }));
           if (f.kind === "inc" && catchCue) (_k = nodes[catchCue.id]) == null ? void 0 : _k.classList.add("wp-dejected");
           if (!opts.replay) {
             if (f.kind === "contact" || f.kind === "block" || f.kind === "tackle") stadiumReact("contact");
@@ -57032,6 +57112,7 @@ ${renderAutoRecruitLog()}`;
     const t0 = performance.now();
     const lerp = (a, b, u) => a + (b - a) * u;
     let camX = watchSideCameraX(p, startX);
+    let camVX = 0, camH = WATCH_SIDE.viewH;
     let kickHeard = false, kickWhistle = false;
     const tick = () => {
       if (!svg.isConnected) {
@@ -57153,8 +57234,18 @@ ${renderAutoRecruitLog()}`;
         engagementN == null ? void 0 : engagementN.classList.toggle("wp-st-engagements-live", t >= 0.05 && t < swingT + 0.45 || t >= landT + 0.1 && t < dur);
       }
       prN == null ? void 0 : prN.classList.toggle("wp-st-faircatch", !p.blocked && !p.touchback && retYds === 0 && !!p.returnerId && t >= landT - 0.12);
-      camX += (watchSideCameraX(p, bx) - camX) * 0.1;
-      svg.setAttribute("viewBox", `${camX.toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
+      {
+        const retOn = !isFG && !p.blocked && retDur > 0 && t >= landT;
+        camH += ((retOn ? 47 : WATCH_SIDE.viewH) - camH) * 0.055;
+        const camW2 = camH * (WATCH_SIDE.viewW / WATCH_SIDE.viewH);
+        const camY2 = (WATCH_SIDE.viewH - camH) / 2;
+        const xPull = watchSideCameraX(p, bx, camW2) - camX;
+        camVX += Math.max(-0.075, Math.min(0.075, xPull * 0.11 - camVX));
+        camVX = Math.max(-2.1, Math.min(2.1, camVX));
+        if (Math.abs(xPull) < 0.35 && Math.abs(camVX) < 0.08) camVX = 0;
+        camX += camVX;
+        svg.setAttribute("viewBox", `${camX.toFixed(2)} ${camY2.toFixed(2)} ${camW2.toFixed(2)} ${camH.toFixed(2)}`);
+      }
       if (t >= dur && fxN && !fxN.childElementCount) {
         const label = isFG ? p.made ? "GOOD" : "NO GOOD" : p.blocked ? "BLOCKED" : p.touchback ? "TOUCHBACK" : p.returnTD ? "RETURN TD" : retYds > 0 ? `RET ${retYds} YDS` : p.returnerId && !p.touchback && !p.blocked ? "FAIR CATCH" : "PUNT";
         const cls = isFG && p.made ? "wa-pick" : isFG || p.blocked || p.returnTD ? "wa-x" : "wp-kick-lbl";
@@ -57222,6 +57313,7 @@ ${renderAutoRecruitLog()}`;
     const t0 = performance.now();
     const lerp = (a, b, u) => a + (b - a) * u;
     let camX = watchSideCameraX(p, teeX);
+    let camVX = 0, camH = WATCH_SIDE.viewH;
     let kickHeard = false, kickWhistle = false;
     const tick = () => {
       if (!svg.isConnected) {
@@ -57333,8 +57425,18 @@ ${renderAutoRecruitLog()}`;
       prN == null ? void 0 : prN.classList.toggle("wp-return-burst", retYds > 0 && t >= boomT + 0.16 && t < dur);
       prN == null ? void 0 : prN.classList.toggle("wp-st-faircatch", !p.onside && !p.touchback && retYds === 0 && t >= boomT - 0.12);
       engagementN == null ? void 0 : engagementN.classList.toggle("wp-st-engagements-live", !p.onside && t >= boomT + 0.18 && t < dur);
-      camX += (watchSideCameraX(p, bx) - camX) * 0.1;
-      svg.setAttribute("viewBox", `${camX.toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
+      {
+        const retOn = !p.onside && !p.touchback && retYds > 0 && t >= boomT;
+        camH += ((retOn ? 47 : WATCH_SIDE.viewH) - camH) * 0.055;
+        const camW2 = camH * (WATCH_SIDE.viewW / WATCH_SIDE.viewH);
+        const camY2 = (WATCH_SIDE.viewH - camH) / 2;
+        const xPull = watchSideCameraX(p, bx, camW2) - camX;
+        camVX += Math.max(-0.075, Math.min(0.075, xPull * 0.11 - camVX));
+        camVX = Math.max(-2.1, Math.min(2.1, camVX));
+        if (Math.abs(xPull) < 0.35 && Math.abs(camVX) < 0.08) camVX = 0;
+        camX += camVX;
+        svg.setAttribute("viewBox", `${camX.toFixed(2)} ${camY2.toFixed(2)} ${camW2.toFixed(2)} ${camH.toFixed(2)}`);
+      }
       if (t >= dur && fxN && !fxN.childElementCount) {
         const label = p.onside ? p.recovered ? "ONSIDE \u2014 RECOVERED!" : "ONSIDE FAILS" : p.returnTD ? "RETURN TD!" : p.touchback ? "TOUCHBACK" : `RET ${retYds} YDS`;
         const cls = p.returnTD || p.recovered ? "wa-pick" : p.onside ? "wa-x" : "wp-kick-lbl";
@@ -57477,8 +57579,15 @@ ${renderAutoRecruitLog()}`;
     svg.innerHTML = watchFieldBase(p, board) + `<g transform="translate(${lx.toFixed(1)},${ly.toFixed(1)})"><g class="wp-flag"><rect x="-1.15" y="-1.15" width="2.3" height="2.3" class="wp-flag-cloth"/><rect x="-0.4" y="-0.4" width="0.8" height="0.8" class="wp-flag-knot"/></g></g><text x="${cx.toFixed(1)}" y="${(fy0 - 9).toFixed(1)}" class="wa-flag-call">FLAG</text><g class="wp-card wp-flag-detail"><rect x="${(cx - 26).toFixed(1)}" y="${(fy0 + 3).toFixed(1)}" width="52" height="11" class="wp-card-bg"/><text x="${cx.toFixed(1)}" y="${(fy0 + 7.6).toFixed(1)}" class="wp-card-txt"${line1.length > 24 ? ` textLength="48" lengthAdjust="spacingAndGlyphs"` : ""}>${line1}</text><text x="${cx.toFixed(1)}" y="${(fy0 + 11.6).toFixed(1)}" class="wp-card-txt wp-card-sub">${verdict}</text></g>`;
     return 2.6;
   }
-  function watchFxMarkup(f) {
-    const [x, y] = watchSidePoint(f.x, f.y);
+  function watchFxMarkup(f, cam = null) {
+    let [x, y] = watchSidePoint(f.x, f.y);
+    if (cam) {
+      const wide = f.kind === "flag" || f.kind === "td" ? 28 : 8;
+      const top = f.kind === "td" ? 13.5 : f.kind === "flag" ? 9.5 : 4;
+      const bot = f.kind === "flag" ? 16.5 : 5;
+      x = Math.max(cam.x + wide, Math.min(cam.x + cam.w - wide, x));
+      y = Math.max(cam.y + top, Math.min(cam.y + cam.h - bot, y));
+    }
     switch (f.kind) {
       case "inc":
         return `<text x="${x}" y="${y}" class="wa-x">\u2715</text>`;
