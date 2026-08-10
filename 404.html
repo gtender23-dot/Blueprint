@@ -6320,6 +6320,79 @@ circle.wsp-skin { transform-box:fill-box; transform-origin:center; transform:sca
 }
 @keyframes wf-ribbon-live { 0%,100% { opacity:.68; } 50% { opacity:.96; } }
 @keyframes wf-fan-bob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(var(--wf-bob)); } }
+/* ── M23: stadium life + broadcast presentation ─────────────────────────── */
+/* Section-based crowd reactions: the scoring side's people ERUPT (fast, tall
+   bounce), the other side sags still. Neutral fans join every roar. */
+#watch-board.watch-roar-home .wf-fan-home, #watch-board.watch-roar-away .wf-fan-away,
+#watch-board.watch-roar-home .wf-fan-neutral, #watch-board.watch-roar-away .wf-fan-neutral {
+  animation:wf-fan-roar .3s steps(2,end) infinite;
+}
+#watch-board.watch-groan-home .wf-fan-home, #watch-board.watch-groan-away .wf-fan-away {
+  animation:none;
+}
+@keyframes wf-fan-roar { 0%,100% { transform:translateY(0); } 50% { transform:translateY(calc(var(--wf-bob) * 3.2)); } }
+/* Officials: zebra shirts, white cap, result signals. */
+.wp-official { pointer-events:none; }
+.wpo-shadow { fill:rgba(0,0,0,.3); }
+.wpo-legs { fill:#f4f0d8; stroke:rgba(6,9,14,.7); stroke-width:.1; }
+.wpo-torso { fill:#f4f0d8; stroke:rgba(6,9,14,.8); stroke-width:.12; }
+.wpo-stripes { stroke:#0a0e16; stroke-width:.14; fill:none; }
+.wpo-arm rect { fill:#f4f0d8; stroke:rgba(6,9,14,.7); stroke-width:.1; }
+.wpo-head { fill:#bd875e; stroke:rgba(6,9,14,.7); stroke-width:.1; }
+.wpo-cap { fill:#f4f0d8; stroke:rgba(6,9,14,.7); stroke-width:.1; }
+.wpo-arm { transform-box:fill-box; transform-origin:50% 0%; }
+/* touchdown: both arms straight up */
+.wpo-sig-td .wpo-arm-l { transform:rotate(165deg); }
+.wpo-sig-td .wpo-arm-r { transform:rotate(-165deg); }
+/* incomplete: arms wave across */
+.wpo-sig-inc .wpo-arm-l { animation:wpo-wave .5s linear infinite; }
+.wpo-sig-inc .wpo-arm-r { animation:wpo-wave .5s linear infinite reverse; }
+@keyframes wpo-wave { 0%,100% { transform:rotate(70deg); } 50% { transform:rotate(110deg); } }
+/* first down: one arm points the direction; spot: one arm down at the ball */
+.wpo-sig-fd .wpo-arm-r { transform:rotate(-90deg); }
+.wpo-sig-spot .wpo-arm-r { transform:rotate(-35deg); }
+/* change of possession: arm rolls */
+.wpo-sig-change .wpo-arm-l { animation:wpo-roll .45s linear infinite; }
+@keyframes wpo-roll { from { transform:rotate(40deg); } to { transform:rotate(400deg); } }
+.wpo-sig-flag .wpo-arm-r { transform:rotate(-140deg); }
+/* Goalposts (top-down forks) + net reaction on a made kick. */
+.wf-goalpost line { stroke:#ffd34d; stroke-width:.42; stroke-linecap:round; }
+.wf-post-pad { fill:#ffd34d; stroke:rgba(6,9,14,.7); stroke-width:.14; }
+.wf-goalpost { transform-box:fill-box; transform-origin:50% 50%; }
+.wf-post-shake { animation:wf-net-shake .9s ease-out both; }
+@keyframes wf-net-shake {
+  0% { transform:rotate(0deg); } 18% { transform:rotate(2.6deg); }
+  40% { transform:rotate(-1.9deg); } 62% { transform:rotate(1.1deg); }
+  82% { transform:rotate(-.5deg); } 100% { transform:rotate(0deg); }
+}
+/* Chain crew on the move: a little hustle bob while they walk the sticks. */
+.wf-gang-walk { animation:wf-gang-hustle .32s steps(2,end) infinite; }
+@keyframes wf-gang-hustle { 0%,100% { translate:0 0; } 50% { translate:0 -.3px; } }
+/* Broadcast banner: slides over the crowd band — never the playable field. */
+.watch-banner {
+  position:absolute; left:50%; bottom:5%; transform:translate(-50%, 140%);
+  display:flex; align-items:center; gap:.6em; padding:.32em .9em;
+  background:rgba(5,7,12,.92); border:1px solid var(--wb-accent, var(--px-yellow));
+  border-left:.45em solid var(--wb-accent, var(--px-yellow));
+  font-family:var(--font-pixel,monospace); pointer-events:none;
+  opacity:0; transition:transform .28s cubic-bezier(.2,.9,.3,1), opacity .2s;
+  white-space:nowrap; z-index:4;
+}
+.watch-banner.on { transform:translate(-50%, 0); opacity:1; }
+.watch-banner .wb-title { color:var(--wb-accent, var(--px-yellow)); font-weight:900; letter-spacing:.1em; font-size:.95em; }
+.watch-banner .wb-sub { color:#f4f0d8; font-weight:700; font-size:.8em; opacity:.9; }
+/* Replay wipe: a one-shot diagonal sweep when the replay board takes over. */
+.watch-wipe {
+  position:absolute; inset:0; pointer-events:none; opacity:0; z-index:5;
+  background:linear-gradient(105deg, transparent 30%, rgba(255,211,77,.9) 46%, #0a0e16 50%, rgba(255,211,77,.9) 54%, transparent 70%);
+  background-size:300% 100%; background-position:120% 0;
+}
+.watch-wipe.run { animation:watch-wipe-run .55s cubic-bezier(.5,.1,.4,.95) both; }
+@keyframes watch-wipe-run {
+  0% { opacity:1; background-position:120% 0; }
+  85% { opacity:1; }
+  100% { opacity:0; background-position:-20% 0; }
+}
 /* Penalty flag (Group 19): the recorded flag tumbles in, FLAG flashes, the
    call card follows. Only ever drawn for plays the engine flagged. */
 .wp-flag-cloth { fill:var(--px-yellow); stroke:#8a6d00; stroke-width:.22; }
@@ -8523,7 +8596,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "a0650ce12d";
+globalThis.__BUILD__ = "3dc35a2328";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -52569,6 +52642,75 @@ ${renderAutoRecruitLog()}`;
     };
     return { anchorAt, hAt, warpAt, warpSegs, slowRate, baseRate, settle, hold, dur };
   }
+  function buildOfficialsPlan(script, p) {
+    const S = script.step, bt = script.ball.track, dur = script.dur;
+    const ballAt = (t) => sampleTrack(bt, S, t);
+    const CREW = [
+      { id: "R", lane: 80, trail: 5.5, lag: 0.38 },
+      { id: "U", lane: 27, trail: 3.5, lag: 0.5 },
+      { id: "LJ", lane: 93.5, trail: 1.5, lag: 0.22 }
+    ];
+    const STANDOFF = 4.2;
+    const MAXS = 0.55;
+    const tracks = CREW.map(() => []);
+    const cur = CREW.map(() => null);
+    for (let i = 0; i < bt.length; i++) {
+      const bn = bt[i];
+      CREW.forEach((o, ci) => {
+        const bl = bt[Math.max(0, i - Math.round(o.lag / S))];
+        const tx = o.id === "LJ" ? 93.5 : o.lane;
+        const ty = bl[1] + o.trail;
+        let px, py;
+        if (!cur[ci]) {
+          px = tx;
+          py = ty;
+        } else {
+          let dx = tx - cur[ci][0], dy = ty - cur[ci][1];
+          const d = Math.hypot(dx, dy);
+          if (d > MAXS) {
+            dx *= MAXS / d;
+            dy *= MAXS / d;
+          }
+          px = cur[ci][0] + dx;
+          py = cur[ci][1] + dy;
+        }
+        if (o.id === "LJ") {
+          px = 93.5;
+          const dxL = px - bn[0];
+          if (Math.abs(dxL) < STANDOFF) {
+            const need = Math.sqrt(STANDOFF * STANDOFF - dxL * dxL);
+            const ddy = py - bn[1];
+            if (Math.abs(ddy) < need) py = bn[1] + (ddy >= 0 ? need : -need);
+          }
+          py = clamp6(py, -59, 60.5);
+        } else {
+          const ddx = px - bn[0], ddy = py - bn[1];
+          const d2 = Math.hypot(ddx, ddy);
+          if (d2 < STANDOFF) {
+            const k = STANDOFF / Math.max(0.2, d2);
+            px = bn[0] + ddx * k;
+            py = bn[1] + ddy * k;
+          }
+          px = clamp6(px, 2, 98);
+          py = clamp6(py, -59, 60.5);
+          const rdx = px - bn[0], rdy = py - bn[1];
+          if (Math.hypot(rdx, rdy) < STANDOFF) {
+            const need = Math.sqrt(Math.max(0, STANDOFF * STANDOFF - rdy * rdy));
+            px = clamp6(bn[0] + (rdx >= 0 ? need : -need), 2, 98);
+          }
+        }
+        cur[ci] = [px, py];
+        tracks[ci].push([px, py]);
+      });
+    }
+    const at = (t) => tracks.map((tr) => sampleTrack(tr, S, t));
+    const signals = [];
+    for (const f of script.fx || []) {
+      const kind = f.kind === "td" ? "td" : f.kind === "fd" ? "fd" : f.kind === "inc" ? "inc" : f.kind === "sack" ? "spot" : f.kind === "tackle" ? "spot" : f.kind === "flag" ? "flag" : f.kind === "int" || f.kind === "fum" ? "change" : null;
+      if (kind && !signals.some((s) => s.kind === kind)) signals.push({ kind, t: f.t, x: f.x, y: f.y });
+    }
+    return { at, signals, standoff: STANDOFF, crew: CREW.map((o) => o.id), dur };
+  }
   function sampleTrack(track, step, t) {
     if (!track.length) return [0, 0];
     const f = t / step;
@@ -56061,7 +56203,9 @@ ${renderAutoRecruitLog()}`;
   <div class="watch-board-wrap"><svg id="watch-board" viewBox="-19 0 100 56" preserveAspectRatio="xMidYMid meet"></svg>
     <div class="watch-camera-bug" id="watch-camera-bug">LIVE</div>
     <div class="watch-replay-bug" id="watch-replay-bug">INSTANT REPLAY</div>
-    <div class="watch-flash" id="watch-flash"></div></div>
+    <div class="watch-flash" id="watch-flash"></div>
+    <div class="watch-wipe" id="watch-wipe"></div>
+    <div class="watch-banner" id="watch-banner"></div></div>
   <div class="watch-controls broadcast-bar">
     ${isLive ? "" : `<button class="bc-btn bc-icon" id="watch-stepback" title="Step back">\u23EE</button>`}
     <button class="bc-btn bc-icon bc-play" id="watch-pause" title="Play / pause">\u23F8</button>
@@ -56314,6 +56458,14 @@ ${renderAutoRecruitLog()}`;
       "watch-kick-onside"
     );
     svg.classList.toggle("watch-replay", !!opts.replay);
+    if (opts.replay) {
+      const wipe = document.getElementById("watch-wipe");
+      if (wipe) {
+        wipe.classList.remove("run");
+        void wipe.offsetWidth;
+        wipe.classList.add("run");
+      }
+    }
     const cameraBug = document.getElementById("watch-camera-bug");
     const replayBug = document.getElementById("watch-replay-bug");
     if (cameraBug) cameraBug.textContent = opts.replay ? "REPLAY" : "LIVE";
@@ -56341,7 +56493,13 @@ ${renderAutoRecruitLog()}`;
     if (sprites) svg.classList.add("watch-sprites");
     else svg.classList.remove("watch-sprites");
     const glyph = (a) => sprites ? spriteMarkup(a, a.team === "off" ? "e" : "w") : a.team === "def" ? `<text class="wd-x" x="0" y="0">\u2715</text><text class="wd-lbl" x="0" y="-2.6">${a.label}</text>` : `<circle r="1.9" class="wo-c${a.qb ? " wo-qb" : ""}" cx="0" cy="0"/><text class="wo-lbl" x="0" y="4.4">${a.label}</text>`;
-    svg.innerHTML = watchFieldBase(p, board) + `<polyline id="wp-trail" class="wp-trail" points=""/><g id="wp-spot" class="wp-spot" transform="translate(0,0)"><ellipse class="wp-spot-ring" rx="2.6" ry="1.15"/><path class="wp-spot-chevron" d="M-1.15 1.8L0 3.05l1.15-1.25z"/></g><g id="wp-engagements">${(script.blocks || []).map((b, i) => `<g class="wp-engage" data-wengage="${i}"><ellipse class="wp-engage-shadow" rx="1.45" ry=".48"/><path class="wp-engage-pads" d="M-1.8-.8L-.35 0-1.8.8M1.8-.8L.35 0 1.8.8"/><circle class="wp-engage-core" r=".32"/></g>`).join("")}</g><g id="wp-blocks">${(script.blocks || []).map((b, i) => `<line class="wp-block-link" data-wblock="${i}"/>`).join("")}</g>` + script.actors.map((a) => {
+    const offPlan = buildOfficialsPlan(script, p);
+    const _off0 = offPlan.at(0);
+    const officialsMarkup = `<g id="wp-officials">` + offPlan.crew.map((id, i) => {
+      const [sx, sy] = watchSidePoint(_off0[i][0], _off0[i][1]);
+      return watchOfficialMarkup(id, sx, sy);
+    }).join("") + `</g>`;
+    svg.innerHTML = watchFieldBase(p, board) + `<polyline id="wp-trail" class="wp-trail" points=""/><g id="wp-spot" class="wp-spot" transform="translate(0,0)"><ellipse class="wp-spot-ring" rx="2.6" ry="1.15"/><path class="wp-spot-chevron" d="M-1.15 1.8L0 3.05l1.15-1.25z"/></g><g id="wp-engagements">${(script.blocks || []).map((b, i) => `<g class="wp-engage" data-wengage="${i}"><ellipse class="wp-engage-shadow" rx="1.45" ry=".48"/><path class="wp-engage-pads" d="M-1.8-.8L-.35 0-1.8.8M1.8-.8L.35 0 1.8.8"/><circle class="wp-engage-core" r=".32"/></g>`).join("")}</g><g id="wp-blocks">${(script.blocks || []).map((b, i) => `<line class="wp-block-link" data-wblock="${i}"/>`).join("")}</g>` + officialsMarkup + script.actors.map((a) => {
       const [sx, sy] = watchSidePoint(a.track[0][0], a.track[0][1]);
       const face = watchSideFacing(a.team);
       return `<g class="wp-actor wp-team-${a.team}${a.qb ? " wp-qb" : ""}${sprites ? ` wsp-still wsp-face-${face}` : ""}" data-wpa="${a.id}" data-wpg="${a.grp || ""}" transform="translate(${sx.toFixed(2)},${sy.toFixed(2)})">` + (sprites ? spriteMarkup(a, face) : glyph(a)) + `</g>`;
@@ -56369,6 +56527,9 @@ ${renderAutoRecruitLog()}`;
     const spotN = svg.querySelector("#wp-spot");
     const blockNodes = [...svg.querySelectorAll("[data-wblock]")];
     const engageNodes = [...svg.querySelectorAll("[data-wengage]")];
+    const officialNodes = [...svg.querySelectorAll("[data-wpo]")];
+    const parN = svg.querySelector(".wf-stadium-par");
+    const camX0Par = camX;
     let catchCue = null;
     {
       const cf = (script.fx || []).find((f) => f.kind === "catch" || f.kind === "inc" || f.kind === "int");
@@ -56998,6 +57159,20 @@ ${renderAutoRecruitLog()}`;
         ballN == null ? void 0 : ballN.setAttribute("transform", `translate(${rbx.toFixed(2)},${rby.toFixed(2)})`);
         if (ballN) ballN.dataset.possess = carriedOn ? cc.id : attach ? attach[0] : "";
       }
+      if (officialNodes.length) {
+        const pos = offPlan.at(t);
+        officialNodes.forEach((n2, i) => {
+          if (!pos[i]) return;
+          const [sx2, sy2] = watchSidePoint(pos[i][0], pos[i][1]);
+          n2.setAttribute("transform", `translate(${sx2.toFixed(2)},${sy2.toFixed(2)})`);
+        });
+        for (const sg of offPlan.signals) {
+          const on = t >= sg.t && t <= sg.t + 1.5;
+          const who = sg.kind === "fd" ? "LJ" : "R";
+          const n2 = officialNodes.find((o) => o.dataset.wpo === who);
+          if (n2) n2.classList.toggle("wpo-sig-" + sg.kind, on);
+        }
+      }
       if (spotN) {
         if (t > script.presnap && cx != null && cd < 3) {
           spotN.setAttribute("transform", `translate(${cx.toFixed(2)},${cy.toFixed(2)})`);
@@ -57025,6 +57200,7 @@ ${renderAutoRecruitLog()}`;
         camX += camVX;
       }
       setCam();
+      if (parN) parN.setAttribute("transform", `translate(${((camX - camX0Par) * 0.12).toFixed(2)},0)`);
       if (t > script.presnap && (!lastTrail || Math.hypot(bx - lastTrail[0], by - lastTrail[1]) > 0.6)) {
         lastTrail = [bx, by];
         trail.push(`${bx.toFixed(1)},${by.toFixed(1)}`);
@@ -57041,6 +57217,23 @@ ${renderAutoRecruitLog()}`;
             else if (f.kind === "catch") stadiumReact("catch");
             else if (f.kind === "inc") stadiumReact("incomplete");
             else if (f.kind === "flag") stadiumReact("whistle");
+            const _offSide = (board == null ? void 0 : board.possession) === "away" ? "away" : "home";
+            const _defSide = _offSide === "home" ? "away" : "home";
+            if (f.kind === "td") {
+              const side = possessionTeam === "off" ? _offSide : _defSide;
+              watchCrowdReact(svg, side);
+              watchShowBanner("TOUCHDOWN", side === "home" ? board == null ? void 0 : board.homeName : board == null ? void 0 : board.awayName, side === "home" ? board == null ? void 0 : board.homeFill : board == null ? void 0 : board.awayFill);
+            } else if (f.kind === "int" || f.kind === "fum") {
+              watchCrowdReact(svg, _defSide);
+              watchShowBanner(f.kind === "int" ? "INTERCEPTED!" : "FUMBLE!", `${(_defSide === "home" ? board == null ? void 0 : board.homeName : board == null ? void 0 : board.awayName) || "Defense"} ball`, _defSide === "home" ? board == null ? void 0 : board.homeFill : board == null ? void 0 : board.awayFill);
+            } else if (f.kind === "fd") {
+              const [gx] = watchSidePoint(f.x, f.y);
+              svg.querySelectorAll(".wf-chain-gang, .wf-down-gang").forEach((g) => {
+                g.classList.add("wf-gang-walk");
+                g.style.transition = "transform 1.4s ease-in-out";
+                g.style.transform = `translate(${gx.toFixed(1)}px, ${(WATCH_SIDE.fieldTop + WATCH_SIDE.fieldHeight + 1.6).toFixed(1)}px)`;
+              });
+            }
           }
         }
       }
@@ -57113,6 +57306,12 @@ ${renderAutoRecruitLog()}`;
     const lerp = (a, b, u) => a + (b - a) * u;
     let camX = watchSideCameraX(p, startX);
     let camVX = 0, camH = WATCH_SIDE.viewH;
+    const parN = svg.querySelector(".wf-stadium-par"), camX0Par = camX;
+    const _postTarget = isFG ? [...svg.querySelectorAll("[data-wf-post]")].sort((a, b) => {
+      const gx = (n) => Math.abs(Number((/translate\(([-\d.]+)/.exec(n.getAttribute("transform") || "") || [0, 0])[1]) - endX);
+      return gx(a) - gx(b);
+    })[0] || null : null;
+    let _netShaken = false;
     let kickHeard = false, kickWhistle = false;
     const tick = () => {
       if (!svg.isConnected) {
@@ -57245,6 +57444,11 @@ ${renderAutoRecruitLog()}`;
         if (Math.abs(xPull) < 0.35 && Math.abs(camVX) < 0.08) camVX = 0;
         camX += camVX;
         svg.setAttribute("viewBox", `${camX.toFixed(2)} ${camY2.toFixed(2)} ${camW2.toFixed(2)} ${camH.toFixed(2)}`);
+        if (parN) parN.setAttribute("transform", `translate(${((camX - camX0Par) * 0.12).toFixed(2)},0)`);
+      }
+      if (isFG && p.made && !_netShaken && t >= landT && _postTarget) {
+        _netShaken = true;
+        _postTarget.classList.add("wf-post-shake");
       }
       if (t >= dur && fxN && !fxN.childElementCount) {
         const label = isFG ? p.made ? "GOOD" : "NO GOOD" : p.blocked ? "BLOCKED" : p.touchback ? "TOUCHBACK" : p.returnTD ? "RETURN TD" : retYds > 0 ? `RET ${retYds} YDS` : p.returnerId && !p.touchback && !p.blocked ? "FAIR CATCH" : "PUNT";
@@ -57314,6 +57518,7 @@ ${renderAutoRecruitLog()}`;
     const lerp = (a, b, u) => a + (b - a) * u;
     let camX = watchSideCameraX(p, teeX);
     let camVX = 0, camH = WATCH_SIDE.viewH;
+    const parN = svg.querySelector(".wf-stadium-par"), camX0Par = camX;
     let kickHeard = false, kickWhistle = false;
     const tick = () => {
       if (!svg.isConnected) {
@@ -57436,6 +57641,7 @@ ${renderAutoRecruitLog()}`;
         if (Math.abs(xPull) < 0.35 && Math.abs(camVX) < 0.08) camVX = 0;
         camX += camVX;
         svg.setAttribute("viewBox", `${camX.toFixed(2)} ${camY2.toFixed(2)} ${camW2.toFixed(2)} ${camH.toFixed(2)}`);
+        if (parN) parN.setAttribute("transform", `translate(${((camX - camX0Par) * 0.12).toFixed(2)},0)`);
       }
       if (t >= dur && fxN && !fxN.childElementCount) {
         const label = p.onside ? p.recovered ? "ONSIDE \u2014 RECOVERED!" : "ONSIDE FAILS" : p.returnTD ? "RETURN TD!" : p.touchback ? "TOUCHBACK" : `RET ${retYds} YDS`;
@@ -57629,6 +57835,25 @@ ${renderAutoRecruitLog()}`;
         return "";
     }
   }
+  function watchOfficialMarkup(id, x, y) {
+    return `<g class="wp-official" data-wpo="${id}" transform="translate(${x.toFixed(2)},${y.toFixed(2)})"><ellipse class="wpo-shadow" cx="0" cy="0" rx=".95" ry=".22"/><g class="wpo-body"><rect class="wpo-legs" x="-.48" y="-1.45" width=".96" height="1.45"/><rect class="wpo-torso" x="-.66" y="-3.05" width="1.32" height="1.6"/><path class="wpo-stripes" d="M-.44-3.05v1.6M-.15-3.05v1.6M.15-3.05v1.6M.44-3.05v1.6"/><g class="wpo-arm wpo-arm-l"><rect x="-1" y="-2.95" width=".3" height="1.05"/></g><g class="wpo-arm wpo-arm-r"><rect x=".7" y="-2.95" width=".3" height="1.05"/></g><circle class="wpo-head" cx="0" cy="-3.5" r=".4"/><rect class="wpo-cap" x="-.4" y="-3.95" width=".8" height=".28"/></g></g>`;
+  }
+  function watchCrowdReact(svg, side) {
+    if (!svg) return;
+    const other = side === "home" ? "away" : "home";
+    svg.classList.add("watch-roar-" + side, "watch-groan-" + other);
+    setTimeout(() => svg.classList.remove("watch-roar-" + side, "watch-groan-" + other), 1900);
+  }
+  var _watchBannerTimer = null;
+  function watchShowBanner(title, sub, fill) {
+    const el = document.getElementById("watch-banner");
+    if (!el) return;
+    el.innerHTML = `<span class="wb-title">${escapeHtml(title)}</span>${sub ? `<span class="wb-sub">${escapeHtml(sub)}</span>` : ""}`;
+    el.style.setProperty("--wb-accent", fill || "var(--px-yellow)");
+    el.classList.add("on");
+    if (_watchBannerTimer) clearTimeout(_watchBannerTimer);
+    _watchBannerTimer = setTimeout(() => el.classList.remove("on"), 2400);
+  }
   function watchFieldBase(p, board = null) {
     const fp = Number.isFinite(p == null ? void 0 : p.fieldPos) ? p.fieldPos : null;
     const FT = WATCH_SIDE.fieldTop, FH = WATCH_SIDE.fieldHeight, FB = FT + FH;
@@ -57665,12 +57890,13 @@ ${renderAutoRecruitLog()}`;
       const x = X_LEFT + 2.4 + i * 4.9;
       const topY = Math.max(1.1, FT - 2.2 - i % 3 * 0.72);
       const botY = Math.min(WATCH_SIDE.viewH - 1.2, FB + 1.35 + i % 3 * 0.72);
+      const sect = i % 5 === 0 ? "neutral" : i % 2 ? "home" : "away";
       const fill = i % 5 === 0 ? "#f4f0d8" : i % 2 ? homeCrowd : awayCrowd;
-      const fan = (y, flip) => `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)})"><g class="wf-fan-motion" style="--wf-phase:${i % 7};--wf-bob:${(-0.22 * flip).toFixed(2)}px"><circle class="wf-fan-head" cx="0" cy="-.5" r=".28"/><rect class="wf-fan-body" x="-.38" y="-.18" width=".76" height=".88" fill="${fill}"/></g></g>`;
+      const fan = (y, flip) => `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)})"><g class="wf-fan-motion wf-fan-${sect}" style="--wf-phase:${i % 7};--wf-bob:${(-0.22 * flip).toFixed(2)}px"><circle class="wf-fan-head" cx="0" cy="-.5" r=".28"/><rect class="wf-fan-body" x="-.38" y="-.18" width=".76" height=".88" fill="${fill}"/></g></g>`;
       crowdLife += fan(topY, 1) + fan(botY, -1);
     }
     crowdLife += `</g>`;
-    let under = `<rect x="${X_LEFT}" y="0" width="${X_RIGHT - X_LEFT}" height="${WATCH_SIDE.viewH}" fill="url(#wf-crowd)"/><rect x="${X_LEFT}" y="${(FT - 1.15).toFixed(1)}" width="${X_RIGHT - X_LEFT}" height=".58" class="wf-stadium-ribbon" fill="${homeCrowd}"/><rect x="${X_LEFT}" y="${(FB + 0.58).toFixed(1)}" width="${X_RIGHT - X_LEFT}" height=".58" class="wf-stadium-ribbon wf-stadium-ribbon-away" fill="${awayCrowd}"/>${crowdLife}`;
+    let under = `<g class="wf-stadium-par"><rect x="${X_LEFT}" y="0" width="${X_RIGHT - X_LEFT}" height="${WATCH_SIDE.viewH}" fill="url(#wf-crowd)"/><rect x="${X_LEFT}" y="${(FT - 1.15).toFixed(1)}" width="${X_RIGHT - X_LEFT}" height=".58" class="wf-stadium-ribbon" fill="${homeCrowd}"/><rect x="${X_LEFT}" y="${(FB + 0.58).toFixed(1)}" width="${X_RIGHT - X_LEFT}" height=".58" class="wf-stadium-ribbon wf-stadium-ribbon-away" fill="${awayCrowd}"/>${crowdLife}</g>`;
     let lines = "";
     if (fp != null) {
       const xOf = (abs) => watchSideFieldX(abs, fp);
@@ -57699,6 +57925,12 @@ ${renderAutoRecruitLog()}`;
       under += ez(gRight, awayC || "#c23a35", awayN, 90, "away");
       under += `<rect x="${grassX.toFixed(1)}" y="${FT}" width="${grassW.toFixed(1)}" height="${FH}" fill="url(#wf-grain)"/>`;
       lines += `<line x1="${grassX.toFixed(1)}" y1="${FT}" x2="${(gRight + EZ).toFixed(1)}" y2="${FT}" class="wf-side"/><line x1="${grassX.toFixed(1)}" y1="${FB}" x2="${(gRight + EZ).toFixed(1)}" y2="${FB}" class="wf-side"/><line x1="${grassX.toFixed(1)}" y1="${FT}" x2="${grassX.toFixed(1)}" y2="${FB}" class="wf-endline"/><line x1="${(gRight + EZ).toFixed(1)}" y1="${FT}" x2="${(gRight + EZ).toFixed(1)}" y2="${FB}" class="wf-endline"/>`;
+      const cyMid = FT + FH / 2;
+      const post = (x, side) => {
+        const st = side === "left" ? -1.7 : 1.7;
+        return `<g class="wf-goalpost" data-wf-post="${side}" transform="translate(${x.toFixed(1)},${cyMid.toFixed(1)})"><line class="wf-post-bar" x1="0" y1="-4.4" x2="0" y2="4.4"/><line class="wf-post-stem" x1="0" y1="0" x2="${st}" y2="0"/><circle class="wf-post-pad" cx="${st}" cy="0" r=".55"/></g>`;
+      };
+      lines += post(grassX, "left") + post(gRight + EZ, "right");
       const hashFar = watchSideY(31.4), hashNear = watchSideY(66.6);
       for (let abs = 0; abs <= 100; abs++) {
         const x = xOf(abs);
@@ -57723,11 +57955,11 @@ ${renderAutoRecruitLog()}`;
       if (p.down && p.distance != null && fp + p.distance <= 100) {
         const firstX = xOf(fp + p.distance);
         lines += `<line x1="${firstX.toFixed(1)}" y1="${FT}" x2="${firstX.toFixed(1)}" y2="${FB}" class="wf-first" data-wf-first="${(fp + p.distance).toFixed(1)}"/>`;
-        lines += `<g transform="translate(${firstX.toFixed(1)},${(FB + 1.6).toFixed(1)})"><rect x="-0.5" y="0" width="1.0" height="3.2" class="wf-crew"/><circle cx="0" cy="-1.05" r="1.1" class="wf-chain-disc"/></g>`;
+        lines += `<g class="wf-chain-gang" transform="translate(${firstX.toFixed(1)},${(FB + 1.6).toFixed(1)})"><rect x="-0.5" y="0" width="1.0" height="3.2" class="wf-crew"/><circle cx="0" cy="-1.05" r="1.1" class="wf-chain-disc"/></g>`;
       }
       const sy = FB + 1.6;
       if (p.down) {
-        lines += `<g transform="translate(31,${sy.toFixed(1)})"><rect x="-1.1" y="0" width="2.2" height="3.2" class="wf-crew"/><rect x="-1.7" y="-3.5" width="3.4" height="3.6" class="wf-downbox-card"/><text x="0" y="-0.75" class="wf-downbox-num">${p.down}</text></g>`;
+        lines += `<g class="wf-down-gang" transform="translate(31,${sy.toFixed(1)})"><rect x="-1.1" y="0" width="2.2" height="3.2" class="wf-crew"/><rect x="-1.7" y="-3.5" width="3.4" height="3.6" class="wf-downbox-card"/><text x="0" y="-0.75" class="wf-downbox-num" data-wf-down="${p.down}">${p.down}</text></g>`;
       }
       const bench = (screenA, fill) => {
         let s = "";
