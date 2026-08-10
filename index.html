@@ -8756,7 +8756,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "5516b9fa3b";
+globalThis.__BUILD__ = "ffe98b2d79";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -16301,6 +16301,16 @@ var _CFB = (() => {
       const db = await openDB();
       const tx = db.transaction(STORE_NAME, "readwrite");
       const store = tx.objectStore(STORE_NAME);
+      const prevBak = store.get(slot + ".bak1");
+      prevBak.onsuccess = () => {
+        const b = prevBak.result;
+        if (b && b.state) store.put({ slot: slot + ".bak2", timestamp: b.timestamp, state: b.state });
+      };
+      const prevMain = store.get(slot);
+      prevMain.onsuccess = () => {
+        const m = prevMain.result;
+        if (m && m.state) store.put({ slot: slot + ".bak1", timestamp: m.timestamp, state: m.state });
+      };
       store.put({ slot, timestamp: ts, state: snapshot });
       return new Promise((res, rej) => {
         tx.oncomplete = () => res(true);
@@ -16335,7 +16345,10 @@ var _CFB = (() => {
     try {
       const db = await openDB();
       const tx = db.transaction(STORE_NAME, "readwrite");
-      tx.objectStore(STORE_NAME).delete(slot);
+      const store = tx.objectStore(STORE_NAME);
+      store.delete(slot);
+      store.delete(slot + ".bak1");
+      store.delete(slot + ".bak2");
       return new Promise((res) => {
         tx.oncomplete = () => res(true);
         tx.onerror = () => res(false);
@@ -16363,7 +16376,27 @@ var _CFB = (() => {
           const rec = e.target.result;
           const saved = rec == null ? void 0 : rec.state;
           const idbTs = rec == null ? void 0 : rec.timestamp;
-          res(resolveNewest(saved, idbTs));
+          const primary = resolveNewest(saved, idbTs);
+          if (primary) {
+            res(primary);
+            return;
+          }
+          const reqB1 = store.get(slot + ".bak1");
+          reqB1.onsuccess = (e1) => {
+            const rec1 = e1.target.result;
+            const fromB1 = resolveNewest(rec1 == null ? void 0 : rec1.state, rec1 == null ? void 0 : rec1.timestamp);
+            if (fromB1) {
+              res(fromB1);
+              return;
+            }
+            const reqB2 = store.get(slot + ".bak2");
+            reqB2.onsuccess = (e2) => {
+              const rec2 = e2.target.result;
+              res(resolveNewest(rec2 == null ? void 0 : rec2.state, rec2 == null ? void 0 : rec2.timestamp));
+            };
+            reqB2.onerror = () => res(null);
+          };
+          reqB1.onerror = () => res(null);
         };
         req.onerror = (e) => rej(e.target.error);
       });
@@ -16384,7 +16417,7 @@ var _CFB = (() => {
       const store = tx.objectStore(STORE_NAME);
       return new Promise((res, rej) => {
         const req = store.getAll();
-        req.onsuccess = (e) => res(e.target.result.map((r) => {
+        req.onsuccess = (e) => res(e.target.result.filter((r) => String(r.slot).indexOf(".bak") === -1).map((r) => {
           var _a, _b, _c, _d, _e, _f, _g;
           const isIncompat = ((_a = r.state) == null ? void 0 : _a._saveVersion) !== SAVE_VERSION;
           const school = isIncompat ? null : (_d = (_c = (_b = r.state) == null ? void 0 : _b.world) == null ? void 0 : _c.schools) == null ? void 0 : _d.find((s) => {
@@ -38938,13 +38971,13 @@ var _CFB = (() => {
           <span class="btn-mm-meta">${live.length ? live.map((d) => `${d} \xB7 ${escapeHtml(slots[d].schoolName || "?")}`).join("  |  ") : "no chairs filled yet"}</span>
           <span class="mm-w-career">${t.meta ? `Season ${t.meta.season} \xB7 ${live.length}/3 chairs` : "not started"}${banked ? ` \xB7 ${(t.ledger || []).length} retired, ${banked.toLocaleString()} XP banked` : ""}</span>
         </button>
-        <button class="mm-coach-del${armed ? " armed" : ""}" data-mm-tree-del="${escapeHtml(t.id)}" title="${armed ? "Tap again to permanently delete this tree, its world and every coach on it" : "Delete tree"}">${armed ? "Delete?" : "\u{1F5D1}"}</button>
+        <button class="mm-coach-del${armed ? " armed" : ""}" data-mm-tree-del="${escapeHtml(t.id)}" aria-label="${armed ? "Confirm permanent delete of this tree" : "Delete tree"}" title="${armed ? "Tap again to permanently delete this tree, its world and every coach on it" : "Delete tree"}">${armed ? "Delete?" : "\u{1F5D1}"}</button>
       </div>`;
     }).join("")}
     ${trees.length < MAX_TREES ? mmNewTree ? `
       <div class="mm-newcoach">
-        <input class="form-input" id="mm-nt-first" type="text" placeholder="Coach first name" maxlength="16" autocomplete="off" />
-        <input class="form-input" id="mm-nt-last" type="text" placeholder="Coach last name" maxlength="16" autocomplete="off" />
+        <input class="form-input" id="mm-nt-first" type="text" placeholder="Coach first name" aria-label="Coach first name" maxlength="16" autocomplete="off" />
+        <input class="form-input" id="mm-nt-last" type="text" placeholder="Coach last name" aria-label="Coach last name" maxlength="16" autocomplete="off" />
         <button class="btn-mm btn-mm-new" id="mm-nt-create">START \u2192</button>
       </div>
       <p class="mm-tree-blurb">Your last name becomes the tree. You'll found a Division III program and build a coaching family from there.</p>` : `
@@ -39080,7 +39113,7 @@ var _CFB = (() => {
     const body = classics.length ? classics.map(
       (item) => {
         var _a, _b;
-        return '<div class="mm-classic-row"><button class="mm-classic-watch" data-mm-classic="' + escapeHtml(item.id) + '" data-mm-classic-world="' + escapeHtml(item.worldSlot) + '"><span class="mm-classic-score">\u2605 ' + (item.score || 0) + '</span><span class="mm-classic-matchup">' + escapeHtml(item.homeName || "Home") + " " + ((_a = item.homeScore) != null ? _a : 0) + "\u2013" + ((_b = item.awayScore) != null ? _b : 0) + " " + escapeHtml(item.awayName || "Away") + '</span><span class="mm-classic-meta">World ' + escapeHtml(item.worldSlot) + " \xB7 Season " + (item.season || 1) + " \xB7 " + escapeHtml(item.week || "") + ' \xB7 Watch replay</span></button><button class="btn-mm-del mm-classic-del" data-mm-classic-del="' + escapeHtml(item.id) + '" data-mm-classic-world="' + escapeHtml(item.worldSlot) + '" title="Delete replay">\u2715</button></div>';
+        return '<div class="mm-classic-row"><button class="mm-classic-watch" data-mm-classic="' + escapeHtml(item.id) + '" data-mm-classic-world="' + escapeHtml(item.worldSlot) + '"><span class="mm-classic-score">\u2605 ' + (item.score || 0) + '</span><span class="mm-classic-matchup">' + escapeHtml(item.homeName || "Home") + " " + ((_a = item.homeScore) != null ? _a : 0) + "\u2013" + ((_b = item.awayScore) != null ? _b : 0) + " " + escapeHtml(item.awayName || "Away") + '</span><span class="mm-classic-meta">World ' + escapeHtml(item.worldSlot) + " \xB7 Season " + (item.season || 1) + " \xB7 " + escapeHtml(item.week || "") + ' \xB7 Watch replay</span></button><button class="btn-mm-del mm-classic-del" data-mm-classic-del="' + escapeHtml(item.id) + '" data-mm-classic-world="' + escapeHtml(item.worldSlot) + '" title="Delete replay" aria-label="Delete replay">\u2715</button></div>';
       }
     ).join("") : '<div class="mm-lib-empty muted">Close finishes, comebacks and overtime games are archived here automatically.</div>';
     return '<div class="mm-section-label" style="margin-top:14px">INSTANT CLASSICS</div><div class="mm-classics">' + body + "</div>";
@@ -39119,8 +39152,8 @@ var _CFB = (() => {
         </div>`;
       if (!started && div === C.TREE.START_DIVISION) return mmNewTrunk ? `
         <div class="mm-newcoach">
-          <input class="form-input" id="mm-tc-first" type="text" placeholder="First" maxlength="16" autocomplete="off" />
-          <input class="form-input" id="mm-tc-last" type="text" placeholder="Last" maxlength="16" autocomplete="off" />
+          <input class="form-input" id="mm-tc-first" type="text" placeholder="First" aria-label="Coach first name" maxlength="16" autocomplete="off" />
+          <input class="form-input" id="mm-tc-last" type="text" placeholder="Last" aria-label="Coach last name" maxlength="16" autocomplete="off" />
           <button class="btn-mm btn-mm-new" id="mm-tc-create">TAKE THE JOB</button>
         </div>` : `
         <button class="btn-mm btn-mm-new mm-world-empty" data-mm-tree-found="1">\uFF0B ${div} \u2014 take your first job</button>`;
@@ -39195,7 +39228,7 @@ var _CFB = (() => {
         return `${lbl} ${gradeFromXP((_a3 = wMeta.skills[k]) != null ? _a3 : 0)}`;
       }).join(" \xB7 ")}</span>` : ""}
           </button>
-          <button class="btn-mm-del" data-mm-world-del="${n}" title="Delete world">\u2715</button>
+          <button class="btn-mm-del" data-mm-world-del="${n}" title="Delete world" aria-label="Delete world ${n}">\u2715</button>
         </div>` : `
         <button class="btn-mm btn-mm-new mm-world-empty" data-mm-world-new="${n}">\uFF0B WORLD ${n} \u2014 start a new dynasty</button>`;
     }).join("")}
@@ -39209,7 +39242,7 @@ var _CFB = (() => {
     </div>
     <div class="mm-section-label" style="margin-top:14px">SAVED TEAMS \xB7 PLAY NOW</div>
     <div class="mm-library">
-      ${(c.teams || []).length ? (c.teams || []).map((t) => `<div class="mm-lib-row"><span>\u{1F3C8} ${escapeHtml(t.name)}${t.season ? ` <small>\xB7 S${t.season}</small>` : ""}</span><button class="btn-mm-del" data-mm-team-del="${escapeHtml(t.id)}" title="Delete saved team">\u2715</button></div>`).join("") : '<div class="mm-lib-empty muted">Save your current roster and gameplan from the Game Plan screen, then load it in Play Now.</div>'}
+      ${(c.teams || []).length ? (c.teams || []).map((t) => `<div class="mm-lib-row"><span>\u{1F3C8} ${escapeHtml(t.name)}${t.season ? ` <small>\xB7 S${t.season}</small>` : ""}</span><button class="btn-mm-del" data-mm-team-del="${escapeHtml(t.id)}" title="Delete saved team" aria-label="Delete saved team ${escapeHtml(t.name)}">\u2715</button></div>`).join("") : '<div class="mm-lib-empty muted">Save your current roster and gameplan from the Game Plan screen, then load it in Play Now.</div>'}
     </div>
     <button class="btn-mm btn-mm-secondary" id="mm-back-coaches" style="margin-top:10px">\u2190 Coaches</button>
   </div>`;
@@ -40266,8 +40299,8 @@ var _CFB = (() => {
         <div class="form-section">
           <label class="form-label">COACH NAME</label>
           <div class="ob-name-row">
-            <input class="form-input" id="ob-first" type="text" placeholder="First" maxlength="16" autocomplete="off" value="${escapeHtml(ob.first)}" />
-            <input class="form-input" id="ob-last" type="text" placeholder="Last" maxlength="16" autocomplete="off" value="${escapeHtml(ob.last)}" />
+            <input class="form-input" id="ob-first" type="text" placeholder="First" aria-label="Coach first name" maxlength="16" autocomplete="off" value="${escapeHtml(ob.first)}" />
+            <input class="form-input" id="ob-last" type="text" placeholder="Last" aria-label="Coach last name" maxlength="16" autocomplete="off" value="${escapeHtml(ob.last)}" />
           </div>
         </div>
         <div class="form-section">
@@ -54282,6 +54315,22 @@ ${renderAutoRecruitLog()}`;
     }
     return getPlayerSchool();
   }
+  function syncOverlayInert() {
+    const root = document.getElementById("app");
+    if (!root) return;
+    const kids = Array.from(root.children);
+    const hasOverlay = kids.some((el) => el.classList && el.classList.contains("modal-overlay"));
+    for (const el of kids) {
+      const exempt = el.classList && (el.classList.contains("modal-overlay") || el.classList.contains("notification"));
+      if (hasOverlay && !exempt) {
+        el.setAttribute("inert", "");
+        el.setAttribute("aria-hidden", "true");
+      } else {
+        el.removeAttribute("inert");
+        el.removeAttribute("aria-hidden");
+      }
+    }
+  }
   function renderApp() {
     var _a, _b, _c, _d, _e, _f, _g, _h;
     const _scroll = captureScroll();
@@ -54301,6 +54350,7 @@ ${renderAutoRecruitLog()}`;
         var _a2;
         return (_a2 = m.setupListeners) == null ? void 0 : _a2.call(m);
       });
+      syncOverlayInert();
       lastRenderedView = view;
       return;
     }
@@ -54311,6 +54361,7 @@ ${renderAutoRecruitLog()}`;
     </div>`;
       setupListeners12();
       (_e = document.getElementById("btn-manual-to-menu")) == null ? void 0 : _e.addEventListener("click", () => navigate("mainmenu"));
+      syncOverlayInert();
       lastRenderedView = view;
       return;
     }
@@ -54318,6 +54369,7 @@ ${renderAutoRecruitLog()}`;
       root.innerHTML = `<div class="newgame-wrapper playnow-wrapper">${state.ui.showHalftime && state.pendingHalftime ? renderHalftimeTakeover() : renderPlayNow()}</div>` + renderNotification() + renderLiveWatchOverlay() + renderGameResultModal() + renderCallSheetModal() + renderTimeoutAdjustOverlay() + renderFourthDownModal() + renderPlayerCardModal() + renderContextHelp() + renderTipPopover();
       playnowListeners();
       setupGlobalListeners();
+      syncOverlayInert();
       lastRenderedView = view;
       return;
     }
@@ -54325,12 +54377,14 @@ ${renderAutoRecruitLog()}`;
       const classic = state._instantClassicReplay;
       root.innerHTML = '<div class="instant-classic-replay-shell"><div class="instant-classic-replay-mark">\u2605 INSTANT CLASSIC ' + ((classic == null ? void 0 : classic.score) || "") + "</div></div>" + renderGameResultModal();
       setupGlobalListeners();
+      syncOverlayInert();
       lastRenderedView = view;
       return;
     }
     if (view === "newgame" || !state.initialized) {
       root.innerHTML = `<div class="newgame-wrapper">${renderNewGame()}</div>`;
       setupListeners3();
+      syncOverlayInert();
       lastRenderedView = view;
       return;
     }
@@ -54345,14 +54399,14 @@ ${renderAutoRecruitLog()}`;
       ${(() => {
       const canBack = !!state.ui.pcardId || !!state.ui.showInbox || state.ui.view === "recruiting" && recruitingCanBack() || (state.ui.navHistory || []).length > 0;
       return `<button class="sidebar-toggle topbar-back${canBack ? "" : " back-disabled"}"
-                        id="btn-back-top" title="Back" ${canBack ? "" : "disabled"}>\u2190</button>`;
+                        id="btn-back-top" title="Back" aria-label="Back" ${canBack ? "" : "disabled"}>\u2190</button>`;
     })()}
       <span class="topbar-crest">${school ? renderCrest(school, 26) : "\u2B21"}</span>
       <div class="topbar-id">
         <span class="topbar-nick">${school ? escapeHtml(school.nick || school.name || "BLUEPRINT").toUpperCase() : "BLUEPRINT"}</span>
         <span class="topbar-meta">S${state.season} \xB7 ${escapeHtml(week)} \xB7 ${escapeHtml(phase)}</span>
       </div>
-      <button class="btn-icon topbar-inbox" id="btn-inbox-top" title="Inbox">\u2709${unread > 0 ? `<span class="inbox-dot">${unread}</span>` : ""}</button>
+      <button class="btn-icon topbar-inbox" id="btn-inbox-top" title="Inbox" aria-label="Inbox${unread > 0 ? `, ${unread} unread` : ""}">\u2709${unread > 0 ? `<span class="inbox-dot">${unread}</span>` : ""}</button>
     </header>
     <nav class="sidebar${state.ui.sidebarOpen ? " open" : ""}">
       <div class="sidebar-brand">
@@ -54401,11 +54455,11 @@ ${renderAutoRecruitLog()}`;
           </div>
         </div>
         <div class="sidebar-actions">
-          <button class="btn-icon" id="btn-inbox" title="Inbox">
+          <button class="btn-icon" id="btn-inbox" title="Inbox" aria-label="Inbox${unread > 0 ? `, ${unread} unread` : ""}">
             \u2709${unread > 0 ? `<span class="inbox-dot">${unread}</span>` : ""}
           </button>
-          <button class="btn-icon" id="btn-save" title="Save Game">\u{1F4BE}</button>
-          <button class="btn-icon" id="btn-main-menu" title="Main Menu">\u2302</button>
+          <button class="btn-icon" id="btn-save" title="Save Game" aria-label="Save Game">\u{1F4BE}</button>
+          <button class="btn-icon" id="btn-main-menu" title="Main Menu" aria-label="Main Menu">\u2302</button>
         </div>
       </div>
     </nav>
@@ -54445,6 +54499,7 @@ ${renderAutoRecruitLog()}`;
     if (!(state.ui.showHalftime && state.pendingHalftime)) injectHelpButton(view);
     installPhoneDialGuards();
     restoreScroll(_scroll, _viewChanged);
+    syncOverlayInert();
     lastRenderedView = view;
   }
   function renderPrestige(p, max = 6) {
@@ -54478,7 +54533,7 @@ ${renderAutoRecruitLog()}`;
     <div class="modal inbox-modal">
       <div class="modal-header">
         <h2>Inbox</h2>
-        <button class="modal-close" id="close-inbox">\u2715</button>
+        <button class="modal-close" id="close-inbox" aria-label="Close inbox">\u2715</button>
       </div>
       <div class="inbox-list">
         ${state.inbox.length === 0 ? '<p class="empty-state">No messages</p>' : state.inbox.map((m) => `
@@ -54514,7 +54569,7 @@ ${renderAutoRecruitLog()}`;
     <div class="modal game-result-modal${tab === "watch" ? " watch-desktop-modal" : ""}">
       <div class="modal-header">
         <h2 class="${resultTitleClass}">${escapeHtml(resultTitle)}</h2>
-        <button class="modal-close" id="close-game-result">\u2715</button>
+        <button class="modal-close" id="close-game-result" aria-label="Close game result">\u2715</button>
       </div>
       <div class="score-display">
         <div class="score-team">
@@ -55389,7 +55444,7 @@ ${renderAutoRecruitLog()}`;
     <div class="modal save-modal">
       <div class="modal-header">
         <h2>Save Game</h2>
-        <button class="modal-close" id="close-save-modal">\u2715</button>
+        <button class="modal-close" id="close-save-modal" aria-label="Close save menu">\u2715</button>
       </div>
       <div class="save-slots">
         <div class="save-slot save-slot-auto" data-save-slot="auto">
