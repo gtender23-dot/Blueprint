@@ -6188,10 +6188,28 @@ circle.wsp-skin { transform-box:fill-box; transform-origin:center; transform:sca
 /* the ground shadow only shows while the ball is airborne — the height cue */
 .wab-shadow { fill:rgba(0,0,0,.35); visibility:hidden; }
 .wp-ball-air .wab-shadow, .wp-ball-kick .wab-shadow { visibility:visible; }
-.wp-ball-air .wab-spin { animation:wab-spiral .34s linear infinite; }
+.wp-ball-air .wab-spin { animation:wab-spiral .16s linear infinite; }
+/* M21: the aim group (JS-rotated) points the nose along the flight; the spin
+   inside it is a TIGHT spiral — fast roll about the long axis (scaleY pulse
+   + lace/highlight shimmer), not the old ±9° end-wobble. */
+.wab-aim { transform-box:fill-box; transform-origin:50% 50%; }
+.wp-ball-air .wab-lace { animation:wab-lace-roll .16s linear infinite; }
+.wp-ball-air .wab-highlight { animation:wab-hi-roll .16s linear infinite; }
+@keyframes wab-lace-roll { 0%,100% { opacity:1; transform:translateY(0); } 50% { opacity:.25; transform:translateY(.28px); } }
+@keyframes wab-hi-roll { 0%,100% { opacity:.9; } 50% { opacity:.3; } }
+/* M21: gun-snap tumble — the short center→QB flight reads as a real snap. */
+.wp-ball-snap .wab-spin { animation:wab-snap-tumble .3s linear infinite; }
+@keyframes wab-snap-tumble { from { transform:rotate(0deg) scaleY(.96); } to { transform:rotate(-360deg) scaleY(.96); } }
+/* M21: a tipped ball — trajectory broken by the credited PBU man; erratic
+   tumble + hop on the way to the turf. */
+.wp-ball-tipped .wab-spin { animation:wab-loose-spin .13s linear infinite !important; }
+.wp-ball-tipped .wab-lift { animation:wab-loose-hop .16s steps(2,end) infinite; }
+.wp-ball-tipped .wab-shadow { visibility:visible; opacity:.55; }
+/* M21: carried ball tucks smaller into the hands band. */
+.wp-ball-carried .wab-model { transform:scale(.4); }
 /* PBP formation tag — every snap reads like film */
 .pbp-form { opacity:.62; font-weight:800; letter-spacing:.04em; }
-@keyframes wab-spiral { 0% { transform:rotate(-9deg) scaleY(.94); } 50% { transform:rotate(9deg) scaleY(1.02); } 100% { transform:rotate(-9deg) scaleY(.94); } }
+@keyframes wab-spiral { 0% { transform:rotate(-3deg) scaleY(.85); } 50% { transform:rotate(3deg) scaleY(1.04); } 100% { transform:rotate(-3deg) scaleY(.85); } }
 /* Broadcast cards (Group 21). */
 .wp-card-bg { fill:rgba(5,7,12,.85); stroke:var(--px-yellow); stroke-width:.4; }
 .wp-card-txt { fill:var(--px-yellow); font-size:3.2px; text-anchor:middle; font-weight:900; letter-spacing:.08em; font-family:var(--font-pixel,monospace); }
@@ -8406,7 +8424,9 @@ body *::after {
 #watch-board.watch-kickoff .wp-ball-kickoff .wab-spin { animation:wab-m15-kickoff .3s linear infinite !important; }
 #watch-board.watch-kick-onside .wp-ball-onside .wab-spin { animation:wab-m15-onside .16s linear infinite !important; }
 @keyframes wab-m15-place { to { transform:rotate(360deg) scale(.94,1.04); } }
-@keyframes wab-m15-punt { to { transform:rotate(360deg) scale(1.02,.92); } }
+/* M21: a real punt SPIRALS — nose-over precession + long-axis roll, not the
+   old end-over-end tumble (place kicks and kickoffs keep theirs; correct). */
+@keyframes wab-m15-punt { 0% { transform:rotate(-24deg) scale(1.04,.86); } 50% { transform:rotate(-10deg) scale(.98,1.02); } 100% { transform:rotate(-24deg) scale(1.04,.86); } }
 @keyframes wab-m15-kickoff { to { transform:rotate(360deg) scale(.98,1.02); } }
 @keyframes wab-m15-onside { to { transform:rotate(360deg) scale(1.08,.88); } }
 .wp-kick-landing { opacity:0; pointer-events:none; }
@@ -8503,7 +8523,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "a55d2f34a2";
+globalThis.__BUILD__ = "b849355765";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -28236,6 +28256,21 @@ var _CFB = (() => {
             brokenBy: playResult.brokenById && inv[playResult.brokenById] || null
           };
           return out2.tackler || out2.assist || out2.ff || out2.brokenBy ? out2 : null;
+        })(),
+        // M21 ball truth stamps (recording only): the credited pass-breakup
+        // man and interceptor translated player→slot so the viewer deflects
+        // and picks with the SIM'S man instead of a proximity guess. No
+        // outcome path reads these — same contract as contactSlots above.
+        ballSlots: (() => {
+          const db = defBaseField == null ? void 0 : defBaseField.bySlot;
+          if (!db) return null;
+          const inv = {};
+          for (const k of Object.keys(db)) inv[db[k]] = k;
+          const out2 = {
+            pbu: playResult.pbuId && inv[playResult.pbuId] || null,
+            pick: playResult.intPickerId && inv[playResult.intPickerId] || null
+          };
+          return out2.pbu || out2.pick ? out2 : null;
         })(),
         offSpd: slotSpeedMap(offField == null ? void 0 : offField.bySlot, offRoster),
         defSpd: slotSpeedMap(defBaseField == null ? void 0 : defBaseField.bySlot, defRoster),
@@ -50971,6 +51006,35 @@ ${renderAutoRecruitLog()}`;
       track[i][1] = end[1];
     }
   }
+  function pinTrackPoint(track, iPin, pt, span = 10) {
+    iPin = Math.min(iPin, track.length - 1);
+    if (iPin < 1) return;
+    const dx = pt[0] - track[iPin][0], dy = pt[1] - track[iPin][1];
+    const i0 = Math.max(0, iPin - span), i1 = Math.min(track.length - 1, iPin + span);
+    for (let i = i0; i <= i1; i++) {
+      const u = i <= iPin ? (i - i0) / (iPin - i0 || 1) : 1 - (i - iPin) / (i1 - iPin || 1);
+      const w = u * u * (3 - 2 * u);
+      track[i][0] += dx * w;
+      track[i][1] += dy * w;
+    }
+  }
+  function tumbleLoose(track, iEnd, rnd, clampLo = 1.5, clampHi = 60, frames = 11, amp = 2.2) {
+    if (iEnd < 0 || iEnd >= track.length - 2) return;
+    const base = track[Math.min(iEnd, track.length - 1)];
+    const ang = rnd() * Math.PI * 2;
+    const dx = Math.cos(ang), dy = Math.sin(ang) * 0.7;
+    const j1 = rnd() * Math.PI * 2, j2 = rnd() * Math.PI * 2;
+    for (let k = 1; k <= frames && iEnd + k < track.length - 1; k++) {
+      const u = k / frames;
+      const out2 = Math.sin(u * Math.PI) * amp;
+      const hop = Math.abs(Math.sin(u * Math.PI * 3 + j1)) * 0.6 * (1 - u);
+      const wob = Math.sin(u * Math.PI * 5 + j2) * 0.45 * (1 - u);
+      track[iEnd + k] = [
+        clamp6(base[0] + dx * out2 - dy * wob, 1, 99),
+        clamp6(base[1] + dy * out2 + dx * wob + hop, clampLo, clampHi)
+      ];
+    }
+  }
   function capTrackSpeed(track, maxStep) {
     for (let i = track.length - 1; i > 0; i--) {
       const dx = track[i][0] - track[i - 1][0], dy = track[i][1] - track[i - 1][1];
@@ -51199,7 +51263,9 @@ ${renderAutoRecruitLog()}`;
     const PRESNAP = p.optionPhase === "jet" ? 0.95 : 0.55;
     const SNAP_ORIGIN = [50, LOS + 0.6];
     const _qbDepthYds = Math.max(0, (((_g = (_f = off.find((s) => s.id === "QB")) == null ? void 0 : _f.by) != null ? _g : LOS + 3) - LOS) / YPU);
-    const SNAP_T = clamp6(0.12 + _qbDepthYds * 0.028, 0.12, 0.32);
+    const _snapDestSlot = p.optionPhase === "wildcat" ? off.find((s) => s.pos === "WILDCAT") || qbSlot : qbSlot;
+    const _snapLatU = Math.abs(((_snapDestSlot == null ? void 0 : _snapDestSlot.bx) != null ? _snapDestSlot.bx : 50) - 50);
+    const SNAP_T = clamp6(0.12 + _qbDepthYds * 0.028 + _snapLatU * 0.022, 0.12, 1.05);
     const SNAP_END = PRESNAP + SNAP_T;
     const snapFlight = (t2, dest) => {
       if (t2 < PRESNAP) return null;
@@ -51426,6 +51492,7 @@ ${renderAutoRecruitLog()}`;
         pre: preFoul
       });
       var ballEnd = { at: dur, pt: null };
+      var ballCue = { kind: "penalty", snapStart: preFoul ? null : PRESNAP, snapEnd: preFoul ? null : SNAP_END, holdEnd: preFoul ? null : tWhistle, meshStart: null, meshEnd: null, fakeStart: null, fakeEnd: null, release: null, catch: null };
     } else if (isPass && !p.sack) {
       const catchers = off.filter((s) => s.catch && s.pos !== "RB" && s.pos !== "FB");
       const backs = off.filter((s) => s.catch && (s.pos === "RB" || s.pos === "FB"));
@@ -51457,7 +51524,8 @@ ${renderAutoRecruitLog()}`;
       const _pocketBreakdown = SNAP_END + (p.hurried ? clamp6(1.15 - (((_k = p.pressureIds) == null ? void 0 : _k.length) || 1) * 0.12, 0.6, 1.15) : 2.4);
       const throwAt = screen ? SNAP_END + _screenDelay : Math.max(SNAP_END + 0.45, Math.min(_routeBreak, _pocketBreakdown));
       const armF = p.qbArm != null ? clamp6(1 + (p.qbArm - 55) / 160, 0.86, 1.16) : 1;
-      const flight = clamp6(Math.hypot(catchPt[0] - qbSlot.bx, catchPt[1] - qbSlot.by) / (28 * armF), 0.22, 1.05);
+      const _flightDist = Math.hypot(catchPt[0] - qbSlot.bx, catchPt[1] - qbSlot.by);
+      const flight = Math.max(clamp6(_flightDist / (28 * armF), 0.22, 1.05), _flightDist / 47);
       const tCatch = throwAt + flight;
       throwCue = { start: Math.max(SNAP_END, throwAt - 0.34), release: throwAt, end: throwAt + 0.28, arm: (_l = p.qbArm) != null ? _l : null };
       if (p.hurried && !screen) pressCue = { start: Math.max(SNAP_END + 0.25, throwAt - 0.5), end: throwAt + 0.05 };
@@ -51618,6 +51686,10 @@ ${renderAutoRecruitLog()}`;
         }
       }
       carrier = p.complete && !p.turnover && tgtSlot ? A[tgtSlot.id] : null;
+      var ballCue = { kind: "pass", snapStart: PRESNAP, snapEnd: SNAP_END, holdEnd: throwAt, meshStart: null, meshEnd: null, fakeStart: p.playAction ? SNAP_END : null, fakeEnd: p.playAction ? _dropStart : null, release: throwAt, catch: tCatch };
+      var carryCue = carrier ? { id: carrier.id, arm: catchPt[0] >= 50 ? "r" : "l", from: tCatch } : null;
+      var _tgtActor = !_throwAway && tgtSlot && !p.turnover ? A[tgtSlot.id] : null;
+      var _catchPtV = catchPt;
       if (carrier) {
         const chasers = defs.filter((d) => d.grp !== "DL").slice(0, 4);
         for (const d of chasers) {
@@ -51631,8 +51703,13 @@ ${renderAutoRecruitLog()}`;
         const snap = snapFlight(t2, () => [A.QB.x, A.QB.y - 0.8]);
         if (t2 < PRESNAP) pt = [50, LOS + 0.6];
         else if (snap) pt = snap;
-        else if (t2 < throwAt) pt = [A.QB.x, A.QB.y - 0.8];
-        else if (t2 < tCatch) {
+        else if (t2 < throwAt) {
+          pt = [A.QB.x, A.QB.y - 0.8];
+          if (p.playAction && _dropStart > SNAP_END && t2 < _dropStart) {
+            const uF = clamp6((t2 - SNAP_END) / (_dropStart - SNAP_END), 0, 1);
+            pt = [pt[0], pt[1] - Math.sin(uF * Math.PI) * 1.1];
+          }
+        } else if (t2 < tCatch) {
           const u = (t2 - throwAt) / flight;
           const ox = A.QB.x, oy = A.QB.y - 0.8;
           const lx = ox + (catchPt[0] - ox) * u;
@@ -51652,8 +51729,10 @@ ${renderAutoRecruitLog()}`;
         return pt;
       };
       if (p.turnover) {
-        let best = null, bd = 1e9;
-        for (const d of defs) {
+        let best = p.ballSlots && p.ballSlots.pick ? defs.find((d2) => d2.slot.id === p.ballSlots.pick) || null : null;
+        if (best && Math.hypot(best.x - catchPt[0], best.y - catchPt[1]) > (tCatch - PRESNAP) * best.speed * 0.75) best = null;
+        let bd = 1e9;
+        if (!best) for (const d of defs) {
           const dd = (d.x - catchPt[0]) ** 2 + (d.y - catchPt[1]) ** 2;
           if (dd < bd) {
             bd = dd;
@@ -51699,6 +51778,8 @@ ${renderAutoRecruitLog()}`;
       wireCoverage(catchers, null, () => [50, 20]);
       fx.push({ t: tSack, kind: "sack", x: sackPt[0], y: sackPt[1] });
       carrier = A.QB;
+      var ballCue = { kind: "sack", snapStart: PRESNAP, snapEnd: SNAP_END, holdEnd: SNAP_END, meshStart: null, meshEnd: null, fakeStart: null, fakeEnd: null, release: null, catch: null };
+      var carryCue = { id: "QB", arm: sackPt[0] >= 50 ? "r" : "l", from: SNAP_END };
       ballPlan = (t2) => {
         if (t2 < PRESNAP) return [50, LOS + 0.6];
         const snap = snapFlight(t2, () => [A.QB.x, A.QB.y - 0.8]);
@@ -51919,9 +52000,15 @@ ${renderAutoRecruitLog()}`;
         const snap = snapFlight(t2, () => [A.QB.x, A.QB.y - 0.8]);
         if (snap) return snap;
         if (t2 < pitchAt) return [A.QB.x, A.QB.y - 0.8];
-        if (t2 < pitchAt + 0.18) {
-          const u = (t2 - pitchAt) / 0.18;
-          return [A.QB.x + (carrier.x - A.QB.x) * u, A.QB.y + (carrier.y - A.QB.y) * u - Math.sin(u * Math.PI) * 0.9];
+        if (_exchT == null) {
+          const gap = Math.hypot(carrier.x - A.QB.x, carrier.y - A.QB.y);
+          _exchT = Math.max(0.18, Math.min(0.9, gap / 42));
+          _exchFrom = [A.QB.x, A.QB.y];
+          _exchPitch = true;
+        }
+        if (t2 < pitchAt + _exchT) {
+          const u = (t2 - pitchAt) / _exchT;
+          return [_exchFrom[0] + (carrier.x - _exchFrom[0]) * u, _exchFrom[1] + (carrier.y - _exchFrom[1]) * u - Math.sin(u * Math.PI) * 0.9];
         }
         return [carrier.x, carrier.y];
       } : (t2) => {
@@ -51929,9 +52016,16 @@ ${renderAutoRecruitLog()}`;
         const snap = snapFlight(t2, () => [A.QB.x, A.QB.y - 0.8]);
         if (snap) return snap;
         if (t2 < meshAt) return [A.QB.x, A.QB.y - 0.8];
-        if (t2 < meshAt + HANDOFF) {
-          const u = (t2 - meshAt) / HANDOFF, ox = A.QB.x, oy = A.QB.y - 0.8;
-          return [ox + (carrier.x - ox) * u, oy + (carrier.y - oy) * u];
+        if (_exchT == null) {
+          const gap = Math.hypot(carrier.x - A.QB.x, carrier.y - (A.QB.y - 0.8));
+          _exchT = Math.max(HANDOFF, Math.min(0.9, gap / 40));
+          _exchFrom = [A.QB.x, A.QB.y - 0.8];
+          _exchPitch = gap > 6;
+        }
+        if (t2 < meshAt + _exchT) {
+          const u = (t2 - meshAt) / _exchT, ox = _exchFrom[0], oy = _exchFrom[1];
+          const lift = _exchPitch ? Math.sin(u * Math.PI) * 0.9 : 0;
+          return [ox + (carrier.x - ox) * u, oy + (carrier.y - oy) * u - lift];
         }
         return [carrier.x, carrier.y];
       };
@@ -51944,6 +52038,24 @@ ${renderAutoRecruitLog()}`;
       var endInfo = { actor: carrier, at: tEnd, pt: endPt };
       var ballEnd = { at: tEnd, pt: endPt };
       var _ballFloorFrame = Math.round(meshAt / STEP);
+      var carryCue = {
+        id: carrier.id,
+        arm: endPt[0] >= 50 ? "r" : "l",
+        from: pitchAt ? pitchAt + 0.18 : directSnap ? SNAP_END : carrier === A.QB ? SNAP_END : meshAt + HANDOFF
+      };
+      var _exchT = null, _exchFrom = null, _exchPitch = false;
+      var ballCue = {
+        kind: "run",
+        snapStart: PRESNAP,
+        snapEnd: SNAP_END,
+        holdEnd: pitchAt ? pitchAt : directSnap || carrier === A.QB ? SNAP_END : meshAt,
+        meshStart: pitchAt ? pitchAt : directSnap || carrier === A.QB ? null : meshAt,
+        meshEnd: pitchAt ? pitchAt + 0.18 : directSnap || carrier === A.QB ? null : meshAt + HANDOFF,
+        fakeStart: null,
+        fakeEnd: null,
+        release: null,
+        catch: null
+      };
     }
     const everyone = [...offs, ...defs];
     everyone.sort((a2, b2) => a2 === carrier ? -1 : b2 === carrier ? 1 : 0);
@@ -51977,6 +52089,10 @@ ${renderAutoRecruitLog()}`;
       const _by = Number.isFinite(_bp1) ? _bp1 : _prevB[1];
       ball.track.push([clamp6(_bx, 1, 99), clamp6(_by, 1.5, 60)]);
     }
+    if (typeof _exchT !== "undefined" && _exchT != null && typeof carryCue !== "undefined" && carryCue && typeof ballCue !== "undefined" && ballCue && ballCue.meshStart != null) {
+      carryCue.from = ballCue.meshStart + _exchT;
+      ballCue.meshEnd = carryCue.from;
+    }
     if (typeof beatenAt !== "undefined" && beatenAt != null) {
       let best = p.beatenDefSlot ? defs.find((d) => d.slot.id === p.beatenDefSlot) : null;
       if (!best) {
@@ -51993,6 +52109,9 @@ ${renderAutoRecruitLog()}`;
         }
       }
       if (best) fx.push({ t: beatenAt, kind: "beaten", actorId: best.id, x: beatenPt[0], y: beatenPt[1] });
+    }
+    if (typeof _tgtActor !== "undefined" && _tgtActor && typeof _catchT !== "undefined" && _catchT != null) {
+      pinTrackPoint(_tgtActor.track, Math.round(_catchT / STEP), _catchPtV, 10);
     }
     if (endInfo) {
       constrainTrack(endInfo.actor.track, Math.round(endInfo.at / STEP), endInfo.pt);
@@ -52188,21 +52307,66 @@ ${renderAutoRecruitLog()}`;
       for (let i = iW; i < ball.track.length; i++) ball.track[i] = [...ball.track[iW]];
     }
     if (endInfo && carrier) {
-      const iEnd = Math.round(endInfo.at / STEP);
-      for (let i = iEnd; i < ball.track.length; i++) ball.track[i] = [...carrier.track[Math.min(i, carrier.track.length - 1)]];
+      const iRide = typeof carryCue !== "undefined" && carryCue && carryCue.id === carrier.id ? Math.round(carryCue.from / STEP) + 1 : Math.round(endInfo.at / STEP);
+      for (let i = iRide; i < ball.track.length; i++) ball.track[i] = [...carrier.track[Math.min(i, carrier.track.length - 1)]];
     }
     if (typeof _intPicker !== "undefined" && _intPicker && !carrier) {
-      const iC = Math.round(ballEnd.at / STEP) + 2;
+      const iC0 = Math.round(ballEnd.at / STEP);
+      const _iSnap0 = Math.round(PRESNAP / STEP);
+      const _pTr0 = _intPicker.track[Math.min(iC0, _intPicker.track.length - 1)];
+      let _pDrift = _pTr0 && ballEnd.pt ? Math.hypot(_pTr0[0] - ballEnd.pt[0], _pTr0[1] - ballEnd.pt[1]) : Infinity;
+      if (_pDrift > (iC0 - _iSnap0) * 0.28) {
+        let nb = null, nd = Infinity;
+        for (const d of defs) {
+          const tr = d.track[Math.min(iC0, d.track.length - 1)];
+          if (!tr || !ballEnd.pt) continue;
+          const dd = Math.hypot(tr[0] - ballEnd.pt[0], tr[1] - ballEnd.pt[1]);
+          if (dd < nd) {
+            nd = dd;
+            nb = d;
+          }
+        }
+        if (nb) {
+          _intPicker = nb;
+          _pDrift = nd;
+        }
+      }
+      if (ballEnd.pt && _pDrift > 0.4 && _pDrift <= (iC0 - _iSnap0) * 0.28 && iC0 - _iSnap0 > 4) {
+        pinTrackPoint(_intPicker.track, iC0, ballEnd.pt, iC0 - _iSnap0);
+      }
+      const iC = iC0 + 2;
       for (let i = iC; i < ball.track.length; i++) ball.track[i] = [..._intPicker.track[Math.min(i, _intPicker.track.length - 1)]];
+    }
+    var deflectCue = null;
+    if (isPass && !p.sack && !p.complete && !p.turnover && p.ballSlots && p.ballSlots.pbu && typeof _catchT !== "undefined" && _catchT != null && !p.throwAway) {
+      const dP = defs.find((d) => d.slot.id === p.ballSlots.pbu) || null;
+      const iC = Math.min(Math.round(_catchT / STEP), ball.track.length - 1);
+      const _iSnap = Math.round(PRESNAP / STEP);
+      const _dTr = dP ? dP.track[Math.min(iC, dP.track.length - 1)] : null;
+      const _drift = _dTr ? Math.hypot(_dTr[0] - ball.track[iC][0], _dTr[1] - ball.track[iC][1]) : Infinity;
+      if (dP && iC - _iSnap > 4 && _drift <= (iC - _iSnap) * 0.28) {
+        const cp = ball.track[iC];
+        pinTrackPoint(dP.track, iC, [clamp6(cp[0] + (dP.x >= cp[0] ? 0.9 : -0.9), 1, 99), clamp6(cp[1] - 0.4, -60, 61)], iC - _iSnap);
+        deflectCue = { id: dP.id, t: _catchT };
+        const ang = rnd() * Math.PI * 2;
+        const dxD = Math.cos(ang), dyD = Math.sin(ang);
+        const K = 12;
+        for (let k = 1; k <= K && iC + k < ball.track.length; k++) {
+          const u = k / K;
+          const dist = 3.4 * (1 - (1 - u) * (1 - u));
+          const wob = Math.sin(k * 2.1) * 0.35 * (1 - u);
+          ball.track[iC + k] = [
+            clamp6(cp[0] + dxD * dist - dyD * wob, 1, 99),
+            clamp6(cp[1] + dyD * dist * 0.7 + dxD * wob + Math.abs(Math.sin(k * 1.7)) * 0.3 * (1 - u), 1.5, 60)
+          ];
+        }
+        const iRest = Math.min(iC + K, ball.track.length - 1);
+        for (let i = iRest + 1; i < ball.track.length; i++) ball.track[i] = [...ball.track[iRest]];
+      }
     }
     if (p.turnover && !isPass && endInfo) {
       const iEnd = Math.round(ballEnd.at / STEP);
-      const bdir = rnd() < 0.5 ? -1 : 1;
-      for (let k = 1; k <= 8 && iEnd + k < ball.track.length - 2; k++) {
-        const decay = 1 - k / 8;
-        ball.track[iEnd + k][0] = clamp6(ball.track[iEnd + k][0] + bdir * Math.sin(k * 1.9) * 0.9 * decay, 1, 99);
-        ball.track[iEnd + k][1] = clamp6(ball.track[iEnd + k][1] + Math.abs(Math.sin(k * 2.3)) * 0.7 * decay, 1.5, 60);
-      }
+      tumbleLoose(ball.track, iEnd, rnd);
       let r1 = null, b1 = Infinity;
       for (const d of defs) {
         const tr = d.track[Math.min(iEnd, d.track.length - 1)];
@@ -52224,12 +52388,7 @@ ${renderAutoRecruitLog()}`;
     }
     if (isPass && p.sack && p.turnover && endInfo) {
       const iEnd = Math.round(ballEnd.at / STEP);
-      const bdir = rnd() < 0.5 ? -1 : 1;
-      for (let k = 1; k <= 7 && iEnd + k < ball.track.length - 2; k++) {
-        const decay = 1 - k / 7;
-        ball.track[iEnd + k][0] = clamp6(ball.track[iEnd + k][0] + bdir * Math.sin(k * 2.1) * 1 * decay, 1, 99);
-        ball.track[iEnd + k][1] = clamp6(ball.track[iEnd + k][1] + Math.abs(Math.sin(k * 2.5)) * 0.6 * decay, 1.5, 60);
-      }
+      tumbleLoose(ball.track, iEnd, rnd, 1.5, 60, 9, 1.8);
       fx.push({ t: ballEnd.at + 0.08, kind: "fum", x: ballEnd.pt[0], y: ballEnd.pt[1] });
     }
     if (isPass) for (const rc of rushCues) {
@@ -52295,6 +52454,13 @@ ${renderAutoRecruitLog()}`;
       // play had no trace) — lets the UI highlight the real matchup someday and
       // lets the probe verify the cushion against the sim's separation.
       covId: _covActorId,
+      // M21: ball-ownership channel — phase labels (ballCue), the carrier's
+      // hand-off truth (carryCue: who, from when, which arm), and the stamped
+      // deflection (deflectCue). Labels only; the ball track owns every spot.
+      ballCue: typeof ballCue !== "undefined" ? ballCue : null,
+      carryCue: typeof carryCue !== "undefined" ? carryCue : null,
+      deflectCue: typeof deflectCue !== "undefined" ? deflectCue : null,
+      pickId: typeof _intPicker !== "undefined" && _intPicker ? _intPicker.id : null,
       throwCue,
       tackleCue,
       moveCue,
@@ -52441,7 +52607,7 @@ ${renderAutoRecruitLog()}`;
     return `<g class="wsp wsp-build-${build} wsp-modern-athlete wsp-reference-athlete wsp-uniform-authentic wsp-profile-${profile} wsp-stance-${setStyle}${rbPrototype ? " wsp-prototype-rb" : ""}${a.qb ? " wsp-qb" : ""}${gloveClass}${visorClass}${armSleeveClass}${kneeBraceClass}" data-jersey="${jerseyText}" style="--gait:${gait}s;--wsp-skin:${skin};--wsp-skin-shadow:${skinShadow}"><g class="wsp-athlete">${body}</g></g>${tag}`;
   }
   function ballMarkup(x, y) {
-    return `<g id="wp-ball" class="wa-ballg" transform="translate(${x},${y})"><ellipse class="wab-shadow" cx="0" cy=".48" rx=".78" ry=".2"/><g class="wab-lift"><g class="wab-spin"><g class="wab-model"><path class="wab-core" d="M-1.7 0Q-1.18-.82 0-.82T1.7 0Q1.18.82 0 .82T-1.7 0Z"/><path class="wab-panel" d="M-1.18-.45Q0-.82 1.18-.45Q.72-.66 0-.66T-1.18-.45Z"/><path class="wab-end" d="M-1.7 0q.24-.4.58-.6l.2.24q-.25.17-.43.36.18.2.43.36l-.2.24q-.34-.2-.58-.6ZM1.7 0q-.24-.4-.58-.6l-.2.24q.25.17.43.36-.18.2-.43.36l.2.24q.34-.2.58-.6Z"/><path class="wab-college-stripe" d="M-1.14-.52q-.18.52 0 1.04M1.14-.52q.18.52 0 1.04"/><path class="wab-seam" d="M-.76-.08Q0-.3.76-.08"/><path class="wab-lace" d="M-.58-.1Q0-.25.58-.1M-.36-.28l.08.35M-.12-.33l.04.36M.12-.33l-.04.36M.36-.28l-.08.35"/><path class="wab-highlight" d="M-.92-.42Q-.3-.68.28-.62"/></g></g></g></g>`;
+    return `<g id="wp-ball" class="wa-ballg" transform="translate(${x},${y})"><ellipse class="wab-shadow" cx="0" cy=".48" rx=".78" ry=".2"/><g class="wab-lift"><g class="wab-aim"><g class="wab-spin"><g class="wab-model"><path class="wab-core" d="M-1.7 0Q-1.18-.82 0-.82T1.7 0Q1.18.82 0 .82T-1.7 0Z"/><path class="wab-panel" d="M-1.18-.45Q0-.82 1.18-.45Q.72-.66 0-.66T-1.18-.45Z"/><path class="wab-end" d="M-1.7 0q.24-.4.58-.6l.2.24q-.25.17-.43.36.18.2.43.36l-.2.24q-.34-.2-.58-.6ZM1.7 0q-.24-.4-.58-.6l-.2.24q.25.17.43.36-.18.2-.43.36l.2.24q.34-.2.58-.6Z"/><path class="wab-college-stripe" d="M-1.14-.52q-.18.52 0 1.04M1.14-.52q.18.52 0 1.04"/><path class="wab-seam" d="M-.76-.08Q0-.3.76-.08"/><path class="wab-lace" d="M-.58-.1Q0-.25.58-.1M-.36-.28l.08.35M-.12-.33l.04.36M.12-.33l-.04.36M.36-.28l-.08.35"/><path class="wab-highlight" d="M-.92-.42Q-.3-.68.28-.62"/></g></g></g></g></g>`;
   }
   var WSP_TURN_V = 4.6;
   var WSP_VERT_V = 1.6;
@@ -56295,6 +56461,8 @@ ${renderAutoRecruitLog()}`;
       "wp-carrier-brace-right"
     ];
     const liftN = ballN == null ? void 0 : ballN.querySelector(".wab-lift");
+    const aimN = ballN == null ? void 0 : ballN.querySelector(".wab-aim");
+    let prevBallR = null, ballAng = 0;
     let flightArc = null;
     if (script.throwCue && catchT != null && catchT > script.throwCue.release) {
       const rel = script.throwCue.release;
@@ -56325,7 +56493,6 @@ ${renderAutoRecruitLog()}`;
       }
       const [bwx, bwy] = sampleTrack(script.ball.track, script.step, t);
       const [bx, by] = watchSidePoint(bwx, bwy);
-      ballN == null ? void 0 : ballN.setAttribute("transform", `translate(${bx.toFixed(2)},${by.toFixed(2)})`);
       let cx = null, cy = null, cd = 1e9, carrierId = null;
       const possessionTeam = turnoverFx && t >= turnoverFx.t + (turnoverFx.kind === "fum" ? 0.32 : 0) ? "def" : "off";
       const playOn = t >= script.presnap;
@@ -56648,6 +56815,91 @@ ${renderAutoRecruitLog()}`;
       for (const id in nodes) {
         const n2 = nodes[id];
         if (n2 && n2._faceLock && !faceLocks.has(id)) n2._faceLock = null;
+      }
+      {
+        const bc = script.ballCue || null, cc = script.carryCue || null, dc = script.deflectCue || null;
+        const inAir = !!throwCue && catchT != null && t >= throwCue.release && t < catchT;
+        const deflectOn = !!dc && t >= dc.t;
+        const looseOn = !!looseFx && t >= looseFx.t;
+        const snapOn = !!bc && bc.snapStart != null && t >= bc.snapStart && t < bc.snapEnd;
+        const meshOn = !!bc && bc.meshStart != null && t >= bc.meshStart && t < bc.meshEnd;
+        const paFakeOn = !!bc && bc.fakeStart != null && t >= bc.fakeStart && t < bc.fakeEnd;
+        if (dc) {
+          const dn = nodes[dc.id];
+          if (dn) {
+            dn.classList.toggle("wp-tackling", t >= dc.t - 0.12 && t <= dc.t + 0.3);
+            dn.classList.toggle("wp-tk-strip", t >= dc.t - 0.12 && t <= dc.t + 0.45);
+          }
+        }
+        let rbx = bx, rby = by;
+        let attach = null;
+        let carriedOn = false;
+        if (!inAir && !looseOn && !deflectOn && !snapOn && !meshOn && playOn) {
+          if (cc && t >= cc.from && nodes[cc.id]) {
+            const cnode = nodes[cc.id];
+            const face = cnode._wsm ? cnode._wsm.face : "e";
+            const isDown = cnode.classList.contains("wp-down") || tackleCue && !tackleCue.sack && cc.id === tackleCue.carrierId && t > tackleCue.impact + 0.18;
+            let ox = face === "e" ? 0.5 : face === "w" ? -0.5 : cc.arm === "r" ? 0.5 : -0.5;
+            let oy = -2.15;
+            if (isDown) {
+              ox *= 1.5;
+              oy = -0.55;
+            }
+            attach = [cc.id, ox, oy];
+            carriedOn = true;
+          } else if (!paFakeOn && bc && bc.holdEnd != null && t >= bc.snapEnd && t < bc.holdEnd && nodes.QB) {
+            const qm = nodes.QB._wsm;
+            const fs = qm && qm.face === "w" ? -1 : 1;
+            const load = nodes.QB.classList.contains("wp-qb-load");
+            attach = ["QB", load ? -fs * 0.55 : fs * 0.42, load ? -3.1 : -2.3];
+          }
+        }
+        if (attach) {
+          const ap = actorPts[attach[0]];
+          if (ap) {
+            const tx = ap[0] + attach[1], ty = ap[1] + attach[2];
+            if (Math.hypot(tx - bx, ty - by) < 3.4) {
+              rbx = tx;
+              rby = ty;
+            } else carriedOn = false;
+          } else carriedOn = false;
+        }
+        if (inAir) {
+          const u2 = (t - throwCue.release) / Math.max(1e-3, catchT - throwCue.release);
+          if (u2 < 0.14 && actorPts.QB && nodes.QB) {
+            const w = 1 - u2 / 0.14;
+            const qm = nodes.QB._wsm;
+            const fs = qm && qm.face === "w" ? -1 : 1;
+            rbx += (actorPts.QB[0] + fs * 0.6 - rbx) * w;
+            rby += (actorPts.QB[1] - 3.05 - rby) * w;
+          } else if (u2 > 0.85 && catchCue && actorPts[catchCue.id] && nodes[catchCue.id]) {
+            const w = (u2 - 0.85) / 0.15;
+            const cm = nodes[catchCue.id]._wsm;
+            const fs = cm && cm.face === "w" ? -1 : 1;
+            rbx += (actorPts[catchCue.id][0] + fs * 0.45 - rbx) * w;
+            rby += (actorPts[catchCue.id][1] - 2.35 - rby) * w;
+          }
+        }
+        let liftY = 0;
+        if (flightArc && t >= flightArc.rel && t < flightArc.end) {
+          const u3 = (t - flightArc.rel) / (flightArc.end - flightArc.rel);
+          liftY = -Math.sin(u3 * Math.PI) * flightArc.loft;
+        }
+        if (aimN) {
+          if (inAir) {
+            if (prevBallR) {
+              const dxA = rbx - prevBallR[0], dyA = rby + liftY - prevBallR[1];
+              if (Math.hypot(dxA, dyA) > 0.12) ballAng = Math.atan2(dyA, dxA) * 180 / Math.PI;
+            }
+            aimN.setAttribute("transform", `rotate(${ballAng.toFixed(1)})`);
+          } else if (aimN.hasAttribute("transform")) aimN.removeAttribute("transform");
+        }
+        prevBallR = [rbx, rby + liftY];
+        ballN == null ? void 0 : ballN.classList.toggle("wp-ball-snap", snapOn);
+        ballN == null ? void 0 : ballN.classList.toggle("wp-ball-carried", carriedOn);
+        ballN == null ? void 0 : ballN.classList.toggle("wp-ball-tipped", deflectOn && t <= dc.t + 0.62);
+        ballN == null ? void 0 : ballN.setAttribute("transform", `translate(${rbx.toFixed(2)},${rby.toFixed(2)})`);
+        if (ballN) ballN.dataset.possess = carriedOn ? cc.id : attach ? attach[0] : "";
       }
       if (spotN) {
         if (t > script.presnap && cx != null && cd < 3) {
