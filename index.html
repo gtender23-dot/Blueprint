@@ -18,19 +18,19 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg-page:    #060912;
-  --bg-card:    #0e1220;
-  --bg-raised:  #141928;
-  --bg-input:   #0a0e1a;
-  --bg-hover:   #1a2035;
-  --surface:    #0e1220;
-  --surface-2:  #141928;
+  --bg-page:    #0A1626;
+  --bg-card:    #13253C;
+  --bg-raised:  #16304C;
+  --bg-input:   #0C1B2E;
+  --bg-hover:   #1B3554;
+  --surface:    #13253C;
+  --surface-2:  #16304C;
   --border-sub: rgba(255,255,255,0.05);
   --border:     rgba(255,255,255,0.10);
   --border-str: rgba(255,255,255,0.20);
-  --text-0: #f0f4ff;
-  --text-1: #b0bcd4;
-  --text-2: #6a7490;
+  --text-0: #EAF0F7;
+  --text-1: #9FB4CE;
+  --text-2: #64789A;
   /* Default brand green — REAL values required here. These were previously
      self-referential (--green: var(--green)) which is guaranteed-invalid per
      the CSS spec: every var(--green) resolved to nothing on screens where
@@ -46,9 +46,9 @@
      active tabs, nav, accents, background wash) use these; SEMANTIC surfaces
      (ratings, stat deltas, win/loss, warnings) stay on the fixed --green so
      a team with a muddy primary can never make "good" numbers unreadable. */
-  --team-1:  var(--green);
-  --team-1-d: var(--green-d);
-  --team-1-dk: var(--green-dk);
+  --team-1:  var(--bc-brand, var(--green));
+  --team-1-d: var(--bc-brand-d, var(--green-d));
+  --team-1-dk: var(--bc-brand-dk, var(--green-dk));
   --team-a4:  color-mix(in srgb, var(--team-1)  4%, transparent);
   --team-a7:  color-mix(in srgb, var(--team-1)  7%, transparent);
   --team-a8:  color-mix(in srgb, var(--team-1)  8%, transparent);
@@ -81,7 +81,7 @@
   --green-a35: color-mix(in srgb, var(--green) 35%, transparent);
   --green-a50: color-mix(in srgb, var(--green) 50%, transparent);
   --green-a70: color-mix(in srgb, var(--green) 70%, transparent);
-  --gold:   #ffd740;
+  --gold:   #F5B942;
   --gold-d: #f9a825;
   --red:    #ff5252;
   --red-d:  #c62828;
@@ -8627,6 +8627,126 @@ body *::after {
 .player-portrait.pp2 svg { position:absolute; inset:0; width:100%; height:100%; display:block; z-index:0; }
 .player-portrait.pp2 .portrait-position { z-index:2; }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   BROADCAST PACKAGE SKIN — UI overhaul Phase 1, layer 1 (Aug 10, 2026).
+   Art direction ratified from Ref/ui-direction-A-reference.html ("A").
+   ADDITIVE paint layer: existing classes keep their layout; this restyles
+   display type, card headers (the angled lower-third), and accents. Team
+   identity vars keep working — semantic colors untouched.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --font-display: 'Archivo', 'Inter', system-ui, sans-serif;
+  /* [Owner ruling] Broadcast accents follow the TEAM'S second color in-game;
+     broadcast gold is only the pre-game house default. Tab ink flips by
+     luminance (set by applyTeamColors). */
+  --bc-gold: var(--team-2, #F5B942);
+  --bc-ink: var(--team-2-ink, #0E1B2C);
+  --bc-crimson: #B33A3A;
+  /* Pre-game brand identity is broadcast gold, not legacy green — in-game,
+     applyTeamColors overrides with the school's real primary. Semantic
+     --green (ratings, deltas, win/loss) is untouched. */
+  --bc-brand: #F5B942;
+  --bc-brand-d: #D99C28;
+  --bc-brand-dk: #6E5012;
+}
+/* Display type: every card title becomes broadcast lettering */
+.card-header .card-title, .panel-title, .screen-title, h1, h2 {
+  font-family: var(--font-display);
+  font-variation-settings: 'wdth' 108;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+/* THE SIGNATURE — the lower-third tab. Card titles wear the angled gold tab;
+   the header row gets the broadcast keyline under it. */
+.card-header {
+  border-bottom: 2px solid var(--bc-gold);
+  padding-bottom: 0;
+  margin-bottom: 10px;
+  align-items: stretch;
+}
+.card-header .card-title {
+  background: var(--bc-gold);
+  color: var(--bc-ink);
+  font-size: 11px;
+  padding: 6px 12px 5px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
+  display: inline-block;
+}
+/* Numbers read like a scorebug */
+.stat-big, .ledger-total span:last-child, .wp-num, .record-chip {
+  font-family: var(--font-display);
+  font-variation-settings: 'wdth' 105;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+/* Primary buttons: squared, gold-forward, clipped corner */
+.btn-primary {
+  border-radius: 3px;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%);
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+/* Nav: active tab carries the gold underline like a broadcast strap */
+.nav-item.active, .tab.active {
+  box-shadow: inset 0 -3px 0 var(--bc-gold);
+}
+
+/* ── Broadcast layer 2 (Aug 10): controls + view headers ────────────────── */
+/* Secondary controls: squared navy, quiet borders — the panel language */
+.btn, .btn-ghost, .btn-sm, select, .pn-select {
+  border-radius: 3px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: .03em;
+}
+.btn-ghost { border: 1px solid var(--border-str); background: var(--bg-raised); }
+/* Every screen's masthead: the broadcast strap — display face + team keyline */
+.view-header { border-bottom: 2px solid var(--bc-gold); padding-bottom: 8px; }
+.view-title, .view-header h1 {
+  font-family: var(--font-display);
+  font-variation-settings: 'wdth' 110;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.view-subtitle { color: var(--text-1); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; font-size: 10px; }
+/* Tab straps everywhere follow the team's second color */
+.rec-tab.active, .seg-btn.active { box-shadow: inset 0 -3px 0 var(--bc-gold); }
+
+/* ── Broadcast layer 3 (Aug 10): THE HEADSET — Game Day's scorebug + sheet ── */
+/* The situation line becomes the scorebug: panel-raised, gold-keyed */
+.cs-sit {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: .04em;
+  background: var(--bg-raised);
+  border-left: 4px solid var(--bc-gold);
+  padding: 9px 12px;
+  border-radius: 3px;
+}
+.cs-sit b { color: var(--bc-gold); }
+/* Category cards: the lower-third tab name, quiet body */
+.cs-cat { border-radius: 4px; border: 1px solid var(--border); }
+.cs-cat-name {
+  font-family: var(--font-display);
+  font-variation-settings: 'wdth' 108;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+/* Concept tiles + quick calls carry the display face */
+.cs-c-name, .cs-concept { font-family: var(--font-display); font-weight: 800; }
+/* Formation chips: active state rides team identity, not legacy blue */
+.cs-form-chip.active, .cs-chip.active, [data-cs-form].active {
+  background: var(--team-1, var(--bc-brand));
+  color: #0E1B2C;
+  border-color: transparent;
+}
+
   </style>
 </head>
 <body>
@@ -8636,7 +8756,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "a52e70f1c6";
+globalThis.__BUILD__ = "5516b9fa3b";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -10615,6 +10735,15 @@ var _CFB = (() => {
         CLINIC_XP: 15,
         // one directed skill retreat per offseason (~5 weekly awards)
         OFFER_LEVERAGE_JS: 8,
+        // [OWNER RULING, Aug 2026 — dynasty vs ladder] PLAYER RETENTION. Every year
+        // the player holds another job offer and stays, the AD raises the
+        // recruiting pool by 10% of the division's base allocation — permanently,
+        // stacking, CAPPED at 100% of that allocation (10 declined calls = double
+        // money). Taking ANY new job forfeits the whole stack: that is the choice.
+        PLAYER_RETENTION: {
+          PCT_PER_OFFER: 0.1,
+          CAP_PCT: 1
+        },
         // jobSecurity bump for declining outside offers in hand
         GOAL_JS_DELTA: 6,
         // jobSecurity per AD goal hit (+) / missed (−)
@@ -10964,7 +11093,12 @@ var _CFB = (() => {
           // D4 — retention: ONLY on a live job offer, the player may pay this share
           // of the division's fixed base allocation (C.ECON.BASE[div]) to keep him,
           // deducted from NEXT season's budget (pendingScheduleGuarantee plumbing).
+          // [OWNER RULING, Aug 2026] It is NOT one-time: every time a suitor comes
+          // back for the same man, the price DOUBLES (10% → 20% → 40% → ...).
+          // Eventually you can't afford him — he leaves, or you promise a Climber
+          // the seat and end the auction. RETENTION_ESCALATION is the doubling base.
           RETENTION_PCT: 0.1,
+          RETENTION_ESCALATION: 2,
           // D5 — the succession promise: money only, and it costs MORE than a
           // retention because it is a seat, not a raise. Same next-season plumbing.
           PROMISE_PCT: 0.2,
@@ -14913,14 +15047,16 @@ var _CFB = (() => {
     const suitor = bigger.length ? bigger[Math.floor(Math.random() * bigger.length)] : null;
     if (!suitor) return null;
     const raise = Math.round(pick2.c.salary * (0.35 + Math.random() * 0.3) / 100) * 100;
-    const retentionCost = Math.round((C.ECON.BASE[school.division] || C.ECON.BASE.D3) * C.STAFF_ID.RETENTION_PCT / 100) * 100;
+    const asks = pick2.c.retentionCount || 0;
+    const retentionCost = Math.round((C.ECON.BASE[school.division] || C.ECON.BASE.D3) * C.STAFF_ID.RETENTION_PCT * Math.pow(C.STAFF_ID.RETENTION_ESCALATION, asks) / 100) * 100;
     return {
       side: pick2.side.toUpperCase(),
       coordId: pick2.c.id,
       coordName: `${pick2.c.name.first} ${pick2.c.name.last}`,
       suitorName: suitor.name,
       raise,
-      retentionCost
+      retentionCost,
+      priorRetentions: asks
     };
   }
   function deriveSchemeIdentity(side, ratings = {}) {
@@ -18109,6 +18245,14 @@ var _CFB = (() => {
     coach.budget = rev.total;
     coach.revenueBreakdown = rev;
     coach.budgetCarryover = 0;
+    const _prStacks = coach.retentionStacks || 0;
+    if (_prStacks > 0) {
+      const _prPct = Math.min(C.PLAYER_RETENTION.CAP_PCT, _prStacks * C.PLAYER_RETENTION.PCT_PER_OFFER);
+      const _prBonus = Math.round((C.ECON.BASE[school.division] || C.ECON.BASE.D3) * _prPct / 100) * 100;
+      rev.retentionBonus = _prBonus;
+      rev.retentionStacks = _prStacks;
+      coach.budget += _prBonus;
+    }
     if (coach.pendingScheduleGuarantee) {
       rev.scheduleGuarantee = coach.pendingScheduleGuarantee;
       coach.budget = Math.max(0, coach.budget + coach.pendingScheduleGuarantee);
@@ -28321,7 +28465,7 @@ var _CFB = (() => {
       if (playType.startsWith("pass")) concept = pickPassConcept(playType, offPersonnel, offRoster, covFam, _cwEff, forcedConceptName, _pbGate);
       else if (playType === "run_inside" || playType === "run_outside") concept = pickRunConcept(playType, offPersonnel, offRoster, defEff, _cwEff, forcedConceptName, _pbGate);
       let audible = false;
-      if (concept.name && playType.startsWith("pass") && qb0 && losFree !== "never" && audiblesUsed < (losFree === "free" ? 2 : 1)) {
+      if (concept.name && !forcedConceptName && !forcedGadget && playType.startsWith("pass") && qb0 && losFree !== "never" && audiblesUsed < (losFree === "free" ? 2 : 1)) {
         const calledVs = (_U = (_T = (_S = PASS_CONCEPTS[concept.name]) == null ? void 0 : _S.vs) == null ? void 0 : _T[believedFam]) != null ? _U : 0;
         const pAud = clamp2((((_V = qb0.attributes.AWR) != null ? _V : 50) - 55) * 0.012 + 8e-3 * traitLv(qb0, "fieldGeneral"), 0, 0.35) * (losFree === "free" ? 1.4 : 1);
         if (calledVs <= -0.02 && Math.random() < pAud) {
@@ -31116,6 +31260,7 @@ var _CFB = (() => {
         100,
         ((_b = state2.playerCoach.jobSecurity) != null ? _b : 0) + C.OFFER_LEVERAGE_JS
       );
+      state2.playerCoach.retentionStacks = (state2.playerCoach.retentionStacks || 0) + 1;
     }
     return n;
   }
@@ -33851,6 +33996,7 @@ var _CFB = (() => {
     pc.status = "employed";
     pc.jobSecurity = 50;
     pc.tenureSeasons = 0;
+    pc.retentionStacks = 0;
     pc.lastDelta = null;
     pc.dominanceStreak = 0;
     pc.lastOfferSeason = null;
@@ -42565,7 +42711,7 @@ var _CFB = (() => {
     const losses = coach.careerLosses || 0;
     const titles = coach.titles || 0;
     const unemployed = coach.status === "unemployed";
-    const PLAYER_SKILLS = ["reputation", "roots"];
+    const PLAYER_SKILLS = ["recruiter", "developer", "reputation", "roots"];
     const skillCards = PLAYER_SKILLS.map((key) => {
       const meta = SKILL_META[key];
       const grade = skillGrade(coach, key);
@@ -42593,6 +42739,7 @@ var _CFB = (() => {
         <span class="muted ledger-formula">${bd.capacity.toLocaleString()} seats \xD7 ${Math.round(bd.fill * 100)}% fill \xD7 $${bd.price} \xD7 ${Math.round(bd.share * 100)}% to program</span></span>
         <span>${fmt(bd.tickets)}</span></div>
       ${bd.carryover ? `<div class="ledger-row"><span>Carryover <span class="muted ledger-formula">leftovers + title & AD-goal bonuses</span></span><span>${fmt(bd.carryover)}</span></div>` : ""}
+      ${bd.retentionBonus ? `<div class="ledger-row"><span>Loyalty raises <span class="muted ledger-formula">${bd.retentionStacks} declined call${bd.retentionStacks === 1 ? "" : "s"} \xD7 10% of base${bd.retentionStacks >= 10 ? " (capped \u2014 double money)" : ""}</span></span><span>${fmt(bd.retentionBonus)}</span></div>` : ""}
       ${bd.salaries ? `<div class="ledger-row"><span>Staff salaries <span class="muted ledger-formula">OC + DC annual</span></span><span>\u2212${fmt(bd.salaries)}</span></div>` : ""}
       ${bd.upkeep ? `<div class="ledger-row"><span>Facility upkeep</span><span>\u2212${fmt(bd.upkeep)}</span></div>` : ""}
       <div class="ledger-row ledger-total"><span>Season pool</span><span>${fmt(bd.total)}</span></div>
@@ -42932,7 +43079,7 @@ var _CFB = (() => {
       ensureAmbition(coord);
       const sheet = Object.entries(coord.schemeIQ || {}).sort((a, b) => b[1] - a[1]).map(([s, iq]) => {
         const t = schemeStarTier(iq);
-        return `<span class="${s === coord.specialty ? "staff-hi" : ""}">${escapeHtml(s)} ${t >= 4 ? "\u{1F48E}" : t ? "\u2605\u2605\u2605".slice(0, t) : "\u2013"}</span>`;
+        return `<span class="${s === coord.specialty ? "staff-hi" : ""}">${escapeHtml(s)} ${t >= 4 ? "\u{1F48E}" : t ? "\u2605\u2605\u2605".slice(0, t) : "\u2013"} ${iq}</span>`;
       }).join(" \xB7 ");
       const cred = cand ? cand.credentials : null;
       const canPromote = !!(openDivs.length && cand && !handoff);
@@ -43124,17 +43271,18 @@ var _CFB = (() => {
     <div class="staff-market-head">CANDIDATES \u2014 ${side} <button class="btn-ghost btn-sm" data-hire-close="1">Close</button></div>
     ${_candidates.list.map((c, i) => {
       ensureAmbition(c);
-      const top = Object.entries(c.schemeIQ || {}).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([s, iq]) => {
+      const sheet = Object.entries(c.schemeIQ || {}).sort((a, b) => b[1] - a[1]).map(([s, iq]) => {
         const t = schemeStarTier(iq);
-        return `<span class="${s === c.specialty ? "staff-hi" : ""}">${escapeHtml(s)} ${t >= 4 ? "\u{1F48E}" : t ? "\u2605\u2605\u2605".slice(0, t) : "\u2013"}</span>`;
+        return `<span class="${s === c.specialty ? "staff-hi" : ""}">${escapeHtml(s)} ${t >= 4 ? "\u{1F48E}" : t ? "\u2605\u2605\u2605".slice(0, t) : "\u2013"} ${iq}</span>`;
       }).join(" \xB7 ");
       return `
       <div class="staff-row staff-cand">
         <div class="staff-info">
           <div class="staff-name">${escapeHtml(c.name.first)} ${escapeHtml(c.name.last)}
-            <span class="muted" style="font-weight:400">\xB7 ${c.age != null ? `${c.age} yrs` : ""} \xB7 ${escapeHtml(c.ambition || "")} \xB7 ${escapeHtml(deriveSchemeIdentity(c.side, c.ratings))} \xB7 $${c.salary.toLocaleString()}/yr</span></div>
+            <span class="muted" style="font-weight:400">\xB7 ${c.age != null ? `${c.age} yrs` : ""} \xB7 ${escapeHtml(c.ambition || "")} \xB7 $${c.salary.toLocaleString()}/yr</span></div>
+          <div class="staff-schemes muted">${escapeHtml(deriveSchemeIdentity(c.side, c.ratings))} \xB7 Specialty: <span class="staff-hi">${escapeHtml(c.specialty || "\u2013")}</span></div>
           <div class="staff-ratings muted">${Object.entries(c.ratings).map(([k, v]) => `${SHORT[k] || k} <b class="${v >= 70 ? "staff-hi" : v <= 35 ? "staff-lo" : ""}">${v}</b>`).join(" \xB7 ")}</div>
-          <div class="staff-schemes muted">${top}</div>
+          <div class="staff-schemes muted">${sheet}</div>
         </div>
         <button class="btn-primary btn-sm" data-hire-pick="${i}">Hire</button>
       </div>`;
@@ -43200,9 +43348,10 @@ var _CFB = (() => {
       rerender();
     });
     (_c = document.querySelector(".stay-btn")) == null ? void 0 : _c.addEventListener("click", () => {
+      var _a2, _b2;
       const n = declineOffersWithLeverage(state);
       if (isTreeGame(state)) noteOfferDeclined(state);
-      notify(n > 0 ? `You turned down the offers \u2014 and the AD noticed. Seat +${C.OFFER_LEVERAGE_JS}.` : "You turned down the offers and stayed put.", "info");
+      notify(n > 0 ? `You turned down the offers \u2014 and the AD noticed. Seat +${C.OFFER_LEVERAGE_JS}, and a loyalty raise: +10% of base on next season's recruiting pool (stack ${((_a2 = state.playerCoach) == null ? void 0 : _a2.retentionStacks) || 1}/10${(((_b2 = state.playerCoach) == null ? void 0 : _b2.retentionStacks) || 1) >= 10 ? " \u2014 capped, double money" : ""}). Leave for another job and every raise is forfeit.` : "You turned down the offers and stayed put.", "info", 7e3);
     });
     setupHandoffListeners();
     document.querySelectorAll("[data-tree-switch]").forEach((btn) => {
@@ -45332,7 +45481,7 @@ var _CFB = (() => {
       const sheet = Object.entries(coord.schemeIQ || {}).sort((a, b) => b[1] - a[1]).map(([s, iq]) => {
         const t = schemeStarTier(iq);
         const star = t ? "\u2605\u2605\u2605\u2605".slice(0, Math.min(3, t)) + (t >= 4 ? "\u{1F48E}" : "") : "\u2013";
-        return `<span class="${s === coord.specialty ? "staff-hi" : ""}">${escapeHtml(s)} ${t >= 4 ? "\u{1F48E}" : star}</span>`;
+        return `<span class="${s === coord.specialty ? "staff-hi" : ""}">${escapeHtml(s)} ${t >= 4 ? "\u{1F48E}" : star} ${iq}</span>`;
       }).join(" \xB7 ");
       const promised = !!coord.promisedSuccession;
       return `
@@ -45362,17 +45511,18 @@ var _CFB = (() => {
       <div class="staff-market-head">CANDIDATES \u2014 ${side} <button class="btn-ghost btn-sm" data-stage-hire-close="1">Close</button></div>
       ${_stageCandidates.list.map((c, i) => {
         ensureAmbition(c);
-        const top = Object.entries(c.schemeIQ || {}).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([s, iq]) => {
+        const sheet = Object.entries(c.schemeIQ || {}).sort((a, b) => b[1] - a[1]).map(([s, iq]) => {
           const t = schemeStarTier(iq);
-          return `<span class="${s === c.specialty ? "staff-hi" : ""}">${escapeHtml(s)} ${t >= 4 ? "\u{1F48E}" : t ? "\u2605\u2605\u2605".slice(0, t) : "\u2013"}</span>`;
+          return `<span class="${s === c.specialty ? "staff-hi" : ""}">${escapeHtml(s)} ${t >= 4 ? "\u{1F48E}" : t ? "\u2605\u2605\u2605".slice(0, t) : "\u2013"} ${iq}</span>`;
         }).join(" \xB7 ");
         return `
         <div class="staff-row">
           <div class="staff-info">
             <div class="staff-name">${escapeHtml(c.name.first)} ${escapeHtml(c.name.last)}
-              <span class="muted" style="font-weight:400">\xB7 ${c.age != null ? `${c.age} yrs` : ""} \xB7 ${escapeHtml(c.ambition || "")} \xB7 ${escapeHtml(deriveSchemeIdentity(c.side, c.ratings))} \xB7 $${c.salary.toLocaleString()}/yr</span></div>
+              <span class="muted" style="font-weight:400">\xB7 ${c.age != null ? `${c.age} yrs` : ""} \xB7 ${escapeHtml(c.ambition || "")} \xB7 $${c.salary.toLocaleString()}/yr</span></div>
+            <div class="staff-schemes muted">${escapeHtml(deriveSchemeIdentity(c.side, c.ratings))} \xB7 Specialty: <span class="staff-hi">${escapeHtml(c.specialty || "\u2013")}</span></div>
             <div class="staff-ratings muted">${Object.entries(c.ratings).map(([k, v]) => `${SHORT[k] || k} <b class="${v >= 70 ? "staff-hi" : v <= 35 ? "staff-lo" : ""}">${v}</b>`).join(" \xB7 ")}</div>
-            <div class="staff-schemes muted">${top}</div>
+            <div class="staff-schemes muted">${sheet}</div>
           </div>
           <button class="btn-primary btn-sm" data-stage-hire-pick="${i}">Hire</button>
         </div>`;
@@ -45383,7 +45533,7 @@ var _CFB = (() => {
     const poachBanner = poach ? `
   <div class="poach-banner">
     <div class="poach-text">\u{1F6A8} <b>${escapeHtml(poach.suitorName)}</b> is offering your ${poach.side} <b>${escapeHtml(poach.coordName)}</b> a job.
-      Pay a retention of <b>$${(poach.retentionCost || 0).toLocaleString()}</b> \u2014 off NEXT season's recruiting budget \u2014 or lose him.</div>
+      Pay a retention of <b>$${(poach.retentionCost || 0).toLocaleString()}</b>${poach.priorRetentions ? ` <i>(ask #${poach.priorRetentions + 1} \u2014 his agent remembers, the price has doubled)</i>` : ""} \u2014 off NEXT season's recruiting budget \u2014 or lose him.</div>
     <div class="poach-actions">
       <button class="btn-primary btn-sm" data-poach="retain">Pay the retention</button>
       <button class="btn-ghost btn-sm" data-poach="walk">Let him walk</button>
@@ -45411,7 +45561,8 @@ var _CFB = (() => {
           const c = (_a2 = school.staff) == null ? void 0 : _a2[side];
           if (c && state.playerCoach) {
             state.playerCoach.pendingRetentionCost = (state.playerCoach.pendingRetentionCost || 0) + (poach.retentionCost || 0);
-            notify(`${poach.coordName} stays. $${(poach.retentionCost || 0).toLocaleString()} comes off next season's recruiting budget.`, "success");
+            c.retentionCount = (c.retentionCount || 0) + 1;
+            notify(`${poach.coordName} stays. $${(poach.retentionCost || 0).toLocaleString()} comes off next season's recruiting budget${c.retentionCount > 1 ? ` \u2014 that's retention #${c.retentionCount}, and the next one doubles again` : " \u2014 and if the phone rings again, the price doubles"}.`, "success");
           }
         } else {
           if (school.staff) school.staff[side] = null;
@@ -45560,8 +45711,9 @@ var _CFB = (() => {
       });
     });
     (_f = document.getElementById("btn-decline-offers")) == null ? void 0 : _f.addEventListener("click", () => {
+      var _a2;
       const n = declineOffersWithLeverage(state);
-      if (n > 0) notify(`Declined ${n} offer${n > 1 ? "s" : ""} \u2014 the AD noticed. Seat +${C.OFFER_LEVERAGE_JS}.`, "info");
+      if (n > 0) notify(`Declined ${n} offer${n > 1 ? "s" : ""} \u2014 the AD noticed. Seat +${C.OFFER_LEVERAGE_JS}, loyalty raise +10% of base next season (stack ${((_a2 = state.playerCoach) == null ? void 0 : _a2.retentionStacks) || 1}/10). Leaving forfeits every raise.`, "info", 7e3);
       rerender();
     });
     document.querySelectorAll(".offer-accept-btn").forEach((btn) => {
@@ -53759,7 +53911,7 @@ ${renderAutoRecruitLog()}`;
     var _a;
     const root = document.documentElement;
     if (!((_a = school == null ? void 0 : school.colors) == null ? void 0 : _a[0])) {
-      for (const v of ["--team-1", "--team-1-d", "--team-1-dk", "--team-2"]) root.style.removeProperty(v);
+      for (const v of ["--team-1", "--team-1-d", "--team-1-dk", "--team-2", "--team-2-ink"]) root.style.removeProperty(v);
       return;
     }
     const accent = teamAccentColor(school.colors[0]);
@@ -53771,6 +53923,8 @@ ${renderAutoRecruitLog()}`;
     root.style.setProperty("--team-1-dk", darkBg);
     const second = teamAccentColor(school.colors[1] || school.colors[0]);
     root.style.setProperty("--team-2", second);
+    const [, , sl] = hexToHsl(second);
+    root.style.setProperty("--team-2-ink", sl >= 55 ? "#0E1B2C" : "#F2F6FB");
   }
   function groupHeader(title, sub, tabs, activeTab3, dataAttr) {
     return `
