@@ -6421,6 +6421,64 @@ circle.wsp-skin { transform-box:fill-box; transform-origin:center; transform:sca
 .watch-banner.on { transform:translate(-50%, 0); opacity:1; }
 .watch-banner .wb-title { color:var(--wb-accent, var(--px-yellow)); font-weight:900; letter-spacing:.1em; font-size:.95em; }
 .watch-banner .wb-sub { color:#f4f0d8; font-weight:700; font-size:.8em; opacity:.9; }
+/* ── M25: finishing the open list ───────────────────────────────────────── */
+/* Player-ID / drive-summary lower third: lower-LEFT strip (the banner owns
+   center), over the crowd band — never the playable field. */
+.watch-lower {
+  position:absolute; left:3%; bottom:5%; transform:translateY(160%);
+  display:flex; align-items:center; gap:.55em; padding:.3em .8em;
+  background:rgba(5,7,12,.92); border:1px solid var(--wl-accent, var(--px-yellow));
+  border-left:.45em solid var(--wl-accent, var(--px-yellow));
+  font-family:var(--font-pixel,monospace); pointer-events:none;
+  opacity:0; transition:transform .28s cubic-bezier(.2,.9,.3,1), opacity .2s;
+  white-space:nowrap; z-index:4; max-width:70%;
+}
+.watch-lower.on { transform:translateY(0); opacity:1; }
+.watch-lower .wl-kicker { color:var(--wl-accent, var(--px-yellow)); font-weight:900; letter-spacing:.12em; font-size:.72em; }
+.watch-lower .wl-title { color:#f4f0d8; font-weight:900; font-size:.92em; }
+.watch-lower .wl-sub { color:#cfd6e4; font-weight:700; font-size:.74em; opacity:.92; }
+/* Turf spray: one-shot pellet kicks (the wp-contact-dust pattern) — brown
+   turf normally, white in snow, dark mud in rain. */
+.wp-turf rect { fill:#7a5c33; animation:wp-turf-kick .55s steps(4,end) forwards; }
+.wp-turf-big rect { animation-duration:.72s; }
+#watch-board[data-weather="snow"] .wp-turf rect { fill:#eef2f6; }
+#watch-board[data-weather="rain"] .wp-turf rect { fill:#463a26; }
+@keyframes wp-turf-kick {
+  0% { opacity:.95; transform:translate(0,0); }
+  100% { opacity:0; transform:translate(var(--dx,0px), var(--dy,-1.5px)); }
+}
+/* Weather: CSS-looped precipitation spanning the world width — the camera
+   pans inside the sheet, no per-frame JS. */
+.wf-weather { pointer-events:none; }
+.wf-rain-drop { fill:#9db8d6; opacity:.5; animation:wf-rain-fall var(--wx-dur,.8s) linear var(--wx-delay,0s) infinite; }
+@keyframes wf-rain-fall { from { transform:translateY(0); } to { transform:translateY(62px); } }
+.wf-snow-flake { fill:#eef2f6; opacity:.85; animation:wf-snow-fall var(--wx-dur,4s) linear var(--wx-delay,0s) infinite; }
+@keyframes wf-snow-fall {
+  0% { transform:translate(0,0); }
+  50% { transform:translate(var(--wx-sway,1px),31px); }
+  100% { transform:translate(0,62px); }
+}
+/* The band: rowed figures deep in the home stands — slow idle bob, and they
+   PLAY on a home roar (bounce + horn glint). */
+.wf-band-man { --wf-bob:-.2px; transform-box:fill-box; transform-origin:50% 100%; animation:wf-fan-bob 2.2s steps(2,end) infinite; animation-delay:calc(var(--wf-phase) * -.4s); }
+.wf-band-body { stroke:rgba(5,7,12,.65); stroke-width:.08; }
+.wf-band-head { fill:#f4f0d8; stroke:rgba(5,7,12,.72); stroke-width:.08; }
+.wf-band-horn { fill:#ffd34d; stroke:rgba(5,7,12,.6); stroke-width:.08; }
+#watch-board.watch-roar-home .wf-band-man { animation:wf-fan-roar .3s steps(2,end) infinite; }
+#watch-board.watch-roar-home .wf-band-horn { fill:#fff3b0; animation:wf-ribbon-live .4s steps(2,end) infinite; }
+/* Mascots: one per sideline by his bench — idle bob, wild on his roar. */
+.wf-mascot { transform-box:fill-box; transform-origin:50% 100%; animation:wf-fan-bob 2.8s ease-in-out infinite; --wf-bob:-.3px; }
+.wf-mascot-body, .wf-mascot-ear { stroke:rgba(6,9,14,.6); stroke-width:.12; }
+.wf-mascot-head { stroke:rgba(6,9,14,.6); stroke-width:.12; }
+#watch-board.watch-roar-home .wf-mascot-home, #watch-board.watch-roar-away .wf-mascot-away { animation:wf-mascot-wild .38s steps(2,end) infinite; }
+@keyframes wf-mascot-wild { 0%,100% { transform:translateY(0) rotate(-5deg); } 50% { transform:translateY(-1.1px) rotate(5deg); } }
+/* Perf gates: every M25 decorative layer respects lite + panning; structure
+   stays in the DOM so probes and reactions keep working. */
+#watch-board.watch-panning .wf-rain-drop, #watch-board.watch-panning .wf-snow-flake,
+#watch-board.watch-panning .wf-band-man, #watch-board.watch-panning .wf-mascot { animation-play-state:paused; }
+#watch-board.watch-lite .wf-weather { display:none; }
+#watch-board.watch-lite .wp-turf { display:none; }
+#watch-board.watch-lite .wf-band-man, #watch-board.watch-lite .wf-mascot { animation:none; }
 /* Replay wipe: a one-shot diagonal sweep when the replay board takes over. */
 .watch-wipe {
   position:absolute; inset:0; pointer-events:none; opacity:0; z-index:5;
@@ -8756,7 +8814,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "ffe98b2d79";
+globalThis.__BUILD__ = "b011ff4bac";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -9686,6 +9744,17 @@ var _CFB = (() => {
         // deep drops clear the line
         BAT_TIP_INT: 0.11,
         // batted balls that become tip-drill picks
+        // ── Downfield tip-drill (M25) ────────────────────────────────────────────
+        // A broken-up ball is briefly live: if a second defender (the deep helper /
+        // robber — a real man already reading the throw) is on the play, he can
+        // snatch the carom. The tipper keeps his PBU, the catcher books the INT —
+        // one play, two credits, exactly how a tip-drill pick is scored in real
+        // football. Kept rare: most swats hit the turf.
+        TIP_DRILL_INT: 0.015,
+        // per-PBU chance the helper wins the carom (ballHawk-scaled). Measured
+        // (tipdrill_ab, 2026-08-10): ~0.1 per team-game — one tip-drill roughly
+        // every 5 games watched, ~13% of a defense's INTs. The real-football
+        // share, and small enough that the INT% band barely moves.
         RUNCOMMIT_RUN_SCALE: 0.028,
         RUNCOMMIT_COV_SCALE: 12e-4,
         // Tempo: scales seconds-per-play. Hurry adds possessions for BOTH teams but
@@ -26702,6 +26771,17 @@ var _CFB = (() => {
         result.intPickerId = catchResult.intPickerId;
       } else if (catchResult.pbu) {
         result.pbuId = catchResult.pbuId;
+        const tipMan = robber || helper;
+        if (!globalThis.__noTipDrill && tipMan && tipMan.id !== catchResult.pbuId) {
+          const hawkMult = 1 + 0.35 * traitLv(tipMan, "ballHawk");
+          if (Math.random() < C.TIP_DRILL_INT * hawkMult) {
+            result.turnover = true;
+            result.turnoverType = "interception";
+            result.passDepth = passDepthKey;
+            result.intPickerId = tipMan.id;
+            result.tipDrill = true;
+          }
+        }
       }
       result.throwerId = (_aa = qb == null ? void 0 : qb.id) != null ? _aa : null;
       return result;
@@ -31211,36 +31291,27 @@ var _CFB = (() => {
     const eligible = coach && coach.status !== "unemployed" && yearsLeft < 2 && (((_b = coach.jobSecurity) != null ? _b : 0) >= C.EXTENSION_JS_MIN || ((_c = coach.lastDelta) != null ? _c : -1) >= 0);
     if (eligible && school) {
       const cls = divisionClass(state2, school);
-      const base = C.RECRUIT_BONUS_BASE[cls] || C.RECRUIT_BONUS_BASE.D3;
-      const sweet = 0.8 + ((_d = coach.jobSecurity) != null ? _d : 50) / 100 * 0.4;
-      const juice = [];
-      const div = school.division;
-      const bracket = (_e = state2.allPlayoffs) == null ? void 0 : _e[div];
-      const ccIds = bracket == null ? void 0 : bracket.confChampIds;
-      if (Array.isArray(ccIds) ? ccIds.includes(school.id) : (_f = ccIds == null ? void 0 : ccIds.has) == null ? void 0 : _f.call(ccIds, school.id)) {
-        juice.push({ label: "Conference champions", pct: 20 });
-      }
-      if ((bracket == null ? void 0 : bracket.champion) === school.id) {
-        juice.push({ label: "National champions", pct: 50 });
-      }
-      const seasonAwards = (state2.awardsLog || []).filter((a) => a.season === state2.season && a.schoolId === school.id);
-      if (seasonAwards.some((a) => a.category === "MVP")) juice.push({ label: "MVP in the building", pct: 10 });
-      if (seasonAwards.some((a) => a.category === "DivCOY" || a.category === "COY")) juice.push({ label: "Coach of the Year", pct: 10 });
-      const streak = coach.dominanceStreak || 0;
-      if (streak >= 2) juice.push({ label: `${streak} straight dominant seasons`, pct: streak * 5 });
-      const juiceMult = 1 + juice.reduce((s, j) => s + j.pct, 0) / 100;
-      const bonus = Math.round(base * sweet * juiceMult / 50) * 50;
+      const ladderBase = C.ECON.BASE[school.division] || C.ECON.BASE.D3;
+      const ladderStacks = coach.retentionStacks || 0;
+      const ladderPct = Math.min(C.PLAYER_RETENTION.CAP_PCT, ladderStacks * C.PLAYER_RETENTION.PCT_PER_OFFER);
+      const ladderNextPct = Math.min(C.PLAYER_RETENTION.CAP_PCT, (ladderStacks + 1) * C.PLAYER_RETENTION.PCT_PER_OFFER);
+      const ladderBump = Math.round(ladderBase * (ladderNextPct - ladderPct) / 100) * 100;
       offer = {
-        years: randInt3(3, 4),
-        recruitBonus: bonus,
+        years: 3,
         cls,
-        juice,
+        ladder: {
+          stacks: ladderStacks,
+          pct: Math.round(ladderPct * 100),
+          nextPct: Math.round(ladderNextPct * 100),
+          bump: ladderBump,
+          base: ladderBase,
+          capped: ladderBump <= 0
+        },
         terms: [
           {
             id: "prove",
             label: "Prove-It",
             years: 2,
-            recruitBonus: Math.round(bonus * 0.8 / 50) * 50,
             jsDelta: 15,
             blurb: "Short and safe \u2014 the AD signs up for patience."
           },
@@ -31248,7 +31319,6 @@ var _CFB = (() => {
             id: "market",
             label: "Market",
             years: 3,
-            recruitBonus: bonus,
             jsDelta: C.EXTENSION_STABILITY_JS,
             blurb: "The standard re-up."
           },
@@ -31256,9 +31326,8 @@ var _CFB = (() => {
             id: "max",
             label: "Max Deal",
             years: 5,
-            recruitBonus: Math.round(bonus * 1.4 / 50) * 50,
             jsDelta: -10,
-            blurb: "Long and rich \u2014 and the seat runs hot from day one."
+            blurb: "Long \u2014 and the seat runs hot from day one."
           }
         ]
       };
@@ -31272,14 +31341,14 @@ var _CFB = (() => {
     const coach = state2.playerCoach;
     if (!offer || !coach) return { ok: false, reason: "No extension on the table" };
     if ((_b = (_a = state2.offseason) == null ? void 0 : _a.data) == null ? void 0 : _b.extensionTaken) return { ok: false, reason: "Already signed" };
-    const term = (offer.terms || []).find((t) => t.id === termId) || { years: offer.years, recruitBonus: offer.recruitBonus, jsDelta: C.EXTENSION_STABILITY_JS, label: "Standard" };
+    const term = (offer.terms || []).find((t) => t.id === termId) || { years: offer.years, jsDelta: C.EXTENSION_STABILITY_JS, label: "Standard" };
     coach.contract = {
       startSeason: state2.season + 1,
       endSeason: state2.season + term.years,
       years: term.years,
-      recruitBonus: term.recruitBonus,
       termLabel: term.label
     };
+    coach.retentionStacks = (coach.retentionStacks || 0) + 1;
     coach.jobSecurity = Math.max(0, Math.min(100, ((_c = coach.jobSecurity) != null ? _c : 0) + term.jsDelta));
     state2.offseason.data.extensionTaken = true;
     return { ok: true, offer, term };
@@ -31294,6 +31363,11 @@ var _CFB = (() => {
         ((_b = state2.playerCoach.jobSecurity) != null ? _b : 0) + C.OFFER_LEVERAGE_JS
       );
       state2.playerCoach.retentionStacks = (state2.playerCoach.retentionStacks || 0) + 1;
+      const ct = state2.playerCoach.contract;
+      if (ct && ct.endSeason > state2.season) {
+        ct.endSeason += 1;
+        ct.years = (ct.years || 0) + 1;
+      }
     }
     return n;
   }
@@ -35481,6 +35555,12 @@ var _CFB = (() => {
     if (!state.coachHistory) state.coachHistory = [];
     if (!Array.isArray(state.instantClassics)) state.instantClassics = [];
     if (state.world) repairRecruitLocations(state.world);
+    {
+      const _mySchool = (_a = state.world) == null ? void 0 : _a.schools.find((s) => s.id === state.playerSchoolId);
+      if ((_mySchool == null ? void 0 : _mySchool.coach) && state.playerCoach && _mySchool.coach.id === state.playerCoach.id) {
+        state.playerCoach = _mySchool.coach;
+      }
+    }
     ensureSkills(state.playerCoach);
     ensureCareerFields(state.playerCoach);
     for (const s of (_b = (_a = state.world) == null ? void 0 : _a.schools) != null ? _b : []) {
@@ -40728,6 +40808,10 @@ var _CFB = (() => {
     if (p.turnover && p.turnoverType === "interception") {
       const pick2 = n(p.intPickerId || p.intById), thrower = n(p.throwerId);
       if (!pick2) return null;
+      if (p.tipDrill) {
+        const tipper = n(p.pbuId);
+        return tipper ? `${tipper} tips it up and ${pick2} snatches the carom out of the air.` : `${pick2} pulls a tipped ball out of the air.`;
+      }
       return thrower ? `${pick2} reads ${thrower} and takes it away.` : `${pick2} picks it off.`;
     }
     if (p.turnover && p.turnoverType === "fumble") {
@@ -42772,7 +42856,7 @@ var _CFB = (() => {
         <span class="muted ledger-formula">${bd.capacity.toLocaleString()} seats \xD7 ${Math.round(bd.fill * 100)}% fill \xD7 $${bd.price} \xD7 ${Math.round(bd.share * 100)}% to program</span></span>
         <span>${fmt(bd.tickets)}</span></div>
       ${bd.carryover ? `<div class="ledger-row"><span>Carryover <span class="muted ledger-formula">leftovers + title & AD-goal bonuses</span></span><span>${fmt(bd.carryover)}</span></div>` : ""}
-      ${bd.retentionBonus ? `<div class="ledger-row"><span>Loyalty raises <span class="muted ledger-formula">${bd.retentionStacks} declined call${bd.retentionStacks === 1 ? "" : "s"} \xD7 10% of base${bd.retentionStacks >= 10 ? " (capped \u2014 double money)" : ""}</span></span><span>${fmt(bd.retentionBonus)}</span></div>` : ""}
+      ${bd.retentionBonus ? `<div class="ledger-row"><span>Loyalty raises <span class="muted ledger-formula">${bd.retentionStacks} raise${bd.retentionStacks === 1 ? "" : "s"} (re-ups + declined calls) \xD7 10% of base${bd.retentionStacks >= 10 ? " (capped \u2014 double money)" : ""}</span></span><span>${fmt(bd.retentionBonus)}</span></div>` : ""}
       ${bd.salaries ? `<div class="ledger-row"><span>Staff salaries <span class="muted ledger-formula">OC + DC annual</span></span><span>\u2212${fmt(bd.salaries)}</span></div>` : ""}
       ${bd.upkeep ? `<div class="ledger-row"><span>Facility upkeep</span><span>\u2212${fmt(bd.upkeep)}</span></div>` : ""}
       <div class="ledger-row ledger-total"><span>Season pool</span><span>${fmt(bd.total)}</span></div>
@@ -43381,10 +43465,12 @@ var _CFB = (() => {
       rerender();
     });
     (_c = document.querySelector(".stay-btn")) == null ? void 0 : _c.addEventListener("click", () => {
-      var _a2, _b2;
+      var _a2, _b2, _c2, _d2, _e2, _f2;
+      const endBefore = (_b2 = (_a2 = state.playerCoach) == null ? void 0 : _a2.contract) == null ? void 0 : _b2.endSeason;
       const n = declineOffersWithLeverage(state);
+      const extended = endBefore != null && (((_d2 = (_c2 = state.playerCoach) == null ? void 0 : _c2.contract) == null ? void 0 : _d2.endSeason) || 0) > endBefore;
       if (isTreeGame(state)) noteOfferDeclined(state);
-      notify(n > 0 ? `You turned down the offers \u2014 and the AD noticed. Seat +${C.OFFER_LEVERAGE_JS}, and a loyalty raise: +10% of base on next season's recruiting pool (stack ${((_a2 = state.playerCoach) == null ? void 0 : _a2.retentionStacks) || 1}/10${(((_b2 = state.playerCoach) == null ? void 0 : _b2.retentionStacks) || 1) >= 10 ? " \u2014 capped, double money" : ""}). Leave for another job and every raise is forfeit.` : "You turned down the offers and stayed put.", "info", 7e3);
+      notify(n > 0 ? `You turned down the offers \u2014 and the AD noticed. Seat +${C.OFFER_LEVERAGE_JS}, and a loyalty raise: +10% of base on next season's recruiting pool (stack ${((_e2 = state.playerCoach) == null ? void 0 : _e2.retentionStacks) || 1}/10${(((_f2 = state.playerCoach) == null ? void 0 : _f2.retentionStacks) || 1) >= 10 ? " \u2014 capped, double money" : ""})${extended ? ", plus a year added to your contract" : ""}. Leave for another job and every raise is forfeit.` : "You turned down the offers and stayed put.", "info", 7e3);
     });
     setupHandoffListeners();
     document.querySelectorAll("[data-tree-switch]").forEach((btn) => {
@@ -45434,7 +45520,7 @@ var _CFB = (() => {
         <div class="award-group-label">YOUR DEAL</div>
         <div class="offseason-item">
           <span class="offseason-label">${(coach == null ? void 0 : coach.contract) ? `${yearsLeft} year${yearsLeft !== 1 ? "s" : ""} remaining` : "No active contract"}</span>
-          <span class="offseason-detail">${(coach == null ? void 0 : coach.contract) ? `$${(coach.contract.recruitBonus || 0).toLocaleString()} per recruit signed` : ""}</span>
+          <span class="offseason-detail">${(coach == null ? void 0 : coach.contract) ? coach.contract.recruitBonus ? `$${coach.contract.recruitBonus.toLocaleString()} per recruit signed (legacy terms)` : `loyalty raises: +${Math.min(100, (coach.retentionStacks || 0) * 10)}% of base on the pool` : ""}</span>
         </div>
         <div class="offseason-item">
           <span class="offseason-label">Seat</span>
@@ -45444,19 +45530,14 @@ var _CFB = (() => {
         <div class="award-group-label" style="margin-top:10px">STAY \u2014 ${escapeHtml(((_d = getPlayerSchool()) == null ? void 0 : _d.name) || "YOUR SCHOOL")}</div>
         ${ext && !taken ? `
           <div class="offseason-item">
-            <span class="offseason-label">${ext.years}-year re-up</span>
-            <span class="offseason-detail"><b>$${ext.recruitBonus.toLocaleString()}</b> per recruit signed${(coach == null ? void 0 : coach.contract) ? ` <span style="opacity:.6">(was $${(coach.contract.recruitBonus || 0).toLocaleString()})</span>` : ""}</span>
+            <span class="offseason-label">Re-up on the table</span>
+            <span class="offseason-detail">${ext.ladder && !ext.ladder.capped ? `<b>+10% of base</b> loyalty raise (+$${(ext.ladder.bump || 0).toLocaleString()} on every future pool) \u2014 total +${ext.ladder.nextPct}% after signing` : `<b>ladder capped</b> \u2014 double money already; signing keeps the paper fresh`}</span>
           </div>
-          ${(ext.juice || []).map((j) => `
-            <div class="offseason-item" style="padding-top:4px;padding-bottom:4px">
-              <span class="offseason-detail" style="color:var(--gold)">\u{1F3C6} ${escapeHtml(j.label)}</span>
-              <span class="offseason-detail" style="color:var(--gold)"><b>+${j.pct}%</b></span>
-            </div>`).join("")}
           <div class="ext-terms">
             ${(ext.terms || []).map((t) => `
               <button class="ext-term-card" data-ext-term="${t.id}">
                 <div class="ext-term-title">${escapeHtml(t.label)} \xB7 ${t.years}yr</div>
-                <div class="ext-term-money">$${t.recruitBonus.toLocaleString()}<span class="muted">/signee</span></div>
+                <div class="ext-term-money">+10%<span class="muted"> of base</span></div>
                 <div class="ext-term-js ${t.jsDelta >= 0 ? "ext-js-up" : "ext-js-down"}">${t.jsDelta >= 0 ? "+" : ""}${t.jsDelta} security</div>
                 <div class="ext-term-blurb muted">${escapeHtml(t.blurb || "")}</div>
               </button>`).join("")}
@@ -45737,16 +45818,19 @@ var _CFB = (() => {
     });
     document.querySelectorAll("[data-ext-term]").forEach((btn) => {
       btn.addEventListener("click", () => {
+        var _a2;
         const res = acceptExtension(state, btn.dataset.extTerm);
-        if (res.ok) notify(`${res.term.label} deal signed: ${res.term.years} years, $${res.term.recruitBonus.toLocaleString()} per signee, ${res.term.jsDelta >= 0 ? "+" : ""}${res.term.jsDelta} security.`, "success");
+        if (res.ok) notify(`${res.term.label} deal signed: ${res.term.years} years, loyalty raise +10% of base (stack ${((_a2 = state.playerCoach) == null ? void 0 : _a2.retentionStacks) || 1}/10), ${res.term.jsDelta >= 0 ? "+" : ""}${res.term.jsDelta} security.`, "success");
         else notify(res.reason, "warning");
         rerender();
       });
     });
     (_f = document.getElementById("btn-decline-offers")) == null ? void 0 : _f.addEventListener("click", () => {
-      var _a2;
+      var _a2, _b2, _c2, _d2, _e2;
+      const endBefore = (_b2 = (_a2 = state.playerCoach) == null ? void 0 : _a2.contract) == null ? void 0 : _b2.endSeason;
       const n = declineOffersWithLeverage(state);
-      if (n > 0) notify(`Declined ${n} offer${n > 1 ? "s" : ""} \u2014 the AD noticed. Seat +${C.OFFER_LEVERAGE_JS}, loyalty raise +10% of base next season (stack ${((_a2 = state.playerCoach) == null ? void 0 : _a2.retentionStacks) || 1}/10). Leaving forfeits every raise.`, "info", 7e3);
+      const extended = endBefore != null && (((_d2 = (_c2 = state.playerCoach) == null ? void 0 : _c2.contract) == null ? void 0 : _d2.endSeason) || 0) > endBefore;
+      if (n > 0) notify(`Declined ${n} offer${n > 1 ? "s" : ""} \u2014 the AD noticed. Seat +${C.OFFER_LEVERAGE_JS}, loyalty raise +10% of base next season (stack ${((_e2 = state.playerCoach) == null ? void 0 : _e2.retentionStacks) || 1}/10)${extended ? ", and a year added to your deal" : ""}. Leaving forfeits every raise.`, "info", 7e3);
       rerender();
     });
     document.querySelectorAll(".offer-accept-btn").forEach((btn) => {
@@ -52666,26 +52750,49 @@ ${renderAutoRecruitLog()}`;
       };
       if (p.turnover) {
         let best = p.ballSlots && p.ballSlots.pick ? defs.find((d2) => d2.slot.id === p.ballSlots.pick) || null : null;
-        if (best && Math.hypot(best.x - catchPt[0], best.y - catchPt[1]) > (tCatch - PRESNAP) * best.speed * 0.75) best = null;
+        const _tipSlotId = p.tipDrill && p.ballSlots && p.ballSlots.pbu && p.ballSlots.pbu !== p.ballSlots.pick ? p.ballSlots.pbu : null;
+        const _pickWindow = tCatch - PRESNAP + (_tipSlotId ? 0.55 : 0);
+        if (best && Math.hypot(best.x - catchPt[0], best.y - catchPt[1]) > _pickWindow * best.speed * 0.75) best = null;
         let bd = 1e9;
         if (!best) for (const d of defs) {
+          if (_tipSlotId && d.slot.id === _tipSlotId) continue;
           const dd = (d.x - catchPt[0]) ** 2 + (d.y - catchPt[1]) ** 2;
           if (dd < bd) {
             bd = dd;
             best = d;
           }
         }
+        var _tipCue = null, _tipT = null, _tipPt = null;
+        if (p.tipDrill && best && p.ballSlots && p.ballSlots.pbu && p.ballSlots.pbu !== p.ballSlots.pick) {
+          const dTip = defs.find((d2) => d2.slot.id === p.ballSlots.pbu) || null;
+          if (dTip && dTip !== best && Math.hypot(dTip.x - catchPt[0], dTip.y - catchPt[1]) <= (tCatch - PRESNAP) * dTip.speed * 0.75) {
+            _tipT = tCatch + 0.55;
+            _tipPt = [clamp6(catchPt[0] + (rnd() - 0.5) * 5, 3, 97), clamp6(catchPt[1] + 1.5 + rnd() * 2.2, 2, 59)];
+            _tipCue = { id: dTip.id, t: tCatch };
+            const prevT = dTip.behave;
+            dTip.behave = (t2, w2, a2) => t2 < throwAt ? prevT ? prevT(t2, w2, a2) : null : t2 < tCatch ? [catchPt[0], catchPt[1], dTip.speed] : [catchPt[0] + (dTip.x >= catchPt[0] ? 4 : -4), catchPt[1] - 2, dTip.speed * 0.7];
+          }
+        }
         if (best) {
           best.picked = true;
           var _intPicker = best;
           const prev = best.behave;
-          best.behave = (t2, w2, a2) => t2 < throwAt ? prev ? prev(t2, w2, a2) : null : t2 < tCatch ? [catchPt[0], catchPt[1], best.speed] : [catchPt[0] + (rnd() < 0.5 ? -6 : 6), catchPt[1] + 6, best.speed];
+          const tGrab = _tipT != null ? _tipT : tCatch;
+          const grabPt = _tipPt != null ? _tipPt : catchPt;
+          best.behave = (t2, w2, a2) => t2 < throwAt ? prev ? prev(t2, w2, a2) : null : t2 < tGrab ? [grabPt[0], grabPt[1], best.speed] : [grabPt[0] + (rnd() < 0.5 ? -6 : 6), grabPt[1] + 6, best.speed];
           for (const s of catchers) {
             const pr = A[s.id].behave;
-            A[s.id].behave = (t2, w2, a2) => t2 < tCatch + 0.22 ? pr ? pr(t2, w2, a2) : null : pursuePt(best, a2, a2.speed * 0.95);
+            A[s.id].behave = (t2, w2, a2) => t2 < tGrab + 0.22 ? pr ? pr(t2, w2, a2) : null : pursuePt(best, a2, a2.speed * 0.95);
           }
         }
-        fx.push({ t: tCatch, kind: "int", x: catchPt[0], y: catchPt[1] });
+        if (_tipT != null) {
+          fx.push({ t: _tipT, kind: "int", x: _tipPt[0], y: _tipPt[1] });
+        } else {
+          _tipCue = null;
+          _tipT = null;
+          _tipPt = null;
+          fx.push({ t: tCatch, kind: "int", x: catchPt[0], y: catchPt[1] });
+        }
       } else if (!p.complete) {
         fx.push({ t: tCatch, kind: "inc", x: catchPt[0], y: catchPt[1] });
       } else {
@@ -53247,6 +53354,25 @@ ${renderAutoRecruitLog()}`;
     }
     var injuryCue = p.qbInjured && endInfo ? { id: "QB", t: endInfo.at + 0.3, x: endInfo.pt[0], y: endInfo.pt[1] } : null;
     if (injuryCue) fx.push({ t: injuryCue.t + 0.25, kind: "hurt", x: injuryCue.x, y: injuryCue.y });
+    if (carrier && carrier.track && carrier.track.length > 12) {
+      let _turfN = 0;
+      const iT0 = Math.round(PRESNAP / STEP) + 4;
+      const iT1 = endInfo ? Math.min(Math.round(endInfo.at / STEP), carrier.track.length - 4) : carrier.track.length - 4;
+      for (let i = iT0; i < iT1 && _turfN < 3; i++) {
+        const b1 = carrier.track[i - 3], b2 = carrier.track[i], b3 = carrier.track[i + 3];
+        if (!b1 || !b2 || !b3) break;
+        const v1x = b2[0] - b1[0], v1y = b2[1] - b1[1], v2x = b3[0] - b2[0], v2y = b3[1] - b2[1];
+        const s1 = Math.hypot(v1x, v1y), s2 = Math.hypot(v2x, v2y);
+        if (s1 < 0.55 || s2 < 0.4) continue;
+        const dot = (v1x * v2x + v1y * v2y) / (s1 * s2 || 1e-6);
+        if (dot < 0.78) {
+          fx.push({ t: i * STEP, kind: "turf", x: b2[0], y: b2[1], big: 0, seed: Math.floor(rnd() * 997) });
+          _turfN++;
+          i += 10;
+        }
+      }
+    }
+    if (tackleCue && endInfo) fx.push({ t: endInfo.at, kind: "turf", x: endInfo.pt[0], y: endInfo.pt[1], big: 1, seed: Math.floor(rnd() * 997) });
     if (ballEnd.pt) constrainTrack(
       ball.track,
       Math.round(ballEnd.at / STEP),
@@ -53263,6 +53389,10 @@ ${renderAutoRecruitLog()}`;
       for (let i = iRide; i < ball.track.length; i++) ball.track[i] = [...carrier.track[Math.min(i, carrier.track.length - 1)]];
     }
     if (typeof _intPicker !== "undefined" && _intPicker && !carrier) {
+      const _tipLive = typeof _tipT !== "undefined" && _tipT != null && typeof _tipPt !== "undefined" && _tipPt != null;
+      if (_tipLive) {
+        ballEnd = { at: _tipT, pt: _tipPt };
+      }
       const iC0 = Math.round(ballEnd.at / STEP);
       const _iSnap0 = Math.round(PRESNAP / STEP);
       const _pTr0 = _intPicker.track[Math.min(iC0, _intPicker.track.length - 1)];
@@ -53286,10 +53416,22 @@ ${renderAutoRecruitLog()}`;
       if (ballEnd.pt && _pDrift > 0.4 && _pDrift <= (iC0 - _iSnap0) * 0.28 && iC0 - _iSnap0 > 4) {
         pinTrackPoint(_intPicker.track, iC0, ballEnd.pt, iC0 - _iSnap0);
       }
+      if (_tipLive && typeof _catchT !== "undefined" && _catchT != null) {
+        const iTip = Math.min(Math.round(_catchT / STEP), ball.track.length - 1);
+        const cp0 = [...ball.track[iTip]];
+        const K2 = Math.max(2, iC0 - iTip);
+        for (let k = 1; k <= K2 && iTip + k < ball.track.length; k++) {
+          const u = k / K2;
+          ball.track[iTip + k] = [
+            clamp6(cp0[0] + (_tipPt[0] - cp0[0]) * u + Math.sin(u * Math.PI) * 0.5, 1, 99),
+            clamp6(cp0[1] + (_tipPt[1] - cp0[1]) * u + Math.sin(u * Math.PI * 2) * 0.25, 1.5, 60)
+          ];
+        }
+      }
       const iC = iC0 + 2;
       for (let i = iC; i < ball.track.length; i++) ball.track[i] = [..._intPicker.track[Math.min(i, _intPicker.track.length - 1)]];
     }
-    var deflectCue = null;
+    var deflectCue = typeof _tipCue !== "undefined" && _tipCue ? _tipCue : null;
     if (isPass && !p.sack && !p.complete && !p.turnover && p.ballSlots && p.ballSlots.pbu && typeof _catchT !== "undefined" && _catchT != null && !p.throwAway) {
       const dP = defs.find((d) => d.slot.id === p.ballSlots.pbu) || null;
       const iC = Math.min(Math.round(_catchT / STEP), ball.track.length - 1);
@@ -55065,6 +55207,13 @@ ${renderAutoRecruitLog()}`;
     }
     if (play.turnover && play.turnoverType === "interception") {
       const picker2 = nm(play.intPickerId);
+      if (play.tipDrill) {
+        const tipper = nm(play.pbuId);
+        return { text: pick2([
+          `${tipper ? tipper + " tips it up" : "Tipped at the catch point"} \u2014 ${picker2 ? picker2 + " snatches the carom" : "and it's picked off"}! INTERCEPTED!`,
+          `Tip drill! ${tipper ? tipper + " gets a hand on it and " : ""}${picker2 || "the defense"} comes down with it \u2014 INTERCEPTION!`
+        ]), cls: "pbp-bad" };
+      }
       return { text: pick2([
         `INTERCEPTED${picker2 ? " by " + picker2 : ""}! ${thrower} picked off`,
         `${picker2 || "The defense"} steps in front \u2014 INTERCEPTION!`,
@@ -57109,7 +57258,8 @@ ${renderAutoRecruitLog()}`;
     <div class="watch-replay-bug" id="watch-replay-bug">INSTANT REPLAY</div>
     <div class="watch-flash" id="watch-flash"></div>
     <div class="watch-wipe" id="watch-wipe"></div>
-    <div class="watch-banner" id="watch-banner"></div></div>
+    <div class="watch-banner" id="watch-banner"></div>
+    <div class="watch-lower" id="watch-lower"></div></div>
   <div class="watch-controls broadcast-bar">
     ${isLive ? "" : `<button class="bc-btn bc-icon" id="watch-stepback" title="Step back">\u23EE</button>`}
     <button class="bc-btn bc-icon bc-play" id="watch-pause" title="Play / pause">\u23F8</button>
@@ -57280,8 +57430,23 @@ ${renderAutoRecruitLog()}`;
       return c ? teamAccentColor(c) : fb;
     };
     const divM = (dv) => dv === "D3" ? 0.86 : dv === "D2" ? 0.93 : 1;
+    const wxKey = `${((_c = r.homeSchool) == null ? void 0 : _c.abbr) || "H"}|${((_d = r.awaySchool) == null ? void 0 : _d.abbr) || "A"}|${state.season || 0}|${state.day || 0}`;
+    let wxH = 2166136261;
+    for (let i = 0; i < wxKey.length; i++) {
+      wxH ^= wxKey.charCodeAt(i);
+      wxH = Math.imul(wxH, 16777619);
+    }
+    wxH = wxH >>> 0;
+    const wxRoll = wxH % 1e3 / 1e3;
+    const wxLate = (state.day || 1) >= 19;
+    const weather = {
+      kind: wxRoll < 0.13 ? "rain" : wxLate && wxRoll < 0.21 ? "snow" : "clear",
+      intensity: 0.55 + (wxH >>> 4) % 100 / 220,
+      seed: wxH
+    };
     return {
       possession: (d == null ? void 0 : d.possession) === "away" ? "away" : "home",
+      weather,
       homeFill: pick2(r.homeSchool, 0, "var(--team-1,#eaeaea)"),
       homeHi: pick2(r.homeSchool, 1, "var(--team-2,#ffd34d)"),
       awayFill: pick2(r.awaySchool, 0, "#c23a35"),
@@ -57349,6 +57514,7 @@ ${renderAutoRecruitLog()}`;
     _watchSideDir = watchSideDirection(board);
     svg.dataset.fieldDirection = _watchSideDir > 0 ? "right" : "left";
     svg.dataset.fieldPossession = (board == null ? void 0 : board.possession) || "";
+    svg.dataset.weather = board && board.weather ? board.weather.kind : "clear";
     svg.classList.remove(
       "watch-presnap",
       "watch-snap-release",
@@ -58753,6 +58919,21 @@ ${renderAutoRecruitLog()}`;
         const line1 = tm2 ? `${nm2} \u2014 ${tm2}` : nm2;
         return `<g transform="translate(${x},${y})"><g class="wp-flag"><rect x="-1.15" y="-1.15" width="2.3" height="2.3" class="wp-flag-cloth"/><rect x="-0.4" y="-0.4" width="0.8" height="0.8" class="wp-flag-knot"/></g></g><text x="${x}" y="${(y - 8).toFixed(1)}" class="wa-flag-call">FLAG</text><g class="wp-card wp-flag-detail"><rect x="${(x - 26).toFixed(1)}" y="${(y + 4).toFixed(1)}" width="52" height="11" class="wp-card-bg"/><text x="${x}" y="${(y + 8.6).toFixed(1)}" class="wp-card-txt"${line1.length > 24 ? ' textLength="48" lengthAdjust="spacingAndGlyphs"' : ""}>${line1}</text><text x="${x}" y="${(y + 12.6).toFixed(1)}" class="wp-card-txt wp-card-sub">${escapeHtml(f.verdict || "")}</text></g>`;
       }
+      case "turf": {
+        let s = f.seed != null ? f.seed : 1;
+        const tr = () => {
+          s = s * 1103515245 + 12345 & 2147483647;
+          return s / 2147483647;
+        };
+        const n = f.big ? 7 : 4;
+        let pel = "";
+        for (let i = 0; i < n; i++) {
+          const ang = tr() * Math.PI * 2, r = (f.big ? 1.6 : 1.1) + tr() * (f.big ? 1.9 : 1.2);
+          const sz = 0.3 + tr() * 0.26;
+          pel += `<rect x="-${(sz / 2).toFixed(2)}" y="-${(sz / 2).toFixed(2)}" width="${sz.toFixed(2)}" height="${sz.toFixed(2)}" style="--dx:${(Math.cos(ang) * r).toFixed(1)}px;--dy:${(Math.sin(ang) * r * 0.6 - 1.1).toFixed(1)}px"/>`;
+        }
+        return `<g class="wp-turf${f.big ? " wp-turf-big" : ""}" transform="translate(${x},${y})">${pel}</g>`;
+      }
       case "td": {
         const cols = ["#ffd34d", "#f4f0d8", "#59d8ff", "#ff8c79", "#3fe04b"];
         let conf = "";
@@ -58787,6 +58968,62 @@ ${renderAutoRecruitLog()}`;
     if (_watchBannerTimer) clearTimeout(_watchBannerTimer);
     _watchBannerTimer = setTimeout(() => el.classList.remove("on"), 2400);
   }
+  var _watchLowerTimer = null;
+  function watchShowLower(kicker, title, sub, fill, ms = 3e3) {
+    const el = document.getElementById("watch-lower");
+    if (!el) return;
+    el.innerHTML = `<span class="wl-kicker">${escapeHtml(kicker)}</span><span class="wl-title">${escapeHtml(title)}</span>${sub ? `<span class="wl-sub">${escapeHtml(sub)}</span>` : ""}`;
+    el.style.setProperty("--wl-accent", fill || "var(--px-yellow)");
+    el.classList.add("on");
+    if (_watchLowerTimer) clearTimeout(_watchLowerTimer);
+    _watchLowerTimer = setTimeout(() => el.classList.remove("on"), ms);
+  }
+  function watchFeaturedMan(p) {
+    const yds = p.yards || 0;
+    if (p.turnover && p.turnoverType === "interception" && p.intPickerId) return { id: p.intPickerId, role: p.tipDrill ? "TIP-DRILL PICK" : "INTERCEPTION", def: true, slot: p.ballSlots && p.ballSlots.pick || null };
+    if (p.sack && (p.sackerId || p.sackerId2)) return { id: p.sackerId || p.sackerId2, role: "SACK", def: true, slot: null };
+    if (p.td && (p.receiverId || p.rusherId || p.returnerId)) return { id: p.receiverId || p.rusherId || p.returnerId, role: "TOUCHDOWN", def: false, slot: p.receiverId ? p.targetSlotId : p.carrierSlotId || null };
+    if (p.complete && yds >= 20 && p.receiverId) return { id: p.receiverId, role: "BIG PLAY", def: false, slot: p.targetSlotId || null };
+    if (String(p.type || "").startsWith("run") && yds >= 15 && p.rusherId) return { id: p.rusherId, role: "BIG RUN", def: false, slot: p.carrierSlotId || null };
+    return null;
+  }
+  function watchJerseyOf(slotId) {
+    var _a;
+    if (!slotId) return null;
+    const n = document.querySelector(`#watch-board [data-wpa="${slotId}"] [data-jersey]`);
+    return ((_a = n) == null ? void 0 : _a.getAttribute("data-jersey")) || null;
+  }
+  function watchGameLine(w, uptoIdx, id) {
+    let ruAtt = 0, ruYds = 0, rec = 0, recYds = 0, tds = 0, sacks = 0, ints = 0, pbus = 0, tkl = 0;
+    for (let i = 0; i <= uptoIdx && i < w.seq.length; i++) {
+      const it = w.seq[i];
+      if (it.kind !== "play" || !it.p) continue;
+      const p = it.p;
+      if (p.rusherId === id && String(p.type || "").startsWith("run")) {
+        ruAtt++;
+        ruYds += p.yards || 0;
+        if (p.td) tds++;
+      }
+      if (p.receiverId === id && p.complete) {
+        rec++;
+        recYds += p.yards || 0;
+        if (p.td) tds++;
+      }
+      if (p.sackerId === id || p.sackerId2 === id) sacks++;
+      if (p.intPickerId === id && p.turnover) ints++;
+      if (p.pbuId === id) pbus++;
+      if (p.tacklerId === id) tkl++;
+    }
+    const bits = [];
+    if (ruAtt) bits.push(`${ruAtt} CAR ${ruYds} YDS`);
+    if (rec) bits.push(`${rec} REC ${recYds} YDS`);
+    if (tds) bits.push(`${tds} TD`);
+    if (sacks) bits.push(`${sacks} SACK${sacks > 1 ? "S" : ""}`);
+    if (ints) bits.push(`${ints} INT`);
+    if (pbus) bits.push(`${pbus} PBU`);
+    if (!bits.length && tkl) bits.push(`${tkl} TKL`);
+    return bits.join(" \xB7 ");
+  }
   function watchFieldBase(p, board = null) {
     const fp = Number.isFinite(p == null ? void 0 : p.fieldPos) ? p.fieldPos : null;
     const FT = WATCH_SIDE.fieldTop, FH = WATCH_SIDE.fieldHeight, FB = FT + FH;
@@ -58794,6 +59031,12 @@ ${renderAutoRecruitLog()}`;
     const X_LEFT = -110, X_RIGHT = 180;
     const homeCrowd = (board == null ? void 0 : board.homeFill) || "#37506f";
     const awayCrowd = (board == null ? void 0 : board.awayFill) || "#8b3440";
+    const wx = (board == null ? void 0 : board.weather) || null;
+    let _wxS = (wx ? wx.seed : 1234567) >>> 0;
+    const wxRnd = () => {
+      _wxS = _wxS * 1103515245 + 12345 & 2147483647;
+      return _wxS / 2147483647;
+    };
     const defs = `<defs>
     <marker id="wa-arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#ffd54a"/></marker>
     <marker id="wa-arr-r" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#e5533d"/></marker>
@@ -58829,7 +59072,13 @@ ${renderAutoRecruitLog()}`;
       crowdLife += fan(topY, 1) + fan(botY, -1);
     }
     crowdLife += `</g>`;
-    let under = `<g class="wf-stadium-par"><rect x="${X_LEFT}" y="0" width="${X_RIGHT - X_LEFT}" height="${WATCH_SIDE.viewH}" fill="url(#wf-crowd)"/><rect x="${X_LEFT}" y="${(FT - 1.15).toFixed(1)}" width="${X_RIGHT - X_LEFT}" height=".58" class="wf-stadium-ribbon" fill="${homeCrowd}"/><rect x="${X_LEFT}" y="${(FB + 0.58).toFixed(1)}" width="${X_RIGHT - X_LEFT}" height=".58" class="wf-stadium-ribbon wf-stadium-ribbon-away" fill="${awayCrowd}"/>${crowdLife}</g>`;
+    let bandBlock = `<g class="wf-band">`;
+    for (let i = 0; i < 16; i++) {
+      const bbx = -8 + i % 8 * 2.2, bby = i < 8 ? 2 : 3.7;
+      bandBlock += `<g transform="translate(${bbx.toFixed(1)},${bby.toFixed(1)})" class="wf-band-man" style="--wf-phase:${i % 5}"><rect class="wf-band-body" x="-.4" y="-.2" width=".8" height=".95" fill="${homeCrowd}"/><circle class="wf-band-head" cx="0" cy="-.52" r=".3"/><circle class="wf-band-horn" cx=".42" cy="-.24" r=".17"/></g>`;
+    }
+    bandBlock += `</g>`;
+    let under = `<g class="wf-stadium-par"><rect x="${X_LEFT}" y="0" width="${X_RIGHT - X_LEFT}" height="${WATCH_SIDE.viewH}" fill="url(#wf-crowd)"/><rect x="${X_LEFT}" y="${(FT - 1.15).toFixed(1)}" width="${X_RIGHT - X_LEFT}" height=".58" class="wf-stadium-ribbon" fill="${homeCrowd}"/><rect x="${X_LEFT}" y="${(FB + 0.58).toFixed(1)}" width="${X_RIGHT - X_LEFT}" height=".58" class="wf-stadium-ribbon wf-stadium-ribbon-away" fill="${awayCrowd}"/>${crowdLife}${bandBlock}</g>`;
     let lines = "";
     if (fp != null) {
       const xOf = (abs) => watchSideFieldX(abs, fp);
@@ -58857,6 +59106,24 @@ ${renderAutoRecruitLog()}`;
       under += ez(gLeft - EZ, homeC || "var(--team-1,#175b35)", homeN, -90, "home");
       under += ez(gRight, awayC || "#c23a35", awayN, 90, "away");
       under += `<rect x="${grassX.toFixed(1)}" y="${FT}" width="${grassW.toFixed(1)}" height="${FH}" fill="url(#wf-grain)"/>`;
+      {
+        const qNow = ((p == null ? void 0 : p.half) === 2 ? 2 : 0) + (((p == null ? void 0 : p.clock) != null ? p.clock : 1800) > 900 ? 0 : 1);
+        const wear = Math.min(1, (qNow + 1) / 4 * (wx && wx.kind !== "clear" ? 1.35 : 1));
+        const hashFarW = watchSideY(31.4), hashNearW = watchSideY(66.6);
+        const snowW = wx && wx.kind === "snow";
+        let wearS = `<g class="wf-wear">`;
+        const nBlotch = Math.round(8 + 16 * wear);
+        for (let i = 0; i < nBlotch; i++) {
+          const abs = 18 + (wxRnd() + wxRnd()) / 2 * 64;
+          const bx = xOf(abs), by = hashFarW + wxRnd() * (hashNearW - hashFarW);
+          const rx = 1.1 + wxRnd() * 1.7;
+          wearS += `<ellipse cx="${bx.toFixed(1)}" cy="${by.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${(rx * 0.42).toFixed(2)}" fill="${snowW ? "#eef2f6" : "#4a3a24"}" opacity="${((0.05 + wxRnd() * 0.06) * (0.5 + wear)).toFixed(3)}"/>`;
+        }
+        wearS += `</g>`;
+        under += wearS;
+        if (snowW) under += `<rect class="wf-snow-veil" x="${grassX.toFixed(1)}" y="${FT}" width="${grassW.toFixed(1)}" height="${FH}" fill="#eef2f6" opacity="${(0.07 + 0.13 * wear * wx.intensity).toFixed(3)}"/>`;
+        else if (wx && wx.kind === "rain") under += `<rect class="wf-wet-sheen" x="${grassX.toFixed(1)}" y="${FT}" width="${grassW.toFixed(1)}" height="${FH}" fill="#08140c" opacity="${(0.1 * wx.intensity).toFixed(3)}"/>`;
+      }
       lines += `<line x1="${grassX.toFixed(1)}" y1="${FT}" x2="${(gRight + EZ).toFixed(1)}" y2="${FT}" class="wf-side"/><line x1="${grassX.toFixed(1)}" y1="${FB}" x2="${(gRight + EZ).toFixed(1)}" y2="${FB}" class="wf-side"/><line x1="${grassX.toFixed(1)}" y1="${FT}" x2="${grassX.toFixed(1)}" y2="${FB}" class="wf-endline"/><line x1="${(gRight + EZ).toFixed(1)}" y1="${FT}" x2="${(gRight + EZ).toFixed(1)}" y2="${FB}" class="wf-endline"/>`;
       const cyMid = FT + FH / 2;
       const post = (x, side) => {
@@ -58904,6 +59171,8 @@ ${renderAutoRecruitLog()}`;
       };
       const yardScale = WATCH_SIDE.ypu * WATCH_SIDE.longitudinal;
       under += bench(gLeft + 22 * yardScale, homeC || "#8a94a8", "home") + bench(gLeft + 60 * yardScale, awayC || "#8a94a8", "away");
+      const mascot = (mx, fill, hi, side) => `<g class="wf-mascot wf-mascot-${side}" transform="translate(${mx.toFixed(1)},${(sy + 0.4).toFixed(1)})"><rect class="wf-mascot-body" x="-.75" y="-.4" width="1.5" height="2.1" fill="${fill}"/><circle class="wf-mascot-head" cx="0" cy="-1.05" r=".62" fill="${hi}"/><rect class="wf-mascot-ear" x="-.55" y="-1.85" width=".35" height=".55" fill="${fill}"/><rect class="wf-mascot-ear" x=".2" y="-1.85" width=".35" height=".55" fill="${fill}"/></g>`;
+      under += mascot(gLeft + 16 * yardScale, homeC || "#8a94a8", board && board.homeHi || "#f4f0d8", "home") + mascot(gLeft + 66 * yardScale, awayC || "#8a94a8", board && board.awayHi || "#f4f0d8", "away");
     } else {
       under += `<rect x="${X_LEFT}" y="${FT}" width="${X_RIGHT - X_LEFT}" height="${FH}" class="wf-turf"/>`;
       for (let x = X_LEFT; x < X_RIGHT; x += 14) under += `<rect x="${x}" y="${FT}" width="7" height="${FH}" class="wf-mow"/>`;
@@ -58912,7 +59181,22 @@ ${renderAutoRecruitLog()}`;
       lines += `<line x1="${X_LEFT}" y1="${FT}" x2="${X_RIGHT}" y2="${FT}" class="wf-side"/><line x1="${X_LEFT}" y1="${FB}" x2="${X_RIGHT}" y2="${FB}" class="wf-side"/>`;
     }
     const dirPath = _watchSideDir > 0 ? "M-2.3 0H2.3M.8-1.35L2.4 0 .8 1.35" : "M2.3 0H-2.3M-.8-1.35L-2.4 0-.8 1.35";
-    return defs + under + lines + `<line x1="31" y1="${FT}" x2="31" y2="${FB}" class="wf-los" data-wf-los="${fp == null ? "" : fp}"/><g class="wf-drive-direction" data-wf-direction="${_watchSideDir > 0 ? "right" : "left"}" transform="translate(31 ${(FT + 2.25).toFixed(1)})"><path d="${dirPath}"/></g>`;
+    let wxLayer = `<g class="wf-weather" data-wf-weather="${wx ? wx.kind : "clear"}">`;
+    if (wx && wx.kind === "rain") {
+      const nD = Math.round(34 + 22 * wx.intensity);
+      for (let i = 0; i < nD; i++) {
+        const dx2 = X_LEFT + wxRnd() * (X_RIGHT - X_LEFT), dur = (0.55 + wxRnd() * 0.5).toFixed(2), dl = (wxRnd() * 1.8).toFixed(2);
+        wxLayer += `<rect class="wf-rain-drop" x="${dx2.toFixed(1)}" y="-3" width="0.14" height="2.1" style="--wx-dur:${dur}s;--wx-delay:-${dl}s"/>`;
+      }
+    } else if (wx && wx.kind === "snow") {
+      const nF = Math.round(26 + 20 * wx.intensity);
+      for (let i = 0; i < nF; i++) {
+        const dx2 = X_LEFT + wxRnd() * (X_RIGHT - X_LEFT), dur = (3.2 + wxRnd() * 2.6).toFixed(2), dl = (wxRnd() * 4).toFixed(2), sw = (0.8 + wxRnd() * 1.4).toFixed(2);
+        wxLayer += `<circle class="wf-snow-flake" cx="${dx2.toFixed(1)}" cy="-2" r="${(0.2 + wxRnd() * 0.16).toFixed(2)}" style="--wx-dur:${dur}s;--wx-delay:-${dl}s;--wx-sway:${sw}px"/>`;
+      }
+    }
+    wxLayer += `</g>`;
+    return defs + under + lines + `<line x1="31" y1="${FT}" x2="31" y2="${FB}" class="wf-los" data-wf-los="${fp == null ? "" : fp}"/><g class="wf-drive-direction" data-wf-direction="${_watchSideDir > 0 ? "right" : "left"}" transform="translate(31 ${(FT + 2.25).toFixed(1)})"><path d="${dirPath}"/></g>` + wxLayer;
   }
   function watchTick(immediate = false) {
     const w = _watch;
@@ -59054,6 +59338,15 @@ ${renderAutoRecruitLog()}`;
         if (p.type === "punt" && !p.stFake || p.type === "fg" && !p.made) {
           watchBugPossession(item.d.possession === "home" ? "away" : "home");
         }
+        const feat = watchFeaturedMan(p);
+        const fEntry = feat && names[feat.id];
+        if (fEntry && boardPalette) {
+          const offHome = item.d.possession !== "away";
+          const featHome = feat.def ? !offHome : offHome;
+          const jersey = watchJerseyOf(feat.slot);
+          const line = watchGameLine(w, w.idx, feat.id);
+          watchShowLower(feat.role, `${jersey ? "#" + jersey + " " : ""}${fEntry.name} \xB7 ${fEntry.pos}`, line, featHome ? boardPalette.homeFill : boardPalette.awayFill);
+        }
       };
       if (w.revealTimer) {
         clearTimeout(w.revealTimer);
@@ -59081,6 +59374,15 @@ ${renderAutoRecruitLog()}`;
       const team = ((_f = item.d.possession === "home" ? w.r.homeSchool : w.r.awaySchool) == null ? void 0 : _f.name) || "";
       ticker.innerHTML = `<span class="wt-result">${escapeHtml(team)}: ${formatDriveResult(item.d)}${item.d.points > 0 ? ` (+${item.d.points})` : ""}</span>`;
       holdMs = baseMs * 0.8;
+      const dPlays = item.d.plays || [];
+      if (dPlays.length) {
+        const dy = dPlays.reduce((n, pl) => n + (pl.yards || 0), 0);
+        const c0 = dPlays[0].clock, c1 = dPlays[dPlays.length - 1].clock;
+        const secs = dPlays[0].half === dPlays[dPlays.length - 1].half && c0 != null && c1 != null ? Math.max(0, c0 - c1) : null;
+        const top = secs != null ? ` \xB7 ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}` : "";
+        const bp2 = watchBoardColors(w, item.d);
+        watchShowLower("DRIVE", `${team}: ${formatDriveResult(item.d)}`, `${dPlays.length} PLAY${dPlays.length > 1 ? "S" : ""} \xB7 ${dy} YDS${top}`, item.d.possession === "home" ? bp2 && bp2.homeFill : bp2 && bp2.awayFill, 3400);
+      }
     } else {
       const trueEnd = !w.onFinish || ((_g = state.ui.liveWatch) == null ? void 0 : _g.stage) === "final";
       if (trueEnd) {
