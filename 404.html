@@ -8882,7 +8882,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "4c6ef8d02e";
+globalThis.__BUILD__ = "3cdc6afb5e";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -35115,6 +35115,22 @@ var _CFB = (() => {
     state2.pendingHalftime = pending2;
     return { pending: true, events: [pendingGameEvent(pending2)] };
   }
+  function simCurrentCoachedGame(state2, rest = false) {
+    const cw = state2.coachWeek;
+    const pending2 = state2.pendingHalftime;
+    if (!cw || !(pending2 == null ? void 0 : pending2.coachWeek)) return [];
+    cw.sim = cw.sim || {};
+    cw.sim[pending2.game.id] = true;
+    if (rest) {
+      for (const g of coachedGamesForDay(state2, cw.day)) cw.sim[g.id] = true;
+    }
+    state2.pendingHalftime = null;
+    const cont = resolveCoachedWeek(state2);
+    if (cont.pending) return cont.events;
+    const adv = advanceDay(state2, state2._dispatch || (() => {
+    }));
+    return cont.events.concat(adv);
+  }
   function startNewSeason(state2, dispatch2) {
     state2.playoffs = null;
     state2.allPlayoffs = null;
@@ -35544,6 +35560,7 @@ var _CFB = (() => {
     setGroupTab: () => setGroupTab,
     setNotifyFn: () => setNotifyFn,
     setRenderFn: () => setRenderFn,
+    simCoached: () => simCoached,
     simToBreak: () => simToBreak,
     simToQuarterEnd: () => simToQuarterEnd,
     skipToOffseason: () => skipToOffseason,
@@ -35989,7 +36006,8 @@ var _CFB = (() => {
       rerender();
       return;
     }
-    if (state._callModeToday == null) {
+    const multiCoach = coachedSchoolIds(state).length > 1;
+    if (!multiCoach && state._callModeToday == null) {
       const opponent = playerGameOpponentForDay(state, state.day + 1);
       if (opponent) {
         ensurePregamePlan(state);
@@ -36303,6 +36321,14 @@ var _CFB = (() => {
     const events = resumeFromHalftime(state, homeGPEdits, awayGPEdits);
     if (handleGamePendingEvents(events)) return;
     state.ui.showHalftime = false;
+    processEvents(events);
+    await autosave();
+    rerender();
+  }
+  async function simCoached(rest = false) {
+    const events = simCurrentCoachedGame(state, rest);
+    if (handleGamePendingEvents(events)) return;
+    state.ui.showHalftime = !!state.pendingHalftime;
     processEvents(events);
     await autosave();
     rerender();
@@ -56300,7 +56326,7 @@ ${renderAutoRecruitLog()}`;
 `;
   }
   function renderHalftimeTakeover() {
-    var _a, _b, _c, _d, _e, _f, _g, _h;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
     if (!state.ui.showHalftime || !state.pendingHalftime) return "";
     const { token, home, away } = state.pendingHalftime;
     const school = getPlayerSchool();
@@ -56374,7 +56400,13 @@ ${renderAutoRecruitLog()}`;
           <span class="dash-crest">${renderCrest(school, 34)}</span>
           ${escapeHtml((school == null ? void 0 : school.name) || "")} <span class="title-nick" style="color:${accent}">${escapeHtml((school == null ? void 0 : school.nick) || "")}</span>
         </h1>
-        <div class="view-subtitle">Season ${state.season} &middot; ${escapeHtml(getWeekLabel())} &middot; Halftime</div>
+        <div class="view-subtitle">Season ${state.season} &middot; ${escapeHtml(getWeekLabel())} &middot; Halftime${(() => {
+      const cw = state.coachWeek;
+      if (!cw || !((_i = state.pendingHalftime) == null ? void 0 : _i.coachWeek)) return "";
+      const all = coachedGamesForDay(state, cw.day).length + (cw.results ? cw.results.length : 0);
+      const done = cw.results ? cw.results.length : 0;
+      return all > 1 ? ` &middot; <span style="color:var(--gold)">Your programs \u2014 game ${done + 1} of ${all}</span>` : "";
+    })()}</div>
       </div>
       <div class="ht-resume-controls">
         <button class="cm-switch cm-switch-sm${((_e = state.settings) == null ? void 0 : _e.liveWatch) !== false ? " on" : ""}" id="ht-coachmode" role="switch" aria-checked="${((_f = state.settings) == null ? void 0 : _f.liveWatch) !== false}">
@@ -56382,6 +56414,7 @@ ${renderAutoRecruitLog()}`;
           <span class="cm-text"><span class="cm-name">\u25B6 Coach Mode</span><span class="cm-sub">${((_g = state.settings) == null ? void 0 : _g.liveWatch) !== false ? "Coach the 2nd half" : "Sim the 2nd half"}</span></span>
         </button>
         <button class="btn-advance" id="btn-resume-halftime">${((_h = state.settings) == null ? void 0 : _h.liveWatch) !== false ? "START 2ND HALF \u2192" : "\u23E9 SIM TO FINAL \u2192"}</button>
+        ${state.coachWeek && ((_j = state.pendingHalftime) == null ? void 0 : _j.coachWeek) ? `<button class="btn-ghost btn-sm" id="btn-sim-coached" title="Let the sim finish this game and move to your next program">Let the sim handle this one \u2192</button>` : ""}
       </div>
     </div>
 
@@ -57254,6 +57287,7 @@ ${renderAutoRecruitLog()}`;
     return labels[d.result] || d.result;
   }
   function setupGlobalListeners() {
+    var _a2;
     var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R;
     document.querySelectorAll("[data-nav]").forEach((el) => {
       const activateNav = () => {
@@ -57272,8 +57306,8 @@ ${renderAutoRecruitLog()}`;
     if (!_helpDelegationWired) {
       _helpDelegationWired = true;
       document.addEventListener("click", (e) => {
-        var _a2, _b2;
-        const btn = (_b2 = (_a2 = e.target).closest) == null ? void 0 : _b2.call(_a2, "[data-help-chapter]");
+        var _a22, _b2;
+        const btn = (_b2 = (_a22 = e.target).closest) == null ? void 0 : _b2.call(_a22, "[data-help-chapter]");
         if (!btn) return;
         e.stopPropagation();
         state.ui.contextHelpChapter = btn.dataset.helpChapter;
@@ -57366,16 +57400,25 @@ ${renderAutoRecruitLog()}`;
         renderApp();
       });
       (_l = document.getElementById("btn-resume-halftime")) == null ? void 0 : _l.addEventListener("click", async () => {
-        var _a2, _b2;
+        var _a22, _b2;
         const btn = document.getElementById("btn-resume-halftime");
         if (btn) {
           btn.disabled = true;
           btn.textContent = "SIMULATING 2ND HALF\u2026";
         }
-        if (((_a2 = state.settings) == null ? void 0 : _a2.liveWatch) === false && ((_b2 = state.pendingHalftime) == null ? void 0 : _b2.token)) {
+        if (((_a22 = state.settings) == null ? void 0 : _a22.liveWatch) === false && ((_b2 = state.pendingHalftime) == null ? void 0 : _b2.token)) {
           state.pendingHalftime.token.callMode = "off";
         }
         await resumeHalftime();
+        renderApp();
+      });
+      (_a2 = document.getElementById("btn-sim-coached")) == null ? void 0 : _a2.addEventListener("click", async () => {
+        const btn = document.getElementById("btn-sim-coached");
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = "Simulating\u2026";
+        }
+        await simCoached();
         renderApp();
       });
     }
@@ -57697,14 +57740,14 @@ ${renderAutoRecruitLog()}`;
     }));
     document.querySelectorAll("[data-dc-callname]").forEach((b) => b.addEventListener("click", () => {
       var _a3, _b3, _c3, _d2, _e2, _f2;
-      var _a2, _b2, _c2;
+      var _a22, _b2, _c2;
       const nm = b.dataset.dcCallname;
       if (nm === "__clear" || state.ui.defCallName === nm) {
         state.ui.defCallName = null;
         rerender();
         return;
       }
-      const call = (_c2 = (_b2 = (_a2 = getPlayerSchool()) == null ? void 0 : _a2.gameplan) == null ? void 0 : _b2.defCalls) == null ? void 0 : _c2[nm];
+      const call = (_c2 = (_b2 = (_a22 = getPlayerSchool()) == null ? void 0 : _a22.gameplan) == null ? void 0 : _b2.defCalls) == null ? void 0 : _c2[nm];
       if (!call) return;
       const sel = {};
       for (const f of ["front", "aggression", "covShell", "covStyle", "edgePlay", "robberCall", "zoneStyle", "pressureIdentity"]) {
@@ -57741,7 +57784,7 @@ ${renderAutoRecruitLog()}`;
       rerender();
     }));
     (document.getElementById("dc-send") || {}).onclick = () => {
-      var _a2, _b2, _c2, _d2, _e2, _f2;
+      var _a3, _b2, _c2, _d2, _e2, _f2;
       if (!callTapOk()) return;
       state.ui.defCallName = null;
       const sel = state.ui.defCall || {};
@@ -57751,7 +57794,7 @@ ${renderAutoRecruitLog()}`;
       }
       const call = __spreadProps2(__spreadValues2({}, sel), { _def: true });
       if (call.runCommit != null) {
-        const standingRC = ((_f2 = (_e2 = (_d2 = (_c2 = (_b2 = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token) == null ? void 0 : _b2.pending) == null ? void 0 : _c2.drive) == null ? void 0 : _d2.sit) == null ? void 0 : _e2.standing) == null ? void 0 : _f2.runCommit) || 0;
+        const standingRC = ((_f2 = (_e2 = (_d2 = (_c2 = (_b2 = (_a3 = state.pendingHalftime) == null ? void 0 : _a3.token) == null ? void 0 : _b2.pending) == null ? void 0 : _c2.drive) == null ? void 0 : _d2.sit) == null ? void 0 : _e2.standing) == null ? void 0 : _f2.runCommit) || 0;
         call.runCommit = standingRC + parseInt(call.runCommit, 10);
       }
       answerPlayCall(call);
@@ -57774,16 +57817,16 @@ ${renderAutoRecruitLog()}`;
     (_I = document.getElementById("cs-mode-keydowns")) == null ? void 0 : _I.addEventListener("click", () => setCallModeMidGame("keydowns"));
     (_J = document.getElementById("cs-mode-off")) == null ? void 0 : _J.addEventListener("click", () => setCallModeMidGame("off"));
     (_K = document.getElementById("cs-mode-everycall")) == null ? void 0 : _K.addEventListener("click", () => {
-      var _a2;
-      const t = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token;
+      var _a22;
+      const t = (_a22 = state.pendingHalftime) == null ? void 0 : _a22.token;
       if (t) {
         t.callMode = "all";
         renderApp();
       }
     });
     (_L = document.getElementById("cs-recover")) == null ? void 0 : _L.addEventListener("click", () => {
-      var _a2, _b2;
-      const t = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token;
+      var _a22, _b2;
+      const t = (_a22 = state.pendingHalftime) == null ? void 0 : _a22.token;
       if (((_b2 = t == null ? void 0 : t.pending) == null ? void 0 : _b2.kind) === "fourth") {
         answerFourthDown("auto");
         return;
@@ -57802,14 +57845,14 @@ ${renderAutoRecruitLog()}`;
       if (callTapOk()) setCallModeMidGame("keydowns");
     });
     (_N = document.getElementById("tc-headset")) == null ? void 0 : _N.addEventListener("click", () => {
-      var _a2, _b2;
+      var _a22, _b2;
       state.ui.autoRun = true;
       const lw = state.ui.liveWatch;
       if (lw && !lw.boardDone) {
         renderApp();
         return;
       }
-      const t = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token;
+      const t = (_a22 = state.pendingHalftime) == null ? void 0 : _a22.token;
       if (((_b2 = t == null ? void 0 : t.pending) == null ? void 0 : _b2.kind) === "fourth") answerFourthDown("auto");
       else answerPlayCall({ concept: "sheet" });
     });
@@ -57824,8 +57867,8 @@ ${renderAutoRecruitLog()}`;
       if (callTapOk()) simToBreak();
     });
     document.querySelectorAll("[data-tc-tempo]").forEach((b) => b.addEventListener("click", () => {
-      var _a2, _b2;
-      const tk = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token;
+      var _a22, _b2;
+      const tk = (_a22 = state.pendingHalftime) == null ? void 0 : _a22.token;
       if (!tk) return;
       const meHome = ((_b2 = tk.homeSchool) == null ? void 0 : _b2.id) === state.playerSchoolId;
       const gp2 = meHome ? tk.homeGP : tk.awayGP;
@@ -57834,9 +57877,9 @@ ${renderAutoRecruitLog()}`;
       renderApp();
     }));
     (_Q = document.getElementById("cs-autorun")) == null ? void 0 : _Q.addEventListener("click", () => {
-      var _a2, _b2, _c2;
+      var _a22, _b2, _c2;
       state.ui.autoRun = true;
-      if (((_c2 = (_b2 = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token) == null ? void 0 : _b2.pending) == null ? void 0 : _c2.kind) === "fourth") answerFourthDown("auto");
+      if (((_c2 = (_b2 = (_a22 = state.pendingHalftime) == null ? void 0 : _a22.token) == null ? void 0 : _b2.pending) == null ? void 0 : _c2.kind) === "fourth") answerFourthDown("auto");
       else answerPlayCall({ concept: "sheet" });
     });
     (_R = document.getElementById("cs-autorun-stop")) == null ? void 0 : _R.addEventListener("click", () => {
