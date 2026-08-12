@@ -8849,7 +8849,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "ee12253391";
+globalThis.__BUILD__ = "8409111b53";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -52302,7 +52302,7 @@ ${renderAutoRecruitLog()}`;
     };
   }
   function stepAgent(a, tgt, dt) {
-    var _a;
+    var _a, _b;
     if (!tgt) {
       a.vx *= 0.82;
       a.vy *= 0.82;
@@ -52320,7 +52320,7 @@ ${renderAutoRecruitLog()}`;
       a.vy += dvy * k;
     }
     a.x = clamp6(a.x + a.vx * dt, 1, 99);
-    a.y = clamp6(a.y + a.vy * dt, 2, 60);
+    a.y = clamp6(a.y + a.vy * dt, (_b = a.yMin) != null ? _b : 2, 60);
   }
   function constrainTrack(track, iEnd, end, span = null, iFloor = 0) {
     iEnd = Math.min(iEnd, track.length - 1);
@@ -52621,11 +52621,12 @@ ${renderAutoRecruitLog()}`;
       });
     }
     let carrier = null, dur, ballPlan, throwCue = null, _covActorId = null;
-    const schedSp = (a, pt, tNow, tDue, base) => clamp6(
+    const schedSp = (a, pt, tNow, tDue, base, floorPct = 0.55) => clamp6(
       Math.hypot(pt[0] - a.x, pt[1] - a.y) / Math.max(0.15, tDue - tNow),
-      base * 0.55,
+      base * floorPct,
       9.6
     );
+    const CARRIER_SP_FLOOR = 0.85;
     const wireRush = (blitz) => {
       var _a2;
       const dl = defs.filter((d) => d.grp === "DL");
@@ -52858,18 +52859,6 @@ ${renderAutoRecruitLog()}`;
       const _pocketBreakdown = SNAP_END + (p.hurried ? clamp6(1.15 - (((_k = p.pressureIds) == null ? void 0 : _k.length) || 1) * 0.12, 0.6, 1.15) : 2.4);
       const throwAt = screen ? SNAP_END + _screenDelay : Math.max(SNAP_END + 0.45, Math.min(_routeBreak, _pocketBreakdown));
       const armF = p.qbArm != null ? clamp6(1 + (p.qbArm - 55) / 160, 0.86, 1.16) : 1;
-      const _flightDist = Math.hypot(catchPt[0] - qbSlot.bx, catchPt[1] - qbSlot.by);
-      const flight = Math.max(clamp6(_flightDist / (28 * armF), 0.22, 1.05), _flightDist / 47);
-      const tCatch = throwAt + flight;
-      throwCue = { start: Math.max(SNAP_END, throwAt - 0.34), release: throwAt, end: throwAt + 0.28, arm: (_l = p.qbArm) != null ? _l : null };
-      if (p.hurried && !screen) pressCue = { start: Math.max(SNAP_END + 0.25, throwAt - 0.5), end: throwAt + 0.05 };
-      if (!screen && t === "pass_deep" && throwAt - SNAP_END > 1.35 && rnd() < 0.4) {
-        const pt2 = SNAP_END + (throwAt - SNAP_END) * 0.45;
-        pumpCue = { start: pt2 - 0.14, end: pt2 + 0.18 };
-      }
-      const yac = p.complete && !p.turnover ? clamp6(Math.abs(endY - catchPt[1]) / (SPD.WR * 0.92) + 0.2, 0.25, 3.2) : 0;
-      const tEnd = p.turnover ? tCatch + 0.55 : tCatch + (p.complete ? yac : 0.12);
-      dur = tEnd + LINGER;
       const _qbStartDepthU = Math.max(0, qbSlot.by - LOS);
       const _quickSet = screen || p.rpo || t === "pass_short" && !p.playAction;
       const _setDepthU = _quickSet ? _qbStartDepthU + 0.4 : t === "pass_deep" ? Math.max(_qbStartDepthU + 1.5, 5.4) : t === "pass_medium" ? Math.max(_qbStartDepthU + 1.1, 4.2) : (
@@ -52884,6 +52873,21 @@ ${renderAutoRecruitLog()}`;
       const _setT = _dropStart + _dropDur;
       const _plantT = Math.max(_setT, throwAt - 0.16);
       const _bpSp = _quickSet ? 6.6 : 5.6;
+      const _flushX = p.isScrambleThrow && !screen ? (rnd() < 0.5 ? -1 : 1) * clamp6(3 + rnd() * 3, 3, 6) : 0;
+      const _relX = qbSlot.bx + _flushX;
+      const _relY = _setY - _hitchU - (p.hurried ? 1.8 : 0.7) - 0.8;
+      const _flightDist = Math.hypot(catchPt[0] - _relX, catchPt[1] - _relY);
+      const flight = Math.max(clamp6(_flightDist / (28 * armF), 0.22, 1.05), _flightDist / 47);
+      const tCatch = throwAt + flight;
+      throwCue = { start: Math.max(SNAP_END, throwAt - 0.34), release: throwAt, end: throwAt + 0.28, arm: (_l = p.qbArm) != null ? _l : null };
+      if (p.hurried && !screen) pressCue = { start: Math.max(SNAP_END + 0.25, throwAt - 0.5), end: throwAt + 0.05 };
+      if (!screen && t === "pass_deep" && throwAt - SNAP_END > 1.35 && rnd() < 0.4) {
+        const pt2 = SNAP_END + (throwAt - SNAP_END) * 0.45;
+        pumpCue = { start: pt2 - 0.14, end: pt2 + 0.18 };
+      }
+      const yac = p.complete && !p.turnover ? clamp6(Math.abs(endY - catchPt[1]) / (SPD.WR * 0.92) + 0.2, 0.25, 3.2) : 0;
+      const tEnd = p.turnover ? tCatch + 0.55 : tCatch + (p.complete ? yac : 0.12);
+      dur = tEnd + LINGER;
       qbCue = {
         family: p.playAction ? "playaction" : _quickSet ? "quick" : t === "pass_deep" ? "five" : "three",
         hurried: !!p.hurried,
@@ -52904,8 +52908,8 @@ ${renderAutoRecruitLog()}`;
         if (p.playAction && t2 < _dropStart) return [qbSlot.bx - 1.5, qbSlot.by + 1.2, 4];
         if (t2 < _setT) return [qbSlot.bx, _setY, _bpSp];
         if (t2 < _plantT) return [qbSlot.bx, _setY - _hitchU, 2.4];
-        if (t2 < throwAt) return [qbSlot.bx, _setY - _hitchU - (p.hurried ? 1.8 : 0.7), p.hurried ? 4.6 : 3];
-        return [qbSlot.bx, _setY - _hitchU - 0.5, 1.8];
+        if (t2 < throwAt) return [qbSlot.bx + _flushX, _setY - _hitchU - (p.hurried ? 1.8 : 0.7), _flushX ? 6.2 : p.hurried ? 4.6 : 3];
+        return [qbSlot.bx + _flushX, _setY - _hitchU - 0.5, 1.8];
       };
       const shapes = CONCEPT_ROUTES[p.concept] || DEPTH_ROUTES[t] || DEPTH_ROUTES.pass_medium;
       const screenShape = screenKind === "bubble" ? "bubble" : screenKind === "tunnel" ? "tunnel" : null;
@@ -53032,6 +53036,7 @@ ${renderAutoRecruitLog()}`;
         }
       }
       const bl = { x: null, y: null };
+      let _relPt = null;
       ballPlan = (t2) => {
         let pt;
         const snap = snapFlight(t2, () => [A.QB.x, A.QB.y - 0.8]);
@@ -53045,7 +53050,8 @@ ${renderAutoRecruitLog()}`;
           }
         } else if (t2 < tCatch) {
           const u = (t2 - throwAt) / flight;
-          const ox = A.QB.x, oy = A.QB.y - 0.8;
+          if (!_relPt) _relPt = [A.QB.x, A.QB.y - 0.8];
+          const ox = _relPt[0], oy = _relPt[1];
           const lx = ox + (catchPt[0] - ox) * u;
           const ly = oy + (catchPt[1] - oy) * u;
           const dx = catchPt[0] - ox, dy = catchPt[1] - oy;
@@ -53185,7 +53191,7 @@ ${renderAutoRecruitLog()}`;
       const givePt = isJet && jetMeshPt ? jetMeshPt : meshPt;
       const holePt = [lane, LOS + 1.6];
       const runDist = Math.hypot(holePt[0] - carrierSlot.bx, holePt[1] - carrierSlot.by) + Math.hypot(endPt[0] - holePt[0], endPt[1] - holePt[1]) + (p.isScramble ? 7 : p.optionPhase === "pitch" ? 6 : p.optionPhase === "jet" ? 4 : 0);
-      const tEnd = meshAt + clamp6(runDist / (carrier.speed * 0.92) + 0.35, 0.9, 7);
+      const tEnd = meshAt + clamp6(runDist / carrier.speed + 0.22, 0.75, 7);
       dur = tEnd + LINGER;
       const hole = holePt;
       const stretchPt = scheme && scheme.stretch ? [clamp6(50 + dir * (10 + scheme.stretch * 22), 6, 94), LOS + 3.4] : null;
@@ -53199,7 +53205,7 @@ ${renderAutoRecruitLog()}`;
         if (stretchPt && t2 < readAt) return [stretchPt[0], stretchPt[1], carrier.speed * 0.94];
         const past = carrier.y <= hole[1] + 0.5;
         const floorSp = isJet ? 7.8 : 0;
-        return past ? [endPt[0], endPt[1], Math.max(floorSp, schedSp(carrier, endPt, t2, tEnd, carrier.speed))] : [hole[0], hole[1], Math.max(floorSp, carrier.speed)];
+        return past ? [endPt[0], endPt[1], Math.max(floorSp, schedSp(carrier, endPt, t2, tEnd, carrier.speed, CARRIER_SP_FLOOR))] : [hole[0], hole[1], Math.max(floorSp, carrier.speed)];
       };
       if (isJet) {
         const fromX = carrierSlot.bx, fromY = carrierSlot.by;
@@ -53423,6 +53429,10 @@ ${renderAutoRecruitLog()}`;
     }
     const everyone = [...offs, ...defs];
     everyone.sort((a2, b2) => a2 === carrier ? -1 : b2 === carrier ? 1 : 0);
+    if (p.fieldPos != null) {
+      const _yFloor = LOS - (100 - p.fieldPos) * YPU - 10 * YPU + 1.2;
+      for (const a2 of everyone) a2.yMin = Math.min(2, _yFloor);
+    }
     const ball = { track: [] };
     const n = Math.ceil((dur + 1e-9) / STEP);
     for (let i = 0; i <= n; i++) {
@@ -57882,7 +57892,7 @@ ${renderAutoRecruitLog()}`;
       const c = ((_a2 = school == null ? void 0 : school.colors) == null ? void 0 : _a2[i]) || ((_b2 = school == null ? void 0 : school.colors) == null ? void 0 : _b2[0]);
       return c ? teamAccentColor(c) : fb;
     };
-    const divM = (dv) => dv === "D3" ? 0.86 : dv === "D2" ? 0.93 : 1;
+    const divM = (dv) => 1;
     const wxKey = `${((_c = r.homeSchool) == null ? void 0 : _c.abbr) || "H"}|${((_d = r.awaySchool) == null ? void 0 : _d.abbr) || "A"}|${state.season || 0}|${state.day || 0}`;
     let wxH = 2166136261;
     for (let i = 0; i < wxKey.length; i++) {
