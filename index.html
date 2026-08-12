@@ -8849,7 +8849,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "1ef35b5fa3";
+globalThis.__BUILD__ = "74f9a1fc82";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -13792,7 +13792,6 @@ var _CFB = (() => {
         riverboat: { label: "Riverboat", icon: "\u{1F3B2}" },
         roadWarrior: { label: "Road Warrior", icon: "\u{1F6E3}\uFE0F" },
         specialTeams: { label: "Special Teams", icon: "\u{1F9B5}" },
-        adjustments: { label: "Adjustments", icon: "\u{1F9E0}" },
         adjustments: { label: "Adjustments", icon: "\u{1F9E0}" }
         // [PLAYTEST 2026-08-12 item 31 — owner: "just cut it"] `motivator` is GONE.
         // It was dead twice over: `per: 0` meant a 💎 motivator and a blank one paid
@@ -13818,7 +13817,6 @@ var _CFB = (() => {
         riverboat: { per: 0.01, label: (g) => g ? `4th-down & 2-pt conversion odds +${g}%` : "Convert when you gamble" },
         roadWarrior: { per: 0.08, label: (g) => g ? `Road / crowd-noise penalty \u2212${(g * 8).toFixed(0)}%` : "Silence hostile crowds" },
         specialTeams: { per: 0.01, label: (g) => g ? `FG range & coverage +${g}%` : "Win the hidden-yardage battle" },
-        adjustments: { per: 0.1, label: (g) => g ? `Halftime adjustment strength +${(g * 10).toFixed(0)}%` : "Out-scheme them after the break" },
         adjustments: { per: 0.1, label: (g) => g ? `Halftime adjustment strength +${(g * 10).toFixed(0)}%` : "Out-scheme them after the break" }
         // motivator removed 2026-08-12 (playtest item 31) — see the note in DNA_AXES.
         // Every axis left on the crest pays a real, readable bonus.
@@ -30768,8 +30766,8 @@ var _CFB = (() => {
     state2.pendingWalkOns.push(entry.wo);
     return { ok: true };
   }
-  function initPreseason(state2) {
-    state2.preseason = {
+  function freshPreseason() {
+    return {
       devFocus: "balanced",
       devDone: false,
       posChanges: [],
@@ -30778,9 +30776,36 @@ var _CFB = (() => {
       springResult: null
     };
   }
+  function preseasonSchools(state2) {
+    var _a, _b, _c;
+    const out2 = [];
+    const slots = ((_a = state2.tree) == null ? void 0 : _a.slots) || {};
+    for (const slot of Object.values(slots)) {
+      if (!slot || slot.retired || !slot.schoolId) continue;
+      const sc2 = (_b = state2.world) == null ? void 0 : _b.schools.find((s) => s.id === slot.schoolId);
+      if (sc2 && !out2.includes(sc2)) out2.push(sc2);
+    }
+    const active = (_c = state2.world) == null ? void 0 : _c.schools.find((s) => s.id === state2.playerSchoolId);
+    if (active && !out2.includes(active)) out2.push(active);
+    return out2;
+  }
+  function initPreseason(state2) {
+    for (const school of preseasonSchools(state2)) school.preseason = freshPreseason();
+    state2.preseason = freshPreseason();
+  }
   function devCtx(state2) {
-    if (!state2.preseason) initPreseason(state2);
-    return state2.preseason;
+    var _a;
+    const school = (_a = state2.world) == null ? void 0 : _a.schools.find((s) => s.id === state2.playerSchoolId);
+    if (!school) {
+      if (!state2.preseason) state2.preseason = freshPreseason();
+      return state2.preseason;
+    }
+    if (!school.preseason) {
+      school.preseason = state2.preseason && !state2._preseasonSplit ? state2.preseason : freshPreseason();
+      state2._preseasonSplit = true;
+    }
+    state2.preseason = school.preseason;
+    return school.preseason;
   }
   function setDevFocus(state2, focusId) {
     const ctx2 = devCtx(state2);
@@ -30880,7 +30905,7 @@ var _CFB = (() => {
     const brain = !globalThis.__noConvertBrain;
     const gradIds = mine ? new Set(graduatingSeniors(state2).map((p) => p.id)) : /* @__PURE__ */ new Set();
     const roster = school.roster.filter((p) => !gradIds.has(p.id) && (mine || p.classYear !== "SR"));
-    const converted = new Set(mine ? (((_a = state2.preseason) == null ? void 0 : _a.posChanges) || []).map((c) => c.playerId) : []);
+    const converted = new Set(mine ? (devCtx(state2).posChanges || []).map((c) => c.playerId) : []);
     const counts = {};
     for (const p of roster) counts[p.position] = (counts[p.position] || 0) + 1;
     const roomRank = (pos, rating, selfId) => roster.filter((x) => x.position === pos && x.id !== selfId && x.compositeRating > rating).length + 1;
@@ -32252,15 +32277,19 @@ var _CFB = (() => {
       }
     }
     if (day === 5) {
-      const playerSchool = state2.world.schools.find((s) => s.id === state2.playerSchoolId);
-      if ((_h = playerSchool == null ? void 0 : playerSchool.pendingRedshirts) == null ? void 0 : _h.length) {
-        for (const pid of playerSchool.pendingRedshirts) {
-          const player = playerSchool.roster.find((p) => p.id === pid);
-          if (player) applyRedshirt(player, state2.season);
+      for (const sid of coachedSchoolIds(state2)) {
+        const sch = state2.world.schools.find((s) => s.id === sid);
+        if (!sch) continue;
+        if ((_h = sch.pendingRedshirts) == null ? void 0 : _h.length) {
+          for (const pid of sch.pendingRedshirts) {
+            const player = sch.roster.find((p) => p.id === pid);
+            if (player) applyRedshirt(player, state2.season);
+          }
+          const _who = sid === state2.playerSchoolId ? "" : ` (${sch.name})`;
+          events.push({ type: "info", text: `Redshirts finalized${_who} \u2014 ${sch.pendingRedshirts.length} player${sch.pendingRedshirts.length !== 1 ? "s" : ""} sitting the year. That window is closed.` });
         }
-        events.push({ type: "info", text: `Redshirts finalized \u2014 ${playerSchool.pendingRedshirts.length} player${playerSchool.pendingRedshirts.length !== 1 ? "s" : ""} sitting the year. That window is closed.` });
+        sch.pendingRedshirts = null;
       }
-      if (playerSchool) playerSchool.pendingRedshirts = null;
     }
     if (isRecruitingDay(day)) {
       const pc = state2.playerCoach;
@@ -34319,13 +34348,24 @@ var _CFB = (() => {
       (e) => e.season !== prevSeason || arrivedIds.has(e.recruitId)
     );
   }
+  function coachedSchoolIds(state2) {
+    var _a;
+    const ids = /* @__PURE__ */ new Set();
+    const slots = ((_a = state2.tree) == null ? void 0 : _a.slots) || {};
+    for (const slot of Object.values(slots)) {
+      if (slot && !slot.retired && slot.schoolId) ids.add(slot.schoolId);
+    }
+    if (state2.playerSchoolId) ids.add(state2.playerSchoolId);
+    return [...ids];
+  }
   function startNewSeason(state2, dispatch2) {
     state2.playoffs = null;
     state2.allPlayoffs = null;
     state2.bowls = null;
     addFreshmenToRosters(state2);
+    const _mine = new Set(coachedSchoolIds(state2));
     for (const school of state2.world.schools) {
-      if (school.id === state2.playerSchoolId) {
+      if (_mine.has(school.id)) {
         school.pendingRedshirts = computeAutoRedshirtCandidates(school, state2.season);
       } else {
         autoRedshirtFreshmen(school, state2.season);
@@ -36317,7 +36357,7 @@ var _CFB = (() => {
                         data-gp-set="puntDef" data-gp-val="${val}">${lbl}</button>
               `).join("")}
             </div>
-            <div class="gp-tip tip-info">\u25B8 GO FOR BLOCK sells out at the line \u2014 a real shot at a blocked punt (~1 or 2 a season), but with everyone rushing there's no return set up behind it. SAFE RETURN puts every body in the wall: +15% return yardage, no block threat. Special teams wins one game a year; choose how you want to steal yours.</div>
+            <div class="gp-tip tip-info">\u25B8 GO FOR BLOCK sells out at the line \u2014 a real shot at a blocked punt (~1 or 2 a season), but with everyone rushing there's no return set up behind it. SAFE RETURN puts every body in the wall: your best returns of the year come from this call, and the punter never feels a thing. Special teams wins one game a year; choose how you want to steal yours.</div>
           </div>
 
           <div class="gp-row">
@@ -36627,6 +36667,8 @@ var _CFB = (() => {
     const dir = gp.runDirection || { left: 33, middle: 34, right: 33 };
     const cont = (_d = school._olCont) != null ? _d : 6;
     const contWord = cont >= 9 ? "in lockstep" : cont >= 6 ? "settled" : cont >= 3 ? "gelling" : "strangers";
+    const sideWord = (v) => v >= 78 ? "a wall" : v >= 68 ? "stout" : v >= 58 ? "solid" : v >= 48 ? "gettable" : "a soft spot";
+    const olBest = L >= M && L >= R ? "left" : R >= M ? "right" : "middle";
     return `
   <div class="card identity-card">
     <div class="card-header"><span class="card-title">OFFENSIVE IDENTITY</span>
@@ -36634,7 +36676,7 @@ var _CFB = (() => {
     <div class="id-row" style="margin-bottom:4px"><span class="id-lbl">\u{1F9ED} They'd call you</span>
       <span><b>${escapeHtml(schemeIdentityLine(gp))}</b></span></div>
     <div class="id-row"><span class="id-lbl">\u{1F3AD} Play action</span>
-      <span>${paWord} <b>(${paCred.toFixed(2)})</b> \xB7 ~${Math.round(wavg(PA_RATE) * 100 * ((_e = gp.paRate) != null ? _e : 100) / 100)}% of med/deep</span></div>
+      <span><b>${paWord}</b> \xB7 ~${Math.round(wavg(PA_RATE) * 100 * ((_e = gp.paRate) != null ? _e : 100) / 100)}% of med/deep</span></div>
     <div class="id-row"><span class="id-lbl">\u{1F525} Screens</span><span>~${(_f = gp.screenRate) != null ? _f : 14}% of short throws \u2014 jackpot vs the blitz</span></div>
     ${rpoShare > 0.05 ? `<div class="id-row"><span class="id-lbl">\u{1F500} RPO</span><span>~${Math.round(rpoShare * ((_g = gp.rpoRate) != null ? _g : 40))}% of run calls carry the option</span></div>` : ""}
     ${(() => {
@@ -36660,7 +36702,7 @@ var _CFB = (() => {
     <div class="id-row"><span class="id-lbl">\u{1F3C3} Motion</span><span>~${Math.round(wavg(MOTION_RATE) * 100 * ((_h = gp.motionRate) != null ? _h : 100) / 100)}% of dropbacks</span></div>
     <div class="id-row"><span class="id-lbl">\u{1F3A9} Draws</span><span>~${(_i = gp.drawRate) != null ? _i : 8}% of inside runs come off a pass look</span></div>
     <div class="id-row"><span class="id-lbl">\u{1F9F1} Your line</span>
-      <span>L <b>${L}</b> \xB7 M <b>${M}</b> \xB7 R <b>${R}</b> \u2014 ${escapeHtml(contWord)} (${cont}/10)</span></div>
+      <span>left ${escapeHtml(sideWord(L))} \xB7 middle ${escapeHtml(sideWord(M))} \xB7 right ${escapeHtml(sideWord(R))} \u2014 ${escapeHtml(contWord)}, best behind the <b>${escapeHtml(olBest)}</b></span></div>
     ${(() => {
       var _a2;
       const fa = ((_a2 = gp.fieldAssignments) == null ? void 0 : _a2.offense) || {};
@@ -36818,7 +36860,7 @@ var _CFB = (() => {
               <span class="gp-slider-hi">60%</span>
               <span class="gp-slider-val" id="rpo-val">${(_b = gp.rpoRate) != null ? _b : 40}%</span>
             </div>
-            <div class="gp-tip tip-info">\u25B8 RPOs run from ANY formation \u2014 what changes is whether your QB can read the mesh. Pistol is what the concept was built for (100% of the dial); Spread is nearly as good (85%); Trips telegraphs it (70%); Air Raid is a drop-back system (45%). Under center \u2014 Power-I (5%) \u2014 he turns his back on the defender he's optioning, so the read barely exists. Higher = more mesh reads: a smart QB (AWR) pulls it against a crashing box for the free slant.</div>
+            <div class="gp-tip tip-info">\u25B8 RPOs run from ANY formation \u2014 what changes is whether your QB can read the mesh. Pistol is what the concept was built for and Spread is nearly as good; Trips telegraphs it and Air Raid is a drop-back system, so the dial buys less there. Under center \u2014 Power-I \u2014 he turns his back on the defender he's optioning, so the read barely exists. Higher = more mesh reads: a smart QB (AWR) pulls it against a crashing box for the free slant.</div>
           </div>
 
           <div class="gp-row">
@@ -36870,7 +36912,7 @@ var _CFB = (() => {
           ${!hasTriple ? `<div class="gp-tip tip-info">\u25B8 From spread formations this is the SPEED option \u2014 no dive back, the QB attacks the edge and reads only the force defender: keep or pitch. It's a changeup (a small slice of your run calls, scaled by the rate dial), not an identity. The Dive lean below is ignored without a Wishbone/Flexbone package.</div>` : ""}
 
           <div class="gp-row">
-            <label class="gp-label">Option Rate <span class="gp-hint">(run calls that are true triple option \xB7 in spread sets it scales your speed-option changeup instead, 70 = its natural rate)</span></label>
+            <label class="gp-label">Option Rate <span class="gp-hint">(run calls that are true triple option \xB7 in spread sets it scales your speed-option changeup instead)</span></label>
             <div class="gp-slider-wrap">
               <span class="gp-slider-lo">0%</span>
               <input class="gp-slider" type="range" id="option-rate" min="0" max="100" value="${(_a2 = gp.optionRate) != null ? _a2 : 70}" />
@@ -36986,7 +37028,7 @@ var _CFB = (() => {
               <span class="gp-slider-hi">Max Protect</span>
               <span class="gp-slider-val" id="prot-emph-val">${(_n = gp.protEmphasis) != null ? _n : 50}</span>
             </div>
-            <div class="gp-tip tip-info">\u25B8 Who stays in when the ball goes up. MAX PROTECT keeps the TE (and backs) in \u2014 ~20% fewer sacks, but the same coverage blankets fewer routes, so every window tightens. MAX ROUTES floods the field and lives with the heat. Crank protection against blitz-heavy and crash-edge defenses; empty the backfield against passive ones.</div>
+            <div class="gp-tip tip-info">\u25B8 Who stays in when the ball goes up. MAX PROTECT keeps the TE (and backs) in \u2014 your QB gets his back foot down clean far more often, but the same coverage blankets fewer routes, so every window tightens. MAX ROUTES floods the field and lives with the heat. Crank protection against blitz-heavy and crash-edge defenses; empty the backfield against passive ones.</div>
           </div>
 
           <div class="gp-row">
@@ -37013,7 +37055,7 @@ var _CFB = (() => {
               <span class="gp-slider-hi">Push it</span>
               <span class="gp-slider-val" id="qb-aggr-val">${(_p = gp.qbAggr) != null ? _p : 50}</span>
             </div>
-            <div class="gp-tip tip-info">\u25B8 The gunslinger dial. PUSH IT hunts depth beyond your called mix and throws into tighter windows \u2014 more yards per completion, more interceptions (up to +25%). PROTECT checks it down and takes what's given. Pair it with your QB: a high-AWR passer earns the right to push; a freshman doesn't.</div>
+            <div class="gp-tip tip-info">\u25B8 The gunslinger dial. PUSH IT hunts depth beyond your called mix and throws into tighter windows \u2014 more yards per completion, and a real jump in interceptions. PROTECT checks it down and takes what's given. Pair it with your QB: a high-AWR passer earns the right to push; a freshman doesn't.</div>
           </div>
 
           <div class="gp-row">
@@ -37031,7 +37073,7 @@ var _CFB = (() => {
           ${offSubTab !== "playbook" ? "" : `
           <details class="gp-section" open>
           <summary class="gp-section-hdr">THE PLAYBOOK <span class="gp-section-sub">concept weights \u2014 your call sheet</span></summary>
-          <div class="gp-tip tip-info">\u25B8 Every snap the sim now calls a real CONCEPT \u2014 this is where you weight them. 50 is a balanced call sheet; crank what your roster executes, bench what it can't (0 = never called, and your QB can't audible into it). Each concept beats some coverages and dies against others \u2014 the drive log shows you which you're meeting. Fair warning: the defense keeps film. Calling one concept on 30%+ of its snaps gets it jumped, so a lopsided sheet pays a tax. Weights ride with your saved plans, so different opponents can get different books.</div>
+          <div class="gp-tip tip-info">\u25B8 Every snap the sim now calls a real CONCEPT \u2014 this is where you weight them. 50 is a balanced call sheet; crank what your roster executes, bench what it can't (0 = never called, and your QB can't audible into it). Each concept beats some coverages and dies against others \u2014 the drive log shows you which you're meeting. Fair warning: the defense keeps film. Ride one concept hard enough and it starts getting jumped, so a lopsided sheet pays a tax. Weights ride with your saved plans, so different opponents can get different books.</div>
           ${(() => {
       const carried = (gp.offFormations || []).filter((f) => f && f.id && (f.weight || 0) > 0).map((f) => f.id).filter((id) => FORMATION_PLAYBOOK[id]);
       if (pbFormTab && !carried.includes(pbFormTab)) pbFormTab = null;
@@ -37388,7 +37430,7 @@ var _CFB = (() => {
                         data-gp-set="tackleStyle" data-gp-val="${val}">${lbl}</button>
               `).join("")}
             </div>
-            <div class="gp-tip tip-info">\u25B8 STRIP HUNT punches at the ball on every contact \u2014 +50% forced fumbles, but going for the ball misses wraps, and a missed wrap is a broken tackle with grass behind it. WRAP UP finishes what it touches \u2014 fewer big runs against you, fewer takeaways for you. Turnover margin vs yardage allowed: pick your religion.</div>
+            <div class="gp-tip tip-info">\u25B8 STRIP HUNT punches at the ball on every contact \u2014 far more balls on the ground, but going for the ball misses wraps, and a missed wrap is a broken tackle with grass behind it. WRAP UP finishes what it touches \u2014 fewer big runs against you, fewer takeaways for you. Turnover margin vs yardage allowed: pick your religion.</div>
           </div>
           </details>`}
 
@@ -37459,7 +37501,7 @@ var _CFB = (() => {
                         data-gp-set="pressLevel" data-gp-val="${val}">${lbl}</button>
               `).join("")}
             </div>
-            <div class="gp-tip tip-info">\u25B8 PRESS jams at the line \u2014 timing routes die in the receiver's stem, but lose the jam and it's a footrace with nobody home, and living that close to the edge draws flags (+12% defensive penalties). OFF concedes the underneath completions to keep a lid on everything deep. Strong-handed, technical corners earn the right to press; everyone else is donating.</div>
+            <div class="gp-tip tip-info">\u25B8 PRESS jams at the line \u2014 timing routes die in the receiver's stem, but lose the jam and it's a footrace with nobody home, and living that close to the edge draws flags. OFF concedes the underneath completions to keep a lid on everything deep. Strong-handed, technical corners earn the right to press; everyone else is donating.</div>
           </div>
 
           <div class="gp-row">
@@ -38318,7 +38360,7 @@ var _CFB = (() => {
         <button class="gp-option gp-option-sm${cell.tempo === t ? " active" : ""}"
                 data-sitset-field="tempo" data-sitset-val="${t}">${t}</button>`).join("")}
     </div>
-    <div class="gp-tip tip-info">\u25B8 Hurry here burns legs (+35%/+20% fatigue) \u2014 cheap for a two-minute cell, expensive as a whole identity. Chew shortens the game.</div>`
+    <div class="gp-tip tip-info">\u25B8 Hurry here burns legs on both sides of the ball \u2014 cheap for a two-minute cell, expensive as a whole identity. Chew shortens the game.</div>`
     )}
 
   ${group(
@@ -38417,14 +38459,14 @@ var _CFB = (() => {
       "Run Commit",
       "runCommit",
       cell.runCommit != null,
-      `AUTO \u2014 0 (neutral box)`,
+      `AUTO \u2014 neutral box`,
       `<div class="gp-slider-wrap">
       <span class="gp-slider-lo">\u221220</span>
       <input class="gp-slider" type="range" id="sit-runcommit" min="-20" max="20" value="${(_H = cell.runCommit) != null ? _H : 0}" />
       <span class="gp-slider-hi">+20</span>
       <span class="gp-slider-val" id="sit-runcommit-val">${((_I = cell.runCommit) != null ? _I : 0) > 0 ? "+" : ""}${(_J = cell.runCommit) != null ? _J : 0}</span>
     </div>
-    <div class="gp-tip tip-info">\u25B8 +20 stuffs the run (~0.6 fewer yds/carry) but leaves every receiver more open (~+3\u20134% completions against). \u221220 drops defenders into coverage and concedes the ground game. There is no free lunch here.</div>`,
+    <div class="gp-tip tip-info">\u25B8 Crowd the box and the ground game dies, but every receiver runs free against a thinner secondary. Drop the box and you hand back the run to keep a lid on the pass. There is no free lunch here.</div>`,
       false
     )}
 
@@ -38905,7 +38947,7 @@ var _CFB = (() => {
       return !carriedForms.some((fid) => (FORMATION_PLAYBOOK[fid] || []).includes(name));
     };
     return `
-  ${opts ? "" : `<div class="gp-row"><button class="gp-option gp-option-sm" id="cw-reset">Reset to balanced (all 50)</button></div>
+  ${opts ? "" : `<div class="gp-row"><button class="gp-option gp-option-sm" id="cw-reset">Reset to an even call sheet</button></div>
   <div class="cw-explain">Weights set the mix inside each group \u2014 and <b>0 is a cut, not a low number</b>: a benched
   play is out of the install and will never be called; the sheet renormalizes around what's left. A play also only
   lives in the formations that carry it \u2014 drop every formation that runs it from your package and it comes off the
@@ -38962,7 +39004,7 @@ var _CFB = (() => {
         ["covShell", "Shell", [["single", "Single"], ["two", "Two-high"]]],
         ["covStyle", "Style", [["man", "Man"], ["zone", "Zone"]]],
         ["edgePlay", "Edge", [["contain", "Set it"], ["crash", "Crash"]]],
-        ["runCommit", "Box", [["-8", "Lighten \u22128"], ["8", "Commit +8"]]]
+        ["runCommit", "Box", [["-8", "Lighten the box"], ["8", "Commit to the run"]]]
       ];
       MAX_DEF_CALLS = 12;
       CALL_FIELDS = [
@@ -38974,7 +39016,7 @@ var _CFB = (() => {
         ["edgePlay", "Edge", [["contain", "Set it"], ["crash", "Crash"]]],
         ["robberCall", "Robber", [["rob", "Rob"], ["overtop", "Overtop"]]],
         ["zoneStyle", "Zone Eyes", [["spot", "Spot"], ["match", "Match"]]],
-        ["runCommit", "Box", [["-10", "Lighten \u221210"], ["10", "Commit +10"]]],
+        ["runCommit", "Box", [["-10", "Lighten the box"], ["10", "Commit to the run"]]],
         // PASS 3: coverage-family ingredients — call-only, never standing dials.
         // A family pins the coverage outright (and forces its shell/style); a
         // rotation is the single-high force rule; Rush 3 drops eight. Prevent
@@ -39022,10 +39064,10 @@ var _CFB = (() => {
         base: "Everything else (2nd & short/medium)"
       };
       SIT_NUDGE = {
-        third_long: "calls +30% more pass here",
-        third_short: "calls \u221225% pass (leans run) here",
-        two_min_trail: "calls +20% more pass here",
-        four_min_lead: "calls \u221225% pass (milks it) here"
+        third_long: "throws here more than it normally would",
+        third_short: "leans on the run here",
+        two_min_trail: "opens it up here",
+        four_min_lead: "milks the clock here"
       };
       SIT_TIPS = {
         openers: "\u25B8 The opening script: coaches script the first drives to probe the defense and bank tendency capital before the chess match starts. This cell owns every ordinary snap of your first TWO drives, then hands the game back to the normal sheet. Goal line, backed up, the clock cells and the red zone still take over \u2014 nobody stays on the script at the goal line. Offense only; leave it AUTO and it never fires.",
@@ -39034,9 +39076,9 @@ var _CFB = (() => {
         two_min_trail: "\u25B8 Desperation time. AUTO already airs it out; take over to pin your best passing package and shift depth toward deep shots.",
         four_min_lead: "\u25B8 Salt the game away. AUTO leans run; take over to go full Heavy Run out of Power-I and drain the half.",
         red_zone: "\u25B8 The field shrinks \u2014 deep routes die inside the 20. This cell rules the whole red zone, including 3rd downs; a short-depth, run-lean plan is the conventional build.",
-        third_short: "\u25B8 AUTO leans run by 25% here (also covers 4th-and-short goes). The defense knows it too \u2014 46/Bear fronts and stacked boxes live on this down.",
+        third_short: "\u25B8 AUTO leans on the run here (this cell also covers 4th-and-short goes). The defense knows it too \u2014 46/Bear fronts and stacked boxes live on this down.",
         third_medium: "\u25B8 The true coin-flip down. No AUTO adjustment \u2014 whatever edge you build here is pure scheme.",
-        third_long: "\u25B8 AUTO passes 30% more often here. Take over to pin a package \u2014 but remember the defense knows it's a passing down too.",
+        third_long: "\u25B8 AUTO already treats this as a passing down. Take over to pin a package \u2014 but remember the defense knows it's a passing down too.",
         second_long: "\u25B8 After a 1st-down stuff. Screens and draws punish a defense teeing off; going conservative concedes 3rd & long.",
         first_ten: "\u25B8 The identity down \u2014 most snaps in a game start here. Changing this cell reshapes your whole offense more than any other.",
         base: "\u25B8 The fallback for anything no other situation claims (mostly 2nd & short/medium)."
@@ -44453,7 +44495,7 @@ var _CFB = (() => {
     const phase = getPhase(state.day);
     if (state.offseason && !state.offseason.done) return renderEventTakeover(school, "offseason");
     if (phase === "PRESEASON") {
-      if (state.day === 4 && ((_a = state.preseason) == null ? void 0 : _a.openerPrep)) return renderEventTakeover(school, "gameweek");
+      if (state.day === 4 && devCtx(state).openerPrep) return renderEventTakeover(school, "gameweek");
       return renderEventTakeover(school, "preseason");
     }
     if (state.playoffs && phase === "PLAYOFFS") return renderEventTakeover(school, "playoffs");
@@ -45001,19 +45043,9 @@ var _CFB = (() => {
   </div>
   <p class="offseason-hint" style="margin-top:10px">Schedule, staff and roster are locked. Continue to open camp for Season ${state.season + 1}.</p>`;
   }
-  function cutDayRecsBody(school, recs) {
-    var _a, _b;
-    const pre = state.preseason || {};
-    const capLeft = C.POS_CHANGE_CAP - (pre.posChanges || []).filter((c) => !c.anytime).length;
-    const penaltyPct = Math.round(conversionPenaltyFactor(state) * 100);
+  function conversionRecRows(recs, capLeft) {
     const ord = (n) => `${n}${n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th"}`;
     return `
-  <div class="offseason-item" style="margin-top:8px">
-    <span class="offseason-label">Staff recommendation${recs.length !== 1 ? "s" : ""}</span>
-    <span class="offseason-detail">${recs.length} position change${recs.length !== 1 ? "s" : ""} worth a look before anyone gets cut \xB7 <b>${Math.max(0, capLeft)}/${C.POS_CHANGE_CAP} camp conversions left</b></span>
-  </div>
-  <p class="offseason-hint" style="margin:4px 0 8px">The staff walked the roster before cut day: these players are buried where they are, and another room has a job for them. A convert takes a \u2212${penaltyPct}% haircut for one season and locks in when camp runs \u2014 it counts against the same ${C.POS_CHANGE_CAP}-conversion camp limit as the spring board. Convert who you like, then head to cuts.</p>
-  ${conversionPreviewPanel()}
   <div class="inline-roster-list" style="margin-top:8px">
     ${recs.map((r) => {
       const diff = r.projected - r.current;
@@ -45032,7 +45064,21 @@ var _CFB = (() => {
           <span class="offseason-hint" style="flex-basis:100%;margin:2px 0 0">${ord(r.fromRank)} of ${r.fromCount} in the ${r.from} room \xB7 ${r.deficit > 0 ? `${r.to} room is ${r.deficit} short` : `walks in as the ${ord(r.toRank)} ${r.to}`}${r.bodyDelta ? ` \xB7 <b>${r.bodyDelta > 0 ? `bulks up (+${r.bodyDelta} lb)` : `slims down (\u2212${Math.abs(r.bodyDelta)} lb)`}</b>` : ""}${r.unhappy ? ' \xB7 <b style="color:var(--red)">unhappy \u2014 flight risk</b>' : r.usageBuried ? ' \xB7 <span style="color:var(--muted)">rotation barely used him</span>' : ""}</span>
         </div>`;
     }).join("")}
+  </div>`;
+  }
+  function cutDayRecsBody(school, recs) {
+    var _a, _b;
+    const pre = devCtx(state);
+    const capLeft = C.POS_CHANGE_CAP - (pre.posChanges || []).filter((c) => !c.anytime).length;
+    const penaltyPct = Math.round(conversionPenaltyFactor(state) * 100);
+    return `
+  <div class="offseason-item" style="margin-top:8px">
+    <span class="offseason-label">Staff recommendation${recs.length !== 1 ? "s" : ""}</span>
+    <span class="offseason-detail">${recs.length} position change${recs.length !== 1 ? "s" : ""} worth a look before anyone gets cut \xB7 <b>${Math.max(0, capLeft)}/${C.POS_CHANGE_CAP} camp conversions left</b></span>
   </div>
+  <p class="offseason-hint" style="margin:4px 0 8px">The staff walked the roster before cut day: these players are buried where they are, and another room has a job for them. A convert takes a \u2212${penaltyPct}% haircut for one season and locks in when camp runs \u2014 it counts against the same ${C.POS_CHANGE_CAP}-conversion camp limit as the spring board. Convert who you like, then head to cuts.</p>
+  ${conversionPreviewPanel()}
+  ${conversionRecRows(recs, capLeft)}
   <button class="btn-primary" id="btn-cutrecs-continue" style="margin-top:12px;width:100%">Continue to Cut Day \u2192</button>`;
   }
   function cutDayBody(school) {
@@ -45523,7 +45569,7 @@ var _CFB = (() => {
   }
   function preseasonWeekBody(school, focusMeta) {
     var _a, _b;
-    const pre = state.preseason || {};
+    const pre = devCtx(state);
     const goals = ((_b = (_a = state.playerCoach) == null ? void 0 : _a.seasonGoals) == null ? void 0 : _b.season) === state.season ? state.playerCoach.seasonGoals.goals : buildSeasonGoals(state);
     const riv = state.rivalry;
     const rivGame = riv ? (state.schedule || []).find((g) => !g.result && [g.homeId, g.awayId].includes(school == null ? void 0 : school.id) && [g.homeId, g.awayId].includes(riv.schoolId)) : null;
@@ -45714,8 +45760,24 @@ var _CFB = (() => {
       const changes = pre.posChanges || [];
       const reviewed = !!pre.posReviewed;
       const boardOpen = convBoardOpen || !reviewed;
+      const campRecs = (() => {
+        try {
+          return cutDayConversionRecs(state) || [];
+        } catch (e) {
+          return [];
+        }
+      })();
+      const campCapLeft = C.POS_CHANGE_CAP - (pre.posChanges || []).filter((c) => !c.anytime).length;
       return `
+    ${campRecs.length ? `
     <div class="offseason-item" style="margin-top:8px">
+      <span class="offseason-label">Staff recommendation${campRecs.length !== 1 ? "s" : ""}</span>
+      <span class="offseason-detail">${campRecs.length} move${campRecs.length !== 1 ? "s" : ""} still on the table \xB7 <b>${campCapLeft}</b> of ${C.POS_CHANGE_CAP} camp conversions left</span>
+    </div>
+    <p class="offseason-hint" style="margin:4px 0 8px">Your staff still likes these. Camp locks position changes for the year, so this is the last time anyone can move.</p>
+    ${conversionPreviewPanel()}
+    ${conversionRecRows(campRecs, campCapLeft)}` : ""}
+    <div class="offseason-item" style="margin-top:${campRecs.length ? "16" : "8"}px">
       <span class="offseason-label">Position changes
         <span class="muted" style="font-weight:400">\xB7 ${changes.length}/${C.POS_CHANGE_CAP}</span></span>
       <span class="offseason-detail" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -46057,8 +46119,8 @@ var _CFB = (() => {
     (_d = document.getElementById("btn-advance-day")) == null ? void 0 : _d.addEventListener("click", async () => {
       var _a22, _b2, _c2, _d2, _e2;
       const btn = document.getElementById("btn-advance-day");
-      if (state.day === 4 && state.preseason && !state.preseason.openerPrep) {
-        state.preseason.openerPrep = true;
+      if (state.day === 4 && !devCtx(state).openerPrep) {
+        devCtx(state).openerPrep = true;
         rerender();
         return;
       }
@@ -46199,7 +46261,7 @@ var _CFB = (() => {
     });
     (_g = document.getElementById("btn-spring-play")) == null ? void 0 : _g.addEventListener("click", () => {
       var _a22;
-      if (!((_a22 = state.preseason) == null ? void 0 : _a22.devDone)) runDevCamp(state);
+      if (!devCtx(state).devDone) runDevCamp(state);
       const res = playSpringGame(state);
       if (!res.ok) {
         notify(res.reason, "warning");
@@ -46236,7 +46298,7 @@ var _CFB = (() => {
       navigate("depthchart");
     });
     (_j = document.getElementById("btn-conv-toggle")) == null ? void 0 : _j.addEventListener("click", () => {
-      const pre = state.preseason || {};
+      const pre = devCtx(state);
       if (!pre.posReviewed) {
         pre.posReviewed = true;
         convBoardOpen = false;
@@ -46244,7 +46306,7 @@ var _CFB = (() => {
       rerender();
     });
     (_a2 = document.getElementById("btn-pos-confirm")) == null ? void 0 : _a2.addEventListener("click", () => {
-      const pre = state.preseason || {};
+      const pre = devCtx(state);
       const n = (pre.posChanges || []).length;
       pre.posReviewed = true;
       convBoardOpen = false;
@@ -46534,7 +46596,7 @@ var _CFB = (() => {
 
   <details class="dc-tip"${depthSecOpen["tip:offense"] ? " open" : ""} data-do-sec="tip:offense">
     <summary>How this screen works</summary>
-    <div class="dc-tip-body">Tap any slot to change who starts there. The dial under each pass-catcher is his TARGET SHARE \u2014 his slice of 100% of the QB's looks. Move one man and the rest rebalance (5% a tap). One rule to know: 25%+ makes him the FEATURED man, and defenses bracket featured men \u2014 volume buys attention. The line reads left-to-right: LT \xB7 LG \xB7 C \xB7 RG \xB7 RT \u2014 your run-direction dials on the Game Plan point at these five.</div>
+    <div class="dc-tip-body">Tap any slot to change who starts there. The dial under each pass-catcher is his TARGET SHARE \u2014 his slice of 100% of the QB's looks. Move one man and the rest rebalance. One rule to know: load a man up far enough and a \u2605 appears \u2014 he is now your FEATURED target, and defenses bracket featured men. Volume buys attention. The line reads left-to-right: LT \xB7 LG \xB7 C \xB7 RG \xB7 RT \u2014 your run-direction dials on the Game Plan point at these five.</div>
   </details>
 
   <div class="field-card off-field">
@@ -47320,7 +47382,7 @@ var _CFB = (() => {
     var _a;
     const pct = ((_a = entry.shares) == null ? void 0 : _a[slot.id]) || 0;
     return `
-  <div class="fs-share" title="Target share \u2014 his slice of 100% of the QB's looks. 25%+ = featured (draws brackets).">
+  <div class="fs-share" title="Target share \u2014 his slice of 100% of the QB's looks. Feed one man enough and he goes featured (\u2605), which draws brackets.">
     <button class="fs-share-btn" data-share-step="-1" data-slot="${slot.id}">\u2212</button>
     <span class="fs-share-pct">${pct}%</span>
     <button class="fs-share-btn" data-share-step="1" data-slot="${slot.id}">+</button>
