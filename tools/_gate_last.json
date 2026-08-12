@@ -1,0 +1,177 @@
+{
+  "tier": "core",
+  "cloud": false,
+  "minutes": 17.5,
+  "results": [
+    {
+      "name": "stat_realism_harness.mjs",
+      "status": "OK",
+      "tail": "rec/game: 2.7   yds/game: 33.7   TD/game: 0.28"
+    },
+    {
+      "name": "pass7_band_ab.mjs",
+      "status": "OK",
+      "tail": "AMPLIFIED INSIDE 2x ENVELOPE"
+    },
+    {
+      "name": "traits_probe.mjs",
+      "status": "OK",
+      "tail": "24 passed, 0 failed"
+    },
+    {
+      "name": "size_fit_probe.mjs",
+      "status": "OK",
+      "tail": "15 passed, 0 failed"
+    },
+    {
+      "name": "trait_growth_probe.mjs",
+      "status": "OK",
+      "tail": "14 passed, 0 failed"
+    },
+    {
+      "name": "snap_track_probe.mjs",
+      "status": "OK",
+      "tail": "11 pass, 0 fail"
+    },
+    {
+      "name": "morale_probe.mjs",
+      "status": "OK",
+      "tail": "9 pass, 0 fail"
+    },
+    {
+      "name": "convert_brain_probe.mjs",
+      "status": "OK",
+      "tail": "16 pass, 0 fail"
+    },
+    {
+      "name": "stage4_probe.mjs",
+      "status": "OK",
+      "tail": "17 pass, 0 fail"
+    },
+    {
+      "name": "cutday_recs_probe.mjs",
+      "status": "OK",
+      "tail": "ALL PASS  (10 pass, 0 fail)"
+    },
+    {
+      "name": "portal_balance_probe.mjs",
+      "status": "OK",
+      "tail": "✅ PORTAL BALANCE PROBE PASS"
+    },
+    {
+      "name": "scheme_role_probe.mjs",
+      "status": "OK",
+      "tail": "ALL PASS: 22 pass, 0 fail"
+    },
+    {
+      "name": "save_migration_check.mjs",
+      "status": "OK",
+      "tail": "ALL PASS ✅"
+    },
+    {
+      "name": "contract_ladder_probe.mjs",
+      "status": "OK",
+      "tail": "ALL PASS ✅"
+    },
+    {
+      "name": "save_backup_probe.mjs",
+      "status": "OK",
+      "tail": "ALL PASS ✅"
+    },
+    {
+      "name": "a11y_overlay_probe.mjs",
+      "status": "OK",
+      "tail": "ALL PASS ✅"
+    },
+    {
+      "name": "coach_age_probe.mjs",
+      "status": "OK",
+      "tail": "ALL GREEN (19 passed)"
+    },
+    {
+      "name": "star_unfold_probe.mjs",
+      "status": "OK",
+      "tail": "ALL GREEN (26 passed)"
+    },
+    {
+      "name": "coordinator_identity_probe.mjs",
+      "status": "OK",
+      "tail": "ALL GREEN (30 passed)"
+    },
+    {
+      "name": "hc_mastery_probe.mjs",
+      "status": "OK",
+      "tail": "ALL GREEN (15 passed)"
+    },
+    {
+      "name": "ceremony_probe.mjs",
+      "status": "OK",
+      "tail": "ALL GREEN (28 passed)"
+    },
+    {
+      "name": "player_retention_probe.mjs",
+      "status": "OK",
+      "tail": "ALL GREEN — the dynasty pays, the ladder costs (16 passed)"
+    },
+    {
+      "name": "coordinator_audit_probe.mjs",
+      "status": "OK",
+      "tail": "ALL GREEN — the coordinator carries exactly what the update says he should (13 passed)"
+    },
+    {
+      "name": "dead_surface_probe.mjs",
+      "status": "OK",
+      "tail": "ALL GREEN (1 passed)"
+    },
+    {
+      "name": "play_fidelity_probe.mjs",
+      "status": "OK",
+      "tail": "ALL GREEN — what you call is what runs (18 passed)"
+    },
+    {
+      "name": "blitz_pie_probe.mjs",
+      "status": "OK",
+      "tail": "7 pass, 0 fail"
+    },
+    {
+      "name": "portrait_probe.mjs",
+      "status": "OK",
+      "tail": "9 pass, 0 fail"
+    },
+    {
+      "name": "tipdrill_probe.mjs",
+      "status": "OK",
+      "tail": "PASS live rate stays rare (most swats hit the turf)  [1/81]"
+    },
+    {
+      "name": "tipdrill_ab.mjs",
+      "status": "OK",
+      "tail": "PASS plays/game flat inside noise (|Δ| ≤ 2.5)  [0.70]"
+    },
+    {
+      "name": "presentation_live_probe.mjs",
+      "status": "OK",
+      "tail": "SIGHTINGS — turf spray frames: 166 · decor roar: true · lite mode: true"
+    },
+    {
+      "name": "st_ui_smoke.mjs",
+      "status": "OK",
+      "tail": "ST UI SMOKE PASS"
+    },
+    {
+      "name": "ui_playcall_smoke.mjs",
+      "status": "OK",
+      "tail": "✅ RUNG 6 UI SMOKE PASS"
+    },
+    {
+      "name": "playnow_smoke.mjs",
+      "status": "OK",
+      "tail": "✅ PLAY NOW E2E PASS"
+    },
+    {
+      "name": "build_stamp_smoke.mjs",
+      "status": "OK",
+      "tail": "✅ BUILD STAMP SMOKE PASS"
+    }
+  ]
+}

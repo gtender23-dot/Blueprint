@@ -1,0 +1,27 @@
+
+E1/E2 — equal per-season earn streams through production code
+  seasons to ★★★: tree 4, solo 6 · to 💎: tree 5, solo 7
+  OK    ★★★ comes STRICTLY earlier for the tree arm (4 < 6) — time compressed
+  OK    💎 too (5 < 7)
+  OK    both arms SATURATE at the same effective grade (10 = 10 = old max)
+  OK    and the same bonus (0.15) — the ceiling is shared
+  OK    the head start itself was ★★-capped (★★)
+  devMult day 1: tree 1.045 vs solo 1.000 · saturated: 1.180 vs 1.180
+  OK    credential-seeded skills give the tree arm a real day-1 developer edge
+  OK    both saturate at the identical old maximum (1.18)
+  OK    at a maxed coordinator, both arms read the SAME capped envelope (1.0672)
+
+E3 — day-1 protégé vs day-1 solo (1200 games, identical rosters)
+  protégé 654–546 (54.5%) · mean diff +2.06 pts (se 0.57)
+  OK    the inheritance is worth points on the field (calibrated true effect ~+1.7/game, 54% — real but modest, as the ★★ cap intends)
+
+E4 — THE LAW: maxed tree-line vs maxed solo (800 games, identical rosters)
+  tree-line 386–414 · mean diff -0.78 pts (tolerance ±2.33)
+  OK    statistically indistinguishable — a maxed tree raises NO ceiling a maxed solo can't reach (|-0.78| ≤ 2.33)
+
+E5 — sanity: endgame vs day-1 solo (800 games)
+  endgame 436–364 (54.5%) · mean diff +3.20 pts (se 0.76)
+  OK    the systems are live — a finished career is worth real points over a day-1 school (calibrated ~+3.3/game, 57.6%; modest BY DESIGN — players decide games, the band-gate law from the other side)
+
+==================================================
+ALL GREEN — the tree compresses time and raises no ceiling (11 passed)

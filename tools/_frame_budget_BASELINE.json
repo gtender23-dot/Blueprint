@@ -1,0 +1,12 @@
+{
+  "frames": 64,
+  "meanMs": 126.64,
+  "p50Ms": 33.4,
+  "p95Ms": 416.7,
+  "maxMs": 533.3,
+  "longtasks": 22,
+  "cast": 22,
+  "windowMs": 9000,
+  "env": "anthropic-cloud-container",
+  "when": "2026-08-09T22:03:41.143Z"
+}

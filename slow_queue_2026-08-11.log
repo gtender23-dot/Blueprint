@@ -1,0 +1,25 @@
+── selected tier — 13 probes (cloud semantics) ──
+OK    covfam_probe.mjs  — ALL PASS  (17 pass, 0 fail)
+OK    mug_probe.mjs  — ALL PASS  (8 pass, 0 fail)
+OK    amoeba_probe.mjs  — ALL PASS  (7 pass, 0 fail)
+OK    creeper_probe.mjs  — ALL CREEPER CHECKS PASSED
+ENV   zone_void_probe.mjs  — known cloud failure (verified identical on pristine)
+OK    motion_struct_probe.mjs  — PASS — the structural read fires on the majority of motion snaps, is mean-neutral, and cleanly gated
+OK    shell_identity_probe.mjs  — PASS — the shell sets a converted corner’s cushion (two-high bails off), mean-neutral in aggregate a
+OK    choice_route_probe.mjs  — ALL PASS ✅ — the choice route reads leverage, and the read is a skill
+FLAKY gadget_probe.mjs  — ALL PASS ✅ — the trick tier is real: boom vs over-pursuit, bust vs discipline
+OK    scramble_style_probe.mjs  — ALL PASS ✅ — the scramble can become a throw now
+OK    time_to_throw_probe.mjs  — ALL PASS ✅ — the pocket has a clock now
+OK    qb_mobility_probe.mjs  — ALL PASS ✅ — mobile QBs are a real, division-relative archetype
+── selected tier — 1 probes (cloud semantics) ──
+OK    qb_power_rush_probe.mjs  — VERDICT: power moves QB rushing — the carrier path reads PWR/STR as designed.
+── summary ──
+OK 1 · flaky-cleared 0 · env-known 0 · skipped-local 0 · deferred-night 0 · FAIL 0 · 1.1 min
+GATE PASSED.
+── selected tier — 3 probes (cloud semantics) ──
+OK    pass4_band_ab.mjs  — BANDS HELD (drift within noise gates)
+OK    pass5_band_ab.mjs  — AMPLIFIED INSIDE 2x ENVELOPE
+OK    pass6_band_ab.mjs  — AMPLIFIED INSIDE 2x ENVELOPE
+── summary ──
+OK 3 · flaky-cleared 0 · env-known 0 · skipped-local 0 · deferred-night 0 · FAIL 0 · 8.9 min
+GATE PASSED.

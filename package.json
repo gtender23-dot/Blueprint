@@ -1,0 +1,23 @@
+{
+  "name": "college-football-2.0",
+  "version": "1.0.0",
+  "main": "sw.js",
+  "scripts": {
+    "build": "node tools/build.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "acorn": "^8.18.0",
+    "acorn-walk": "^8.3.5",
+    "eslint-scope": "^9.1.2",
+    "playwright-core": "^1.61.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1",
+    "playwright": "^1.62.0"
+  },
+  "type": "module"
+}
