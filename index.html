@@ -1335,8 +1335,10 @@ th.col-drag-over {
 .grad-need-chip {
   display: flex; flex-direction: column; align-items: center;
   padding: 4px 8px; border-radius: 6px; border: 1px solid;
-  min-width: 42px; gap: 1px; cursor: default;
+  min-width: 42px; gap: 1px; cursor: pointer;
+  font: inherit; color: inherit;
 }
+.grad-need-chip.active { outline: 2px solid var(--gold, #d9a441); outline-offset: 1px; }
 .grad-need-chip.grad-need-covered {
   border-color: var(--green-dk);
   background: var(--green-a8);
@@ -1877,6 +1879,10 @@ input[type="range"] { accent-color: var(--team-1); }
 .box-score { padding: 0 20px 12px; }
 .box-row { display: grid; grid-template-columns: 1fr 80px 80px; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border-sub); font-size: 13px; }
 .box-row.header { font-size: 10px; font-weight: 700; color: var(--text-2); text-transform: uppercase; }
+.box-line { padding-bottom: 2px; }
+.box-line .box-row { grid-template-columns: 1fr repeat(6, 30px); gap: 4px; text-align: right; }
+.box-line .box-row > span:first-child { text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.box-line .box-row > span:last-child { border-left: 1px solid var(--border-sub); padding-left: 4px; }
 /* ── Player stats (box score tab) ──────────────────────────────────────── */
 .player-stats-wrap { display: flex; flex-direction: column; gap: 0; }
 .ps-team-block { padding: 10px 20px 14px; border-top: 1px solid var(--border-sub); }
@@ -4416,6 +4422,9 @@ th.conv-sort.active { color: var(--team-1); }
 
 /* Contract term cards */
 .ext-terms { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 8px; }
+/* The AD offers one deal, not a menu — item 20, playtest 2026-08-12. */
+.ext-terms:has(.ext-term-offered) { grid-template-columns: 1fr; }
+.ext-term-offered { cursor: default; border-color: var(--green-dk, rgba(255,255,255,0.24)); }
 .ext-term-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);
   border-radius: 12px; padding: 10px 8px; text-align: center; cursor: pointer; color: var(--text-1); }
 .ext-term-card:active { transform: scale(0.985); transition: transform 0.12s ease; }
@@ -8805,6 +8814,32 @@ body *::after {
   border-color: transparent;
 }
 
+/* ── Chair switcher (playtest 2026-08-12 item 22) ─────────────────────────
+   The school name is the control on both layouts. Sheet sits above the fixed
+   topbar (z 150) but below the mobile drawer (200) and its backdrop (199). */
+.topbar-id-btn, .sidebar-brand-btn {
+  background: none; border: 0; font: inherit; color: inherit; cursor: pointer;
+  text-align: left; padding: 0; -webkit-tap-highlight-color: transparent;
+}
+.topbar-id-btn:active, .sidebar-brand-btn:active { opacity: 0.72; }
+.topbar-caret { font-size: 9px; opacity: 0.55; margin-left: 4px; vertical-align: middle; }
+.ts-overlay { z-index: 160; }
+.ts-sheet { max-width: 460px; width: 100%; }
+.ts-list { display: flex; flex-direction: column; gap: 6px; padding: 6px 16px 10px; }
+.ts-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 10px 12px; border-radius: 8px; cursor: pointer; font: inherit;
+  color: inherit; background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.ts-row:disabled { cursor: default; }
+.ts-row-active { border-color: var(--green-dk, rgba(120,200,140,0.5)); background: var(--green-a8, rgba(120,200,140,0.08)); }
+.ts-div { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; min-width: 26px; opacity: 0.75; }
+.ts-body { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.ts-school { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ts-coach { font-size: 11px; }
+.ts-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; opacity: 0.7; }
+
   </style>
 </head>
 <body>
@@ -8814,7 +8849,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "b011ff4bac";
+globalThis.__BUILD__ = "ee12253391";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -10816,6 +10851,8 @@ var _CFB = (() => {
         // jobSecurity bump for declining outside offers in hand
         GOAL_JS_DELTA: 6,
         // jobSecurity per AD goal hit (+) / missed (−)
+        // [PLAYTEST 2026-08-12 item 20] The deal every coach signs in preseason year 1.
+        PROVE_IT_YEARS: 2,
         EXTENSION_JS_MIN: 55,
         // extension offered at/above this meter (or expectations met)
         EXTENSION_STABILITY_JS: 4,
@@ -11448,23 +11485,43 @@ var _CFB = (() => {
         }
       };
       OVR_POS_ADJ = {
-        // Re-derived Jul 2026 after CON was removed from the rating (dropping the
-        // motor share moved every position's mean, most by 1-2 points). Sampled over
-        // ~70k generated players across 3 worlds; each value is (58 − that
-        // position's raw mean), so every position averages ~58 and OVR stays
-        // comparable across the roster.
-        QB: -4.1,
-        RB: 5,
+        // Each value is (58 − that position's raw mean), so every position averages
+        // ~58 and OVR stays comparable across the roster.
+        //
+        // RE-DERIVED 2026-08-12 (playtest item 3 — "corners overall too high").
+        // The Jul 2026 values were correct when they were sampled and then rotted:
+        // AWR was added to the CB and DE cores AFTER that census, and a core
+        // attribute spawns ~0.6×its threshold above base, so every corner silently
+        // gained ~3.7 raw OVR and every end ~2.1 — with the offset never re-derived
+        // to absorb it. Corners had drifted to a mean of 65.1 against a target of 58,
+        // sitting +6.2 over safeties and +7.6 over quarterbacks. The census also
+        // caught a second offender nobody had reported: offensive linemen at +5.9.
+        //
+        // Measured by `tools/pos_ovr_census_probe.mjs --derive` over 3 generated
+        // worlds (~75k players — the same sample shape the original comment cites),
+        // and A/B'd in-process with matched RNG by `tools/ovr_adj_ab.mjs`: comp%
+        // +0.10, yds/att +0.04, yds/carry +0.04, sacks −0.09. The numbers changed;
+        // the football did not.
+        //
+        // K AND P ARE DELIBERATELY NOT RE-DERIVED. The census says both read ~3.5
+        // low, but nothing in the game compares a kicker's overall to a corner's —
+        // the number exists to rank kickers against kickers — and their composite
+        // feeds a separately calibrated kicking model. The A/B proved the cost:
+        // pulling K/P onto the 58 scale was the ONLY change that moved scoring
+        // (+1.5 pts/team, straight through the FG model). Specialists keep their
+        // own scale on purpose; `pos_ovr_census_probe` exempts them for this reason.
+        QB: -3.2,
+        RB: 5.3,
         FB: 7.7,
-        WR: -3.4,
-        TE: 6.7,
-        OL: -1.3,
-        DE: 2.2,
-        DT: 0.5,
-        OLB: 0.3,
-        LB: 3.4,
-        CB: 1,
-        S: -2.7,
+        WR: -3.9,
+        TE: 5.1,
+        OL: -6.7,
+        DE: 0,
+        DT: -1.1,
+        OLB: 1.3,
+        LB: 2.3,
+        CB: -5.6,
+        S: -3.1,
         K: -8.9,
         P: -14.6
       };
@@ -13564,8 +13621,7 @@ var _CFB = (() => {
       adjustments: "Second-Half",
       riverboat: "Riverboat",
       roadWarrior: "Road-Tested",
-      specialTeams: "Special-Teams-Minded",
-      motivator: "Motivating"
+      specialTeams: "Special-Teams-Minded"
     };
     if (graded.length === 1 || graded[0][1] - graded[1][1] >= 3) return `${NAMES[graded[0][0]]} Coach`;
     return `${NAMES[graded[1][0]]} ${NAMES[graded[0][0]]} Coach`;
@@ -13658,7 +13714,7 @@ var _CFB = (() => {
       DNA_STAR_XP = [200, 700, 1650, 2e3];
       DNA_STAR_EFF = [0, 3, 6, 9, 10];
       DNA_STAR_GLYPH = ["", "\u2605", "\u2605\u2605", "\u2605\u2605\u2605", "\u{1F48E}"];
-      DNA_RETIRED = { culture: "motivator" };
+      DNA_RETIRED = {};
       KEY = "cfb-coaches-v1";
       TREE_KEY = "cfb-trees-v1";
       MAX_COACHES = 4;
@@ -13715,12 +13771,15 @@ var _CFB = (() => {
         roadWarrior: { label: "Road Warrior", icon: "\u{1F6E3}\uFE0F" },
         specialTeams: { label: "Special Teams", icon: "\u{1F9B5}" },
         adjustments: { label: "Adjustments", icon: "\u{1F9E0}" },
-        // W9: the people-and-growth identity \u2014 raises what your men can become and
-        // builds the kind of program they want to stay in. Absorbs the retired
-        // `culture` axis. Identity-only in this build (no sim read yet); its sim
-        // effects (potential growth + portal retention) land as a deliberate,
-        // probed follow-up, so a graded motivator moves zero sim numbers today.
-        motivator: { label: "Motivator", icon: "\u{1F525}" }
+        adjustments: { label: "Adjustments", icon: "\u{1F9E0}" }
+        // [PLAYTEST 2026-08-12 item 31 — owner: "just cut it"] `motivator` is GONE.
+        // It was dead twice over: `per: 0` meant a 💎 motivator and a blank one paid
+        // the same nothing, and NO code path anywhere ever awarded it XP, so it could
+        // not be raised either. Worse than merely inert — a career migrated from the
+        // retired `culture` axis could carry a grade, so dnaTitle would call a man a
+        // "Motivating Coach" on the strength of an axis that did nothing and could
+        // never grow. Cut the way developer/recruiter were: drop it from DNA_AXES and
+        // every consumer follows, because they all key off this table.
         // [DNA TREE §4 D3] developer + recruiter LEFT the crest and returned to the
         // skills system alongside Roots and Reputation (the un-fold). Earned DNA XP
         // in those axes folds back into skill XP via unfoldDnaToSkills — a man keeps
@@ -13738,10 +13797,9 @@ var _CFB = (() => {
         roadWarrior: { per: 0.08, label: (g) => g ? `Road / crowd-noise penalty \u2212${(g * 8).toFixed(0)}%` : "Silence hostile crowds" },
         specialTeams: { per: 0.01, label: (g) => g ? `FG range & coverage +${g}%` : "Win the hidden-yardage battle" },
         adjustments: { per: 0.1, label: (g) => g ? `Halftime adjustment strength +${(g * 10).toFixed(0)}%` : "Out-scheme them after the break" },
-        // per: 0 → dnaBonus returns a 0 multiplier, so this axis is identity-only and
-        // has no sim effect in this build. The label describes what it WILL do once
-        // wired (Stage 2), stated in plain football terms per the help-voice rule.
-        motivator: { per: 0, label: (g) => g ? `Your players' ceilings climb further, and a program men want to stay in` : "Raise what your men can become \u2014 and keep them" }
+        adjustments: { per: 0.1, label: (g) => g ? `Halftime adjustment strength +${(g * 10).toFixed(0)}%` : "Out-scheme them after the break" }
+        // motivator removed 2026-08-12 (playtest item 31) — see the note in DNA_AXES.
+        // Every axis left on the crest pays a real, readable bonus.
         // developer/recruiter bonuses removed with the D3 un-fold — their effects
         // live on the skill ladder again (SKILL_DEVELOPER_STEP / SKILL_RECRUITER_STEP).
       };
@@ -15790,9 +15848,15 @@ var _CFB = (() => {
       ensureHCMastery(playerCoach);
     } catch (e) {
     }
-    const bench = staffFor(source.prestige, source.division);
-    const backfill = bench[side] || bench.oc;
-    source.staff = __spreadProps(__spreadValues({}, source.staff || {}), { [side]: backfill });
+    let backfill = null;
+    if (source.id === target.id && source.id === state2.playerSchoolId) {
+      source.staff = __spreadProps(__spreadValues({}, source.staff || {}), { [side]: null });
+      state2.pendingCoordHire = { schoolId: source.id, side, reason: "promotion" };
+    } else {
+      const bench = staffFor(source.prestige, source.division);
+      backfill = bench[side] || bench.oc;
+      source.staff = __spreadProps(__spreadValues({}, source.staff || {}), { [side]: backfill });
+    }
     const seated = seatSlot(state2, {
       division,
       coachId: (profile == null ? void 0 : profile.id) || null,
@@ -15814,7 +15878,8 @@ var _CFB = (() => {
       credentials,
       inherit,
       tookControl: !!takeControl,
-      replacedBy: backfill.name
+      replacedBy: backfill ? backfill.name : null,
+      chairOpen: !backfill
     };
   }
   function applyDownTargets(state2) {
@@ -17810,9 +17875,13 @@ var _CFB = (() => {
     return Math.max(0, avail - inFlight);
   }
   function chargeScholarship(state2, schoolId) {
-    if (schoolId !== state2.playerSchoolId) return;
+    if (schoolId !== state2.playerSchoolId) return true;
     const coach = state2.playerCoach;
-    if (coach) coach.scholarshipsAvailable = Math.max(0, (coach.scholarshipsAvailable || 0) - 1);
+    if (!coach) return true;
+    const have = coach.scholarshipsAvailable || 0;
+    if (have <= 0) return false;
+    coach.scholarshipsAvailable = have - 1;
+    return true;
   }
   function commitEntry(state2, entry, school, events) {
     school.roster.push(entry.player);
@@ -17893,9 +17962,13 @@ var _CFB = (() => {
         return { s, adj: adjustedOffer(s, entry, b.money) };
       }).filter(Boolean).sort((a, b) => b.adj - a.adj);
       const win = ranked[0];
+      if (win && win.s.id === state2.playerSchoolId && !chargeScholarship(state2, win.s.id)) {
+        if (events) events.push({ type: "warning", text: `\u{1F504} ${entry.player.name.first} ${entry.player.name.last} picked you \u2014 but you had no scholarship left to give him. He signs elsewhere.` });
+        continue;
+      }
       if (win) {
         win.s.roster.push(entry.player);
-        chargeScholarship(state2, win.s.id);
+        if (win.s.id !== state2.playerSchoolId) chargeScholarship(state2, win.s.id);
         signedPerSchool[win.s.id] = (signedPerSchool[win.s.id] || 0) + 1;
         portal.signings.push({ playerId: entry.player.id, toSchoolId: win.s.id });
         entry.signedTo = win.s.id;
@@ -18814,14 +18887,24 @@ var _CFB = (() => {
     const uncommitted = recruits.filter(
       (r) => !r.committed && r.decisionStatus === "undecided" && calibreVisible(r, school.division) && tierOf(r) !== _myTier - 1
     );
+    const posCount = {};
+    const returningCount = {};
+    for (const p of school.roster || []) {
+      posCount[p.position] = (posCount[p.position] || 0) + 1;
+      if (p.classYear !== "SR") returningCount[p.position] = (returningCount[p.position] || 0) + 1;
+    }
+    const targets = schemeRosterTargets(school) || ROSTER_TARGETS;
+    const signedByPos = {};
+    const deficitOf = (pos) => Math.max(0, ((targets == null ? void 0 : targets[pos]) || 0) - (returningCount[pos] || 0) - (signedByPos[pos] || 0));
     uncommitted.sort((a, b) => {
+      const fa = deficitOf(a.position);
+      const fb = deficitOf(b.position);
+      if (fa !== fb) return fb - fa;
       const da = recruitDistance(a, school);
       const db = recruitDistance(b, school);
       if (da !== db) return da - db;
       return (b.visionRating || 0) - (a.visionRating || 0);
     });
-    const posCount = {};
-    for (const p of school.roster || []) posCount[p.position] = (posCount[p.position] || 0) + 1;
     const atMax = (pos) => ROSTER_POS_MAX[pos] != null && (posCount[pos] || 0) >= ROSTER_POS_MAX[pos];
     const belowMin = (pos) => ROSTER_POS_MIN[pos] != null && (posCount[pos] || 0) < ROSTER_POS_MIN[pos];
     const signed = [];
@@ -18829,6 +18912,7 @@ var _CFB = (() => {
       r.committed = school.id;
       r.decisionStatus = "committed";
       posCount[r.position] = (posCount[r.position] || 0) + 1;
+      signedByPos[r.position] = (signedByPos[r.position] || 0) + 1;
       signed.push(r);
     };
     for (const r of uncommitted) {
@@ -18839,12 +18923,12 @@ var _CFB = (() => {
     for (const r of uncommitted) {
       if (signed.length >= openSlots) break;
       if (r.committed) continue;
-      if (!atMax(r.position)) take(r);
+      if (deficitOf(r.position) > 0 && !atMax(r.position)) take(r);
     }
     for (const r of uncommitted) {
       if (signed.length >= openSlots) break;
       if (r.committed) continue;
-      take(r);
+      if (!atMax(r.position)) take(r);
     }
     return signed;
   }
@@ -18896,9 +18980,27 @@ var _CFB = (() => {
       if (!avail.length || dir !== "Central" && score(avail[0]) <= 0) return null;
       return avail[randInt3(0, Math.min(1, avail.length - 1))];
     }
-    for (const z of sizePref) {
-      const pool = avail.filter((c) => c.z === z);
-      if (pool.length) return pool[randInt3(0, pool.length - 1)];
+    if (sizePref && !Array.isArray(sizePref)) {
+      const buckets = [];
+      let total = 0;
+      for (const z of [1, 2, 3]) {
+        const w = sizePref[z] || 0;
+        if (w <= 0) continue;
+        const pool = avail.filter((c) => c.z === z);
+        if (!pool.length) continue;
+        total += w;
+        buckets.push({ pool, upTo: total });
+      }
+      if (buckets.length) {
+        const roll = randInt3(1, total);
+        const hit = buckets.find((b) => roll <= b.upTo) || buckets[buckets.length - 1];
+        return hit.pool[randInt3(0, hit.pool.length - 1)];
+      }
+    } else if (sizePref) {
+      for (const z of sizePref) {
+        const pool = avail.filter((c) => c.z === z);
+        if (pool.length) return pool[randInt3(0, pool.length - 1)];
+      }
     }
     return avail[randInt3(0, avail.length - 1)];
   }
@@ -21819,7 +21921,12 @@ var _CFB = (() => {
         D2: [["cs", 25], ["sat", 19], ["dir", 12], ["cu", 10], ["cc", 8], ["cd", 8], ["pc", 6], ["sn", 6], ["ct", 3], ["su", 3]],
         D3: [["pc", 20], ["sn", 16], ["cc", 20], ["cd", 10], ["sat", 12], ["cs", 10], ["cu", 4], ["ct", 3], ["dir", 3], ["poly", 2]]
       };
-      CITY_SIZE_PREF = { power: [3, 2, 1], midMajor: [2, 3, 1], D2: [1, 2, 3], D3: [1, 2, 3] };
+      CITY_SIZE_PREF = {
+        power: { 3: 6, 2: 3, 1: 1 },
+        midMajor: { 2: 5, 3: 4, 1: 2 },
+        D2: { 1: 2, 2: 3, 3: 2 },
+        D3: { 1: 3, 2: 2, 3: 1 }
+      };
       CAMPUS_SIZE_PREF = { power: [2, 1, 3], midMajor: [2, 1, 3], D2: [1, 2, 3], D3: [1, 2, 3] };
       PATTERN_TYPE = {
         uOf: "flagship",
@@ -28491,7 +28598,7 @@ var _CFB = (() => {
       };
       const offById = (id) => offRoster.find((p) => p.id === id) || null;
       const defById = (id) => defRoster.find((p) => p.id === id) || null;
-      const MESH_DEPTH_KEYS = ["SLOT", "FB", "WING", "ABACK", "WILDCAT", "JETMAN"];
+      const MESH_DEPTH_KEYS = ["SLOT", "FB", "WING", "ABACK", "WILDCAT", "JETMAN", "FADE"];
       let offDepthWithSlot = activeOffDepth;
       for (const key of MESH_DEPTH_KEYS) {
         const named = (_H = offSchool == null ? void 0 : offSchool.depthOrder) == null ? void 0 : _H[key];
@@ -30081,13 +30188,46 @@ var _CFB = (() => {
     playHalf(token, 1);
     return token;
   }
+  function pinnedFirst(depth, gameplan) {
+    const fa = gameplan == null ? void 0 : gameplan.fieldAssignments;
+    if (!fa) return depth;
+    const pinSet = /* @__PURE__ */ new Set();
+    for (const side of ["offense", "defense"]) {
+      for (const entry of Object.values(fa[side] || {})) {
+        for (const pid of Object.values(entry.slots || {})) pinSet.add(pid);
+      }
+    }
+    if (pinSet.size === 0) return depth;
+    const out2 = {};
+    for (const [pos, ids] of Object.entries(depth || {})) {
+      const front = (ids || []).filter((id) => pinSet.has(id));
+      const rest = (ids || []).filter((id) => !pinSet.has(id));
+      out2[pos] = [...front, ...rest];
+    }
+    return out2;
+  }
   function beginSecondHalf(token, homeGPEdits = null, awayGPEdits = null) {
     var _a;
     if (homeGPEdits) Object.assign(token.homeGP, homeGPEdits);
     if (awayGPEdits) Object.assign(token.awayGP, awayGPEdits);
     for (const side of ["home", "away"]) {
       const school = token[`${side}School`];
-      if (school == null ? void 0 : school.depthChart) token[`${side}Team`].depth = school.depthChart;
+      if (school == null ? void 0 : school.depthChart) {
+        const dressed = token[`${side}Team`].depth;
+        let base = school.depthChart;
+        if (dressed) {
+          const allowed = new Set(Object.values(dressed).flat());
+          const filtered = {};
+          let dropped = false;
+          for (const [pos, ids] of Object.entries(base || {})) {
+            const keep = (ids || []).filter((id) => allowed.has(id));
+            if (keep.length !== (ids || []).length) dropped = true;
+            filtered[pos] = keep;
+          }
+          if (dropped) base = filtered;
+        }
+        token[`${side}Team`].depth = pinnedFirst(base, school.gameplan);
+      }
       if ((_a = school == null ? void 0 : school.gameplan) == null ? void 0 : _a.fieldAssignments) token[`${side}GP`].fieldAssignments = school.gameplan.fieldAssignments;
     }
   }
@@ -30533,6 +30673,14 @@ var _CFB = (() => {
       const over = effectiveRosterOver(state2);
       if (over > 0) {
         return [{ type: "warning", text: `Cut day: you're ${over} over the cap once seniors graduate. Cut ${over} more before you hit the portal.` }];
+      }
+    }
+    if (stage && stage.id === "staff") {
+      const school = state2.world.schools.find((s) => s.id === state2.playerSchoolId);
+      const st = (school == null ? void 0 : school.staff) || {};
+      const empty = [!st.oc && "offensive", !st.dc && "defensive"].filter(Boolean);
+      if (empty.length) {
+        return [{ type: "warning", text: `You can't open camp with no ${empty.join(" and no ")} coordinator. Fill ${empty.length > 1 ? "both chairs" : "the chair"} before you move on.` }];
       }
     }
     if (stage) fireStageExit(stage, state2, events);
@@ -31264,6 +31412,9 @@ var _CFB = (() => {
       commitSeasonGoals(state2, state2.season);
       events.push({ type: "info", text: "AD expectations locked for the season." });
     }
+    if (day === 3 && !ctx2.devDone && !ctx2.posReviewed) {
+      return { ok: false, events: [{ type: "warning", text: "Camp locks position changes for the year. Look at the board below and confirm your positions are set before you open camp." }] };
+    }
     if (day === 3) {
       if (!ctx2.devDone) runDevCamp(state2);
       if (!ctx2.springResult) {
@@ -31278,6 +31429,20 @@ var _CFB = (() => {
     if (!school) return "D3";
     if (school.division !== "D1") return school.division;
     return ((_b = (_a = state2.world.conferences) == null ? void 0 : _a[school.conf]) == null ? void 0 : _b.conferenceClass) || "midMajor";
+  }
+  function adTerm(state2, coach, school) {
+    var _a, _b, _c;
+    const js = (_a = coach == null ? void 0 : coach.jobSecurity) != null ? _a : 50;
+    const delta = (_b = coach == null ? void 0 : coach.lastDelta) != null ? _b : 0;
+    const tenure = (_c = coach == null ? void 0 : coach.tenureSeasons) != null ? _c : 0;
+    const score = js + delta * 6 + Math.min(3, tenure) * 4;
+    if (score >= 92) {
+      return { id: "ad", label: "Max Deal", years: 5, jsDelta: -6, blurb: "Five years. The AD is betting the program on you \u2014 and a deal this long makes the seat run hot the moment it stops working." };
+    }
+    if (score >= 72) {
+      return { id: "ad", label: "Market", years: 3, jsDelta: C.EXTENSION_STABILITY_JS, blurb: "Three years \u2014 the standard re-up for a coach the AD is happy with." };
+    }
+    return { id: "ad", label: "Prove-It", years: 2, jsDelta: 15, blurb: "Two years. The AD wants more before he commits \u2014 win and the next one is longer." };
   }
   function getExtensionOffer(state2) {
     var _a, _b, _c, _d, _e, _f;
@@ -31307,30 +31472,9 @@ var _CFB = (() => {
           base: ladderBase,
           capped: ladderBump <= 0
         },
-        terms: [
-          {
-            id: "prove",
-            label: "Prove-It",
-            years: 2,
-            jsDelta: 15,
-            blurb: "Short and safe \u2014 the AD signs up for patience."
-          },
-          {
-            id: "market",
-            label: "Market",
-            years: 3,
-            jsDelta: C.EXTENSION_STABILITY_JS,
-            blurb: "The standard re-up."
-          },
-          {
-            id: "max",
-            label: "Max Deal",
-            years: 5,
-            jsDelta: -10,
-            blurb: "Long \u2014 and the seat runs hot from day one."
-          }
-        ]
+        terms: [adTerm(state2, coach, school)]
       };
+      offer.years = offer.terms[0].years;
     }
     data.extensionOffer = offer;
     return offer;
@@ -31341,7 +31485,7 @@ var _CFB = (() => {
     const coach = state2.playerCoach;
     if (!offer || !coach) return { ok: false, reason: "No extension on the table" };
     if ((_b = (_a = state2.offseason) == null ? void 0 : _a.data) == null ? void 0 : _b.extensionTaken) return { ok: false, reason: "Already signed" };
-    const term = (offer.terms || []).find((t) => t.id === termId) || { years: offer.years, jsDelta: C.EXTENSION_STABILITY_JS, label: "Standard" };
+    const term = (offer.terms || [])[0] || { years: offer.years, jsDelta: C.EXTENSION_STABILITY_JS, label: "Standard" };
     coach.contract = {
       startSeason: state2.season + 1,
       endSeason: state2.season + term.years,
@@ -31781,6 +31925,15 @@ var _CFB = (() => {
         total: PHASES.PRESEASON.days[1],
         label: `Preseason Week ${n2}`,
         short: `PRE ${n2}`
+      };
+    }
+    if (d === PHASES.CONFCHAMP.days[1]) {
+      return {
+        kind: "selection",
+        num: REG_WEEK_COUNT,
+        total: REG_WEEK_COUNT,
+        label: "Selection Week",
+        short: "SEL"
       };
     }
     if (d <= PHASES.CONFCHAMP.days[1]) {
@@ -32299,6 +32452,7 @@ var _CFB = (() => {
       }
     }
     if (day === PHASES.CONFCHAMP.days[1] && !state2.allPlayoffs && !state2.pendingHalftime) {
+      events.push({ type: "info", text: "\u{1F3C6} Selection Week \u2014 the regular season is over. Conference titles go to the league champions on record, and the postseason field is set." });
       buildAllBrackets(state2, events);
       const div = getPlayerDivision(state2);
       const seeds = ((_q = (_p = state2.allPlayoffs) == null ? void 0 : _p[div]) == null ? void 0 : _q.seeds) || [];
@@ -32466,25 +32620,8 @@ var _CFB = (() => {
     if (me) me.weeklyPlan = defaultWeeklyPlan();
     state2._pregamePlan = null;
   }
-  function pinnedFirst(depth, gameplan) {
-    const fa = gameplan == null ? void 0 : gameplan.fieldAssignments;
-    if (!fa) return depth;
-    const pinSet = /* @__PURE__ */ new Set();
-    for (const side of ["offense", "defense"]) {
-      for (const entry of Object.values(fa[side] || {})) {
-        for (const pid of Object.values(entry.slots || {})) pinSet.add(pid);
-      }
-    }
-    if (pinSet.size === 0) return depth;
-    const out2 = {};
-    for (const [pos, ids] of Object.entries(depth || {})) {
-      const front = (ids || []).filter((id) => pinSet.has(id));
-      const rest = (ids || []).filter((id) => !pinSet.has(id));
-      out2[pos] = [...front, ...rest];
-    }
-    return out2;
-  }
   function gameDressed(school, season) {
+    school.depthChart = buildDepthChart(school.roster, school.gameplan, school.depthOrder || {});
     const rs = new Set(school.roster.filter((p) => p.redshirted && p.redshirtYear === season).map((p) => p.id));
     if (rs.size === 0) return { roster: school.roster, depth: pinnedFirst(school.depthChart, school.gameplan) };
     for (const [pos, ids] of Object.entries(school.depthChart || {})) {
@@ -34093,6 +34230,19 @@ var _CFB = (() => {
     if (oldSchool && oldSchool.id !== newSchoolId && (!oldSchool.coach || oldSchool.coach === pc)) {
       oldSchool.coach = makeReplacementAICoach(oldSchool);
     }
+    if (oldSchool && oldSchool.id !== newSchoolId && oldSchool.gameplan) {
+      const carried = JSON.parse(JSON.stringify(oldSchool.gameplan));
+      delete carried.fieldAssignments;
+      delete carried.rbCarryShares;
+      delete carried._aiScheme;
+      delete carried._nextPlay;
+      newSchool.gameplan = Object.assign(newSchool.gameplan || {}, carried);
+      try {
+        newSchool.depthChart = buildDepthChart(newSchool.roster, newSchool.gameplan, newSchool.depthOrder || {});
+      } catch (e) {
+        console.warn("gameplan carry rebuild:", e.message);
+      }
+    }
     newSchool.coach = pc;
     if (pc.skills && pc.skills.roots) {
       pc.skills.roots.xp = Math.round((pc.skills.roots.xp || 0) * C.ROOTS_MOVE_RETENTION);
@@ -34104,6 +34254,11 @@ var _CFB = (() => {
     pc.jobSecurity = 50;
     pc.tenureSeasons = 0;
     pc.retentionStacks = 0;
+    const forfeitedBudget = Math.round(pc.budget || 0);
+    pc.budget = 0;
+    pc.budgetCarryover = 0;
+    pc.pendingScheduleGuarantee = 0;
+    pc.pendingRetentionCost = 0;
     pc.lastDelta = null;
     pc.dominanceStreak = 0;
     pc.lastOfferSeason = null;
@@ -34123,7 +34278,7 @@ var _CFB = (() => {
         console.warn("W9 handoff:", e.message);
       }
     }
-    return { ok: true, schoolName: newSchool.name };
+    return { ok: true, schoolName: newSchool.name, forfeitedBudget, carriedGameplan: !!(oldSchool && oldSchool.id !== newSchoolId && oldSchool.gameplan) };
   }
   function pruneCapBlockedSignings(state2) {
     const prevSeason = state2.season - 1;
@@ -34359,7 +34514,11 @@ var _CFB = (() => {
         PRESEASON: { days: [1, 4], label: "Preseason" },
         NONCONF: { days: [5, 8], label: "Non-Conference" },
         CONFERENCE: { days: [9, 18], label: "Conference Play" },
-        CONFCHAMP: { days: [19, 19], label: "Conference Championship" },
+        // No game is scheduled on day 19 — CONF_GAME_DAYS ends at 18. Conference
+        // champions are decided on conference record and the postseason field is
+        // announced here, so the week is Selection Week, not a title-game week. (Real
+        // title games are a separate pass: see Ref/PLAYTEST_2026-08-12.md item 17.)
+        CONFCHAMP: { days: [19, 19], label: "Selection Week" },
         PLAYOFFS: { days: [20, 23], label: "Playoffs" },
         JOBS: { days: [24, 30], label: "Offseason" }
       };
@@ -34545,6 +34704,7 @@ var _CFB = (() => {
     navigate: () => navigate,
     navigateBack: () => navigateBack,
     notify: () => notify,
+    notifyJobMoveCosts: () => notifyJobMoveCosts,
     openSchool: () => openSchool,
     processEvents: () => processEvents,
     programGroupTab: () => programGroupTab,
@@ -34600,6 +34760,12 @@ var _CFB = (() => {
       state.ui.notification = null;
       rerender();
     }, duration);
+  }
+  function notifyJobMoveCosts(result) {
+    const bits = [];
+    if (result && result.carriedGameplan) bits.push("Your game plan came with you \u2014 formations, fronts and situational calls. Depth-chart pins stayed behind with the old roster.");
+    if (result && result.forfeitedBudget > 0) bits.push(`You left $${Math.round(result.forfeitedBudget).toLocaleString()} of unspent budget behind \u2014 it was the old program's money.`);
+    if (bits.length) notify(bits.join(" "), "info", 7e3);
   }
   function navSnapshot() {
     var _a;
@@ -34743,6 +34909,12 @@ var _CFB = (() => {
       // season offers last appeared (for the offer cooldown)
     };
     school.coach = playerCoach;
+    playerCoach.contract = {
+      startSeason: 1,
+      endSeason: 1 + C.PROVE_IT_YEARS,
+      years: C.PROVE_IT_YEARS,
+      termLabel: "Prove-It"
+    };
     try {
       ensureHCMastery(playerCoach);
     } catch (e) {
@@ -36051,7 +36223,7 @@ var _CFB = (() => {
     <div class="gameplan-sections">
 
       ${gameplanSection === "situations" ? renderSituationsSection(gp) : ""}
-      ${gameplanSection === "offense" ? renderSchemeProfile(gp) + renderIdentityCard(gp) + renderOffenseDefaults(gp) : ""}
+      ${gameplanSection === "offense" ? renderIdentityCard(gp) + renderOffenseDefaults(gp) : ""}
       ${gameplanSection === "defense" ? renderDefenseDefaults(gp) : ""}
 
       <!-- SPECIAL TEAMS -->
@@ -36326,7 +36498,7 @@ var _CFB = (() => {
       gp.baseTempo = val === "fast" ? "Hurry" : val === "slow" ? "Chew" : "Normal";
     }
   }
-  function renderSchemeProfile(gp) {
+  function schemeIdentityLine(gp) {
     var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
     const clampV = (v, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
     const R = (v) => Math.round(clampV(v) * 100);
@@ -36370,31 +36542,7 @@ var _CFB = (() => {
     const tempoWord = tempoScore >= 70 ? "up-tempo" : tempoScore <= 30 ? "clock-controlling" : "measured";
     const aggWord = aggression >= 62 ? "attacking" : aggression <= 38 ? "bend-don\u2019t-break" : "even-keeled";
     const decWord = deception >= 60 ? ", multiple looks" : deception <= 25 ? ", vanilla" : "";
-    const identity = `${tempoWord.charAt(0).toUpperCase()}${tempoWord.slice(1)} ${leanWord}, ${aggWord}${decWord}`;
-    const grade = (v) => v >= 80 ? "var(--green)" : v >= 55 ? "var(--gold, #d9a441)" : v >= 30 ? "#c9803a" : "#9a5a4a";
-    const meter = (label, val, lo, hi) => `
-    <div class="id-row" style="align-items:center">
-      <span class="id-lbl">${label}</span>
-      <span style="display:flex;align-items:center;gap:9px;flex:1;justify-content:flex-end">
-        <span style="font-size:10px;opacity:.6;min-width:74px;text-align:right">${lo}</span>
-        <span style="position:relative;width:120px;height:8px;background:rgba(255,255,255,.12);border-radius:5px;overflow:hidden">
-          <span style="position:absolute;left:0;top:0;height:100%;width:${val}%;background:${grade(val)}"></span>
-        </span>
-        <span style="font-size:10px;opacity:.6;min-width:52px">${hi}</span>
-        <b style="min-width:26px;text-align:right">${val}</b>
-      </span>
-    </div>`;
-    return `
-  <div class="card identity-card">
-    <div class="card-header"><span class="card-title">SCHEME PROFILE</span>
-      <span class="muted" style="font-size:11px">every dial + formation weight, scored</span></div>
-    <div class="id-row" style="margin-bottom:4px"><span class="id-lbl">\u{1F9ED} Identity</span>
-      <span><b>${escapeHtml(identity)}</b></span></div>
-    ${meter("\u2694\uFE0F Aggression", aggression, "Ball-control", "All-out")}
-    ${meter("\u23F1\uFE0F Tempo", tempoScore, "Grind clock", "No-huddle")}
-    ${meter("\u{1F3AF} Air \u2194 Ground", airGround, "Run-heavy", "Pass-heavy")}
-    ${meter("\u{1F0CF} Deception", deception, "Vanilla", "Multiple")}
-  </div>`;
+    return `${tempoWord.charAt(0).toUpperCase()}${tempoWord.slice(1)} ${leanWord}, ${aggWord}${decWord}`;
   }
   function renderIdentityCard(gp) {
     var _a, _b, _c, _d, _e, _f, _g, _h, _i;
@@ -36455,6 +36603,8 @@ var _CFB = (() => {
   <div class="card identity-card">
     <div class="card-header"><span class="card-title">OFFENSIVE IDENTITY</span>
       <span class="muted" style="font-size:11px">what their film room sees</span></div>
+    <div class="id-row" style="margin-bottom:4px"><span class="id-lbl">\u{1F9ED} They'd call you</span>
+      <span><b>${escapeHtml(schemeIdentityLine(gp))}</b></span></div>
     <div class="id-row"><span class="id-lbl">\u{1F3AD} Play action</span>
       <span>${paWord} <b>(${paCred.toFixed(2)})</b> \xB7 ~${Math.round(wavg(PA_RATE) * 100 * ((_e = gp.paRate) != null ? _e : 100) / 100)}% of med/deep</span></div>
     <div class="id-row"><span class="id-lbl">\u{1F525} Screens</span><span>~${(_f = gp.screenRate) != null ? _f : 14}% of short throws \u2014 jackpot vs the blitz</span></div>
@@ -39790,12 +39940,13 @@ var _CFB = (() => {
 
     <div class="ob-setting-row">
       <div class="ob-setting-label">Game Planning</div>
-      <div class="ob-setting-desc">Simple: a few big, plain-language dials \u2014 the sim handles the details. Advanced: full control of every scheme knob, situational grid, and play design.</div>
+      <div class="ob-setting-desc">Simple: a few big, plain-language dials \u2014 you set the identity and the sim handles the scheme. Advanced: every situational knob, formation split and coverage default is yours. The simulation is identical either way; this only changes how much of it you drive.</div>
       <div class="gp-mode-toggle" style="margin-top:6px">
         <button class="gp-mode-btn${gpMode === "simple" ? " active" : ""}" data-ob-gpmode="simple">Simple</button>
         <button class="gp-mode-btn${gpMode === "advanced" ? " active" : ""}" data-ob-gpmode="advanced">Advanced</button>
       </div>
-      ${gpMode === "simple" ? `<div class="ob-setting-desc" style="margin-top:8px;color:var(--gold);font-weight:600">\u{1F331} Simple starts are Division III, Take the Job only \u2014 the grassroots path. Switch to Advanced to unlock D1/D2 and the other start types.</div>` : ""}
+      <div class="ob-setting-desc" style="margin-top:6px;opacity:.8">You can switch between Simple and Advanced any time from Settings \u203A Game \u203A Game Plan Detail \u2014 your plan carries over either way.</div>
+      ${gpMode === "simple" ? `<div class="ob-setting-desc" style="margin-top:8px;color:var(--gold);font-weight:600">\u{1F331} One catch for THIS run: a Simple start is Division III, Take the Job only \u2014 the grassroots path. Pick Advanced now to unlock D1/D2 and the other start types.</div>` : ""}
     </div>
 
     ${(() => {
@@ -40092,7 +40243,7 @@ var _CFB = (() => {
           <div class="ob-rv-row"><span>Stadium</span><span>${escapeHtml(((_b = s.stadium) == null ? void 0 : _b.name) || "\u2014")} (${(((_c = s.stadium) == null ? void 0 : _c.capacity) || 0).toLocaleString()})</span></div>
           <div class="ob-rv-row"><span>Enrollment</span><span>${(s.enrollment || 0).toLocaleString()} students</span></div>
           <div class="ob-rv-row"><span>Conference</span><span>${escapeHtml(conference.name)} \xB7 ${s.division}</span></div>
-          <div class="ob-rv-row"><span>Prestige</span><span class="prestige-pips">${"\u25CF".repeat(s.prestige)}${"\u25CB".repeat(maxPips - s.prestige)}</span></div>
+          <div class="ob-rv-row"><span>Prestige</span>${renderPrestigePips(s.prestige, maxPips)}</div>
           ${ob.challenge ? `<div class="ob-rv-row ob-rv-challenge"><span>Challenge</span><span>${(CHALLENGE_CARDS.find((c) => c.id === ob.challenge) || {}).icon || ""} ${(CHALLENGE_CARDS.find((c) => c.id === ob.challenge) || {}).title || ""}</span></div>` : ""}
         </div>
         ${replaced ? `<p class="ob-replaced">The ${escapeHtml(s.nick)} take the place of ${escapeHtml(replaced.name)}, whose program folded this spring.</p>` : ""}
@@ -40449,7 +40600,7 @@ var _CFB = (() => {
     }).join("");
   }
   function renderPrestigePips(p, max = 5) {
-    const filled = Math.min(Math.round(p), max);
+    const filled = Math.max(0, Math.min(Math.round(p || 0), max));
     return `<span class="prestige-pips">${"\u25CF".repeat(filled)}${"\u25CB".repeat(max - filled)}</span>`;
   }
   function schoolCardCoachLine(s) {
@@ -40782,16 +40933,25 @@ var _CFB = (() => {
   function quarterOf(p) {
     var _a;
     const half = p.half || 1;
+    if (half >= 3) return 5;
     const secs = (_a = p.clock) != null ? _a : C.HALF_SECONDS;
     const firstOfHalf = secs > C.HALF_SECONDS / 2;
     return half === 1 ? firstOfHalf ? 1 : 2 : firstOfHalf ? 3 : 4;
   }
-  function quarterClock(p) {
+  function quarterSecsLeft(p) {
     var _a;
     const secs = Math.max(0, ((_a = p.clock) != null ? _a : C.HALF_SECONDS) | 0);
+    if ((p.half || 1) >= 3) return secs;
     const qtr = C.HALF_SECONDS / 2;
-    const left = secs > qtr ? secs - qtr : secs;
+    return secs > qtr ? secs - qtr : secs;
+  }
+  function quarterClock(p) {
+    const left = quarterSecsLeft(p);
     return `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+  }
+  function chronoKey(row) {
+    var _a;
+    return (row.q || 1) * 1e5 - ((_a = row.qsec) != null ? _a : 0);
   }
   function describe(p, nameOf, offName) {
     var _a;
@@ -40896,6 +41056,7 @@ var _CFB = (() => {
         rows.push({
           q: quarterOf(p),
           clock: quarterClock(p),
+          qsec: quarterSecsLeft(p),
           side,
           school: (offSchool == null ? void 0 : offSchool.name) || "",
           text,
@@ -40907,7 +41068,39 @@ var _CFB = (() => {
         });
       }
     }
-    return rows.sort((a, b) => b.weight - a.weight).slice(0, n).map((r) => __spreadProps2(__spreadValues2({}, r), { weight: Math.round(r.weight) }));
+    return rows.sort((a, b) => b.weight - a.weight).slice(0, n).sort((a, b) => chronoKey(a) - chronoKey(b)).map((r) => __spreadProps2(__spreadValues2({}, r), { weight: Math.round(r.weight) }));
+  }
+  function linescore(result) {
+    var _a, _b, _c;
+    const cells = [1, 2, 3, 4, 5].map((q) => ({ q, home: 0, away: 0 }));
+    let ph = 0, pa = 0, lastQ = 0;
+    for (const d of (_a = result == null ? void 0 : result.drives) != null ? _a : []) {
+      for (const p of d.plays || []) {
+        if (!Number.isFinite(p == null ? void 0 : p.scoreOff) || !Number.isFinite(p == null ? void 0 : p.scoreDef)) continue;
+        const home = d.possession === "away" ? p.scoreDef : p.scoreOff;
+        const away = d.possession === "away" ? p.scoreOff : p.scoreDef;
+        const qi = Math.min(5, Math.max(1, quarterOf(p)));
+        lastQ = Math.max(lastQ, qi);
+        if (home === ph && away === pa) continue;
+        cells[qi - 1].home += home - ph;
+        cells[qi - 1].away += away - pa;
+        ph = home;
+        pa = away;
+      }
+    }
+    const fh = Math.max(0, ((_b = result == null ? void 0 : result.homeScore) != null ? _b : 0) | 0);
+    const fa = Math.max(0, ((_c = result == null ? void 0 : result.awayScore) != null ? _c : 0) | 0);
+    if (ph !== fh || pa !== fa) {
+      const tail = cells[Math.max(1, lastQ) - 1];
+      tail.home += fh - ph;
+      tail.away += fa - pa;
+    }
+    const hadOT = cells[4].home !== 0 || cells[4].away !== 0 || lastQ >= 5;
+    const rows = hadOT ? cells : cells.slice(0, 4);
+    const sumH = rows.reduce((s, c) => s + c.home, 0);
+    const sumA = rows.reduce((s, c) => s + c.away, 0);
+    if (sumH !== fh || sumA !== fa) return null;
+    return { cells: rows, homeTotal: fh, awayTotal: fa, hadOT };
   }
 
   // js/ui/app.js
@@ -40917,6 +41110,7 @@ var _CFB = (() => {
   init_season();
   init_sim();
   init_situations();
+  init_tree();
   init_state();
 
   // js/ui/manual/anatomy-of-a-play.js
@@ -43191,8 +43385,9 @@ var _CFB = (() => {
       const key = sideLabel2.toLowerCase();
       const cand = candBySide[key];
       const coord = cand ? cand.coord : school && school.staff ? school.staff[key] : null;
+      const windowOpen = coordWindowOpen();
       if (!coord) return `<div class="staff-row"><span class="muted">No ${sideLabel2} on staff</span>
-      <button class="btn-ghost btn-sm" data-hire-market="${sideLabel2}">Hire</button></div>`;
+      <button class="btn-ghost btn-sm" data-hire-market="${sideLabel2}"${windowOpen ? "" : ' title="Hire at the offseason Coordinator Hires step"'}>${windowOpen ? "Hire" : "Hire \u2014 offseason"}</button></div>`;
       ensureAmbition(coord);
       const sheet = Object.entries(coord.schemeIQ || {}).sort((a, b) => b[1] - a[1]).map(([s, iq]) => {
         const t = schemeStarTier(iq);
@@ -43213,7 +43408,7 @@ var _CFB = (() => {
         ${cred ? `<div class="staff-schemes muted">${cred.seasons} yr${cred.avgUnitGrade ? ` \xB7 units ${escapeHtml(cred.avgUnitGrade)}` : ""}${cred.streakBPlus ? ` \xB7 ${cred.streakBPlus}-yr B+ streak` : ""}</div>` : ""}
       </div>
       <div class="staff-actions">
-        <button class="btn-ghost btn-sm" data-hire-market="${sideLabel2}">Replace</button>
+        <button class="btn-ghost btn-sm" data-hire-market="${sideLabel2}"${windowOpen ? "" : ' title="Coordinator changes happen at the offseason Coordinator Hires step"'}>${windowOpen ? "Replace" : "Replace \u2014 offseason"}</button>
         ${canPromote ? `<button class="btn-primary btn-sm" data-tree-promote="${escapeHtml(cand.side)}">Give him this program</button>` : ""}
       </div>
     </div>`;
@@ -43406,10 +43601,22 @@ var _CFB = (() => {
     }).join("")}
   </div>`;
   }
+  function coordWindowOpen() {
+    var _a, _b;
+    if (state.pendingCoordHire) return true;
+    const os = state.offseason;
+    if (!os || os.done) return false;
+    const stages = visibleStages(state);
+    return ((_b = (_a = stages[os.stage]) == null ? void 0 : _a.id) != null ? _b : null) === "staff";
+  }
   function setupListeners18() {
     var _a, _b, _c, _d, _e, _f;
     document.querySelectorAll("[data-hire-market]").forEach((btn) => {
       btn.addEventListener("click", () => {
+        if (!coordWindowOpen()) {
+          notify("Coordinators are hired at the offseason Coordinator Hires step \u2014 not mid-season. Your staff is set until then.", "info", 5e3);
+          return;
+        }
         state.ui.staffMarket = btn.dataset.hireMarket;
         _candidates = { side: null, list: [] };
         rerender();
@@ -43425,8 +43632,15 @@ var _CFB = (() => {
         const side = state.ui.staffMarket;
         const pick2 = _candidates.list[parseInt(btn.dataset.hirePick, 10)];
         if (!school || !pick2) return;
+        if (!coordWindowOpen()) {
+          state.ui.staffMarket = null;
+          notify("That window has closed \u2014 coordinator changes happen at Coordinator Hires.", "info");
+          rerender();
+          return;
+        }
         if (!school.staff) school.staff = {};
         school.staff[side.toLowerCase()] = pick2;
+        if (state.pendingCoordHire && school.staff.oc && school.staff.dc) state.pendingCoordHire = null;
         state.ui.staffMarket = null;
         notify(`${pick2.name.first} ${pick2.name.last} hired as ${side} \u2014 $${pick2.salary.toLocaleString()}/yr from next season's pool`, "success");
         rerender();
@@ -43447,6 +43661,7 @@ var _CFB = (() => {
         if (result.ok) {
           const h = pendingHandoff(state);
           notify(h ? `You've accepted the job at ${result.schoolName} \u2014 and ${h.schoolName} needs a coach. This offseason only, you can send one of your old coordinators down to take it.` : `You've accepted the job at ${result.schoolName}!`, "success", h ? 7e3 : void 0);
+          notifyJobMoveCosts(result);
         } else notify(result.reason, "warning");
         rerender();
       });
@@ -43454,8 +43669,10 @@ var _CFB = (() => {
     document.querySelectorAll(".accept-shortlist-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         const result = acceptJob(state, btn.dataset.schoolId);
-        if (result.ok) notify(`You're the new coach at ${result.schoolName}.`, "success");
-        else notify(result.reason, "warning");
+        if (result.ok) {
+          notify(`You're the new coach at ${result.schoolName}.`, "success");
+          notifyJobMoveCosts(result);
+        } else notify(result.reason, "warning");
         rerender();
       });
     });
@@ -43491,7 +43708,7 @@ var _CFB = (() => {
           return;
         }
         state.pendingOffers = null;
-        notify(`${res.name} takes the ${res.schoolName} job. You're coaching him now \u2014 your old staff hired ${res.replacedBy.first} ${res.replacedBy.last} to replace him.`, "success", 7e3);
+        notify(res.replacedBy ? `${res.name} takes the ${res.schoolName} job. You're coaching him now \u2014 your old staff hired ${res.replacedBy.first} ${res.replacedBy.last} to replace him.` : `${res.name} takes the ${res.schoolName} job. You're coaching him now.`, "success", 7e3);
         await saveNow();
         rerender();
       });
@@ -43507,7 +43724,7 @@ var _CFB = (() => {
           notify(res.reason, "warning", 4500);
           return;
         }
-        notify(`${res.name} is the new head coach at ${res.schoolName}. You're him now.`, "success", 6e3);
+        notify(res.chairOpen ? `${res.name} is the new head coach at ${res.schoolName}. You're him now \u2014 and the ${String(btn.dataset.treePromote).toUpperCase()} chair he vacated is empty. Hire his replacement before camp.` : `${res.name} is the new head coach at ${res.schoolName}. You're him now.`, "success", 7e3);
         await saveNow();
         rerender();
       });
@@ -44252,7 +44469,10 @@ var _CFB = (() => {
     for (let w = PHASES.NONCONF.days[0]; w <= PHASES.CONFCHAMP.days[1]; w++) {
       const g = (state.schedule || []).find((g2) => g2.day === w && (g2.homeId === (school == null ? void 0 : school.id) || g2.awayId === (school == null ? void 0 : school.id)));
       if (!g) {
-        if (w === PHASES.CONFCHAMP.days[1]) continue;
+        if (w === PHASES.CONFCHAMP.days[1]) {
+          steps.push(`<span class="event-rail-step${w <= state.day ? " done" : ""}" title="Selection Week \u2014 conference titles settle and the field is announced">SEL</span>`);
+          continue;
+        }
         steps.push(`<span class="event-rail-step${w <= state.day ? " done" : ""}" title="${escapeHtml(weekLabel(w))} \u2014 bye">${escapeHtml(weekShort(w))} BYE</span>`);
         continue;
       }
@@ -44364,7 +44584,7 @@ var _CFB = (() => {
     } else if (mode === "jobs") {
       kicker = "Offseason";
       title = "Between Seasons";
-      sub = `Set up Season ${state.season + 1} \u2014 lock your schedule and trim the roster.`;
+      sub = `The books are closed on Season ${state.season}. Here is the program you take into ${state.season + 1}.`;
       body = jobsBody(school);
     } else {
       ({ railHtml, kicker, title, sub, body } = gameWeekContent(school));
@@ -44468,7 +44688,7 @@ var _CFB = (() => {
     const isOpener = played === 0 && !next.postseason;
     const isRival = !!(state.rivalry && opp && state.rivalry.schoolId === opp.id && (next.rivalry === true || next.rivalry === void 0 && next.day === C.RIVALRY_DAY));
     const gPhase = getPhase(next.day);
-    const tag = next.postseason ? "Playoffs" : gPhase === "CONFCHAMP" ? "Conference Championship" : isRival ? `Rivalry Week \u2014 ${state.rivalry.trophy}` : isOpener ? "Season Opener" : gPhase === "CONFERENCE" ? "Conference" : "Non-Conference";
+    const tag = next.postseason ? "Playoffs" : gPhase === "CONFCHAMP" ? "Selection Week" : isRival ? `Rivalry Week \u2014 ${state.rivalry.trophy}` : isOpener ? "Season Opener" : gPhase === "CONFERENCE" ? "Conference" : "Non-Conference";
     const byeAhead = next.day > state.day + 1;
     return {
       railHtml,
@@ -44730,9 +44950,28 @@ var _CFB = (() => {
     };
   }
   function jobsBody(school) {
+    var _a;
+    const coach = state.playerCoach;
+    const roster = (school == null ? void 0 : school.roster) || [];
+    const incoming = (state.signingsLog || []).filter((sg) => sg.season === state.season && sg.schoolId === (school == null ? void 0 : school.id)).length;
+    const st = (school == null ? void 0 : school.staff) || {};
+    const coordName = (c) => c ? escapeHtml(`${c.name.first} ${c.name.last}`) : '<span style="color:var(--red)">vacant</span>';
+    const yrsLeft = ((_a = coach == null ? void 0 : coach.contract) == null ? void 0 : _a.endSeason) != null ? Math.max(0, coach.contract.endSeason - state.season) : null;
+    const rows = [
+      ["Roster", `${roster.length} on the books for Season ${state.season + 1}`],
+      ["Incoming class", incoming ? `${incoming} signed` : "none signed"],
+      ["Offensive coordinator", coordName(st.oc)],
+      ["Defensive coordinator", coordName(st.dc)],
+      ["Your deal", yrsLeft == null ? "\u2014" : yrsLeft > 0 ? `${yrsLeft} season${yrsLeft !== 1 ? "s" : ""} left` : "expiring"],
+      ["Program", `${escapeHtml((school == null ? void 0 : school.name) || "")} \xB7 ${escapeHtml((school == null ? void 0 : school.division) || "")}${(school == null ? void 0 : school.conf) ? ` \xB7 ${escapeHtml(school.conf)}` : ""}`]
+    ];
     return `
-  <div class="event-embed">${renderScheduling()}</div>
-  <p class="offseason-hint" style="margin-top:10px">Continue to start Season ${state.season + 1}.</p>`;
+  <div class="card">
+    <div class="card-header"><span class="card-title">WHERE YOU STAND</span>
+      <span class="muted" style="font-size:11px">everything the offseason changed</span></div>
+    ${rows.map(([k, v]) => `<div class="offseason-item"><span class="offseason-label">${k}</span><span class="offseason-detail">${v}</span></div>`).join("")}
+  </div>
+  <p class="offseason-hint" style="margin-top:10px">Schedule, staff and roster are locked. Continue to open camp for Season ${state.season + 1}.</p>`;
   }
   function cutDayRecsBody(school, recs) {
     var _a, _b;
@@ -44775,14 +45014,16 @@ var _CFB = (() => {
     const coach = state.playerCoach;
     const roster = (school == null ? void 0 : school.roster) || [];
     const scholarships = (coach == null ? void 0 : coach.scholarshipsAvailable) || 0;
-    const gradsLeaving = graduatingSeniors(state).length;
-    const over = roster.length - gradsLeaving - C.ROSTER_SIZE;
+    const leavingSrs = graduatingSeniors(state);
+    const gradsLeaving = leavingSrs.length;
+    const gradIds = new Set(leavingSrs.map((p) => p.id));
+    const over = effectiveRosterOver(state);
     const cutsUsed = ((_a = coach == null ? void 0 : coach.cutsUsed) == null ? void 0 : _a.season) === state.season ? coach.cutsUsed.n : 0;
     const atCutCap = cutsUsed >= C.SEASON_CUT_CAP && over <= 0;
     const schCount = roster.filter((p) => !p.isWalkOn).length;
     const woCount = roster.filter((p) => p.isWalkOn).length;
     const CLASS_ORDER = { FR: 0, SO: 1, JR: 2, SR: 3 };
-    const displayed = roster.filter((p) => (!cutModalPos || p.position === cutModalPos) && (!cutModalClass || p.classYear === cutModalClass)).sort((a, b) => {
+    const displayed = roster.filter((p) => !gradIds.has(p.id) && (!cutModalPos || p.position === cutModalPos) && (!cutModalClass || p.classYear === cutModalClass)).sort((a, b) => {
       var _a2, _b;
       const pc = (a.position || "").localeCompare(b.position || "");
       if (pc !== 0) return pc;
@@ -45236,7 +45477,21 @@ var _CFB = (() => {
     ${histChips}
     <div class="offseason-label" style="font-size:11px;letter-spacing:.5px;opacity:.7;margin-top:10px">THIS SEASON\u2019S GOALS</div>
     ${(goals || []).map((g) => `<div class="offseason-item"><span class="offseason-label">${escapeHtml(g.label)}</span></div>`).join("")}
+    ${contractLine(coach)}
   </div>`;
+  }
+  function contractLine(coach) {
+    var _a;
+    const ct = coach == null ? void 0 : coach.contract;
+    if (!ct) return "";
+    const left = Math.max(0, ((_a = ct.endSeason) != null ? _a : state.season) - state.season);
+    const label = escapeHtml(ct.termLabel || "Contract");
+    return `
+    <div class="offseason-label" style="font-size:11px;letter-spacing:.5px;opacity:.7;margin-top:10px">YOUR PAPER</div>
+    <div class="offseason-item">
+      <span class="offseason-label">${label} \xB7 ${ct.years || left} year${(ct.years || left) !== 1 ? "s" : ""}</span>
+      <span class="offseason-detail">${left > 0 ? `${left} season${left !== 1 ? "s" : ""} left${left === 1 ? " \u2014 the AD will want to talk in the offseason" : ""}` : "expiring \u2014 this is the year"}</span>
+    </div>`;
   }
   function preseasonWeekBody(school, focusMeta) {
     var _a, _b;
@@ -45429,22 +45684,25 @@ var _CFB = (() => {
       ${escapeHtml(f.label)}${focus === f.id ? " \u2713" : ""}
     </button>`).join("");
       const changes = pre.posChanges || [];
+      const reviewed = !!pre.posReviewed;
+      const boardOpen = convBoardOpen || !reviewed;
       return `
-    <div class="offseason-label" style="font-size:11px;letter-spacing:.5px;opacity:.7;margin-top:8px">TRAINING FOCUS</div>
-    <div>${focusBtns}</div>
-    <button class="btn-primary" id="btn-spring-play" style="margin-top:14px;width:100%">Run Spring Game</button>
-    <p class="offseason-hint" style="margin-top:6px">Development camp works the whole roster (freshmen too), then White vs Black runs on post-camp ratings \u2014 full box score, nothing counts, everyone banks reps. Position changes below lock when it runs. Skipping ahead runs it automatically.</p>
-
-    <div class="offseason-item" style="margin-top:16px">
+    <div class="offseason-item" style="margin-top:8px">
       <span class="offseason-label">Position changes
         <span class="muted" style="font-weight:400">\xB7 ${changes.length}/${C.POS_CHANGE_CAP}</span></span>
       <span class="offseason-detail" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         ${changes.map((ch) => `<span class="dash-qs-item">${ch.from} \u2192 ${ch.to} \u2713</span>`).join("")}
-        <button class="btn-ghost btn-sm" id="btn-conv-toggle">${convBoardOpen ? "Close board" : "Open board"}</button>
+        <button class="btn-ghost btn-sm" id="btn-conv-toggle">${boardOpen ? "Close board" : "Open board"}</button>
       </span>
     </div>
-    ${convBoardOpen ? `<p class="offseason-hint" style="margin:2px 0 0">Convert a player to a new position \u2014 pick a target position to see everyone's projected rating there (conversion penalty included). Changes lock when the spring game runs.</p>
-         ${positionChangeBoard(school, pre)}` : ""}`;
+    ${boardOpen ? `<p class="offseason-hint" style="margin:2px 0 0">Move a player to a new position \u2014 pick a target position to see everyone's projected rating there, conversion penalty included. This is the last window: camp locks them for the year.</p>
+         ${positionChangeBoard(school, pre)}` : ""}
+    ${reviewed ? `<p class="offseason-hint" style="margin-top:10px;color:var(--green)">Positions confirmed \u2713 \u2014 you can still change your mind until camp runs.</p>` : `<button class="btn-primary" id="btn-pos-confirm" style="margin-top:12px;width:100%">${changes.length ? `Lock in ${changes.length} position change${changes.length !== 1 ? "s" : ""} \u2014 positions are set` : "No changes \u2014 my positions are set"}</button>`}
+
+    <div class="offseason-label" style="font-size:11px;letter-spacing:.5px;opacity:.7;margin-top:18px">TRAINING FOCUS</div>
+    <div>${focusBtns}</div>
+    <button class="btn-primary" id="btn-spring-play" style="margin-top:14px;width:100%"${reviewed ? "" : " disabled"}>Run Spring Game</button>
+    <p class="offseason-hint" style="margin-top:6px">${reviewed ? "" : "Confirm your positions first. "}Development camp works the whole roster (freshmen too), then White vs Black runs on post-camp ratings \u2014 full box score, nothing counts, everyone banks reps. Skipping ahead runs it automatically.</p>`;
     }
     const rows = (list) => list.map((x) => `<div class="offseason-item"><span class="offseason-label">${escapeHtml(x.name)} (${x.pos})</span><span class="offseason-detail">${escapeHtml(x.line)}</span></div>`).join("");
     const report = pre.campReport || [];
@@ -45534,14 +45792,16 @@ var _CFB = (() => {
             <span class="offseason-detail">${ext.ladder && !ext.ladder.capped ? `<b>+10% of base</b> loyalty raise (+$${(ext.ladder.bump || 0).toLocaleString()} on every future pool) \u2014 total +${ext.ladder.nextPct}% after signing` : `<b>ladder capped</b> \u2014 double money already; signing keeps the paper fresh`}</span>
           </div>
           <div class="ext-terms">
-            ${(ext.terms || []).map((t) => `
-              <button class="ext-term-card" data-ext-term="${t.id}">
-                <div class="ext-term-title">${escapeHtml(t.label)} \xB7 ${t.years}yr</div>
+            ${(ext.terms || []).slice(0, 1).map((t) => `
+              <div class="ext-term-card ext-term-offered">
+                <div class="ext-term-title">${escapeHtml(t.label)} \xB7 ${t.years} year${t.years !== 1 ? "s" : ""}</div>
                 <div class="ext-term-money">+10%<span class="muted"> of base</span></div>
                 <div class="ext-term-js ${t.jsDelta >= 0 ? "ext-js-up" : "ext-js-down"}">${t.jsDelta >= 0 ? "+" : ""}${t.jsDelta} security</div>
                 <div class="ext-term-blurb muted">${escapeHtml(t.blurb || "")}</div>
-              </button>`).join("")}
-          </div>` : taken ? '<div class="offseason-item"><span class="offseason-detail" style="color:var(--green)">Extension signed \u2014 you\u2019re staying \u2713</span></div>' : '<div class="offseason-item"><span class="offseason-detail">No new deal on the table \u2014 the AD wants results first.</span></div>'}
+              </div>`).join("")}
+          </div>
+          <p class="offseason-hint" style="margin:6px 0 0">The AD sets the length. What you've done here is the argument.</p>
+          <button class="btn-primary" data-ext-term="ad" style="margin-top:8px;width:100%">Sign it</button>` : taken ? '<div class="offseason-item"><span class="offseason-detail" style="color:var(--green)">Extension signed \u2014 you\u2019re staying \u2713</span></div>' : '<div class="offseason-item"><span class="offseason-detail">No new deal on the table \u2014 the AD wants results first.</span></div>'}
 
         <div class="award-group-label" style="margin-top:10px">SUITORS ${offers.length ? `<span class="muted">(${offers.length})</span>` : ""}</div>
         ${offers.length ? `
@@ -45663,16 +45923,17 @@ var _CFB = (() => {
   </div>`;
   }
   function setupListeners6() {
+    var _a2;
     var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
     document.querySelectorAll("[data-poach]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        var _a2;
+        var _a22;
         const poach = state.pendingPoach;
         const school = getPlayerSchool();
         if (!poach || !school) return;
         const side = poach.side.toLowerCase();
         if (btn.dataset.poach === "retain") {
-          const c = (_a2 = school.staff) == null ? void 0 : _a2[side];
+          const c = (_a22 = school.staff) == null ? void 0 : _a22[side];
           if (c && state.playerCoach) {
             state.playerCoach.pendingRetentionCost = (state.playerCoach.pendingRetentionCost || 0) + (poach.retentionCost || 0);
             c.retentionCount = (c.retentionCount || 0) + 1;
@@ -45680,7 +45941,8 @@ var _CFB = (() => {
           }
         } else {
           if (school.staff) school.staff[side] = null;
-          notify(`${poach.coordName} left for ${poach.suitorName}. The ${poach.side} job is open.`, "warning");
+          state.pendingCoordHire = { schoolId: school == null ? void 0 : school.id, side, reason: "poached" };
+          notify(`${poach.coordName} left for ${poach.suitorName}. The ${poach.side} job is open \u2014 fill it before camp.`, "warning");
         }
         state.pendingPoach = null;
         rerender();
@@ -45708,13 +45970,14 @@ var _CFB = (() => {
     });
     document.querySelectorAll("[data-stage-hire-pick]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        var _a2, _b2;
+        var _a22, _b2;
         const school = getPlayerSchool();
-        const side = (_b2 = (_a2 = state.offseason) == null ? void 0 : _a2.data) == null ? void 0 : _b2.staffMarketSide;
+        const side = (_b2 = (_a22 = state.offseason) == null ? void 0 : _a22.data) == null ? void 0 : _b2.staffMarketSide;
         const pick2 = _stageCandidates.list[parseInt(btn.dataset.stageHirePick, 10)];
         if (!school || !pick2 || !side) return;
         if (!school.staff) school.staff = {};
         school.staff[side.toLowerCase()] = pick2;
+        if (state.pendingCoordHire && school.staff.oc && school.staff.dc) state.pendingCoordHire = null;
         state.offseason.data.staffMarketSide = null;
         notify(`${pick2.name.first} ${pick2.name.last} hired as ${side} \u2014 opens the playbook at Dev Camp`, "success");
         rerender();
@@ -45764,7 +46027,7 @@ var _CFB = (() => {
       rerender();
     }));
     (_d = document.getElementById("btn-advance-day")) == null ? void 0 : _d.addEventListener("click", async () => {
-      var _a2, _b2, _c2, _d2, _e2;
+      var _a22, _b2, _c2, _d2, _e2;
       const btn = document.getElementById("btn-advance-day");
       if (state.day === 4 && state.preseason && !state.preseason.openerPrep) {
         state.preseason.openerPrep = true;
@@ -45778,7 +46041,7 @@ var _CFB = (() => {
         return;
       }
       state.ui.redshirtBurnAck = false;
-      const board = ((_a2 = state.playerCoach) == null ? void 0 : _a2.recruitBoard) || [];
+      const board = ((_a22 = state.playerCoach) == null ? void 0 : _a22.recruitBoard) || [];
       if (state.day === 2 && board.length === 0 && !state.ui.recruitStartAck) {
         state.ui.showRecruitStartWarn = true;
         rerender();
@@ -45818,16 +46081,16 @@ var _CFB = (() => {
     });
     document.querySelectorAll("[data-ext-term]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        var _a2;
+        var _a3;
         const res = acceptExtension(state, btn.dataset.extTerm);
-        if (res.ok) notify(`${res.term.label} deal signed: ${res.term.years} years, loyalty raise +10% of base (stack ${((_a2 = state.playerCoach) == null ? void 0 : _a2.retentionStacks) || 1}/10), ${res.term.jsDelta >= 0 ? "+" : ""}${res.term.jsDelta} security.`, "success");
+        if (res.ok) notify(`${res.term.label} deal signed: ${res.term.years} years, loyalty raise +10% of base (stack ${((_a3 = state.playerCoach) == null ? void 0 : _a3.retentionStacks) || 1}/10), ${res.term.jsDelta >= 0 ? "+" : ""}${res.term.jsDelta} security.`, "success");
         else notify(res.reason, "warning");
         rerender();
       });
     });
     (_f = document.getElementById("btn-decline-offers")) == null ? void 0 : _f.addEventListener("click", () => {
-      var _a2, _b2, _c2, _d2, _e2;
-      const endBefore = (_b2 = (_a2 = state.playerCoach) == null ? void 0 : _a2.contract) == null ? void 0 : _b2.endSeason;
+      var _a3, _b2, _c2, _d2, _e2;
+      const endBefore = (_b2 = (_a3 = state.playerCoach) == null ? void 0 : _a3.contract) == null ? void 0 : _b2.endSeason;
       const n = declineOffersWithLeverage(state);
       const extended = endBefore != null && (((_d2 = (_c2 = state.playerCoach) == null ? void 0 : _c2.contract) == null ? void 0 : _d2.endSeason) || 0) > endBefore;
       if (n > 0) notify(`Declined ${n} offer${n > 1 ? "s" : ""} \u2014 the AD noticed. Seat +${C.OFFER_LEVERAGE_JS}, loyalty raise +10% of base next season (stack ${((_e2 = state.playerCoach) == null ? void 0 : _e2.retentionStacks) || 1}/10)${extended ? ", and a year added to your deal" : ""}. Leaving forfeits every raise.`, "info", 7e3);
@@ -45840,6 +46103,7 @@ var _CFB = (() => {
           state.pendingOffers = null;
           const h = isTreeGame(state) ? pendingHandoff(state) : null;
           notify(h ? `You're the new coach at ${result.schoolName} \u2014 and ${h.schoolName} needs a coach. This offseason only, you can send one of your old coordinators down to take it.` : `You're the new coach at ${result.schoolName}.`, "success", h ? 7e3 : void 0);
+          notifyJobMoveCosts(result);
         } else notify(result.reason, "warning");
         rerender();
       });
@@ -45906,8 +46170,8 @@ var _CFB = (() => {
       rerender();
     });
     (_g = document.getElementById("btn-spring-play")) == null ? void 0 : _g.addEventListener("click", () => {
-      var _a2;
-      if (!((_a2 = state.preseason) == null ? void 0 : _a2.devDone)) runDevCamp(state);
+      var _a22;
+      if (!((_a22 = state.preseason) == null ? void 0 : _a22.devDone)) runDevCamp(state);
       const res = playSpringGame(state);
       if (!res.ok) {
         notify(res.reason, "warning");
@@ -45944,7 +46208,19 @@ var _CFB = (() => {
       navigate("depthchart");
     });
     (_j = document.getElementById("btn-conv-toggle")) == null ? void 0 : _j.addEventListener("click", () => {
-      convBoardOpen = !convBoardOpen;
+      const pre = state.preseason || {};
+      if (!pre.posReviewed) {
+        pre.posReviewed = true;
+        convBoardOpen = false;
+      } else convBoardOpen = !convBoardOpen;
+      rerender();
+    });
+    (_a2 = document.getElementById("btn-pos-confirm")) == null ? void 0 : _a2.addEventListener("click", () => {
+      const pre = state.preseason || {};
+      const n = (pre.posChanges || []).length;
+      pre.posReviewed = true;
+      convBoardOpen = false;
+      notify(n ? `Positions set \u2014 ${n} change${n !== 1 ? "s" : ""} take effect at camp.` : "Positions set \u2014 no changes this year.", "success");
       rerender();
     });
     (_k = document.getElementById("btn-rec-go")) == null ? void 0 : _k.addEventListener("click", () => {
@@ -45952,17 +46228,17 @@ var _CFB = (() => {
       navigate("recruiting");
     });
     (_l = document.getElementById("btn-rec-skip")) == null ? void 0 : _l.addEventListener("click", () => {
-      var _a2;
+      var _a22;
       state.ui.showRecruitStartWarn = false;
       state.ui.recruitStartAck = true;
-      (_a2 = document.getElementById("btn-advance-day")) == null ? void 0 : _a2.click();
+      (_a22 = document.getElementById("btn-advance-day")) == null ? void 0 : _a22.click();
     });
     (_m = document.getElementById("btn-rs-play")) == null ? void 0 : _m.addEventListener("click", () => {
-      var _a2;
+      var _a22;
       state.ui.showRedshirtBurnWarn = null;
       state.ui.redshirtBurnAck = true;
       rerender();
-      (_a2 = document.getElementById("btn-advance-day")) == null ? void 0 : _a2.click();
+      (_a22 = document.getElementById("btn-advance-day")) == null ? void 0 : _a22.click();
     });
     (_n = document.getElementById("btn-skip-offseason")) == null ? void 0 : _n.addEventListener("click", async (e) => {
       e.target.disabled = true;
@@ -46016,15 +46292,19 @@ var _CFB = (() => {
     };
     document.querySelectorAll(".cut-player-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        var _a2, _b2;
+        var _a22, _b2;
         const school = getPlayerSchool();
         const coach = state.playerCoach;
         if (!school || !coach) return;
         const pid = btn.dataset.playerId;
         const player = school.roster.find((p) => p.id === pid);
         if (!player) return;
-        const over = school.roster.length - C.ROSTER_SIZE;
-        const used = ((_a2 = coach.cutsUsed) == null ? void 0 : _a2.season) === state.season ? coach.cutsUsed.n : 0;
+        if (graduatingSeniors(state).some((p) => p.id === pid)) {
+          notify(`${fullName(player)} graduates at season's end \u2014 his scholarship comes back either way.`, "info");
+          return;
+        }
+        const over = effectiveRosterOver(state);
+        const used = ((_a22 = coach.cutsUsed) == null ? void 0 : _a22.season) === state.season ? coach.cutsUsed.n : 0;
         if (used >= C.SEASON_CUT_CAP && over <= 0) {
           notify(`Cut limit reached \u2014 max ${C.SEASON_CUT_CAP} a season.`, "info");
           return;
@@ -46056,11 +46336,11 @@ var _CFB = (() => {
     });
     document.querySelectorAll(".redshirt-check").forEach((cb) => {
       cb.addEventListener("change", () => {
-        var _a2, _b2;
+        var _a22, _b2;
         const school = getPlayerSchool();
         if (!school) return;
         const pid = cb.dataset.playerId;
-        const current = (_a2 = school.pendingRedshirts) != null ? _a2 : [];
+        const current = (_a22 = school.pendingRedshirts) != null ? _a22 : [];
         let updated;
         if (cb.checked) {
           updated = [...current, pid];
@@ -46080,10 +46360,10 @@ var _CFB = (() => {
       rerender();
     });
     (_p = document.getElementById("btn-redshirt-confirm")) == null ? void 0 : _p.addEventListener("click", () => {
-      var _a2;
+      var _a22;
       const school = getPlayerSchool();
       if (!school) return;
-      const ids = (_a2 = school.pendingRedshirts) != null ? _a2 : [];
+      const ids = (_a22 = school.pendingRedshirts) != null ? _a22 : [];
       const n = ids.length;
       for (const pid of ids) {
         const player = school.roster.find((p) => p.id === pid);
@@ -47301,6 +47581,28 @@ var _CFB = (() => {
       });
     });
   }
+  function pinRoomOf(school, pid) {
+    var _a;
+    if (!pid) return null;
+    const pos = (_a = (school.roster || []).find((p) => p.id === pid)) == null ? void 0 : _a.position;
+    if (!pos) return null;
+    school.depthOrder = school.depthOrder || {};
+    const current = school.depthOrder[pos] || (school.depthChart || {})[pos] || [];
+    return { pos, current: current.filter((id) => id !== pid) };
+  }
+  function promoteInRoom(school, pid) {
+    const r = pinRoomOf(school, pid);
+    if (!r) return;
+    school.depthOrder[r.pos] = [pid, ...r.current];
+  }
+  function demoteInRoom(school, pid) {
+    const r = pinRoomOf(school, pid);
+    if (!r) return;
+    const order = school.depthOrder[r.pos];
+    if (!order || order[0] !== pid) return;
+    if (r.current.length === 0) delete school.depthOrder[r.pos];
+    else school.depthOrder[r.pos] = r.current;
+  }
   function setupListeners9() {
     var _a, _b, _c;
     const school = getPlayerSchool();
@@ -47386,13 +47688,17 @@ var _CFB = (() => {
         const val = el.dataset.pick;
         const entry = picker.side === "offense" ? gp.fieldAssignments.offense[picker.containerId] : gp.fieldAssignments.defense[picker.containerId];
         if (!entry.slots) entry.slots = {};
+        const prevPinned = entry.slots[picker.slotId] || null;
         if (val === "__auto__") {
           delete entry.slots[picker.slotId];
+          demoteInRoom(school, prevPinned);
         } else {
           for (const [sid, pid] of Object.entries(entry.slots)) {
             if (pid === val && sid !== picker.slotId) delete entry.slots[sid];
           }
           entry.slots[picker.slotId] = val;
+          if (prevPinned && prevPinned !== val) demoteInRoom(school, prevPinned);
+          promoteInRoom(school, val);
         }
         picker = null;
         rerender();
@@ -48796,7 +49102,7 @@ var _CFB = (() => {
     if (ATTRIBUTES.includes(key)) return ((_a = r.attributes) == null ? void 0 : _a[key]) || 0;
     return r[key] || 0;
   }
-  function renderGradNeeds(school) {
+  function renderClassNeeds(school) {
     var _a, _b;
     if (!school) return "";
     const recruits = ((_a = state.world) == null ? void 0 : _a.recruits) || [];
@@ -48807,27 +49113,26 @@ var _CFB = (() => {
       const r = byId2.get(e.recruitId);
       if (r && !r.committed) boardByPos[r.position] = (boardByPos[r.position] || 0) + 1;
     }
-    const chips = POSITIONS.map((pos) => {
-      const seniors = school.roster.filter((p) => p.position === pos && p.classYear === "SR").length;
-      if (seniors === 0) return null;
-      const signed = recruits.filter((r) => r.position === pos && r.committed === school.id).length;
-      const onBoard = boardByPos[pos] || 0;
-      const covered = signed >= seniors;
-      return { pos, seniors, onBoard, signed, covered };
-    }).filter(Boolean);
-    if (chips.length === 0) return "";
+    const klass = recruits.filter((r) => r.committed === school.id);
+    const rows = classNeedRows(school, klass);
+    if (rows.length === 0) return "";
+    const seniorsOut = (pos) => school.roster.filter((p) => p.position === pos && p.classYear === "SR").length;
     return `
   <div class="grad-needs">
-    <span class="filter-label">GRADUATING SENIORS</span>
+    <span class="filter-label">CLASS NEEDS \u2014 tap a position to filter</span>
     <div class="grad-need-chips">
-      ${chips.map(({ pos, seniors, onBoard, signed, covered }) => `
-        <div class="grad-need-chip${covered ? " grad-need-covered" : " grad-need-open"}" title="${seniors} senior${seniors !== 1 ? "s" : ""} graduating \xB7 ${onBoard} on board \xB7 ${signed} signed">
-          <span class="grad-need-pos">${pos}</span>
-          <span class="grad-need-out">${seniors}\u2191</span>
+      ${rows.map((nr) => {
+      const onBoard = boardByPos[nr.pos] || 0;
+      const covered = nr.filled >= nr.target;
+      const out2 = seniorsOut(nr.pos);
+      return `
+        <button class="grad-need-chip${covered ? " grad-need-covered" : " grad-need-open"}${searchFilters.pos === nr.pos ? " active" : ""}" data-need-pos="${nr.pos}"
+          title="${nr.filled} signed of ${nr.target} needed \xB7 ${onBoard} on board${out2 ? ` \xB7 ${out2} senior${out2 !== 1 ? "s" : ""} leaving` : ""}">
+          <span class="grad-need-pos">${nr.pos}</span>
+          <span class="grad-need-in">${nr.filled}/${nr.target}</span>
           <span class="grad-need-board">${onBoard}\u25CE</span>
-          <span class="grad-need-in">${signed}\u2713</span>
-        </div>
-      `).join("")}
+        </button>`;
+    }).join("")}
     </div>
   </div>
 `;
@@ -48924,7 +49229,7 @@ var _CFB = (() => {
         <button class="btn-ghost btn-sm" id="sf-clear-attrs">Clear attribute filters</button>
       </div>
 
-      ${renderGradNeeds(school)}
+      ${renderClassNeeds(school)}
 
       <div class="search-results-count">${results.length} recruits match${results.length > 100 ? ` (showing first 100)` : ""}</div>
     </div>
@@ -49719,6 +50024,14 @@ ${renderAutoRecruitLog()}`;
         rerender();
       });
     });
+    document.querySelectorAll("[data-need-pos]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const pos = btn.dataset.needPos;
+        searchFilters.pos = searchFilters.pos === pos ? "" : pos;
+        searchFilters.arch = "";
+        rerender();
+      });
+    });
     document.querySelectorAll("[data-sf-arch]").forEach((btn) => {
       btn.addEventListener("click", () => {
         searchFilters.arch = btn.dataset.sfArch;
@@ -50166,7 +50479,7 @@ ${renderAutoRecruitLog()}`;
     const played = !!game.result;
     const isCurrent = game.day === state.day;
     const phase = getPhase(game.day);
-    const phaseLabel = { NONCONF: "Non-Conference", CONFERENCE: "Conference", CONFCHAMP: "Conf. Championship", PLAYOFFS: "Playoffs" }[phase] || "Game";
+    const phaseLabel = { NONCONF: "Non-Conference", CONFERENCE: "Conference", CONFCHAMP: "Selection Week", PLAYOFFS: "Playoffs" }[phase] || "Game";
     let resultClass = "";
     let resultText = "";
     let myScore = "", oppScore = "";
@@ -50504,7 +50817,8 @@ ${renderAutoRecruitLog()}`;
     const g = Math.max(st.games || 0, 1);
     const rec = school.record || { wins: 0, losses: 0, confWins: 0, confLosses: 0 };
     const cap = ((_a = C.PRESTIGE_MAX) == null ? void 0 : _a[school.division]) || 5;
-    const stars = "\u2605".repeat(Math.min(school.prestige || 0, cap)) + "\u2606".repeat(Math.max(0, cap - (school.prestige || 0)));
+    const filledStars = Math.max(0, Math.min(Math.round(school.prestige || 0), cap));
+    const stars = "\u2605".repeat(filledStars) + "\u2606".repeat(cap - filledStars);
     const accent = school.colors && school.colors[0] || "var(--green)";
     const roster = school.roster || [];
     const lead = (key) => roster.filter((p) => {
@@ -52750,6 +53064,12 @@ ${renderAutoRecruitLog()}`;
       };
       if (p.turnover) {
         let best = p.ballSlots && p.ballSlots.pick ? defs.find((d2) => d2.slot.id === p.ballSlots.pick) || null : null;
+        if (best && best.y <= LOS - 8 * 0.85) {
+          const lat = catchPt[0] - best.x;
+          if (Math.abs(lat) > 6) {
+            best.x = clamp6(best.x + Math.max(-14, Math.min(14, lat * 0.55)), 2, 98);
+          }
+        }
         const _tipSlotId = p.tipDrill && p.ballSlots && p.ballSlots.pbu && p.ballSlots.pbu !== p.ballSlots.pick ? p.ballSlots.pbu : null;
         const _pickWindow = tCatch - PRESNAP + (_tipSlotId ? 0.55 : 0);
         if (best && Math.hypot(best.x - catchPt[0], best.y - catchPt[1]) > _pickWindow * best.speed * 0.75) best = null;
@@ -52779,7 +53099,8 @@ ${renderAutoRecruitLog()}`;
           const prev = best.behave;
           const tGrab = _tipT != null ? _tipT : tCatch;
           const grabPt = _tipPt != null ? _tipPt : catchPt;
-          best.behave = (t2, w2, a2) => t2 < throwAt ? prev ? prev(t2, w2, a2) : null : t2 < tGrab ? [grabPt[0], grabPt[1], best.speed] : [grabPt[0] + (rnd() < 0.5 ? -6 : 6), grabPt[1] + 6, best.speed];
+          const tBreak = Math.max(PRESNAP + 0.35, throwAt - 0.9);
+          best.behave = (t2, w2, a2) => t2 < tBreak ? prev ? prev(t2, w2, a2) : null : t2 < tGrab ? [grabPt[0], grabPt[1], best.speed] : [grabPt[0] + (rnd() < 0.5 ? -6 : 6), grabPt[1] + 6, best.speed];
           for (const s of catchers) {
             const pr = A[s.id].behave;
             A[s.id].behave = (t2, w2, a2) => t2 < tGrab + 0.22 ? pr ? pr(t2, w2, a2) : null : pursuePt(best, a2, a2.speed * 0.95);
@@ -53517,6 +53838,23 @@ ${renderAutoRecruitLog()}`;
           }
           at[j].tr = track[Math.min(iEnd2, track.length - 1)];
         }
+      }
+    }
+    if (typeof tackleCue !== "undefined" && tackleCue && tackleCue.t != null) {
+      const iEndF = Math.round(tackleCue.t / STEP);
+      const exF = tackleCue.x, eyF = tackleCue.y;
+      let extrasF = 0;
+      for (const d of defs) {
+        if (d.id === tackleCue.id || tackleCue.assistId && d.id === tackleCue.assistId) continue;
+        const tr = d.track[Math.min(iEndF, d.track.length - 1)];
+        if (!tr) continue;
+        const ddF = Math.hypot(tr[0] - exF, tr[1] - eyF);
+        if (ddF >= 3.2) continue;
+        extrasF++;
+        if (extrasF <= 1 && ddF >= 2.2) continue;
+        const angF = Math.atan2(tr[1] - eyF, tr[0] - exF) || extrasF * 2.4;
+        const rrF = extrasF <= 1 ? 2.5 : 4.1 + (extrasF - 2) * 0.7;
+        constrainTrack(d.track, iEndF, [clamp6(exF + Math.cos(angF) * rrF, 1, 99), clamp6(eyF + Math.sin(angF) * rrF, -60, 61)], 8);
       }
     }
     if (p.fieldPos != null) {
@@ -54412,7 +54750,11 @@ ${renderAutoRecruitLog()}`;
     ".inbox-list",
     ".picker-list",
     ".school-conf-grid",
-    ".sched-picker-list"
+    ".sched-picker-list",
+    // Adjustment surfaces: every chip press re-renders the whole app, so without
+    // these two the timeout menu and the live call sheet jump to the top on each tap.
+    ".to-adjust-body",
+    ".callsheet-modal"
   ];
   var lastRenderedView = null;
   var _helpDelegationWired = false;
@@ -54544,17 +54886,21 @@ ${renderAutoRecruitLog()}`;
                         id="btn-back-top" title="Back" aria-label="Back" ${canBack ? "" : "disabled"}>\u2190</button>`;
     })()}
       <span class="topbar-crest">${school ? renderCrest(school, 26) : "\u2B21"}</span>
-      <div class="topbar-id">
-        <span class="topbar-nick">${school ? escapeHtml(school.nick || school.name || "BLUEPRINT").toUpperCase() : "BLUEPRINT"}</span>
-        <span class="topbar-meta">S${state.season} \xB7 ${escapeHtml(week)} \xB7 ${escapeHtml(phase)}</span>
-      </div>
+      ${(() => {
+      const sw = teamSwitchModel();
+      const inner = `<span class="topbar-nick">${school ? escapeHtml(school.nick || school.name || "BLUEPRINT").toUpperCase() : "BLUEPRINT"}</span>${sw.show ? '<span class="topbar-caret">\u25BE</span>' : ""}
+        <span class="topbar-meta">S${state.season} \xB7 ${escapeHtml(week)} \xB7 ${escapeHtml(phase)}</span>`;
+      return sw.show ? `<button class="topbar-id topbar-id-btn" id="btn-team-switch" aria-label="Switch chairs" aria-haspopup="dialog">${inner}</button>` : `<div class="topbar-id">${inner}</div>`;
+    })()}
       <button class="btn-icon topbar-inbox" id="btn-inbox-top" title="Inbox" aria-label="Inbox${unread > 0 ? `, ${unread} unread` : ""}">\u2709${unread > 0 ? `<span class="inbox-dot">${unread}</span>` : ""}</button>
     </header>
     <nav class="sidebar${state.ui.sidebarOpen ? " open" : ""}">
-      <div class="sidebar-brand">
-        <span class="brand-icon">${school ? renderCrest(school, 24) : "\u2B21"}</span>
-        <span class="brand-text">${school ? escapeHtml(school.nick || school.name || "BLUEPRINT").toUpperCase() : "BLUEPRINT"}</span>
-      </div>
+      ${(() => {
+      const sw = teamSwitchModel();
+      const inner = `<span class="brand-icon">${school ? renderCrest(school, 24) : "\u2B21"}</span>
+        <span class="brand-text">${school ? escapeHtml(school.nick || school.name || "BLUEPRINT").toUpperCase() : "BLUEPRINT"}</span>${sw.show ? '<span class="topbar-caret">\u25BE</span>' : ""}`;
+      return sw.show ? `<button class="sidebar-brand sidebar-brand-btn" id="btn-team-switch-side" aria-label="Switch chairs" aria-haspopup="dialog">${inner}</button>` : `<div class="sidebar-brand">${inner}</div>`;
+    })()}
       ${school ? '<div class="team-stripe"><span></span><span></span><span></span></div>' : ""}
       <div class="season-badge">
         <span class="season-label">S${state.season} \xB7 ${escapeHtml(week)}</span>
@@ -54628,6 +54974,7 @@ ${renderAutoRecruitLog()}`;
   ${renderLiveWatchOverlay()}
   ${renderGameResultModal()}
   ${renderSaveModal()}
+  ${renderTeamSwitchSheet()}
   ${renderPlayerCardModal()}
   ${renderKickoffModal()}
   ${renderCallSheetModal()}
@@ -54643,6 +54990,50 @@ ${renderAutoRecruitLog()}`;
     restoreScroll(_scroll, _viewChanged);
     syncOverlayInert();
     lastRenderedView = view;
+  }
+  function teamSwitchModel() {
+    let slots = null;
+    try {
+      if (isTreeGame(state)) {
+        const snap = treeSnapshot(state);
+        slots = ((snap == null ? void 0 : snap.slots) || []).filter((sl) => !sl.empty);
+      }
+    } catch (e) {
+      slots = null;
+    }
+    const offers = (state.pendingOffers || []).length;
+    const live = slots && slots.length > 1;
+    return { slots: slots || [], offers, show: !!(live || offers) };
+  }
+  function renderTeamSwitchSheet() {
+    if (!state.ui.showTeamSwitch) return "";
+    const m = teamSwitchModel();
+    if (!m.show) return "";
+    const rows = m.slots.map((sl) => `
+    <button class="ts-row${sl.active ? " ts-row-active" : ""}" data-ts-slot="${escapeHtml(sl.division)}"${sl.active ? " disabled" : ""}>
+      <span class="ts-div">${escapeHtml(sl.division)}</span>
+      <span class="ts-body">
+        <span class="ts-school">${escapeHtml(sl.schoolName || "\u2014")}</span>
+        <span class="ts-coach muted">${escapeHtml(sl.name || "Coach")}${sl.record ? ` \xB7 ${sl.record.wins}\u2013${sl.record.losses}` : ""}</span>
+      </span>
+      <span class="ts-tag">${sl.active ? "YOU" : "Coach him"}</span>
+    </button>`).join("");
+    const offerRow = m.offers ? `
+    <button class="ts-row" data-ts-offers="1">
+      <span class="ts-div">\u2709</span>
+      <span class="ts-body"><span class="ts-school">${m.offers} job offer${m.offers !== 1 ? "s" : ""} on the table</span>
+        <span class="ts-coach muted">Sign at Contract &amp; Signing Day</span></span>
+      <span class="ts-tag">Open</span>
+    </button>` : "";
+    return `
+  <div class="modal-overlay ts-overlay" data-ts-close="bg">
+    <div class="modal ts-sheet">
+      <div class="modal-header"><h2>Your chairs</h2></div>
+      <div class="ts-list">${rows}${offerRow}</div>
+      <p class="offseason-hint" style="padding:0 16px 12px">Switching chairs is free and instant \u2014 the clock is shared, so nothing moves in the world when you do it. Changing JOBS happens in the offseason.</p>
+      <div class="modal-footer" style="padding:0 16px 14px"><button class="btn-ghost" data-ts-close="btn" style="width:100%">Close</button></div>
+    </div>
+  </div>`;
   }
   function renderPrestige(p, max = 6) {
     const filled = Math.max(0, Math.min(Math.round(p || 0), max));
@@ -54871,13 +55262,39 @@ ${renderAutoRecruitLog()}`;
     } catch (e) {
       reel = [];
     }
+    let ls = null;
+    try {
+      ls = linescore(r);
+    } catch (e) {
+      ls = null;
+    }
+    const lsMine = (c) => isHome ? c.home : c.away;
+    const lsTheirs = (c) => isHome ? c.away : c.home;
     return `
+  ${ls ? `
+  <div class="box-score box-line">
+    <div class="box-row header">
+      <span></span>
+      ${ls.cells.map((c) => `<span>${c.q === 5 ? "OT" : c.q}</span>`).join("")}
+      <span>T</span>
+    </div>
+    <div class="box-row">
+      <span>${escapeHtml(((_a = school == null ? void 0 : school.name) == null ? void 0 : _a.substring(0, 10)) || "")}</span>
+      ${ls.cells.map((c) => `<span>${lsMine(c)}</span>`).join("")}
+      <span><b>${isHome ? ls.homeTotal : ls.awayTotal}</b></span>
+    </div>
+    <div class="box-row">
+      <span>${escapeHtml(((_b = opp == null ? void 0 : opp.name) == null ? void 0 : _b.substring(0, 10)) || "")}</span>
+      ${ls.cells.map((c) => `<span>${lsTheirs(c)}</span>`).join("")}
+      <span><b>${isHome ? ls.awayTotal : ls.homeTotal}</b></span>
+    </div>
+  </div>` : ""}
   ${reel.length ? `
   <div class="box-reel">
     <div class="box-reel-label">HIGHLIGHTS</div>
     ${reel.map((h) => `
       <div class="result-moment${h.side === "home" === isHome ? " ours" : " theirs"}">
-        <span class="moment-when">Q${h.q} ${h.clock}</span>
+        <span class="moment-when">${h.q === 5 ? "OT" : `Q${h.q}`} ${h.clock}</span>
         <span class="moment-text">${escapeHtml(h.text)}</span>
         <span class="moment-score">${escapeHtml(h.score)}</span>
       </div>`).join("")}
@@ -55403,20 +55820,21 @@ ${renderAutoRecruitLog()}`;
             ${plays.map((p) => {
         var _a2, _b, _c;
         const desc = describePlay(p, names);
+        let covTag = "";
         if (p.coverage && String(p.type || "").startsWith("pass") && !p.sack) {
           const pre = p.killCall === "toPass" ? "checked: " : "";
-          const cpt = p.concept ? `${p.concept}${p.audible ? " (audible)" : ""} ` : "";
-          const show = p.shownCoverage ? p.fooled ? ` \u2014 bit on ${p.shownCoverage.replace("Cover ", "")}` : ` (showed ${p.shownCoverage.replace("Cover ", "")})` : "";
+          const cpt = p.concept ? `${escapeHtml(p.concept)}${p.audible ? " (audible)" : ""} ` : "";
+          const show = p.shownCoverage ? p.fooled ? ` \u2014 bit on ${escapeHtml(p.shownCoverage.replace("Cover ", ""))}` : ` (showed ${escapeHtml(p.shownCoverage.replace("Cover ", ""))})` : "";
           let blame = "";
           if (p.complete && ((_a2 = p.yards) != null ? _a2 : 0) >= 15 && p.beatenDefId) {
             const bn = (_b = names[p.beatenDefId]) == null ? void 0 : _b.name;
-            if (bn) blame = p.covJob ? ` \u2014 beat ${bn} in the ${p.covJob}` : ` \u2014 beat ${bn}`;
+            if (bn) blame = p.covJob ? ` \u2014 beat ${escapeHtml(bn)} in the ${escapeHtml(p.covJob)}` : ` \u2014 beat ${escapeHtml(bn)}`;
           }
-          desc.text += ` <span class="pbp-cov">\xB7 ${pre}${cpt}vs ${p.coverage}${show}${blame}</span>`;
+          covTag = ` <span class="pbp-cov">\xB7 ${pre}${cpt}vs ${escapeHtml(p.coverage)}${show}${blame}</span>`;
         } else if (p.concept && String(p.type || "").startsWith("run") && !p.optionPhase && !["Jet Sweep", "Draw"].includes(p.concept)) {
           const pre = p.killCall === "toRun" ? "checked: " : "";
-          const gap = p.runGap && ((_c = p.yards) != null ? _c : 0) <= 0 && !p.isScramble ? ` \u2014 stuffed in the ${p.runGap}` : "";
-          desc.text += ` <span class="pbp-cov">\xB7 ${pre}${p.concept}${gap}</span>`;
+          const gap = p.runGap && ((_c = p.yards) != null ? _c : 0) <= 0 && !p.isScramble ? ` \u2014 stuffed in the ${escapeHtml(p.runGap)}` : "";
+          covTag = ` <span class="pbp-cov">\xB7 ${pre}${escapeHtml(p.concept)}${gap}</span>`;
         }
         const dd = p.down && p.distance != null ? `${ordinal3(p.down)} & ${p.distance}` : "";
         const form = p.offFormation ? `${p.offFormation} vs ${p.defFront || "?"}` : "";
@@ -55433,7 +55851,7 @@ ${renderAutoRecruitLog()}`;
                       ${sitChip ? `<span class="pbp-chip pbp-chip-sit">${sitChip}</span>` : ""}
                       ${p.blitzFired ? `<span class="pbp-chip pbp-chip-blitz">BLITZ</span>` : ""}
                     </span>
-                    <span class="pbp-desc ${desc.cls}">${escapeHtml(desc.text)}</span>
+                    <span class="pbp-desc ${desc.cls}">${escapeHtml(desc.text)}${covTag}</span>
                     ${form ? `<span class="pbp-form">${escapeHtml(form)}</span>` : ""}
                   </span>
                 </div>
@@ -55784,6 +56202,41 @@ ${renderAutoRecruitLog()}`;
     (_n = document.getElementById("close-pcard")) == null ? void 0 : _n.addEventListener("click", () => {
       state.ui.pcardId = null;
       renderApp();
+    });
+    for (const id of ["btn-team-switch", "btn-team-switch-side"]) {
+      const _tsBtn = document.getElementById(id);
+      if (_tsBtn) _tsBtn.addEventListener("click", () => {
+        state.ui.showTeamSwitch = true;
+        renderApp();
+      });
+    }
+    document.querySelectorAll("[data-ts-close]").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        if (el.dataset.tsClose === "bg" && e.target !== el) return;
+        state.ui.showTeamSwitch = false;
+        renderApp();
+      });
+    });
+    document.querySelectorAll("[data-ts-slot]").forEach((el) => {
+      el.addEventListener("click", () => {
+        state.ui.showTeamSwitch = false;
+        try {
+          const block = lockstepBlock(state);
+          if (block) {
+            notify(block, "warning", 5e3);
+            renderApp();
+            return;
+          }
+        } catch (e) {
+        }
+        switchTreeSlot(el.dataset.tsSlot);
+      });
+    });
+    document.querySelectorAll("[data-ts-offers]").forEach((el) => {
+      el.addEventListener("click", () => {
+        state.ui.showTeamSwitch = false;
+        navigate("program");
+      });
     });
     for (const id of ["btn-inbox", "btn-inbox-top"]) {
       (_o = document.getElementById(id)) == null ? void 0 : _o.addEventListener("click", () => {
