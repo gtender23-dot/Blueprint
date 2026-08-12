@@ -8849,7 +8849,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "8409111b53";
+globalThis.__BUILD__ = "1ef35b5fa3";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -11307,7 +11307,21 @@ var _CFB = (() => {
         REP_VIOLATION: 10,
         REP_RESCIND: 3,
         // Prestige (§12)
-        PRESTIGE_W_WIN: 0.12,
+        // [PLAYTEST 2026-08-12 item 18] Re-tuned. At 0.12 a 1-star program that went
+        // 11-1 gained +0.025 prestige — it entered the next August still a 1-star,
+        // which is the owner's exact report. The theoretical ceiling from winning was
+        // +0.06/season, so a full star took 3-4 undefeated title years while a 12%
+        // baseline creep dragged you back toward where you started. Prestige was
+        // effectively static. Measured before/after by tools/prestige_trajectory_probe.
+        PRESTIGE_W_WIN: 0.4,
+        // Winning big is worth more than winning. Above SURGE_AT the gain goes
+        // super-linear, and below SLUMP_AT the fall does the same — so a program that
+        // is genuinely great (or genuinely collapsing) moves at the pace people expect,
+        // while an ordinary winning season still only nudges.
+        PRESTIGE_SURGE_AT: 0.7,
+        PRESTIGE_W_SURGE: 0.6,
+        PRESTIGE_SLUMP_AT: 0.3,
+        PRESTIGE_W_SLUMP: 0.6,
         PRESTIGE_W_TITLE: 0.15,
         PRESTIGE_W_BOWL: 0.04,
         PRESTIGE_W_CONF: 0.08,
@@ -11317,7 +11331,10 @@ var _CFB = (() => {
         // overperformance drags the BASELINE itself — slow, permanent, symmetric.
         // ~0.08 of the gap per season: a decade of +1★ form ≈ +0.6★ of permanent
         // pedigree. Fading powers sink the same way. Division caps still bound it.
-        PRESTIGE_BASELINE_CREEP: 0.12,
+        // [PLAYTEST 2026-08-12 item 18] 0.12 → 0.05. The baseline is what prestige
+        // decays TOWARD, so a fast creep normalised a hot streak almost as quickly as
+        // it was earned. A run should take a few years to become who you are.
+        PRESTIGE_BASELINE_CREEP: 0.05,
         // Job market (§10.2)
         JOB_REP_W: 0.5,
         JOB_WIN_W: 0.35,
@@ -11399,6 +11416,11 @@ var _CFB = (() => {
         PRESS_SIG_DOCK: 6,
         // ...and the dock for asking a front to run someone else's blitz
         FZ_DROP_RATE: 0.8,
+        // [PLAYTEST 2026-08-12 item 4B] How often a drop-eligible edge bails out of a
+        // shown rush on his own, with no dial set. This lived as a bare `?? 18` inline
+        // in sim.js while every other pressure number lives here — and the depth-chart
+        // tooltip hard-coded the same 18 in prose, so the two were free to drift apart.
+        FZ_NATIVE_DROP_PCT: 18,
         // non-3-4 fire zone: odds the shown rusher actually bails
         // ── PASS 4 (Aug 2026): pressure flavors — call ingredients only ────────────
         // pressLook ("mug"/"amoeba") and dogGame ("green"/"cross") ride defCalls
@@ -25832,10 +25854,11 @@ var _CFB = (() => {
     const dlIds = defPersonnel.DL || [];
     const olbSet = new Set(defPersonnel.OLB || []);
     const droppedIds = [];
+    const _dropFront = (DEF_DROP_ELIGIBLE[frontId] || []).length > 0;
     for (let i = 0; i < dlIds.length; i++) {
       const id = dlIds[i];
-      if ((frontId === "3-4" || frontId === "Penny") && olbSet.has(id)) {
-        const dropP = ((_k = dropShareById == null ? void 0 : dropShareById[id]) != null ? _k : 18) / 100;
+      if (_dropFront && olbSet.has(id)) {
+        const dropP = ((_k = dropShareById == null ? void 0 : dropShareById[id]) != null ? _k : C.FZ_NATIVE_DROP_PCT) / 100;
         if (Math.random() < dropP) {
           droppedIds.push(id);
           continue;
@@ -26077,7 +26100,8 @@ var _CFB = (() => {
       result.rushN = passRushers.length;
       result.rush3 = true;
     }
-    const defPersonnelCov = rush3DroppedIds.length ? __spreadProps2(__spreadValues2({}, defPersonnel), { LB: [...defPersonnel.LB || [], ...rush3DroppedIds] }) : defPersonnel;
+    const _covExtra = [...rush3DroppedIds];
+    const defPersonnelCov = _covExtra.length ? __spreadProps2(__spreadValues2({}, defPersonnel), { LB: [...defPersonnel.LB || [], ..._covExtra] }) : defPersonnel;
     const forcedScreen = (offPlan == null ? void 0 : offPlan._forceScreen) || null;
     const isScreen = !!forcedScreen || playType === "pass_short" && !result.playAction && Math.random() < ((_n = offPlan.screenRate) != null ? _n : 14) / 100;
     const edgeRushMult = ((defPlan == null ? void 0 : defPlan.edgePlayEff) === "crash" ? 1.08 : (defPlan == null ? void 0 : defPlan.edgePlayEff) === "contain" ? 0.94 : 1) * clamp2(1 + (((_o = offPlan == null ? void 0 : offPlan.protEmphasis) != null ? _o : 50) - 50) / -250, 0.8, 1.2);
@@ -26085,8 +26109,8 @@ var _CFB = (() => {
     if (fireZone) result.fireZone = true;
     let fzBonus = 0;
     if (fireZone) {
-      const d0 = defRoster.find((pl) => pl.id === droppedIds[0]);
-      const craft = d0 ? (d0.attributes.AWR + d0.attributes.TEC) / 2 : 50;
+      const _dropped = droppedIds.map((id) => defRoster.find((pl) => pl.id === id)).filter(Boolean);
+      const craft = _dropped.length ? _dropped.reduce((sum, d) => sum + (d.attributes.AWR + d.attributes.TEC) / 2, 0) / _dropped.length : 50;
       fzBonus = clamp2(8 + (craft - 50) * 0.3, 5, 22);
     }
     const _cAwr = (() => {
@@ -30522,6 +30546,7 @@ var _CFB = (() => {
       init_spread();
       init_concepts();
       init_constants();
+      init_constants_field();
       init_contests();
       init_fieldassign();
       init_formations();
@@ -33860,12 +33885,15 @@ var _CFB = (() => {
       const rw = school.recentWins || [];
       let wSum = 0, wgt = 0;
       for (let i = 0; i < W.length; i++) {
+        if (rw[i] == null) continue;
         wgt += W[i];
-        const wins = rw[i] != null ? rw[i] : 0.5 * gamesPerSeason;
-        wSum += W[i] * (wins / gamesPerSeason);
+        wSum += W[i] * (rw[i] / gamesPerSeason);
       }
       const windowPct = wgt > 0 ? wSum / wgt : 0.5;
-      const delta = C.PRESTIGE_W_WIN * (windowPct - 0.5) - C.PRESTIGE_W_DECAY * (school.prestige - school.baseline);
+      const surge = Math.max(0, windowPct - C.PRESTIGE_SURGE_AT);
+      const slump = Math.max(0, C.PRESTIGE_SLUMP_AT - windowPct);
+      const form = C.PRESTIGE_W_WIN * (windowPct - 0.5) + C.PRESTIGE_W_SURGE * surge - C.PRESTIGE_W_SLUMP * slump;
+      const delta = form - C.PRESTIGE_W_DECAY * (school.prestige - school.baseline);
       const lo = (_a = school.prestigeMin) != null ? _a : 1;
       const hi = (_c = school.prestigeMax) != null ? _c : ((_b = C.PRESTIGE_MAX) == null ? void 0 : _b[school.division]) || 5;
       school.prestige = clamp4(school.prestige + delta, lo, hi);
@@ -47224,7 +47252,7 @@ var _CFB = (() => {
   function renderDropControl(slot, blitzShares) {
     const val = _pieShareOf(slot, blitzShares);
     return `
-  <div class="fs-blitz fs-drop" title="His slice of the pressure pie \u2014 the share of fired blitzes that are a FIRE ZONE through him: he drops into coverage and a backer comes behind. Undialed, he still bails naturally on ~18% of snaps.">
+  <div class="fs-blitz fs-drop" title="His slice of the pressure pie \u2014 the share of fired blitzes that are a FIRE ZONE through him: he drops into coverage and a backer comes behind. Undialed, he still bails naturally on ~${C.FZ_NATIVE_DROP_PCT}% of snaps.">
     <span class="fs-drop-ico">\u{1F6E1}</span>
     <button class="fs-blitz-btn" data-blitz-step="-1" data-blitz-slot="${slot.id}">\u2212</button>
     <span class="fs-blitz-val">${val}</span>
