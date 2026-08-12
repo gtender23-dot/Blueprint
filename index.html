@@ -593,6 +593,11 @@ body::before {
 .pcard-stats { padding: 8px 16px 0; font-size: 11px; }
 .pcard-attrs { padding: 12px 16px 16px; }
 
+.btn-advance-locked {
+  /* multi-coach: play your programs first — the week is gated */
+  filter: grayscale(0.7) brightness(0.7);
+  opacity: 0.65; cursor: not-allowed;
+}
 .btn-advance {
   /* high-value action: team fill + brushed texture + a strong SECONDARY-color ring/glow */
   background:
@@ -8882,7 +8887,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "3cdc6afb5e";
+globalThis.__BUILD__ = "f06f21aee1";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -16237,33 +16242,6 @@ var _CFB = (() => {
       return `${(s == null ? void 0 : s.name) || r.division} (${r.division})`;
     });
     return `Your other program${pending2.length > 1 ? "s play" : " plays"} this week: ${names.join(", ")}. Take the game over or accept the result before the week moves.`;
-  }
-  function softFinalize(state2, division) {
-    const row = agendaRows(state2).find((r) => r.division === division);
-    if (!row) return { ok: false, reason: "Nothing pending for that coach." };
-    row.status = "finalized";
-    return { ok: true };
-  }
-  function softFinalizeAll(state2) {
-    let n = 0;
-    for (const row of agendaPending(state2)) {
-      row.status = "finalized";
-      n++;
-    }
-    return n;
-  }
-  function takeOver(state2, division) {
-    const t = ensureTree(state2);
-    if (!t) return { ok: false, reason: "Not a tree game." };
-    const prior = new Map(agendaRows(state2).map((r) => [r.division, r.status]));
-    const res = activateSlot(state2, division);
-    if (!res.ok) return res;
-    t.agenda = { season: null, day: null, rows: [] };
-    refreshAgenda(state2);
-    for (const row of t.agenda.rows) {
-      if (prior.get(row.division)) row.status = prior.get(row.division);
-    }
-    return res;
   }
   function treeSeasonTick(state2) {
     const t = ensureTree(state2);
@@ -32855,9 +32833,11 @@ var _CFB = (() => {
       return [{ type: "warning", text: "Finish your halftime adjustments before continuing." }];
     }
     state2._dispatch = dispatch2;
-    {
-      const cw = resolveCoachedWeek(state2);
-      if (cw.pending) return cw.events;
+    if (coachedSchoolIds(state2).length > 1) {
+      const mine = coachedGamesForDay(state2, state2.day + 1);
+      if (mine.some((g) => !g.result)) {
+        return [{ type: "warning", text: "Play or sim each of your programs' games this week before you advance.", coachWeekGate: true }];
+      }
     }
     if (ensureTree(state2)) {
       refreshAgenda(state2);
@@ -33628,14 +33608,7 @@ var _CFB = (() => {
       if (pending2.coachWeek && state2.coachWeek) {
         (state2.coachWeek.results = state2.coachWeek.results || []).push(r);
         events2.push({ type: "game", result });
-        const cont = resolveCoachedWeek(state2);
-        if (cont.pending) {
-          events2.push(...cont.events);
-          return events2;
-        }
-        const adv = advanceDay(state2, state2._dispatch || (() => {
-        }));
-        return events2.concat(adv);
+        return events2;
       }
       const stash = state2.pendingWeeklyCands;
       const dayCands = stash && stash.day === game.day ? stash.cands : [];
@@ -35083,53 +35056,68 @@ var _CFB = (() => {
     if (!halftimeToken) return null;
     return { token: halftimeToken, game, home, away, coachWeek: true, context: { kind: "regular", day: game.day } };
   }
-  function resolveCoachedWeek(state2) {
+  function ensureCoachWeek(state2) {
     var _a;
-    const coachedIds = coachedSchoolIds(state2);
-    if (coachedIds.length <= 1) return { pending: false, events: [] };
     const day = state2.day + 1;
-    const games = coachedGamesForDay(state2, day);
-    if (!games.length) return { pending: false, events: [] };
     let cw = state2.coachWeek;
     if (!cw || cw.day !== day) {
       cw = state2.coachWeek = { day, origActive: ((_a = state2.tree) == null ? void 0 : _a.active) || null, sim: {}, results: [], restored: false };
     }
-    const next = games.find((g) => !g.result);
-    if (!next) {
-      finishCoachedWeek(state2);
-      return { pending: false, events: [] };
-    }
-    const idSet = new Set(coachedIds);
-    const steerId = idSet.has(next.homeId) ? next.homeId : next.awayId;
+    return cw;
+  }
+  function activateCoachedChair(state2, gameId) {
+    const game = (state2.schedule || []).find((g) => g.id === gameId);
+    if (!game || game.result) return null;
+    ensureCoachWeek(state2);
+    const idSet = new Set(coachedSchoolIds(state2));
+    const steerId = idSet.has(game.homeId) ? game.homeId : game.awayId;
     const div = coachedSlotDivFor(state2, steerId);
     if (div) activateSlot(state2, div);
-    if (cw.sim && cw.sim[next.id]) {
-      simCoachedGameNow(state2, next);
-      return resolveCoachedWeek(state2);
+    const oppId = game.homeId === steerId ? game.awayId : game.homeId;
+    const opp = state2.world.schools.find((s) => s.id === oppId) || null;
+    return { game, opp, steerId };
+  }
+  function beginCoachedGame(state2, gameId, sim = false) {
+    const game = (state2.schedule || []).find((g) => g.id === gameId);
+    if (!game || game.result) return { ok: false };
+    ensureCoachWeek(state2);
+    const idSet = new Set(coachedSchoolIds(state2));
+    const steerId = idSet.has(game.homeId) ? game.homeId : game.awayId;
+    const div = coachedSlotDivFor(state2, steerId);
+    if (div) activateSlot(state2, div);
+    if (sim) {
+      const result = simCoachedGameNow(state2, game);
+      return { ok: true, simmed: true, result, game };
     }
-    const pending2 = startCoachedGamePause(state2, next);
+    const pending2 = startCoachedGamePause(state2, game);
     if (!pending2) {
-      simCoachedGameNow(state2, next);
-      return resolveCoachedWeek(state2);
+      const result = simCoachedGameNow(state2, game);
+      return { ok: true, simmed: true, result, game };
     }
     state2.pendingHalftime = pending2;
-    return { pending: true, events: [pendingGameEvent(pending2)] };
+    return { ok: true, pending: true, game };
   }
   function simCurrentCoachedGame(state2, rest = false) {
-    const cw = state2.coachWeek;
     const pending2 = state2.pendingHalftime;
-    if (!cw || !(pending2 == null ? void 0 : pending2.coachWeek)) return [];
-    cw.sim = cw.sim || {};
-    cw.sim[pending2.game.id] = true;
-    if (rest) {
-      for (const g of coachedGamesForDay(state2, cw.day)) cw.sim[g.id] = true;
+    const cw = ensureCoachWeek(state2);
+    if (pending2 == null ? void 0 : pending2.coachWeek) {
+      const g = pending2.game;
+      state2.pendingHalftime = null;
+      const result = simCoachedGameNow(state2, g);
+      const events = [{ type: "game", result }];
+      if (rest) {
+        for (const other of coachedGamesForDay(state2, cw.day)) {
+          if (!other.result) simCoachedGameNow(state2, other);
+        }
+      }
+      return events;
     }
-    state2.pendingHalftime = null;
-    const cont = resolveCoachedWeek(state2);
-    if (cont.pending) return cont.events;
-    const adv = advanceDay(state2, state2._dispatch || (() => {
-    }));
-    return cont.events.concat(adv);
+    if (rest) {
+      for (const other of coachedGamesForDay(state2, cw.day)) {
+        if (!other.result) simCoachedGameNow(state2, other);
+      }
+    }
+    return [];
   }
   function startNewSeason(state2, dispatch2) {
     state2.playoffs = null;
@@ -35519,6 +35507,7 @@ var _CFB = (() => {
   __export(state_exports, {
     advanceDay: () => advanceDay2,
     advanceDay2: () => advanceDay2,
+    afterCoachedGameResultClose: () => afterCoachedGameResultClose,
     answerFourthDown: () => answerFourthDown,
     answerPlayCall: () => answerPlayCall,
     chooseKickoffMode: () => chooseKickoffMode,
@@ -35540,6 +35529,7 @@ var _CFB = (() => {
     getUpcomingGame: () => getUpcomingGame,
     getWeekLabel: () => getWeekLabel,
     getWeekShort: () => getWeekShort,
+    kickoffCoachedGame: () => kickoffCoachedGame,
     liveWatchOn: () => liveWatchOn,
     loadFromSlot: () => loadFromSlot,
     navigate: () => navigate,
@@ -35561,6 +35551,7 @@ var _CFB = (() => {
     setNotifyFn: () => setNotifyFn,
     setRenderFn: () => setRenderFn,
     simCoached: () => simCoached,
+    simCoachedGameFromAgenda: () => simCoachedGameFromAgenda,
     simToBreak: () => simToBreak,
     simToQuarterEnd: () => simToQuarterEnd,
     skipToOffseason: () => skipToOffseason,
@@ -36097,10 +36088,50 @@ var _CFB = (() => {
   async function chooseKickoffMode(mode) {
     state.settings.lastCallMode = mode;
     state._callModeToday = mode;
+    const cwGameId = state.ui.pendingKickoff && state.ui.pendingKickoff.coachWeekGameId;
     state.ui.pendingKickoff = null;
     state.ui.callSheetFormation = null;
     state.ui.autoRun = false;
+    if (cwGameId) {
+      const res = beginCoachedGame(state, cwGameId);
+      if (res && res.pending && state.pendingHalftime) {
+        const tok = state.pendingHalftime.token;
+        const ev = (tok == null ? void 0 : tok.pending) ? { type: tok.pending.kind === "fourth" ? "fourthdown" : "playcall", game: state.pendingHalftime.game, token: tok } : { type: "halftime", game: state.pendingHalftime.game, token: tok };
+        if (handleGamePendingEvents([ev])) return;
+      } else if (res && res.simmed) {
+        processEvents([{ type: "game", result: res.result }]);
+      }
+      await autosave();
+      rerender();
+      return;
+    }
     await advanceDay2();
+  }
+  async function kickoffCoachedGame(gameId) {
+    const info = activateCoachedChair(state, gameId);
+    if (!info) {
+      rerender();
+      return;
+    }
+    state._pregamePlan = null;
+    ensurePregamePlan(state);
+    state._callModeToday = null;
+    state.ui.pendingKickoff = { opponent: info.opp && info.opp.name || null, coachWeekGameId: gameId };
+    await autosave();
+    rerender();
+  }
+  async function simCoachedGameFromAgenda(gameId) {
+    const res = beginCoachedGame(state, gameId, true);
+    if (res && res.result) processEvents([{ type: "game", result: res.result }]);
+    await autosave();
+    rerender();
+  }
+  async function afterCoachedGameResultClose() {
+    state.ui.showGameResult = false;
+    state.ui.lastGameResult = null;
+    if (state.coachWeek && state.ui.view !== "dashboard") navigate("dashboard");
+    await autosave();
+    rerender();
   }
   async function answerPlayCall(call) {
     var _a, _b;
@@ -36327,8 +36358,7 @@ var _CFB = (() => {
   }
   async function simCoached(rest = false) {
     const events = simCurrentCoachedGame(state, rest);
-    if (handleGamePendingEvents(events)) return;
-    state.ui.showHalftime = !!state.pendingHalftime;
+    state.ui.showHalftime = false;
     processEvents(events);
     await autosave();
     rerender();
@@ -45650,6 +45680,7 @@ var _CFB = (() => {
       below = renderSeasonStrip(school);
       btnLabel = state.day === 4 ? "KICK OFF THE SEASON \u2192" : "ADVANCE WEEK \u2192";
     }
+    const coachWeekPending = coachedSchoolIds(state).length > 1 ? coachedGamesForDay(state, state.day + 1).filter((g) => !g.result).length : 0;
     return `
   <div class="view-dashboard event-takeover">
     <div class="view-header">
@@ -45660,7 +45691,7 @@ var _CFB = (() => {
         </h1>
         <div class="view-subtitle">Season ${state.season} &middot; ${escapeHtml(dashCalendarLine())}</div>
       </div>
-      <button class="btn-advance" id="btn-advance-day">${btnLabel}</button>
+      <button class="btn-advance${coachWeekPending ? " btn-advance-locked" : ""}" id="btn-advance-day"${coachWeekPending ? ` disabled aria-disabled="true" title="Play or sim each of your programs' games below first"` : ""}>${coachWeekPending ? `PLAY YOUR GAMES FIRST (${coachWeekPending})` : btnLabel}</button>
     </div>
 
     ${renderTreeAgenda()}
@@ -45684,33 +45715,54 @@ var _CFB = (() => {
   }
   function renderTreeAgenda() {
     if (!isTreeGame(state)) return "";
-    refreshAgenda(state);
-    const rows = agendaRows(state);
-    if (!rows.length) return "";
-    const pending2 = agendaPending(state).length;
+    if (coachedSchoolIds(state).length <= 1) return "";
+    const day = state.day + 1;
+    const games = coachedGamesForDay(state, day);
+    if (!games.length) return "";
     const nameOf = (id) => {
       var _a;
       var _a2;
       return ((_a2 = state.world) == null ? void 0 : (_a = _a2.schools.find((s) => s.id === id)) == null ? void 0 : _a.name) || "?";
     };
+    const divOf = (schoolId) => {
+      var _a2;
+      const slots = ((_a2 = state.tree) == null ? void 0 : _a2.slots) || {};
+      for (const [div, slot] of Object.entries(slots)) if (slot && !slot.retired && slot.schoolId === schoolId) return div;
+      return "";
+    };
+    const idSet = new Set(coachedSchoolIds(state));
+    const pending2 = games.filter((g) => !g.result).length;
     return `
     <div class="tree-agenda${pending2 ? " tree-agenda-blocking" : ""}">
       <div class="tree-agenda-hdr">
-        <span>YOUR OTHER PROGRAMS \xB7 THIS WEEK</span>
-        ${pending2 > 1 ? '<button class="btn-ghost btn-sm" id="tree-finalize-all">Accept all</button>' : ""}
+        <span>YOUR PROGRAMS \xB7 THIS WEEK</span>
+        ${pending2 ? `<span class="muted" style="font-weight:400">${pending2} to play</span>` : '<span class="tree-agenda-done">\u2713 all played \u2014 advance the week</span>'}
       </div>
-      ${rows.map((r) => `
-        <div class="tree-agenda-row${r.status === "finalized" ? " done" : ""}">
+      ${games.map((g) => {
+      const mineId = idSet.has(g.homeId) ? g.homeId : g.awayId;
+      const oppId = mineId === g.homeId ? g.awayId : g.homeId;
+      const home = mineId === g.homeId;
+      const div = divOf(mineId);
+      let scoreTag = "";
+      if (g.result) {
+        const my = home ? g.result.homeScore : g.result.awayScore;
+        const th = home ? g.result.awayScore : g.result.homeScore;
+        const won = my > th;
+        scoreTag = `<span class="tree-agenda-done" style="color:${won ? "var(--green)" : "var(--red)"}">${won ? "W" : "L"} ${my}\u2013${th}</span>`;
+      }
+      return `
+        <div class="tree-agenda-row${g.result ? " done" : ""}">
           <div class="tree-agenda-game">
-            <span class="tree-chair-div">${r.division}</span>
-            ${escapeHtml(nameOf(r.schoolId))} <span class="muted">${r.home ? "vs" : "at"} ${escapeHtml(nameOf(r.oppId))}</span>
+            ${div ? `<span class="tree-chair-div">${div}</span>` : ""}
+            ${escapeHtml(nameOf(mineId))} <span class="muted">${home ? "vs" : "at"} ${escapeHtml(nameOf(oppId))}</span>
           </div>
-          ${r.status === "finalized" ? '<span class="tree-agenda-done">\u2713 accepted</span>' : `<div class="tree-agenda-acts">
-                 <button class="btn-ghost btn-sm" data-tree-final="${r.division}">Soft finalize</button>
-                 <button class="btn-primary btn-sm" data-tree-take="${r.division}">Take over</button>
+          ${g.result ? scoreTag : `<div class="tree-agenda-acts">
+                 <button class="btn-ghost btn-sm" data-cw-sim="${escapeHtml(g.id)}">Sim</button>
+                 <button class="btn-primary btn-sm" data-cw-kick="${escapeHtml(g.id)}">Kickoff \u2192</button>
                </div>`}
-        </div>`).join("")}
-      ${pending2 ? `<div class="tree-agenda-note">The week can't move until every one of these is played or accepted. That's the deal with running more than one program \u2014 one clock, one truth.</div>` : ""}
+        </div>`;
+    }).join("")}
+      ${pending2 ? `<div class="tree-agenda-note">Play or sim each of your programs this week. Kickoff runs the pregame, then halftime, then the final and the box score \u2014 close it and take over the next when you're ready. The week advances once they're all done.</div>` : ""}
     </div>`;
   }
   function dashCalendarLine() {
@@ -47088,22 +47140,12 @@ var _CFB = (() => {
       rerender();
     });
     setupHandoffListeners();
-    document.querySelectorAll("[data-tree-final]").forEach((b) => b.addEventListener("click", () => {
-      softFinalize(state, b.dataset.treeFinal);
-      rerender();
+    document.querySelectorAll("[data-cw-kick]").forEach((b) => b.addEventListener("click", async () => {
+      await kickoffCoachedGame(b.dataset.cwKick);
     }));
-    (_e = document.getElementById("tree-finalize-all")) == null ? void 0 : _e.addEventListener("click", () => {
-      softFinalizeAll(state);
-      rerender();
-    });
-    document.querySelectorAll("[data-tree-take]").forEach((b) => b.addEventListener("click", async () => {
-      const res = takeOver(state, b.dataset.treeTake);
-      if (!res.ok) {
-        notify(res.reason, "warning", 4e3);
-        return;
-      }
-      notify(`You're on the ${res.schoolName} sideline this week.`, "info", 3500);
-      rerender();
+    document.querySelectorAll("[data-cw-sim]").forEach((b) => b.addEventListener("click", async () => {
+      b.disabled = true;
+      await simCoachedGameFromAgenda(b.dataset.cwSim);
     }));
     (_d = document.getElementById("btn-advance-day")) == null ? void 0 : _d.addEventListener("click", async () => {
       var _a22, _b2, _c2, _d2, _e2;
@@ -57539,12 +57581,20 @@ ${renderAutoRecruitLog()}`;
         closeInstantClassicReplay();
         return;
       }
+      if (state.coachWeek) {
+        afterCoachedGameResultClose();
+        return;
+      }
       state.ui.showGameResult = false;
       renderApp();
     });
     (_v = document.getElementById("close-game-result-btn")) == null ? void 0 : _v.addEventListener("click", () => {
       if (state._instantClassicReplay) {
         closeInstantClassicReplay();
+        return;
+      }
+      if (state.coachWeek) {
+        afterCoachedGameResultClose();
         return;
       }
       state.ui.showGameResult = false;
@@ -57555,6 +57605,10 @@ ${renderAutoRecruitLog()}`;
       if (e.target.id !== "game-result-overlay") return;
       if (state._instantClassicReplay) {
         closeInstantClassicReplay();
+        return;
+      }
+      if (state.coachWeek) {
+        afterCoachedGameResultClose();
         return;
       }
       state.ui.showGameResult = false;
