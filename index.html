@@ -3304,6 +3304,11 @@ input[type="range"] { accent-color: var(--team-1); }
   font-size: 12px; font-weight: 800; color: var(--green);
   width: 40px; text-align: right; font-variant-numeric: tabular-nums;
 }
+.share-diff-badge {
+  font-size: 10px; font-weight: 700; color: var(--gold);
+  width: 62px; text-align: right; white-space: nowrap;
+}
+.share-diff-badge.share-diff-none { visibility: hidden; }
 
 /* Scout history tab */
 .hist-natty { color: var(--gold); font-weight: 800; }
@@ -8067,6 +8072,34 @@ body *::after {
 .trait-chip.trait-flaw { border-color: #c05a5a; color: #d98080; }
 .trait-chip.trait-flaw .trait-pips { color: #d98080; }
 .trait-chip.trait-fogged { opacity: .75; font-style: italic; }
+
+/* Item 10 — full TRAITS block on the player card (touch-friendly, no hover needed) */
+.trait-detail-card .card-sub { font-size: 11px; color: var(--muted, #9a90b0); margin-left: 8px; }
+.trait-detail-list { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.trait-detail-row {
+  padding: 8px 10px; border-radius: 8px;
+  background: var(--raised, #262033); border-left: 3px solid var(--border, #3a3150);
+}
+.trait-detail-row.trait-detail-bridge { border-left-color: var(--gold, #e8c05a); }
+.trait-detail-row.trait-detail-flaw { border-left-color: #c05a5a; }
+.trait-detail-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.trait-detail-name { font-size: 13px; font-weight: 700; color: var(--text, #e8e2f4); }
+.trait-detail-bridge .trait-detail-name { color: var(--gold, #e8c05a); }
+.trait-detail-flaw .trait-detail-name { color: #d98080; }
+.trait-detail-lv { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--accent, #c778f0); }
+.trait-detail-tag { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted, #9a90b0); }
+.trait-detail-desc { font-size: 12px; color: var(--text-1, #cfc7e0); margin-top: 3px; line-height: 1.4; }
+.trait-detail-grow { font-size: 11px; color: var(--muted, #9a90b0); margin-top: 4px; font-style: italic; }
+
+/* Item 10 — compact trait strip on the roster row */
+.trait-mini-row { display: inline-flex; flex-wrap: wrap; gap: 3px; margin-left: 6px; vertical-align: middle; }
+.trait-mini {
+  font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 999px;
+  background: var(--raised, #262033); border: 1px solid var(--border, #3a3150);
+  color: var(--text-1, #cfc7e0); white-space: nowrap;
+}
+.trait-mini-bridge { border-color: var(--gold, #e8c05a); color: var(--gold, #e8c05a); }
+.trait-mini-flaw { border-color: #c05a5a; color: #d98080; }
 .frame-line strong { font-weight: 700; }
 .frame-jobs { display: inline-flex; gap: 3px; align-items: baseline; margin-left: 2px; }
 .frame-job-chip {
@@ -8849,7 +8882,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "74f9a1fc82";
+globalThis.__BUILD__ = "4c6ef8d02e";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -10137,6 +10170,23 @@ var _CFB = (() => {
         // per-return breakaway ceiling [TUNE Jul 2026: 0.06→0.04]
         PUNT_FAIR_CATCH: 0.45,
         // fraction of returnable punts fair-caught/downed (no return)
+        // Subsystem 6 PASS 2 (Aug 2026): muffed/fumbled returns — a real ST turnover source the
+        // pass-1 model left out (returns were clean-or-fair-catch, no way to lose the ball). Sources
+        // (footballperspective fumble study): of ~30.8k punts, ~3.5% were muffed/fumbled by the return
+        // team and the kicking team fell on ~1/3 of those (~1.15% of ALL punts became turnovers);
+        // ~3.1% of kickoffs were fumbled with the kicking team recovering ~1%. The returner's
+        // ball-security (0.5*HND+0.5*SEC) suppresses the muff, so a sure-handed returner rarely bobbles
+        // and a poor one is a live risk. Turnover-band-safe (adds ~0.05/team-game each).
+        PUNT_MUFF_BASE: 0.035,
+        // fraction of FIELDED (non-fair-catch) punts muffed at the catch
+        KO_MUFF_BASE: 0.022,
+        // fraction of RETURNED kickoffs fumbled/muffed
+        MUFF_RECOVER_KICK: 0.33,
+        // share of muffs the kicking/coverage team falls on -> the return team loses possession
+        MUFF_HND_PIVOT: 55,
+        // returner ball-security (0.5*HND+0.5*SEC) at which the base muff rate holds
+        MUFF_HND_SCALE: 9e-4,
+        // per-point security shift in muff prob around the pivot (±30 pts ≈ ∓0.027)
         PAT2_RATE: 0.47,
         // Subsystem 6 (Aug 2026): onside recovery is no longer a flat 0.15. Expected onside
         // (hands team out, everyone knows it is coming) recovers ~11%; a surprise onside ~60%.
@@ -14155,99 +14205,579 @@ var _CFB = (() => {
       };
       PLAY_CATALOG = {
         // DEFENSE — pursuit & tackling
-        wrapTackler: { name: "Wrap Tackler", pos: ["LB", "OLB", "S", "CB", "DE", "DT"], hook: "breaksTackle chance" },
-        openField: { name: "Open-Field Tackler", pos: ["S", "CB", "LB", "OLB"], hook: "geoYAC pMake" },
-        bigHitter: { name: "Big Hitter", pos: ["S", "LB", "OLB"], hook: "runOutcome ffChance (hit power)" },
-        stripArtist: { name: "Strip Artist", pos: ["DE", "OLB", "LB", "CB", "S"], hook: "strip-style ffChance + strip sack" },
-        motor: { name: "Motor", pos: ["DE", "DT", "OLB"], hook: "fatigueMultiplier onset (rush persistence)" },
-        trigger: { name: "Trigger", pos: ["LB", "S"], hook: "run2geo second-level fill react" },
+        wrapTackler: {
+          name: "Wrap Tackler",
+          pos: ["LB", "OLB", "S", "CB", "DE", "DT"],
+          hook: "breaksTackle chance",
+          desc: "Breaks down and wraps up \u2014 ballcarriers don't slip this tackle for extra yards.",
+          grow: "Piling up tackles."
+        },
+        openField: {
+          name: "Open-Field Tackler",
+          pos: ["S", "CB", "LB", "OLB"],
+          hook: "geoYAC pMake",
+          desc: "Makes the one-on-one tackle in space, the hardest one there is, so catches and runs die where they're caught.",
+          grow: "Making tackles in the open field."
+        },
+        bigHitter: {
+          name: "Big Hitter",
+          pos: ["S", "LB", "OLB"],
+          hook: "runOutcome ffChance (hit power)",
+          desc: "Arrives with bad intentions \u2014 the kind of hit that jars the ball loose and makes receivers hear footsteps.",
+          grow: "Punishing hits that force fumbles."
+        },
+        stripArtist: {
+          name: "Strip Artist",
+          pos: ["DE", "OLB", "LB", "CB", "S"],
+          hook: "strip-style ffChance + strip sack",
+          desc: "Always going for the ball on the tackle \u2014 rips and punches it out, including the strip-sack.",
+          grow: "Forcing fumbles."
+        },
+        motor: {
+          name: "Motor",
+          pos: ["DE", "DT", "OLB"],
+          hook: "fatigueMultiplier onset (rush persistence)",
+          desc: "Never quits on a rush. Late in the down and late in the game, he's still coming while others fade.",
+          grow: "Chase-down sacks."
+        },
+        trigger: {
+          name: "Trigger",
+          pos: ["LB", "S"],
+          hook: "run2geo second-level fill react",
+          desc: "Reads run and fires downhill without a false step \u2014 in the gap before the back gets there.",
+          grow: "Tackles for loss."
+        },
         // Rush
-        bend: { name: "Bend", pos: ["DE", "OLB"], hook: "blockRep speedPath" },
-        powerMove: { name: "Power Move", pos: ["DE", "DT"], hook: "blockRep powerPath" },
-        batRadar: { name: "Bat Radar", pos: ["DT", "DE"], hook: "BAT_* batted-pass chance" },
-        greenDogT: { name: "Green Dog", pos: ["LB", "OLB"], hook: "man-gate blitz convert rate" },
-        gapShooter: { name: "Gap Shooter", pos: ["LB", "OLB"], hook: "run-blitz penetrator react" },
-        gamesRunner: { name: "Games Runner", pos: ["LB", "OLB"], hook: "cross-dog pickP (Pass 4 hook rule)" },
+        bend: {
+          name: "Bend",
+          pos: ["DE", "OLB"],
+          hook: "blockRep speedPath",
+          desc: "Wins the edge with speed and flexibility, dipping under the tackle's punch to flatten to the quarterback.",
+          grow: "Sacks and pressures."
+        },
+        powerMove: {
+          name: "Power Move",
+          pos: ["DE", "DT"],
+          hook: "blockRep powerPath",
+          desc: "Bull-rushes his man into the pocket, collapsing it from the inside with pure strength.",
+          grow: "Sacks and pressures."
+        },
+        batRadar: {
+          name: "Bat Radar",
+          pos: ["DT", "DE"],
+          hook: "BAT_* batted-pass chance",
+          desc: "Gets his hands up in the throwing lane when he can't get home \u2014 knocks passes down at the line.",
+          grow: "Batting passes down."
+        },
+        greenDogT: {
+          name: "Green Dog",
+          pos: ["LB", "OLB"],
+          hook: "man-gate blitz convert rate",
+          desc: "When his man stays in to block, he doesn't waste the free rusher \u2014 turns coverage into an instant blitz.",
+          grow: "Blitz sacks."
+        },
+        gapShooter: {
+          name: "Gap Shooter",
+          pos: ["LB", "OLB"],
+          hook: "run-blitz penetrator react",
+          desc: "Times the snap and knifes through his gap before the line can wall him off. A blitz weapon.",
+          grow: "Tackles for loss shooting gaps."
+        },
+        gamesRunner: {
+          name: "Games Runner",
+          pos: ["LB", "OLB"],
+          hook: "cross-dog pickP (Pass 4 hook rule)",
+          desc: "Runs stunts and twists clean, looping behind the line to come free where the protection isn't.",
+          grow: "Sacks off games and stunts."
+        },
         // Coverage
-        sticky: { name: "Sticky", pos: ["CB", "S"], hook: "sepgeo man react/keep" },
-        zoneEyes: { name: "Zone Eyes", pos: ["LB", "S", "CB", "OLB"], hook: "assignCoverage bust reduction" },
-        pressJam: { name: "Press Jam", pos: ["CB"], hook: "sepgeo jam term" },
-        ballHawk: { name: "Ball Hawk", pos: ["S", "CB", "LB"], hook: "tipped-ball INT pick weight" },
-        highPoint: { name: "High Point", pos: ["CB", "S"], hook: "SIZE_MISMATCH contested term (def)" },
-        spyEyes: { name: "Spy Eyes", pos: ["LB", "OLB"], hook: "spyQB scramble containment" },
-        filmJunkie: { name: "Film Junkie", pos: ["S", "LB", "CB"], hook: "paBite discipline / disguise read" },
-        disguiseArtist: { name: "Disguise Artist", pos: ["S", "CB"], hook: "pDisguise craft (seller side)" },
-        patternMatcher: { name: "Pattern Matcher", pos: ["LB", "S", "CB"], hook: "awrSqueeze zone-void" },
-        robber: { name: "Robber", pos: ["S"], hook: "robStrength undercut" },
-        screenSniffer: { name: "Screen Sniffer", pos: ["DT", "DE", "LB"], hook: "screen sniffChance" },
-        edgeSetter: { name: "Edge Setter", pos: ["DE", "OLB"], hook: "edgeTec contain vs jets/outside" },
-        optionSound: { name: "Option Sound", pos: ["DE", "OLB", "LB"], hook: "resolveOptionPlay readWinP (def side)" },
+        sticky: {
+          name: "Sticky",
+          pos: ["CB", "S"],
+          hook: "sepgeo man react/keep",
+          desc: "Mirrors his man out of the break and stays in his hip pocket \u2014 separation never opens up.",
+          grow: "Breakups in coverage."
+        },
+        zoneEyes: {
+          name: "Zone Eyes",
+          pos: ["LB", "S", "CB", "OLB"],
+          hook: "assignCoverage bust reduction",
+          desc: "Sees the whole field in zone, passes off crossers cleanly, and rarely gets caught in a bust.",
+          grow: "Tackles from zone coverage."
+        },
+        pressJam: {
+          name: "Press Jam",
+          pos: ["CB"],
+          hook: "sepgeo jam term",
+          desc: "Re-routes receivers at the line with a violent jam, wrecking the timing of the whole concept.",
+          grow: "Breakups off the jam."
+        },
+        ballHawk: {
+          name: "Ball Hawk",
+          pos: ["S", "CB", "LB"],
+          hook: "tipped-ball INT pick weight",
+          desc: "Has a nose for the football \u2014 finds the tipped ball and the overthrow and comes down with it.",
+          grow: "Interceptions."
+        },
+        highPoint: {
+          name: "High Point",
+          pos: ["CB", "S"],
+          hook: "SIZE_MISMATCH contested term (def)",
+          desc: "Goes up and gets it at its highest point, winning the jump ball against bigger receivers.",
+          grow: "Winning contested balls (breakups)."
+        },
+        spyEyes: {
+          name: "Spy Eyes",
+          pos: ["LB", "OLB"],
+          hook: "spyQB scramble containment",
+          desc: "A disciplined spy \u2014 mirrors a scrambling quarterback and takes away the escape lane.",
+          grow: "Reps spying the quarterback."
+        },
+        filmJunkie: {
+          name: "Film Junkie",
+          pos: ["S", "LB", "CB"],
+          hook: "paBite discipline / disguise read",
+          desc: "Lives in the film room. Doesn't bite on play-action or misdirection, and reads the formation's tell.",
+          grow: "Sniffing out fakes and misdirection."
+        },
+        disguiseArtist: {
+          name: "Disguise Artist",
+          pos: ["S", "CB"],
+          hook: "pDisguise craft (seller side)",
+          desc: "Shows one coverage and plays another \u2014 holds the disguise until the snap and fools the read.",
+          grow: "Reps selling coverage disguises."
+        },
+        patternMatcher: {
+          name: "Pattern Matcher",
+          pos: ["LB", "S", "CB"],
+          hook: "awrSqueeze zone-void",
+          desc: "Plays match coverage \u2014 carries routes like man while keeping his zone eyes, squeezing the throwing windows.",
+          grow: "Tackles matching routes."
+        },
+        robber: {
+          name: "Robber",
+          pos: ["S"],
+          hook: "robStrength undercut",
+          desc: "Sits in the hole and robs the intermediate throw, jumping the dig or the crosser the QB never saw him on.",
+          grow: "Interceptions jumping routes."
+        },
+        screenSniffer: {
+          name: "Screen Sniffer",
+          pos: ["DT", "DE", "LB"],
+          hook: "screen sniffChance",
+          desc: "Smells the screen developing, peels off the rush, and blows it up before it starts.",
+          grow: "Blowing up screens (tackles for loss)."
+        },
+        edgeSetter: {
+          name: "Edge Setter",
+          pos: ["DE", "OLB"],
+          hook: "edgeTec contain vs jets/outside",
+          desc: "Sets a hard edge and turns everything back inside \u2014 outside runs and jet sweeps have nowhere to go.",
+          grow: "Stops setting the edge (tackles for loss)."
+        },
+        optionSound: {
+          name: "Option Sound",
+          pos: ["DE", "OLB", "LB"],
+          hook: "resolveOptionPlay readWinP (def side)",
+          desc: "Plays his assignment on the option \u2014 never guesses, takes his man, and makes the offense wrong.",
+          grow: "Reps defending the option."
+        },
         // PASS 5 (Hook Rule, named at plan-of-record — Ref/PASS5_OFFENSE_PLAN.md)
-        rpoSound: { name: "RPO Sound", pos: ["LB", "OLB", "S"], hook: "rpoConflictRead biteP discipline + readP resistance (def side)" },
-        angles: { name: "Angles", pos: ["LB", "S", "CB"], hook: "geoYAC pursuit convergence" },
+        rpoSound: {
+          name: "RPO Sound",
+          pos: ["LB", "OLB", "S"],
+          hook: "rpoConflictRead biteP discipline + readP resistance (def side)",
+          desc: "The conflict defender an RPO is built to fool \u2014 he stays square and takes away the read either way.",
+          grow: "Defusing RPOs."
+        },
+        angles: {
+          name: "Angles",
+          pos: ["LB", "S", "CB"],
+          hook: "geoYAC pursuit convergence",
+          desc: "Takes the perfect pursuit angle, cutting off the runner instead of chasing him. Runs never spring loose.",
+          grow: "Run-down tackles."
+        },
         // Special teams
-        gunner: { name: "Gunner", pos: ["S", "CB", "LB", "WR"], hook: "st_coverage coverageStrength" },
-        returnVision: { name: "Return Vision", pos: ["WR", "RB", "CB", "S"], hook: "returner rating / breakChance" },
-        iceVeins: { name: "Ice Veins", pos: ["K"], hook: "attemptFG late/pressure context" },
-        coffinCorner: { name: "Coffin Corner", pos: ["P"], hook: "punt placement inside-20" },
-        hangTime: { name: "Hang Time", pos: ["P"], hook: "return coverage / fair catches" },
-        handsTeam: { name: "Hands Team", pos: ["TE", "LB"], hook: "onsideResult recovery" },
+        gunner: {
+          name: "Gunner",
+          pos: ["S", "CB", "LB", "WR"],
+          hook: "st_coverage coverageStrength",
+          desc: "Flies down on punt coverage, beats the jammer, and gets to the returner before he can start.",
+          grow: "Reps on the coverage unit."
+        },
+        returnVision: {
+          name: "Return Vision",
+          pos: ["WR", "RB", "CB", "S"],
+          hook: "returner rating / breakChance",
+          desc: "Sees the return develop, hits the crease, and turns a fair catch into a house call.",
+          grow: "Reps and yards as a returner."
+        },
+        iceVeins: {
+          name: "Ice Veins",
+          pos: ["K"],
+          hook: "attemptFG late/pressure context",
+          desc: "Doesn't feel the moment \u2014 the game-winner in the cold is just another kick.",
+          grow: "Making field goals."
+        },
+        coffinCorner: {
+          name: "Coffin Corner",
+          pos: ["P"],
+          hook: "punt placement inside-20",
+          desc: "Drops the punt inside the 10 and pins the offense against its own goal line.",
+          grow: "Reps pinning punts deep."
+        },
+        hangTime: {
+          name: "Hang Time",
+          pos: ["P"],
+          hook: "return coverage / fair catches",
+          desc: "Boots it high enough that the coverage is there on the catch \u2014 forces the fair catch, kills the return.",
+          grow: "Reps flipping field position."
+        },
+        handsTeam: {
+          name: "Hands Team",
+          pos: ["TE", "LB"],
+          hook: "onsideResult recovery",
+          desc: "Sure hands on the hands team \u2014 comes up with the onside kick and the scramble for a loose ball.",
+          grow: "Reps on the recovery unit."
+        },
         // OFFENSE — QB room (v1.5)
-        blitzBeater: { name: "Blitz Beater", pos: ["QB"], hook: "hotChance" },
-        eyeManipulator: { name: "Eye Manipulator", pos: ["QB"], hook: "robber lookoff term" },
-        fieldGeneral: { name: "Field General", pos: ["QB"], hook: "seeIt/pAud kill-call machinery" },
-        rhythmPasser: { name: "Rhythm Passer", pos: ["QB"], hook: "inRhythm first-read bonus" },
-        slidesEarly: { name: "Slides Early", pos: ["QB"], hook: "qbContactResult (two-sided)" },
-        pocketPresence: { name: "Pocket Presence", pos: ["QB"], hook: "covSack escape / sack-avoid" },
-        scrambleDrill: { name: "Scramble Drill", pos: ["QB"], hook: "off-schedule throw comp" },
-        conflictReader: { name: "Conflict Reader", pos: ["QB"], hook: "rpoConflictRead readP (off side) + choice-route misP" },
+        blitzBeater: {
+          name: "Blitz Beater",
+          pos: ["QB"],
+          hook: "hotChance",
+          desc: "Reads the blitz pre-snap and gets the ball out hot to the vacated area before the pressure lands.",
+          grow: "Passing yards."
+        },
+        eyeManipulator: {
+          name: "Eye Manipulator",
+          pos: ["QB"],
+          hook: "robber lookoff term",
+          desc: "Moves defenders with his eyes \u2014 looks off the safety and holds the robber to open the real throw.",
+          grow: "Reps commanding the pocket."
+        },
+        fieldGeneral: {
+          name: "Field General",
+          pos: ["QB"],
+          hook: "seeIt/pAud kill-call machinery",
+          desc: "Runs the offense at the line \u2014 checks into the right play and kills the bad one before the snap.",
+          grow: "Touchdown passes."
+        },
+        rhythmPasser: {
+          name: "Rhythm Passer",
+          pos: ["QB"],
+          hook: "inRhythm first-read bonus",
+          desc: "Deadly in rhythm \u2014 when the first read is there on time, the ball is out and on the money.",
+          grow: "Passing yards."
+        },
+        slidesEarly: {
+          name: "Slides Early",
+          pos: ["QB"],
+          hook: "qbContactResult (two-sided)",
+          desc: "Protects himself \u2014 gives up the extra yard to slide or step out and live for the next snap.",
+          grow: "Reps taking care of the ball and his body."
+        },
+        pocketPresence: {
+          name: "Pocket Presence",
+          pos: ["QB"],
+          hook: "covSack escape / sack-avoid",
+          desc: "Feels the rush without seeing it, climbs and slides in the pocket, and turns sacks into throws.",
+          grow: "Passing yards."
+        },
+        scrambleDrill: {
+          name: "Scramble Drill",
+          pos: ["QB"],
+          hook: "off-schedule throw comp",
+          desc: "Dangerous off-schedule \u2014 keeps his eyes downfield on the scramble and makes plays out of structure.",
+          grow: "Scramble yards."
+        },
+        conflictReader: {
+          name: "Conflict Reader",
+          pos: ["QB"],
+          hook: "rpoConflictRead readP (off side) + choice-route misP",
+          desc: "Reads the conflict defender right every time on the RPO and choice route \u2014 takes exactly what's given.",
+          grow: "Winning RPO reads."
+        },
         // RB
-        passProBack: { name: "Pass-Pro Back", pos: ["RB"], hook: "blitzer pickupProb" },
-        chipper: { name: "Chipper", pos: ["RB", "TE"], hook: "chip bump machinery" },
-        patientRunner: { name: "Patient Runner", pos: ["RB"], hook: "run2geo lane-commit entry" },
-        oneCut: { name: "One-Cut", pos: ["RB"], hook: "runFit read/bend cut quality" },
-        homeRunThreat: { name: "Home-Run Threat", pos: ["RB", "WR"], hook: "breakaway breakP" },
-        secureBag: { name: "Secure Bag", pos: ["RB", "WR", "QB"], hook: "carry-fumble mult" },
-        yacMonster: { name: "YAC Monster", pos: ["WR", "RB", "TE"], hook: "geoYAC wiggle/openTackle" },
+        passProBack: {
+          name: "Pass-Pro Back",
+          pos: ["RB"],
+          hook: "blitzer pickupProb",
+          desc: "Trusted in protection \u2014 picks up the blitzing linebacker and keeps the quarterback clean.",
+          grow: "Reps in pass protection."
+        },
+        chipper: {
+          name: "Chipper",
+          pos: ["RB", "TE"],
+          hook: "chip bump machinery",
+          desc: "Lands a real chip on the edge rusher on his way out, buying the tackle a beat and the QB an extra count.",
+          grow: "Reps chipping on the way to the route."
+        },
+        patientRunner: {
+          name: "Patient Runner",
+          pos: ["RB"],
+          hook: "run2geo lane-commit entry",
+          desc: "Lets the blocks develop, presses the hole, and hits it the instant it opens \u2014 no wasted movement.",
+          grow: "Rushing yards."
+        },
+        oneCut: {
+          name: "One-Cut",
+          pos: ["RB"],
+          hook: "runFit read/bend cut quality",
+          desc: "Reads it, plants, and goes \u2014 one decisive cut downhill, no dancing behind the line.",
+          grow: "Rushing yards."
+        },
+        homeRunThreat: {
+          name: "Home-Run Threat",
+          pos: ["RB", "WR"],
+          hook: "breakaway breakP",
+          desc: "One crease and he's gone \u2014 the speed to take any touch the distance the moment he breaks the second level.",
+          grow: "Explosive yardage."
+        },
+        secureBag: {
+          name: "Secure Bag",
+          pos: ["RB", "WR", "QB"],
+          hook: "carry-fumble mult",
+          desc: "High and tight, always \u2014 covers the ball in traffic and doesn't put it on the ground.",
+          grow: "Carries without a fumble."
+        },
+        yacMonster: {
+          name: "YAC Monster",
+          pos: ["WR", "RB", "TE"],
+          hook: "geoYAC wiggle/openTackle",
+          desc: "The catch is where it starts \u2014 makes the first man miss and turns short throws into chunk gains.",
+          grow: "Yards after contact."
+        },
         // WR/TE
-        routeTech: { name: "Route Technician", pos: ["WR", "TE"], hook: "sepgeo receiver duel" },
-        contestedCatch: { name: "Contested Catch", pos: ["WR", "TE"], hook: "contested catchProb term" },
-        chainMover: { name: "Chain Mover", pos: ["WR", "TE"], hook: "catchResolution on 3rd down (situational)" },
-        releaseArtist: { name: "Release Artist", pos: ["WR"], hook: "sepgeo release vs jam" },
-        doubleMove: { name: "Double-Move Artist", pos: ["WR"], hook: "sepgeo dblLag sell" },
-        motionWeapon: { name: "Motion Weapon", pos: ["WR", "RB"], hook: "motionGain" },
-        deepTracker: { name: "Deep Tracker", pos: ["WR"], hook: "vdeep over-the-shoulder" },
-        blockingWR: { name: "Blocking Receiver", pos: ["WR", "TE"], hook: "stalk-block blockScore" },
-        paSeller: { name: "Play-Action Seller", pos: ["RB", "QB"], hook: "PA credibility" },
-        leverageReader: { name: "Leverage Reader", pos: ["WR", "TE"], hook: "choice-route convP + misP (schemeFor)" },
-        gadgetAce: { name: "Gadget Ace", pos: ["RB", "WR"], hook: "gadget resolver exchange/sell craft" },
-        leadBlocker: { name: "Lead Blocker", pos: ["RB", "TE"], hook: "FB-lead run blockRep" },
+        routeTech: {
+          name: "Route Technician",
+          pos: ["WR", "TE"],
+          hook: "sepgeo receiver duel",
+          desc: "Runs precise routes, sinks his hips, and snaps out of breaks to create separation without a step wasted.",
+          grow: "Catches."
+        },
+        contestedCatch: {
+          name: "Contested Catch",
+          pos: ["WR", "TE"],
+          hook: "contested catchProb term",
+          desc: "Wins the ball with a defender draped on him \u2014 strong hands and a big frame in a crowd.",
+          grow: "Contested catches."
+        },
+        chainMover: {
+          name: "Chain Mover",
+          pos: ["WR", "TE"],
+          hook: "catchResolution on 3rd down (situational)",
+          desc: "The one you want on third down \u2014 finds the sticks, sits in the soft spot, and moves the chains.",
+          grow: "Third-down catches."
+        },
+        releaseArtist: {
+          name: "Release Artist",
+          pos: ["WR"],
+          hook: "sepgeo release vs jam",
+          desc: "Beats press at the line with quick feet and hands \u2014 can't be jammed off his release.",
+          grow: "Catches."
+        },
+        doubleMove: {
+          name: "Double-Move Artist",
+          pos: ["WR"],
+          hook: "sepgeo dblLag sell",
+          desc: "Sells the first move so well the defender bites \u2014 then it's over the top for a big play.",
+          grow: "Catches."
+        },
+        motionWeapon: {
+          name: "Motion Weapon",
+          pos: ["WR", "RB"],
+          hook: "motionGain",
+          desc: "Dangerous on the move \u2014 jet and orbit motion turn him into a runner, a threat, and a defense's headache.",
+          grow: "Reps as a motion man."
+        },
+        deepTracker: {
+          name: "Deep Tracker",
+          pos: ["WR"],
+          hook: "vdeep over-the-shoulder",
+          desc: "Tracks the deep ball over his shoulder in full stride and adjusts to the underthrow without breaking down.",
+          grow: "Deep receiving yards."
+        },
+        blockingWR: {
+          name: "Blocking Receiver",
+          pos: ["WR", "TE"],
+          hook: "stalk-block blockScore",
+          desc: "Blocks like he means it on the perimeter \u2014 his stalk block is what springs the screen and the outside run.",
+          grow: "Reps blocking on the edge."
+        },
+        paSeller: {
+          name: "Play-Action Seller",
+          pos: ["RB", "QB"],
+          hook: "PA credibility",
+          desc: "Sells the fake \u2014 the mesh looks exactly like the run, and the linebackers step up right into it.",
+          grow: "Reps selling play-action."
+        },
+        leverageReader: {
+          name: "Leverage Reader",
+          pos: ["WR", "TE"],
+          hook: "choice-route convP + misP (schemeFor)",
+          desc: "Reads the defender's leverage on option routes and breaks the right way \u2014 always into the open grass.",
+          grow: "Option-route conversions."
+        },
+        gadgetAce: {
+          name: "Gadget Ace",
+          pos: ["RB", "WR"],
+          hook: "gadget resolver exchange/sell craft",
+          desc: "The trick-play specialist \u2014 clean on the reverse, the flea-flicker exchange, and the halfback pass.",
+          grow: "Gadget and trick-play snaps."
+        },
+        leadBlocker: {
+          name: "Lead Blocker",
+          pos: ["RB", "TE"],
+          hook: "FB-lead run blockRep",
+          desc: "A missile through the hole \u2014 finds the linebacker and clears the path for the back behind him.",
+          grow: "Reps leading up on the run."
+        },
         // OL
-        lineGeneral: { name: "Line General", pos: ["OL"], hook: "centerAwr half-slide + stunt counter (center)" },
-        anchor: { name: "Anchor", pos: ["OL"], hook: "blockRep powerPath resistance" },
-        mirror: { name: "Mirror", pos: ["OL"], hook: "blockRep speedPath ride" },
-        puller: { name: "Puller", pos: ["OL"], hook: "pull mobility bonus" },
-        peopleMover: { name: "People Mover", pos: ["OL"], hook: "run-branch blockRep drive" }
+        lineGeneral: {
+          name: "Line General",
+          pos: ["OL"],
+          hook: "centerAwr half-slide + stunt counter (center)",
+          desc: "Sets the protection and makes the calls \u2014 passes off stunts and twists so nobody comes free.",
+          grow: "Reps anchoring the protection calls."
+        },
+        anchor: {
+          name: "Anchor",
+          pos: ["OL"],
+          hook: "blockRep powerPath resistance",
+          desc: "Can't be bull-rushed \u2014 drops his weight and stones the power move, keeping the pocket square.",
+          grow: "Reps holding up in protection."
+        },
+        mirror: {
+          name: "Mirror",
+          pos: ["OL"],
+          hook: "blockRep speedPath ride",
+          desc: "Light, quick feet \u2014 mirrors the speed rush and rides the edge man past the quarterback.",
+          grow: "Reps in pass protection."
+        },
+        puller: {
+          name: "Puller",
+          pos: ["OL"],
+          hook: "pull mobility bonus",
+          desc: "Gets out in front in space on the pull and finds his man on the move \u2014 the engine of power and counter.",
+          grow: "Reps pulling on run downs."
+        },
+        peopleMover: {
+          name: "People Mover",
+          pos: ["OL"],
+          hook: "run-branch blockRep drive",
+          desc: "Wins the point of attack and drives his man off the ball, opening running lanes by force.",
+          grow: "Reps run blocking."
+        }
       };
       FLAW_CATALOG = {
-        grabby: { name: "Grabby", pos: ["CB", "S"], hook: "PENALTY_CATALOG Pass Interference weight" },
-        jumpy: { name: "Jumpy", pos: ["DE", "DT", "OLB", "OL"], hook: "offside/false-start weight" },
-        gambler: { name: "Gambler", pos: ["CB", "S"], hook: "INTs up AND burned-deep up (two-sided)" },
-        headhunter: { name: "Headhunter", pos: ["S", "LB"], hook: "splash hits + personal fouls" },
-        freelancer: { name: "Freelancer", pos: ["LB", "S", "CB", "OLB"], hook: "busts up + splash up (two-sided)" },
-        drops: { name: "Drops", pos: ["WR", "TE", "RB"], hook: "dropProb" },
-        fumbler: { name: "Fumbler", pos: ["RB", "WR", "QB"], hook: "carry-fumble mult" },
-        happyFeet: { name: "Happy Feet", pos: ["QB"], hook: "hurried read pool / HURRY_PENALTY" },
-        slowStarter: { name: "Slow Starter", pos: ["QB", "RB", "WR", "K"], hook: "form dip, front half of games" },
-        telegraph: { name: "Telegraph", pos: ["QB"], hook: "robber/forced-ball INT term" },
-        heroBall: { name: "Hero Ball", pos: ["QB"], hook: "covSack branch weights (two-sided)" },
-        dancer: { name: "Dancer", pos: ["RB"], hook: "One-Cut reversed: bounces everything (two-sided)" },
-        bodyCatcher: { name: "Body Catcher", pos: ["WR", "TE"], hook: "contested term reversed" },
-        bitesHard: { name: "Bites Hard", pos: ["LB", "S"], hook: "paBite discipline reversed + dbl victim (two-sided)" },
-        laneDrifter: { name: "Lane Drifter", pos: ["DT", "DE"], hook: "gap-integrity / stunt-align" },
-        holdingHabit: { name: "Holding Habit", pos: ["OL"], hook: "Offensive Holding weight" },
-        shanks: { name: "Shanks", pos: ["K", "P"], hook: "pressure variance on the kick roll" },
-        muffs: { name: "Muffs", pos: ["WR", "RB", "CB", "S"], hook: "muffP machinery (returns/pitches)" }
+        grabby: {
+          name: "Grabby",
+          pos: ["CB", "S"],
+          hook: "PENALTY_CATALOG Pass Interference weight",
+          desc: "Gets handsy downfield when he's beaten \u2014 draws pass interference and holding flags in coverage."
+        },
+        jumpy: {
+          name: "Jumpy",
+          pos: ["DE", "DT", "OLB", "OL"],
+          hook: "offside/false-start weight",
+          desc: "Too eager off the ball \u2014 jumps the snap for offside and false-start flags at the worst times."
+        },
+        gambler: {
+          name: "Gambler",
+          pos: ["CB", "S"],
+          hook: "INTs up AND burned-deep up (two-sided)",
+          desc: "Rolls the dice on the ball \u2014 gets his share of picks, and gets torched deep just as often when he guesses wrong."
+        },
+        headhunter: {
+          name: "Headhunter",
+          pos: ["S", "LB"],
+          hook: "splash hits + personal fouls",
+          desc: "Hunts the big hit \u2014 delivers the splash, but takes the targeting and personal-foul flags that come with it."
+        },
+        freelancer: {
+          name: "Freelancer",
+          pos: ["LB", "S", "CB", "OLB"],
+          hook: "busts up + splash up (two-sided)",
+          desc: "Freelances off his assignment chasing plays \u2014 makes some splash, but leaves busts behind when he's wrong."
+        },
+        drops: {
+          name: "Drops",
+          pos: ["WR", "TE", "RB"],
+          hook: "dropProb",
+          desc: "Stone hands at the wrong moment \u2014 puts catchable balls on the ground, third downs included."
+        },
+        fumbler: {
+          name: "Fumbler",
+          pos: ["RB", "WR", "QB"],
+          hook: "carry-fumble mult",
+          desc: "Loose with the ball \u2014 carries it away from his body and coughs it up in traffic."
+        },
+        happyFeet: {
+          name: "Happy Feet",
+          pos: ["QB"],
+          hook: "hurried read pool / HURRY_PENALTY",
+          desc: "Bails on a clean pocket \u2014 feet start dancing at the first hint of pressure and the read falls apart."
+        },
+        slowStarter: {
+          name: "Slow Starter",
+          pos: ["QB", "RB", "WR", "K"],
+          hook: "form dip, front half of games",
+          desc: "Takes a while to get going \u2014 plays below himself in the first half before settling in."
+        },
+        telegraph: {
+          name: "Telegraph",
+          pos: ["QB"],
+          hook: "robber/forced-ball INT term",
+          desc: "Stares down his target \u2014 defenders read his eyes and jump the throw for the pick."
+        },
+        heroBall: {
+          name: "Hero Ball",
+          pos: ["QB"],
+          hook: "covSack branch weights (two-sided)",
+          desc: "Tries to make the great play when the smart one is there \u2014 a few highlights, and a lot of avoidable sacks."
+        },
+        dancer: {
+          name: "Dancer",
+          pos: ["RB"],
+          hook: "One-Cut reversed: bounces everything (two-sided)",
+          desc: "Dances behind the line instead of hitting it \u2014 bounces runs outside that should've gone straight ahead."
+        },
+        bodyCatcher: {
+          name: "Body Catcher",
+          pos: ["WR", "TE"],
+          hook: "contested term reversed",
+          desc: "Catches with his body, not his hands \u2014 loses the contested ball he should win."
+        },
+        bitesHard: {
+          name: "Bites Hard",
+          pos: ["LB", "S"],
+          hook: "paBite discipline reversed + dbl victim (two-sided)",
+          desc: "Bites on the fake \u2014 play-action and misdirection pull him out of position and open the throw behind him."
+        },
+        laneDrifter: {
+          name: "Lane Drifter",
+          pos: ["DT", "DE"],
+          hook: "gap-integrity / stunt-align",
+          desc: "Drifts out of his gap chasing the ball \u2014 leaves a crease behind him for the cutback."
+        },
+        holdingHabit: {
+          name: "Holding Habit",
+          pos: ["OL"],
+          hook: "Offensive Holding weight",
+          desc: "Grabs cloth when he's beaten \u2014 brings back big plays with holding flags."
+        },
+        shanks: {
+          name: "Shanks",
+          pos: ["K", "P"],
+          hook: "pressure variance on the kick roll",
+          desc: "Streaky under pressure \u2014 the leg is there, but the misses come in bunches at the worst times."
+        },
+        muffs: {
+          name: "Muffs",
+          pos: ["WR", "RB", "CB", "S"],
+          hook: "muffP machinery (returns/pitches)",
+          desc: "Shaky fielding the ball in space \u2014 muffs punts and bobbles pitches, giving it right back."
+        }
       };
       JOB_SIZE_WINDOWS = {
         NB: [178, 208],
@@ -20197,6 +20727,10 @@ var _CFB = (() => {
       greenDog: false,
       spyQB: false,
       targetShares: { WR1: 22, WR2: 20, WR3: 16, TE1: 20, RB1: 14 },
+      defaultShares: { X: 24, Z: 20, SL: 16, Y: 18, HB: 12 },
+      // item 16 — the coach's editable default target-share set, keyed by slot
+      // label (X/Z/SL/Y/HB). defaultShareFor prefers it; per-formation overrides
+      // live on the Depth Chart field view.
       fourthDown: "Moderate",
       maxFGDist: 42,
       situations: {},
@@ -23542,9 +24076,10 @@ var _CFB = (() => {
       if (!entry.slots) entry.slots = {};
       if (!entry.shares) entry.shares = {};
       const legacy = gp.targetShares || {};
+      const defaults = gp.defaultShares || null;
       for (const s of layout.slots) {
         if (!s.catch) continue;
-        if (entry.shares[s.id] == null) entry.shares[s.id] = defaultShareFor(s, legacy);
+        if (entry.shares[s.id] == null) entry.shares[s.id] = defaultShareFor(s, legacy, defaults);
       }
     }
     for (const fid of Object.keys(DEF_FIELD_LAYOUTS)) {
@@ -23561,8 +24096,9 @@ var _CFB = (() => {
     }
     return fa;
   }
-  function defaultShareFor(slot, legacy) {
+  function defaultShareFor(slot, legacy, defaults) {
     var _a, _b, _c, _d, _e, _f, _g;
+    if (defaults && slot.label && defaults[slot.label] != null) return defaults[slot.label];
     const byLabel = {
       X: (_a = legacy.WR1) != null ? _a : 24,
       Z: (_b = legacy.WR2) != null ? _b : 20,
@@ -27604,10 +28140,10 @@ var _CFB = (() => {
     const k = kId ? kRoster.find((p) => p.id === kId) : null;
     const leg = k ? 0.5 * (k.attributes.STR || 0) + 0.5 * (k.attributes.PWR || 0) : 40;
     const acc2 = k ? 0.5 * (k.attributes.TEC || 0) + 0.5 * (k.attributes.AWR || 0) : 40;
-    const rangeCenter = 48 + (leg - 50) * 0.22 + (dnaSpecialGrade || 0) * 0.4;
+    const rangeCenter = 48.5 + (leg - 50) * 0.22 + (dnaSpecialGrade || 0) * 0.4;
     const clutchAdj = pressureKick ? 0.05 * traitLv(k, "iceVeins") - 0.07 * flawLv(k, "shanks") : 0;
     const accBonus = (acc2 - 50) * C.FG_TECH_SCALE + (dnaSpecialGrade || 0) * 0.01 + clutchAdj;
-    return clamp2(logistic((rangeCenter - kickDistance) / 10.5 + accBonus), 0.01, 0.985);
+    return clamp2(logistic((rangeCenter - kickDistance) / 11.5 + accBonus), 0.01, 0.985);
   }
   function attemptFG(kRoster, depth, kickDistance, dnaSpecialGrade = 0, pressureKick = false) {
     return Math.random() < fgMakeProb(kRoster, depth, kickDistance, dnaSpecialGrade, pressureKick);
@@ -27748,6 +28284,12 @@ var _CFB = (() => {
     }
     return { player: best, rating: bestVal > 0 ? bestVal : 55 };
   }
+  function returnMuff(returner, muffBase) {
+    var sec = returner ? 0.5 * (returner.attributes.HND || 50) + 0.5 * (returner.attributes.SEC || 50) : 50;
+    var muffP = clamp2((muffBase || 0) - (sec - C.MUFF_HND_PIVOT) * C.MUFF_HND_SCALE, 3e-3, 0.09);
+    if (Math.random() >= muffP) return { muffed: false, lostToKicking: false };
+    return { muffed: true, lostToKicking: Math.random() < C.MUFF_RECOVER_KICK };
+  }
   function coverageStrength(roster, stGrade = 0) {
     const cov = roster.filter((p) => ["LB", "S", "CB"].includes(p.position)).slice(0, 8);
     const base = cov.length ? cov.reduce((s, p) => s + (p.attributes.SPD + p.attributes.STR) / 2 + 1.2 * traitLv(p, "gunner"), 0) / cov.length : 55;
@@ -27793,8 +28335,12 @@ var _CFB = (() => {
     }
     const { player, rating } = pickReturner(receivingRoster, returnerOverride);
     const cov = coverageStrength(kickingRoster, stGrade);
+    const _kMuff = returnMuff(player, C.KO_MUFF_BASE);
+    if (_kMuff.muffed && _kMuff.lostToKicking) {
+      return { touchback: false, td: false, fieldPos: clamp2(Math.round(randNorm(20, 4)), 12, 30), returner: player, retYds: 0, muffLost: true };
+    }
     const r = returnOutcome(rating, cov, 3, C.KICKOFF_RETURN_BASE, sch, traitLv(player, "returnVision"));
-    return { touchback: false, td: r.td, fieldPos: r.startLine, returner: player, retYds: r.yards };
+    return { touchback: false, td: r.td, fieldPos: r.startLine, returner: player, retYds: r.yards, muffLost: false };
   }
   function onsideResult(surprise = false, stGrade = 0, handsLv = 0) {
     const rate = ((surprise ? C.ONSIDE_SURPRISE : C.ONSIDE_EXPECTED) + (stGrade || 0) * 3e-3) * (1 - 0.05 * (handsLv || 0));
@@ -28159,6 +28705,33 @@ var _CFB = (() => {
             if (Math.random() >= _fairP) {
               const { player, rating } = pickReturner(defRoster, (((_d = defSchool == null ? void 0 : defSchool.depthOrder) == null ? void 0 : _d.RET) || [])[0]);
               const cov = coverageStrength(offRoster, ((_e = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : _e.specialTeams) || 0);
+              const _pMuff = returnMuff(player, C.PUNT_MUFF_BASE);
+              if (_pMuff.muffed) {
+                plays.push({
+                  type: "punt",
+                  puntYds,
+                  touchback: false,
+                  muffed: true,
+                  muffLost: _pMuff.lostToKicking,
+                  returnerId: player ? player.id : null,
+                  punterId: (offDepth["P"] || [])[0] || null,
+                  returnYds: 0,
+                  returnTD: false,
+                  down,
+                  distance,
+                  fieldPos,
+                  clock: gameState.clock,
+                  half: gameState.half,
+                  scoreOff: gameState.score.off,
+                  scoreDef: gameState.score.def
+                });
+                if (_pMuff.lostToKicking) {
+                  log.push(`MUFFED PUNT \u2014 ${offSchool.name} recovers the bobble at the ${puntStart <= 50 ? puntStart : 100 - puntStart}!`);
+                  return { plays, result: "punt", points: 0, finalFieldPos: "muff_retain", muffFieldPos: clamp2(100 - puntStart, 1, 99), pen };
+                }
+                log.push(`Muffed punt \u2014 ${defSchool.name} falls on its own bobble, no return.`);
+                return { plays, result: "punt", points: 0, finalFieldPos: puntStart, pen };
+              }
               const r = returnOutcome(rating, cov, puntStart, C.PUNT_RETURN_BASE, _retSch, traitLv(player, "returnVision"));
               returner = player;
               retYds = Math.round(r.yards * (puntDef === "block" ? 0.5 : puntDef === "safe" ? 1.15 : 1));
@@ -29294,8 +29867,17 @@ var _CFB = (() => {
       }
       if (playResult.turnover) {
         const typeStr = playResult.turnoverType === "interception" ? "INTERCEPTION" : "FUMBLE";
+        let takeover = 100 - fieldPos;
+        if (playResult.turnoverType === "interception" && !globalThis.__noIntTouchback) {
+          const intAirByBand = { short: 4, medium: 11, deep: 20 };
+          const airDepth = intAirByBand[playResult.passDepth] != null ? intAirByBand[playResult.passDepth] : 8;
+          if (fieldPos + airDepth >= 100) {
+            takeover = 20;
+            if (plays.length) plays[plays.length - 1].intTouchback = true;
+          }
+        }
         log.push(`${typeStr} \u2014 ${defSchool.name} takes over`);
-        return { plays, result: "turnover", points: 0, finalFieldPos: 100 - fieldPos, pen };
+        return { plays, result: "turnover", points: 0, finalFieldPos: takeover, pen };
       }
       if (playResult.sack) {
         const rawPos = fieldPos - Math.abs(playResult.yards);
@@ -29779,67 +30361,80 @@ var _CFB = (() => {
                   td: !!ko.td
                 });
               }
-              pendingKickoff = ko.td ? [] : [{
-                type: "kickoff",
-                kickingSide: scoringTeam,
-                receivingSide: receivingTeam,
-                onside: false,
-                touchback: !!ko.touchback,
-                returnerId: (_i = (_h = ko.returner) == null ? void 0 : _h.id) != null ? _i : null,
-                retYds: ko.retYds || 0,
-                returnTD: false,
-                fieldPos: 50
-              }];
-              if (ko.td) {
-                log.push(`KICKOFF RETURN TOUCHDOWN \u2014 ${retName || "The returner"} takes it all the way for ${recvSchool.name}!`);
-                const pat = Math.random() < C.PAT_RATE ? 1 : 0;
-                if (receivingTeam === "home") token.homeScore += 6 + pat;
-                else token.awayScore += 6 + pat;
-                const ko2 = kickoffOutcome(recvRoster, kickRoster, (((_k = (_j = scoringTeam === "home" ? homeSchool : awaySchool) == null ? void 0 : _j.depthOrder) == null ? void 0 : _k.RET) || [])[0], ((_l = recvSchool == null ? void 0 : recvSchool._dnaGrades) == null ? void 0 : _l.specialTeams) || 0, ((kickSchool == null ? void 0 : kickSchool.gameplan) == null ? void 0 : kickSchool.gameplan.retScheme) || null);
-                if (!ko2.touchback && ko2.returner) {
-                  token.koReturns.push({
-                    side: scoringTeam,
-                    returnerId: ko2.returner.id,
-                    yards: ko2.retYds || 0,
-                    td: false
-                  });
-                }
-                pendingKickoff = [
-                  {
-                    type: "kickoff",
-                    kickingSide: scoringTeam,
-                    receivingSide: receivingTeam,
-                    onside: false,
-                    touchback: false,
-                    returnerId: (_n = (_m = ko.returner) == null ? void 0 : _m.id) != null ? _n : null,
-                    retYds: ko.retYds || 0,
-                    returnTD: true,
-                    koTeam: (recvSchool == null ? void 0 : recvSchool.name) || "",
-                    fieldPos: 50
-                  },
-                  {
-                    type: "kickoff",
-                    kickingSide: receivingTeam,
-                    receivingSide: scoringTeam,
-                    onside: false,
-                    touchback: !!ko2.touchback,
-                    returnerId: (_p = (_o = ko2.returner) == null ? void 0 : _o.id) != null ? _p : null,
-                    retYds: ko2.retYds || 0,
-                    returnTD: false,
-                    fieldPos: 50
-                  }
-                ];
+              if (ko.muffLost) {
+                const _koRt = receivingTeam === "home" ? homeStats : awayStats;
+                _koRt.fumbles++;
                 possession = scoringTeam;
-                fieldPos = ko2.fieldPos;
+                fieldPos = clamp2(100 - ko.fieldPos, 55, 90);
+                pendingKickoff = [{ type: "kickoff", kickingSide: scoringTeam, receivingSide: receivingTeam, onside: false, muffLost: true, touchback: false, returnerId: (ko.returner == null ? void 0 : ko.returner.id) != null ? ko.returner.id : null, retYds: 0, returnTD: false, fieldPos: 50 }];
+                log.push(`FUMBLED KICKOFF \u2014 ${kickSchool.name} recovers at the ${fieldPos <= 50 ? fieldPos : 100 - fieldPos}!`);
               } else {
-                if (!ko.touchback && retName && ko.retYds != null) {
-                  log.push(`${retName} returns the kickoff ${ko.retYds} yards`);
+                pendingKickoff = ko.td ? [] : [{
+                  type: "kickoff",
+                  kickingSide: scoringTeam,
+                  receivingSide: receivingTeam,
+                  onside: false,
+                  touchback: !!ko.touchback,
+                  returnerId: (_i = (_h = ko.returner) == null ? void 0 : _h.id) != null ? _i : null,
+                  retYds: ko.retYds || 0,
+                  returnTD: false,
+                  fieldPos: 50
+                }];
+                if (ko.td) {
+                  log.push(`KICKOFF RETURN TOUCHDOWN \u2014 ${retName || "The returner"} takes it all the way for ${recvSchool.name}!`);
+                  const pat = Math.random() < C.PAT_RATE ? 1 : 0;
+                  if (receivingTeam === "home") token.homeScore += 6 + pat;
+                  else token.awayScore += 6 + pat;
+                  const ko2 = kickoffOutcome(recvRoster, kickRoster, (((_k = (_j = scoringTeam === "home" ? homeSchool : awaySchool) == null ? void 0 : _j.depthOrder) == null ? void 0 : _k.RET) || [])[0], ((_l = recvSchool == null ? void 0 : recvSchool._dnaGrades) == null ? void 0 : _l.specialTeams) || 0, ((kickSchool == null ? void 0 : kickSchool.gameplan) == null ? void 0 : kickSchool.gameplan.retScheme) || null);
+                  if (!ko2.touchback && ko2.returner) {
+                    token.koReturns.push({
+                      side: scoringTeam,
+                      returnerId: ko2.returner.id,
+                      yards: ko2.retYds || 0,
+                      td: false
+                    });
+                  }
+                  pendingKickoff = [
+                    {
+                      type: "kickoff",
+                      kickingSide: scoringTeam,
+                      receivingSide: receivingTeam,
+                      onside: false,
+                      touchback: false,
+                      returnerId: (_n = (_m = ko.returner) == null ? void 0 : _m.id) != null ? _n : null,
+                      retYds: ko.retYds || 0,
+                      returnTD: true,
+                      koTeam: (recvSchool == null ? void 0 : recvSchool.name) || "",
+                      fieldPos: 50
+                    },
+                    {
+                      type: "kickoff",
+                      kickingSide: receivingTeam,
+                      receivingSide: scoringTeam,
+                      onside: false,
+                      touchback: !!ko2.touchback,
+                      returnerId: (_p = (_o = ko2.returner) == null ? void 0 : _o.id) != null ? _p : null,
+                      retYds: ko2.retYds || 0,
+                      returnTD: false,
+                      fieldPos: 50
+                    }
+                  ];
+                  possession = scoringTeam;
+                  fieldPos = ko2.fieldPos;
+                } else {
+                  if (!ko.touchback && retName && ko.retYds != null) {
+                    log.push(`${retName} returns the kickoff ${ko.retYds} yards`);
+                  }
+                  possession = receivingTeam;
+                  fieldPos = ko.fieldPos;
                 }
-                possession = receivingTeam;
-                fieldPos = ko.fieldPos;
               }
             }
           }
+        } else if (driveResult.finalFieldPos === "muff_retain") {
+          const _rtStats = possession === "home" ? awayStats : homeStats;
+          _rtStats.fumbles++;
+          fieldPos = driveResult.muffFieldPos || 75;
         } else {
           possession = possession === "home" ? "away" : "home";
           fieldPos = driveResult.finalFieldPos || 25;
@@ -31935,6 +32530,45 @@ var _CFB = (() => {
     }
     return scored.map((e, i) => __spreadProps2(__spreadValues2({}, e), { rank: i + 1 }));
   }
+  function computeClassRankings(schools, signingsLog, division, season) {
+    const pool = (schools || []).filter((s) => s.division === division);
+    if (!pool.length) return [];
+    const byId2 = new Map(pool.map((s) => [s.id, s]));
+    const agg = /* @__PURE__ */ new Map();
+    for (const sg of signingsLog || []) {
+      if (sg.season !== season) continue;
+      if (!byId2.has(sg.schoolId)) continue;
+      const vr = Math.max(1, Math.min(99, sg.star || 0));
+      let a = agg.get(sg.schoolId);
+      if (!a) agg.set(sg.schoolId, a = { sum: 0, size: 0, starSum: 0, top: 0 });
+      a.sum += Math.pow(vr, 2.5) / 1e3;
+      a.size += 1;
+      a.starSum += vr;
+      if (vr > a.top) a.top = vr;
+    }
+    const scored = pool.map((s) => {
+      const a = agg.get(s.id) || { sum: 0, size: 0, starSum: 0, top: 0 };
+      const score = a.sum + a.size * CLASS_SIZE_TERM;
+      return {
+        school: s,
+        score,
+        size: a.size,
+        avgStar: a.size ? a.starSum / a.size / 20 : 0,
+        topStar: a.top / 20
+      };
+    });
+    scored.sort(
+      (a, b) => b.score - a.score || b.size - a.size || (b.school.prestige || 0) - (a.school.prestige || 0)
+    );
+    return scored.map((e, i) => __spreadProps2(__spreadValues2({}, e), { rank: i + 1 }));
+  }
+  function classRankOf(schools, signingsLog, schoolId, season) {
+    const school = (schools || []).find((s) => s.id === schoolId);
+    if (!school) return null;
+    const list = computeClassRankings(schools, signingsLog, school.division, season);
+    const e = list.find((x) => x.school.id === schoolId);
+    return e ? { rank: e.rank, of: list.length, score: e.score, size: e.size, avgStar: e.avgStar } : null;
+  }
   function rankMap(state2, division, topN = 25) {
     var _a;
     const poll = computeDivisionPoll(((_a = state2.world) == null ? void 0 : _a.schools) || [], state2.schedule || [], division);
@@ -31945,10 +32579,11 @@ var _CFB = (() => {
     }
     return m;
   }
-  var MARGIN_CAP, PRIOR_DECAY_GAMES, PRESTIGE_CEIL;
+  var CLASS_SIZE_TERM, MARGIN_CAP, PRIOR_DECAY_GAMES, PRESTIGE_CEIL;
   var init_rankings = __esm({
     "js/engine/rankings.js"() {
       init_spread();
+      CLASS_SIZE_TERM = 1.5;
       MARGIN_CAP = 21;
       PRIOR_DECAY_GAMES = 8;
       PRESTIGE_CEIL = { D1: 6, D2: 4, D3: 3 };
@@ -32219,6 +32854,11 @@ var _CFB = (() => {
     if (state2.pendingHalftime) {
       return [{ type: "warning", text: "Finish your halftime adjustments before continuing." }];
     }
+    state2._dispatch = dispatch2;
+    {
+      const cw = resolveCoachedWeek(state2);
+      if (cw.pending) return cw.events;
+    }
     if (ensureTree(state2)) {
       refreshAgenda(state2);
       const treeBlock = lockstepBlock(state2);
@@ -32485,13 +33125,15 @@ var _CFB = (() => {
     }
     resolveStaleGames(state2, day, events);
     const dayGames = (state2.schedule || []).filter((g) => g.day === day && !g.result);
-    if (dayGames.length > 0) {
-      const { results, halftimeGame } = simulateGameDay(dayGames, state2);
+    const coachedResults = state2.coachWeek && state2.coachWeek.results || [];
+    if (dayGames.length > 0 || coachedResults.length > 0) {
+      const { results, halftimeGame } = dayGames.length > 0 ? simulateGameDay(dayGames, state2) : { results: [], halftimeGame: null };
       for (const r of results) {
         updateStandings(state2, r);
         events.push({ type: "game", result: r.result });
       }
-      const weeklyCands = collectWeeklyCandidates(state2, results);
+      const allResults = [...coachedResults, ...results];
+      const weeklyCands = collectWeeklyCandidates(state2, allResults);
       if (halftimeGame) {
         state2.pendingWeeklyCands = { day, cands: weeklyCands };
       } else {
@@ -32499,7 +33141,11 @@ var _CFB = (() => {
         state2.pendingWeeklyCands = null;
       }
       checkRedshirtBurns(state2, events);
-      checkRivalryResult(state2, results, events);
+      checkRivalryResult(state2, allResults, events);
+      if (!halftimeGame && state2.coachWeek) {
+        finishCoachedWeek(state2);
+        state2.coachWeek = null;
+      }
       if (halftimeGame) {
         state2.pendingHalftime = halftimeGame;
         events.push(pendingGameEvent(halftimeGame));
@@ -32979,6 +33625,18 @@ var _CFB = (() => {
         state2._lastAdjEval = null;
       }
       updateStandings(state2, r);
+      if (pending2.coachWeek && state2.coachWeek) {
+        (state2.coachWeek.results = state2.coachWeek.results || []).push(r);
+        events2.push({ type: "game", result });
+        const cont = resolveCoachedWeek(state2);
+        if (cont.pending) {
+          events2.push(...cont.events);
+          return events2;
+        }
+        const adv = advanceDay(state2, state2._dispatch || (() => {
+        }));
+        return events2.concat(adv);
+      }
       const stash = state2.pendingWeeklyCands;
       const dayCands = stash && stash.day === game.day ? stash.cands : [];
       state2.pendingWeeklyCands = null;
@@ -33768,12 +34426,19 @@ var _CFB = (() => {
   function archiveSeasonIntoSchools(state2) {
     var _a, _b, _c;
     const rankByDiv = {};
+    const classRankByDiv = {};
     for (const d of ["D1", "D2", "D3"]) {
       try {
         const poll = computeDivisionPoll(state2.world.schools, state2.schedule || [], d);
         rankByDiv[d] = new Map(poll.map((e) => [e.school.id, e.rank]));
       } catch (e) {
         rankByDiv[d] = /* @__PURE__ */ new Map();
+      }
+      try {
+        const cr = computeClassRankings(state2.world.schools, state2.signingsLog || [], d, state2.season);
+        classRankByDiv[d] = new Map(cr.map((e) => [e.school.id, { rank: e.rank, size: e.size }]));
+      } catch (e) {
+        classRankByDiv[d] = /* @__PURE__ */ new Map();
       }
     }
     const bowlById = /* @__PURE__ */ new Map();
@@ -33804,6 +34469,9 @@ var _CFB = (() => {
         if (b) post = b.result.winner === school.id ? "Bowl win" : "Bowl loss";
       }
       const rank = (_c = (_b = rankByDiv[school.division]) == null ? void 0 : _b.get(school.id)) != null ? _c : null;
+      const _crMap = classRankByDiv[school.division];
+      const _cr = _crMap ? _crMap.get(school.id) : null;
+      if (_cr && _cr.size > 0) school.lastClassRank = { rank: _cr.rank, season: state2.season };
       const _hc = school.coach;
       const _hcName = _hc && _hc.name ? `${_hc.name.first || ""} ${_hc.name.last || "Coach"}`.trim() : _hc ? "Coach" : null;
       const _hcYou = _hc && (_hc === state2.playerCoach || school.id === state2.playerSchoolId && !_hc.isAI);
@@ -33817,6 +34485,7 @@ var _CFB = (() => {
         division: school.division,
         prestige: school.prestige,
         rank: rank != null && rank <= 25 ? rank : null,
+        classRank: _cr && _cr.size > 0 ? _cr.rank : null,
         confChamp: ((bracket == null ? void 0 : bracket.confChampIds) || []).includes(school.id),
         post,
         coach: _hcName,
@@ -34357,6 +35026,94 @@ var _CFB = (() => {
     }
     if (state2.playerSchoolId) ids.add(state2.playerSchoolId);
     return [...ids];
+  }
+  function coachedGamesForDay(state2, day) {
+    const idSet = new Set(coachedSchoolIds(state2));
+    return (state2.schedule || []).filter(
+      (g) => g.day === day && !g.result && (idSet.has(g.homeId) || idSet.has(g.awayId))
+    );
+  }
+  function coachedSlotDivFor(state2, schoolId) {
+    var _a;
+    const slots = ((_a = state2.tree) == null ? void 0 : _a.slots) || {};
+    for (const [div, slot] of Object.entries(slots)) {
+      if (slot && !slot.retired && slot.schoolId === schoolId) return div;
+    }
+    return null;
+  }
+  function finishCoachedWeek(state2) {
+    const cw = state2.coachWeek;
+    if (!cw) return;
+    var _a;
+    if (cw.origActive && !cw.restored) {
+      const slot = (_a = state2.tree) == null ? void 0 : _a.slots[cw.origActive];
+      if (slot && !slot.retired) activateSlot(state2, cw.origActive);
+      cw.restored = true;
+    }
+  }
+  function simCoachedGameNow(state2, game) {
+    var _a, _b;
+    const home = state2.world.schools.find((s) => s.id === game.homeId);
+    const away = state2.world.schools.find((s) => s.id === game.awayId);
+    if (!home || !away) return null;
+    const h = gameDressed(home, state2.season);
+    const a = gameDressed(away, state2.season);
+    const result = simulateGame(home, away, h.roster, a.roster, h.depth, a.depth, home.gameplan, away.gameplan);
+    if (((_a = state2.settings) == null ? void 0 : _a.injuries) !== false) for (const player of home.roster) checkGameInjury(player, state2.day, home);
+    if (((_b = state2.settings) == null ? void 0 : _b.injuries) !== false) for (const player of away.roster) checkGameInjury(player, state2.day, away);
+    game.result = result;
+    updateStandings(state2, { game, result });
+    try {
+      trackCoachDNA(state2, null, game, result, []);
+    } catch (e) {
+    }
+    try {
+      for (const s of [home, away]) updateOLContinuity(s);
+    } catch (e) {
+    }
+    const cw = state2.coachWeek;
+    if (cw) (cw.results = cw.results || []).push({ game, result });
+    return result;
+  }
+  function startCoachedGamePause(state2, game) {
+    const home = state2.world.schools.find((s) => s.id === game.homeId);
+    const away = state2.world.schools.find((s) => s.id === game.awayId);
+    if (!home || !away) return null;
+    const { halftimeToken } = runGameMaybeHalftime(home, away, state2);
+    if (!halftimeToken) return null;
+    return { token: halftimeToken, game, home, away, coachWeek: true, context: { kind: "regular", day: game.day } };
+  }
+  function resolveCoachedWeek(state2) {
+    var _a;
+    const coachedIds = coachedSchoolIds(state2);
+    if (coachedIds.length <= 1) return { pending: false, events: [] };
+    const day = state2.day + 1;
+    const games = coachedGamesForDay(state2, day);
+    if (!games.length) return { pending: false, events: [] };
+    let cw = state2.coachWeek;
+    if (!cw || cw.day !== day) {
+      cw = state2.coachWeek = { day, origActive: ((_a = state2.tree) == null ? void 0 : _a.active) || null, sim: {}, results: [], restored: false };
+    }
+    const next = games.find((g) => !g.result);
+    if (!next) {
+      finishCoachedWeek(state2);
+      return { pending: false, events: [] };
+    }
+    const idSet = new Set(coachedIds);
+    const steerId = idSet.has(next.homeId) ? next.homeId : next.awayId;
+    const div = coachedSlotDivFor(state2, steerId);
+    if (div) activateSlot(state2, div);
+    if (cw.sim && cw.sim[next.id]) {
+      simCoachedGameNow(state2, next);
+      return resolveCoachedWeek(state2);
+    }
+    const pending2 = startCoachedGamePause(state2, next);
+    if (!pending2) {
+      simCoachedGameNow(state2, next);
+      return resolveCoachedWeek(state2);
+    }
+    state2.pendingHalftime = pending2;
+    return { pending: true, events: [pendingGameEvent(pending2)] };
   }
   function startNewSeason(state2, dispatch2) {
     state2.playoffs = null;
@@ -35994,6 +36751,21 @@ var _CFB = (() => {
           chapter: "reading-a-player",
           body: `A measure of how well a player fits the job his position asks of him, not of the athlete himself. Stand the same body at a different spot and the number changes, because the job changed.`
         },
+        "class-rank": {
+          term: "Class Rank",
+          chapter: "recruiting",
+          body: `Where your recruiting class stands against the other programs in your division. It leans hard on your best signees \u2014 a handful of blue-chippers outranks a long list of solid ones \u2014 with a smaller nudge for signing a full class. It updates live off current commitments and locks in on Signing Day.`
+        },
+        "target-share": {
+          term: "Target Shares",
+          chapter: "calling-a-game",
+          body: `How often each receiving role is the intended man on a pass. It's a lean, not a script \u2014 the quarterback still reads the coverage and takes what's open, so a featured target sees more looks but never all of them. Shares are set by role (X, Z, slot, tight end, back), so they follow whoever lines up there. The Game Plan sets your standing default; the Depth Chart field view lets you tweak it formation by formation.`
+        },
+        "rpo": {
+          term: "RPO",
+          chapter: "calling-a-game",
+          body: `Run-Pass Option. One play that's both a run and a pass \u2014 the quarterback hands off or pulls it to throw depending on what one defender does after the snap. It puts that defender in a bind: crash the run and the throw is open, sit on the pass and the run has a lane.`
+        },
         "role-fit": {
           term: "Role Fit",
           chapter: "reading-a-player",
@@ -36418,7 +37190,7 @@ var _CFB = (() => {
       </div>
       ${selectedIds.size > 0 ? `
       <div class="gp-row">
-        <label class="gp-label">Usage Weights</label>
+        <label class="gp-label">How Often You Line Up Here</label>
         <div class="formation-weights">
           ${offFormations.map((entry, i) => `
             <div class="fw-row">
@@ -36720,6 +37492,27 @@ var _CFB = (() => {
       <span>${dir.left || 0}% left \xB7 ${dir.middle || 0}% mid \xB7 ${dir.right || 0}% right${L > R + 8 && (dir.right || 0) > (dir.left || 0) ? " \u2014 <i>running away from your strength?</i>" : ""}</span></div>
   </div>`;
   }
+  function renderDefaultSharesRow(gp) {
+    if (!gp.defaultShares) gp.defaultShares = Object.assign({}, DEFAULT_SHARE_FALLBACK);
+    const ds = gp.defaultShares;
+    const total = DEFAULT_SHARE_SLOTS.reduce((s, [k]) => s + (ds[k] != null ? ds[k] : DEFAULT_SHARE_FALLBACK[k]), 0);
+    return `
+  <div class="gp-row">
+    <label class="gp-label">Default ${tipTerm("target-share", "Target Shares")} <span class="gp-hint">(who the ball looks for)</span></label>
+    <div class="run-dir-row">
+      ${DEFAULT_SHARE_SLOTS.map(([key, lbl]) => {
+      const v = ds[key] != null ? ds[key] : DEFAULT_SHARE_FALLBACK[key];
+      return `
+        <div class="run-dir-cell">
+          <div class="run-dir-name">${lbl}</div>
+          <input type="range" min="0" max="40" step="2" value="${v}" data-defshare="${key}">
+          <div class="run-dir-val">${v}%</div>
+        </div>`;
+    }).join("")}
+    </div>
+    <div class="gp-tip tip-info">\u25B8 Your standing pecking order for who gets thrown to \u2014 by role, not by name, so it follows whoever lines up there. The sim leans this way but always takes what the coverage gives. Want a different mix out of a specific formation? Tune it per-formation on the field view: <button type="button" class="btn-ghost btn-sm" data-nav="depthchart">Depth Chart \u2192</button></div>
+  </div>`;
+  }
   function renderOffenseDefaults(gp) {
     var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r;
     const offFormations = normalizeFormations(gp.offFormations, gp.offFormation);
@@ -36770,7 +37563,7 @@ var _CFB = (() => {
 
           ${selectedIds.size > 0 ? `
           <div class="gp-row">
-            <label class="gp-label">Usage Weights</label>
+            <label class="gp-label">How Often You Line Up Here</label>
             <div class="formation-weights">
               ${offFormations.map((entry, i) => `
                 <div class="fw-row">
@@ -36853,7 +37646,7 @@ var _CFB = (() => {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">RPO Rate <span class="gp-hint">(Pistol/RPO runs carrying the option)</span></label>
+            <label class="gp-label">${tipTerm("rpo", "RPO")} Rate <span class="gp-hint">(run-pass option plays)</span></label>
             <div class="gp-slider-wrap">
               <span class="gp-slider-lo">0%</span>
               <input class="gp-slider" type="range" id="rpo-rate" min="0" max="60" value="${(_a = gp.rpoRate) != null ? _a : 40}" />
@@ -36871,7 +37664,7 @@ var _CFB = (() => {
               <span class="gp-slider-hi">12%</span>
               <span class="gp-slider-val" id="gadget-val">${(_b = gp.gadgetRate) != null ? _b : 4}%</span>
             </div>
-            <div class="gp-tip tip-info">\u25B8 PASS 5 trick tier \u2014 the dial is how often an outside run becomes a Reverse or a deep shot becomes a Flea Flicker / HB Pass on its own. Each is also callable from the sheet's Gadgets tab. They cash in against a run-committed, over-pursuing defense and get people hurt against a disciplined one \u2014 the reverse dies to a contain edge, the flea flicker eats sacks.</div>
+            <div class="gp-tip tip-info">\u25B8 Trick plays \u2014 the dial is how often an outside run becomes a Reverse or a deep shot becomes a Flea Flicker / HB Pass on its own. Each is also callable from the sheet's Gadgets tab. They cash in against a run-committed, over-pursuing defense and get people hurt against a disciplined one \u2014 the reverse dies to a contain edge, the flea flicker eats sacks.</div>
           </div>
 
           ${["Wildcat", "Flexbone", "Pistol/RPO", "Spread", "Trips/Bunch", "Air Raid", "Empty", "Single Back", "Power-I"].some((f) => selectedIds.has(f)) ? `
@@ -36959,6 +37752,8 @@ var _CFB = (() => {
           <details class="gp-section" open>
           <summary class="gp-section-hdr">THE PASS GAME <span class="gp-section-sub">depth &amp; targets</span></summary>
 
+          ${renderDefaultSharesRow(gp)}
+
           <div class="gp-row">
             <label class="gp-label">Pass Depth Distribution</label>
             <div class="run-dir-row">
@@ -37032,7 +37827,7 @@ var _CFB = (() => {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">Protection Identity <span class="gp-hint">(how the pocket is built)</span></label>
+            <label class="gp-label">Protection Style <span class="gp-hint">(how you keep the QB clean)</span></label>
             <div class="gp-options">
               ${C.PROT_IDENTITY.order.map((val) => `
                 <button class="gp-option gp-option-sm${(gp.protIdentity || "halfSlide") === val ? " active" : ""}"
@@ -37059,7 +37854,7 @@ var _CFB = (() => {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">LOS Freedom <span class="gp-hint">(audibles &amp; kill calls)</span></label>
+            <label class="gp-label">Line-of-Scrimmage Freedom <span class="gp-hint">(let the QB change the call)</span></label>
             <div class="gp-options">
               ${[["never", "Run the Call"], ["auto", "Auto"], ["free", "Full Freedom"]].map(([val, lbl]) => `
                 <button class="gp-option gp-option-sm${(gp.losFreedom || "auto") === val ? " active" : ""}"
@@ -37072,7 +37867,7 @@ var _CFB = (() => {
 
           ${offSubTab !== "playbook" ? "" : `
           <details class="gp-section" open>
-          <summary class="gp-section-hdr">THE PLAYBOOK <span class="gp-section-sub">concept weights \u2014 your call sheet</span></summary>
+          <summary class="gp-section-hdr">THE PLAYBOOK <span class="gp-section-sub">your play mix \u2014 the call sheet</span></summary>
           <div class="gp-tip tip-info">\u25B8 Every snap the sim now calls a real CONCEPT \u2014 this is where you weight them. 50 is a balanced call sheet; crank what your roster executes, bench what it can't (0 = never called, and your QB can't audible into it). Each concept beats some coverages and dies against others \u2014 the drive log shows you which you're meeting. Fair warning: the defense keeps film. Ride one concept hard enough and it starts getting jumped, so a lopsided sheet pays a tax. Weights ride with your saved plans, so different opponents can get different books.</div>
           ${(() => {
       const carried = (gp.offFormations || []).filter((f) => f && f.id && (f.weight || 0) > 0).map((f) => f.id).filter((id) => FORMATION_PLAYBOOK[id]);
@@ -37083,10 +37878,10 @@ var _CFB = (() => {
       };
       const strip = carried.length ? `
           <div class="gp-row"><div class="gp-options">
-            <button class="gp-option gp-option-sm${!pbFormTab ? " active" : ""}" data-pbform="">GLOBAL SHEET</button>
+            <button class="gp-option gp-option-sm${!pbFormTab ? " active" : ""}" data-pbform="">BASE PLAYBOOK</button>
             ${carried.map((id) => `<button class="gp-option gp-option-sm${pbFormTab === id ? " active" : ""}" data-pbform="${escapeHtml(id)}">${escapeHtml(id)}${authoredIn(id) ? ` (${authoredIn(id)})` : ""}</button>`).join("")}
           </div></div>
-          <div class="gp-hint">Madden-style formation sheets: pick a formation to author ITS playbook. Overrides apply only to snaps from that formation; untouched plays inherit the global sheet.</div>` : "";
+          <div class="gp-hint">Per-formation playbooks: pick a formation to set its own play mix. Changes apply only to snaps from that formation; untouched plays use your base playbook.</div>` : "";
       return strip + (pbFormTab ? renderFormationPlaybook(gp, pbFormTab) : renderPlaybookGroups(gp));
     })()}
           </details>`}
@@ -37238,7 +38033,7 @@ var _CFB = (() => {
         <input class="gp-slider" type="range" id="screen-rate" min="0" max="30" value="${(_f = gp.screenRate) != null ? _f : 14}" />
       </div>
       ${chipRow(
-      "LOS Freedom",
+      "Line-of-Scrimmage Freedom",
       gp.losFreedom || "auto",
       [["never", "Run the Call"], ["auto", "Auto"], ["free", "Full Freedom"]],
       "losFreedom"
@@ -37412,7 +38207,7 @@ var _CFB = (() => {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">Sub Philosophy <span class="gp-hint">(answering their personnel)</span></label>
+            <label class="gp-label">Substitutions <span class="gp-hint">(answering their personnel)</span></label>
             <div class="gp-options">
               ${[["match", "Match"], ["auto", "Auto"], ["base", "Stay Base"]].map(([val, lbl]) => `
                 <button class="gp-option gp-option-sm${(gp.subPhilosophy || "auto") === val ? " active" : ""}"
@@ -37450,7 +38245,7 @@ var _CFB = (() => {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">Zone Teaching <span class="gp-hint">(spot-drop vs match)</span></label>
+            <label class="gp-label">Zone Style <span class="gp-hint">(sit in lanes vs carry routes)</span></label>
             <div class="gp-options">
               ${[["spot", "Spot-drop"], ["balanced", "Balanced"], ["match", "Match"]].map(([val, lbl]) => `
                 <button class="gp-option gp-option-sm${(gp.zoneStyle || "balanced") === val ? " active" : ""}"
@@ -37542,7 +38337,7 @@ var _CFB = (() => {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">Pressure Identity <span class="gp-hint">(what the heat looks like)</span></label>
+            <label class="gp-label">Pressure Style <span class="gp-hint">(what your blitz looks like)</span></label>
             <div class="gp-options">
               <button class="gp-option gp-option-sm${!gp.pressureIdentity ? " active" : ""}"
                       data-gp-pressid="auto">Auto \u2014 ${escapeHtml((_d = FRONT_PRESSURE_SIGNATURE[gp.defBaseFront || "4-3"] && ((_c = C.PRESS_IDENTITY[FRONT_PRESSURE_SIGNATURE[gp.defBaseFront || "4-3"]]) == null ? void 0 : _c.label)) != null ? _d : "front\u2019s signature")}</button>
@@ -38050,6 +38845,16 @@ var _CFB = (() => {
         });
       });
     });
+    root.querySelectorAll("[data-defshare]").forEach((sl) => {
+      sl.addEventListener("input", (e) => {
+        var _a2;
+        if (!gp.defaultShares) gp.defaultShares = {};
+        const key = sl.dataset.defshare;
+        gp.defaultShares[key] = parseInt(e.target.value) || 0;
+        const v = (_a2 = sl.parentElement) == null ? void 0 : _a2.querySelector(".run-dir-val");
+        if (v) v.textContent = `${gp.defaultShares[key]}%`;
+      });
+    });
   }
   function cellIsCustom(sits, key) {
     const c = sits[key];
@@ -38119,7 +38924,7 @@ var _CFB = (() => {
         return `
             <div class="chk-row">
               <span class="chk-lbl">${flbl}</span>
-              <button class="dc-plan${cur == null ? " active" : ""}" data-call-clear="${escapeHtml(nm)}" data-call-field="${field}">inherit</button>
+              <button class="dc-plan${cur == null ? " active" : ""}" data-call-clear="${escapeHtml(nm)}" data-call-field="${field}">use plan</button>
               ${opts.map(([v, ol]) => `<button class="dc-chip${cur === v ? " active" : ""}" data-call-name="${escapeHtml(nm)}" data-call-field="${field}" data-call-val="${v}">${ol}</button>`).join("")}
             </div>`;
       }).join("")}
@@ -38177,7 +38982,7 @@ var _CFB = (() => {
     return `
           <details class="gp-section" open>
           <summary class="gp-section-hdr">CHECK-WITH-ME <span class="gp-section-sub">calls keyed on their personnel</span></summary>
-          <div class="gp-tip tip-info">\u25B8 The situation cells key on down-and-distance; a real call sheet also keys on PERSONNEL \u2014 "vs Empty, bring the house." When the offense breaks the huddle in a class below, your check overlays the standing call for that snap. Anything left inherit rides the plan. Over-check at your peril: motion and the jet game punish a defense that declares off the first look.</div>
+          <div class="gp-tip tip-info">\u25B8 The situation cells key on down-and-distance; a real call sheet also keys on PERSONNEL \u2014 "vs Empty, bring the house." When the offense breaks the huddle in a class below, your check overlays the standing call for that snap. Anything left on "use plan" rides the plan. Over-check at your peril: motion and the jet game punish a defense that declares off the first look.</div>
           ${CHK_CLASSES.map(([cls, label, desc]) => {
       const cell = checks[cls] || {};
       const has = Object.keys(cell).length > 0;
@@ -38189,7 +38994,7 @@ var _CFB = (() => {
         return `
             <div class="chk-row">
               <span class="chk-lbl">${flbl}</span>
-              <button class="dc-plan${cur == null ? " active" : ""}" data-chk-clear="${cls}" data-chk-field="${field}">inherit</button>
+              <button class="dc-plan${cur == null ? " active" : ""}" data-chk-clear="${cls}" data-chk-field="${field}">use plan</button>
               ${opts.map(([v, ol]) => `<button class="dc-chip${cur === v ? " active" : ""}" data-chk-class="${cls}" data-chk-field="${field}" data-chk-val="${v}">${ol}</button>`).join("")}
             </div>`;
       }).join("")}
@@ -38377,7 +39182,7 @@ var _CFB = (() => {
     )}
 
   ${group(
-      "Protection Identity",
+      "Protection Style",
       "protIdentity",
       cell.protIdentity != null,
       `AUTO \u2014 ${escapeHtml(C.PROT_IDENTITY.labels[gp.protIdentity || "halfSlide"])}`,
@@ -38416,11 +39221,11 @@ var _CFB = (() => {
     )}
 
   ${group(
-      "Playbook \u2014 Concept Weights",
+      "Playbook \u2014 Play Mix",
       "conceptWeights",
       !!cell.conceptWeights,
-      `AUTO \u2014 your base call sheet${gp.conceptWeights && Object.keys(gp.conceptWeights).length ? " (custom weights)" : " (balanced)"}`,
-      `<div class="gp-tip tip-info">\u25B8 The wizard grid: THIS situation's sheet. Weights overlay your base playbook per concept \u2014 bench the fades at the goal line, feature Power on 3rd &amp; short. The call sheet's \u2248% follow it live.</div>
+      `AUTO \u2014 your base call sheet${gp.conceptWeights && Object.keys(gp.conceptWeights).length ? " (custom mix)" : " (balanced)"}`,
+      `<div class="gp-tip tip-info">\u25B8 THIS situation's play mix. It overlays your base playbook \u2014 bench the fades at the goal line, feature Power on 3rd &amp; short. The call sheet's \u2248% follow it live.</div>
     ${renderPlaybookGroups(gp, { cw: __spreadValues2(__spreadValues2({}, gp.conceptWeights || {}), cell.conceptWeights), attr: "sitcw" })}`
     )}
   `}
@@ -38488,7 +39293,7 @@ var _CFB = (() => {
       ["Cushion", "pressLevel", [["press", "Press"], ["balanced", "Balanced"], ["off", "Off"]], "balanced"],
       ["Edge Discipline", "edgePlay", [["contain", "Contain"], ["balanced", "Balanced"], ["crash", "Crash"]], "balanced"],
       ["Option Assignment", "optionKey", [["balanced", "Balanced"], ["qb", "Contain QB"], ["pitch", "Take Pitch"]], "balanced"],
-      ["Sub Philosophy", "subPhilosophy", [["match", "Match"], ["auto", "Auto"], ["base", "Stay Base"]], "auto"],
+      ["Substitutions", "subPhilosophy", [["match", "Match"], ["auto", "Auto"], ["base", "Stay Base"]], "auto"],
       ["Tackling", "tackleStyle", [["wrap", "Wrap"], ["balanced", "Balanced"], ["strip", "Strip"]], "balanced"]
     ].map(([lbl, field, opts, dflt]) => {
       var _a2;
@@ -38747,6 +39552,12 @@ var _CFB = (() => {
       { id: "Power-I", weight: 20 }
     ].filter((f, i, arr) => arr.findIndex((x) => x.id === f.id) === i);
   }
+  function builtinPlan(name) {
+    return BUILTIN_PLANS.find((p) => p.name === name) || null;
+  }
+  function applyPlanToSchool(school, gp) {
+    Object.assign(school.gameplan, JSON.parse(JSON.stringify(gp)));
+  }
   function renderPlanSlots(school) {
     var _a, _b;
     if (!school) return "";
@@ -38759,11 +39570,16 @@ var _CFB = (() => {
       <button class="plan-slot${q.active === s ? " active" : ""}" data-plan-slot="${s}">${s}</button>`).join("")}
     ${state._coachId ? `
       <button class="btn-ghost btn-sm" id="btn-gp-save-team" style="margin-left:auto">Save Team to Play Now</button>
-      <button class="btn-ghost btn-sm" id="btn-gp-to-library">Save Plan</button>
-      ${lib.length ? `<select class="form-select plan-lib-select" id="gp-lib-load">
-        <option value="">Load\u2026</option>
-        ${lib.map((p) => `<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join("")}
-      </select>` : ""}` : ""}
+      <button class="btn-ghost btn-sm" id="btn-gp-to-library">Save Plan</button>` : ""}
+    <select class="form-select plan-lib-select" id="gp-lib-load"${state._coachId ? "" : ` style="margin-left:auto"`}>
+      <option value="">Load a plan\u2026</option>
+      <optgroup label="Preset plans">
+        ${BUILTIN_PLANS.map((p) => `<option value="builtin:${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join("")}
+      </optgroup>
+      ${lib.length ? `<optgroup label="My plans">
+        ${lib.map((p) => `<option value="lib:${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join("")}
+      </optgroup>` : ""}
+    </select>
   </div>`;
   }
   function setupListeners() {
@@ -38803,9 +39619,22 @@ var _CFB = (() => {
     (_c = document.getElementById("gp-lib-load")) == null ? void 0 : _c.addEventListener("change", (e) => {
       var _a2, _b2;
       const school2 = getPlayerSchool();
-      const p = (((_b2 = (_a2 = getCoach(state._coachId)) == null ? void 0 : _a2.plans) == null ? void 0 : _b2.gameplans) || []).find((x) => x.name === e.target.value);
-      if (!p || !school2) return;
-      Object.assign(school2.gameplan, JSON.parse(JSON.stringify(p.gp)));
+      const raw = e.target.value;
+      if (!raw || !school2) return;
+      const sep = raw.indexOf(":");
+      const kind = sep >= 0 ? raw.slice(0, sep) : "lib";
+      const planName = sep >= 0 ? raw.slice(sep + 1) : raw;
+      if (kind === "builtin") {
+        const bp = builtinPlan(planName);
+        if (!bp) return;
+        applyPlanToSchool(school2, bp.gp);
+        notify(`"${bp.name}" preset loaded`, "success");
+        rerender();
+        return;
+      }
+      const p = (((_b2 = (_a2 = getCoach(state._coachId)) == null ? void 0 : _a2.plans) == null ? void 0 : _b2.gameplans) || []).find((x) => x.name === planName);
+      if (!p) return;
+      applyPlanToSchool(school2, p.gp);
       notify(`"${p.name}" loaded from library`, "success");
       rerender();
     });
@@ -38896,10 +39725,10 @@ var _CFB = (() => {
     ].filter(([, list]) => list.length);
     return `
   <div class="cw-explain">This is <b>${escapeHtml(fid)}'s own call sheet</b> \u2014 ${carry.length} plays it actually runs.
-  Slide a play here and the override applies only to snaps out of ${escapeHtml(fid)}; anything you don't touch
-  <b>inherits the global sheet</b>. 0 is still a cut \u2014 benched here means never called from this formation.
-  ${nAuthored ? `<b>${nAuthored} play${nAuthored === 1 ? "" : "s"} authored.</b>` : "Nothing authored yet \u2014 this formation runs the global book."}</div>
-  ${nAuthored ? `<div class="gp-row"><button class="gp-option gp-option-sm" id="fpb-reset" data-fpbform="${escapeHtml(fid)}">Reset ${escapeHtml(fid)} to the global sheet</button></div>` : ""}
+  Slide a play here and the change applies only to snaps out of ${escapeHtml(fid)}; anything you don't touch
+  <b>uses your base playbook</b>. 0 is still a cut \u2014 benched here means never called from this formation.
+  ${nAuthored ? `<b>${nAuthored} play${nAuthored === 1 ? "" : "s"} set here.</b>` : "Nothing set yet \u2014 this formation runs your base playbook."}</div>
+  ${nAuthored ? `<div class="gp-row"><button class="gp-option gp-option-sm" id="fpb-reset" data-fpbform="${escapeHtml(fid)}">Reset ${escapeHtml(fid)} to your base playbook</button></div>` : ""}
   ${groups.map(([title, list], gi) => {
       const eff = (nm) => {
         var _b;
@@ -38916,7 +39745,7 @@ var _CFB = (() => {
         return `
         <div class="cw-row">
           <div class="cw-name">${escapeHtml(name)} <span class="cw-hint">${conceptHint(name, c)}</span>
-            ${authored ? `<button class="cw-offsheet" data-fpbclear="${escapeHtml(name)}" data-fpbform="${escapeHtml(fid)}" title="Authored for ${escapeHtml(fid)} \u2014 tap to go back to inheriting the global weight">set here \xB7 tap to inherit</button>` : ""}
+            ${authored ? `<button class="cw-offsheet" data-fpbclear="${escapeHtml(name)}" data-fpbform="${escapeHtml(fid)}" title="Set for ${escapeHtml(fid)} \u2014 tap to go back to your base playbook">set here \xB7 tap to reset</button>` : ""}
           </div>
           <div class="gp-slider-wrap">
             <span class="gp-slider-lo">bench</span>
@@ -38949,7 +39778,7 @@ var _CFB = (() => {
     return `
   ${opts ? "" : `<div class="gp-row"><button class="gp-option gp-option-sm" id="cw-reset">Reset to an even call sheet</button></div>
   <div class="cw-explain">Weights set the mix inside each group \u2014 and <b>0 is a cut, not a low number</b>: a benched
-  play is out of the install and will never be called; the sheet renormalizes around what's left. A play also only
+  play is out of the game plan and will never be called; the sheet re-balances around what's left. A play also only
   lives in the formations that carry it \u2014 drop every formation that runs it from your package and it comes off the
   sheet no matter where the slider sits.</div>`}
   ${groups.map(([title, subT, list], gi) => {
@@ -38980,7 +39809,7 @@ var _CFB = (() => {
     }).join("")}
 `;
   }
-  var CHK_CLASSES, CHK_FIELDS, MAX_DEF_CALLS, CALL_FIELDS, PERS_COLS, gameplanSection, offSubTab, pbFormTab, defSubTab, sitSide, openSitKey, callSheetSit, callSheetPers, callEditName, SIT_DESCS, SIT_NUDGE, SIT_TIPS, PIN_FRONTS, COV_OPTIONS, ALL_FORMATIONS, DEF_FRONTS2, DEF_FRONT_DESCS, DEF_FRONT_NEEDS, SIMPLE_DIALS, SIMPLE_SITS;
+  var DEFAULT_SHARE_SLOTS, DEFAULT_SHARE_FALLBACK, CHK_CLASSES, CHK_FIELDS, MAX_DEF_CALLS, CALL_FIELDS, PERS_COLS, BUILTIN_PLANS, gameplanSection, offSubTab, pbFormTab, defSubTab, sitSide, openSitKey, callSheetSit, callSheetPers, callEditName, SIT_DESCS, SIT_NUDGE, SIT_TIPS, PIN_FRONTS, COV_OPTIONS, ALL_FORMATIONS, DEF_FRONTS2, DEF_FRONT_DESCS, DEF_FRONT_NEEDS, SIMPLE_DIALS, SIMPLE_SITS;
   var init_gameplan = __esm({
     "js/ui/views/gameplan.js"() {
       init_spread();
@@ -38992,6 +39821,14 @@ var _CFB = (() => {
       init_state();
       init_tips();
       init_utils();
+      DEFAULT_SHARE_SLOTS = [
+        ["X", "X \u2014 Split End"],
+        ["Z", "Z \u2014 Flanker"],
+        ["SL", "Slot"],
+        ["Y", "Y \u2014 Tight End"],
+        ["HB", "Back"]
+      ];
+      DEFAULT_SHARE_FALLBACK = { X: 24, Z: 20, SL: 16, Y: 18, HB: 12 };
       CHK_CLASSES = [
         ["empty", "VS EMPTY", "no backs \u2014 4-5 wide, QB alone"],
         ["spread", "VS SPREAD", "3+ receivers \u2014 Spread, Air Raid, Trips, Pistol"],
@@ -39039,6 +39876,113 @@ var _CFB = (() => {
         ["12", "12", "1 back \xB7 2 TE \u2014 Ace"],
         ["heavy", "HEAVY", "2+ backs / multi-TE"],
         ["option", "BONE", "3-back option looks"]
+      ];
+      BUILTIN_PLANS = [
+        {
+          name: "Air Raid",
+          blurb: "Empty sets, quick game, and a nickel defense that trusts its rush. Throw it to win it.",
+          gp: {
+            offFormations: [{ id: "Air Raid", weight: 45 }, { id: "Empty", weight: 30 }, { id: "Spread", weight: 25 }],
+            defBaseFront: "Nickel",
+            tendency: "Heavy Pass",
+            rushInPct: 45,
+            passDepth: { short: 40, medium: 38, deep: 22 },
+            blitzPct: 25,
+            pressureSource: { edge: 45, interior: 20, secondary: 35 },
+            coverageScheme: "aggressive",
+            greenDog: false,
+            spyQB: false,
+            targetShares: { WR1: 26, WR2: 22, WR3: 20, TE1: 14, RB1: 18 },
+            fourthDown: "Aggressive",
+            maxFGDist: 42,
+            situations: {},
+            baseTempo: "Hurry"
+          }
+        },
+        {
+          name: "Spread Option",
+          blurb: "Pistol RPOs and option football on the ground, tempo to wear them down, four-down mindset.",
+          gp: {
+            offFormations: [{ id: "Pistol/RPO", weight: 45 }, { id: "Spread", weight: 30 }, { id: "Flexbone", weight: 25 }],
+            defBaseFront: "4-3",
+            tendency: "Run",
+            rushInPct: 65,
+            passDepth: { short: 45, medium: 38, deep: 17 },
+            blitzPct: 20,
+            pressureSource: { edge: 50, interior: 25, secondary: 25 },
+            coverageScheme: "balanced",
+            greenDog: false,
+            spyQB: false,
+            targetShares: { WR1: 22, WR2: 20, WR3: 16, TE1: 20, RB1: 22 },
+            fourthDown: "Aggressive",
+            maxFGDist: 42,
+            situations: {},
+            baseTempo: "Hurry"
+          }
+        },
+        {
+          name: "Pro Balanced",
+          blurb: "A little of everything. Run to set up the pass, a sound 4-3, no wasted risk. The safe start.",
+          gp: {
+            offFormations: [{ id: "Single Back", weight: 40 }, { id: "Power-I", weight: 30 }, { id: "Spread", weight: 30 }],
+            defBaseFront: "4-3",
+            tendency: "Balanced",
+            rushInPct: 60,
+            passDepth: { short: 40, medium: 40, deep: 20 },
+            blitzPct: 20,
+            pressureSource: { edge: 50, interior: 20, secondary: 30 },
+            coverageScheme: "balanced",
+            greenDog: false,
+            spyQB: false,
+            targetShares: { WR1: 22, WR2: 20, WR3: 16, TE1: 20, RB1: 14 },
+            fourthDown: "Moderate",
+            maxFGDist: 44,
+            situations: {},
+            baseTempo: "Normal"
+          }
+        },
+        {
+          name: "Bend-Don't-Break",
+          blurb: "Grind the clock, lean on the run, keep everything in front on defense. Win the field-position game.",
+          gp: {
+            offFormations: [{ id: "Power-I", weight: 40 }, { id: "Single Back", weight: 35 }, { id: "Jumbo", weight: 25 }],
+            defBaseFront: "4-3",
+            tendency: "Heavy Run",
+            rushInPct: 72,
+            passDepth: { short: 52, medium: 33, deep: 15 },
+            blitzPct: 10,
+            pressureSource: { edge: 45, interior: 30, secondary: 25 },
+            coverageScheme: "conservative",
+            greenDog: false,
+            spyQB: true,
+            targetShares: { WR1: 20, WR2: 18, WR3: 12, TE1: 24, RB1: 26 },
+            fourthDown: "Conservative",
+            maxFGDist: 40,
+            situations: {},
+            baseTempo: "Chew"
+          }
+        },
+        {
+          name: "Blitz Everything",
+          blurb: "Bring the house from a 3-4, dare them to beat man coverage, and take the ball away. High risk, high reward.",
+          gp: {
+            offFormations: [{ id: "Spread", weight: 40 }, { id: "Single Back", weight: 35 }, { id: "Trips/Bunch", weight: 25 }],
+            defBaseFront: "3-4",
+            tendency: "Balanced",
+            rushInPct: 58,
+            passDepth: { short: 42, medium: 38, deep: 20 },
+            blitzPct: 45,
+            pressureSource: { edge: 45, interior: 35, secondary: 20 },
+            coverageScheme: "aggressive",
+            greenDog: true,
+            spyQB: false,
+            targetShares: { WR1: 22, WR2: 20, WR3: 16, TE1: 20, RB1: 14 },
+            fourthDown: "Aggressive",
+            maxFGDist: 44,
+            situations: {},
+            baseTempo: "Normal"
+          }
+        }
       ];
       gameplanSection = "offense";
       offSubTab = "package";
@@ -40035,6 +40979,16 @@ var _CFB = (() => {
     </div>`;
     })()}
 
+    <div class="ob-setting-row">
+      <div class="ob-setting-label">Starting Game Plan</div>
+      <div class="ob-setting-desc">A ready-made identity to open with. You can tweak every dial on the Game Plan screen, or load a different preset any time \u2014 nothing here is locked in.</div>
+      <select class="form-select" id="ob-start-plan" style="margin-top:6px;max-width:280px">
+        <option value=""${!ob.startPlan ? " selected" : ""}>Team default \u2014 let the staff set it</option>
+        ${BUILTIN_PLANS.map((p) => `<option value="${escapeHtml(p.name)}"${ob.startPlan === p.name ? " selected" : ""}>${escapeHtml(p.name)}</option>`).join("")}
+      </select>
+      ${ob.startPlan && builtinPlan(ob.startPlan) ? `<div class="ob-setting-desc" style="margin-top:6px;opacity:.85">${escapeHtml(builtinPlan(ob.startPlan).blurb)}</div>` : ""}
+    </div>
+
     <button class="btn-primary ob-next" id="ob-next-0" style="margin-top:16px">LET'S GO \u2192</button>
     <div class="ob-alt"><a href="#" id="ob-legacy-link">\u2026or take over an existing program instead</a></div>
   </div>
@@ -40429,6 +41383,13 @@ var _CFB = (() => {
       state.settings.recruitAssist = btn.dataset.obAssist;
       rerender();
     }));
+    {
+      const sp = document.getElementById("ob-start-plan");
+      if (sp) sp.addEventListener("change", (e) => {
+        ob.startPlan = e.target.value || null;
+        rerender();
+      });
+    }
     (_c = document.getElementById("ob-next-0")) == null ? void 0 : _c.addEventListener("click", () => {
       if (!ob.first && !ob.last) {
         if (state._coachProfileName) {
@@ -40556,12 +41517,14 @@ var _CFB = (() => {
           state.playerCoach.jobSecurity = ob.custom.jobSecurity;
           state.playerCoach.budget = Math.round((state.playerCoach.budget || 0) * (ob.custom.budgetPct / 100));
         }
+        const startBuiltin = ob.startPlan ? builtinPlan(ob.startPlan) : null;
+        if (startBuiltin) {
+          const school2 = state.world.schools.find((s) => s.id === state.playerSchoolId);
+          if (school2) applyPlanToSchool(school2, startBuiltin.gp);
+        }
         if (state._coachId) {
           const prof = getCoach(state._coachId);
           const school2 = state.world.schools.find((s) => s.id === state.playerSchoolId);
-          if (((_b2 = (_a2 = prof == null ? void 0 : prof.plans) == null ? void 0 : _a2.gameplans) == null ? void 0 : _b2[0]) && school2) {
-            Object.assign(school2.gameplan, JSON.parse(JSON.stringify(prof.plans.gameplans[0].gp)));
-          }
           if (((_d2 = (_c2 = prof == null ? void 0 : prof.plans) == null ? void 0 : _c2.practice) == null ? void 0 : _d2[0]) && school2) {
             const pp = JSON.parse(JSON.stringify(prof.plans.practice[0].pp));
             if (pp.positionPlans) school2.positionPlans = pp.positionPlans;
@@ -46614,7 +47577,7 @@ var _CFB = (() => {
     </div>
   </div>
 
-  ${gameplanIsSimple() ? renderSimpleOffPanel(school, gp, catchSlots, entry, bySlot) : renderShareBar(catchSlots, entry.shares, shareTotal, school, bySlot)}
+  ${gameplanIsSimple() ? renderSimpleOffPanel(school, gp, catchSlots, entry, bySlot) : renderShareBar(catchSlots, entry.shares, shareTotal, school, bySlot, gp, fid)}
   ${renderDepthOrder(school, "offense")}
 `;
   }
@@ -47395,17 +48358,18 @@ var _CFB = (() => {
     if (featured >= 25) return `<div class="fs-featured" title="Featured target \u2014 the offense feeds him the ball (defenses bracket him)">\u2605</div>`;
     return "";
   }
-  function renderShareBar(catchSlots, shares, shareTotal, school, bySlot) {
+  function renderShareBar(catchSlots, shares, shareTotal, school, bySlot, gp, fid) {
     const roster = (school == null ? void 0 : school.roster) || [];
-    return `
-  <div class="card share-summary">
-    <div class="card-header"><span class="card-title">TARGET SHARE</span>
-      <span class="card-sub">who the QB looks for \xB7 per slot</span></div>
-    <div class="share-rows">
-      ${catchSlots.map((s) => {
+    const legacy = (gp == null ? void 0 : gp.targetShares) || {};
+    const defaults = (gp == null ? void 0 : gp.defaultShares) || null;
+    let anyDiffers = false;
+    const rows = catchSlots.map((s) => {
       const pid = bySlot[s.id];
       const p = pid ? roster.find((pl) => pl.id === pid) : null;
       const raw = (shares == null ? void 0 : shares[s.id]) || 0;
+      const def = defaultShareFor(s, legacy, defaults);
+      const differs = raw !== def;
+      if (differs) anyDiffers = true;
       return `
           <div class="share-row">
             <span class="share-slot-label">${escapeHtml(s.label)}</span>
@@ -47413,8 +48377,16 @@ var _CFB = (() => {
             <input class="share-slider" type="range" min="0" max="100" step="5" value="${raw}"
                    data-share-slider="${s.id}">
             <span class="share-slot-pct" data-share-pct="${s.id}">${raw}%</span>
+            ${differs ? `<span class="share-diff-badge" title="Differs from your Game Plan default of ${def}%">\u2260 default</span>` : `<span class="share-diff-badge share-diff-none"></span>`}
           </div>`;
-    }).join("")}
+    }).join("");
+    return `
+  <div class="card share-summary">
+    <div class="card-header"><span class="card-title">TARGET SHARE</span>
+      <span class="card-sub">who the QB looks for \xB7 per slot</span>
+      ${anyDiffers && fid ? `<button class="btn-ghost btn-sm" type="button" data-share-reset="${escapeHtml(fid)}">Reset to default</button>` : ""}</div>
+    <div class="share-rows">
+      ${rows}
     </div>
   </div>
 `;
@@ -47877,6 +48849,20 @@ var _CFB = (() => {
         repaintOffShares(gp, activeOffFormation);
       });
     });
+    document.querySelectorAll("[data-share-reset]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const fid = btn.dataset.shareReset;
+        const entry = gp.fieldAssignments.offense[fid];
+        if (!entry) return;
+        if (!entry.shares) entry.shares = {};
+        const layout = OFF_FIELD_LAYOUTS[fid];
+        const catchSlots = (layout ? layout.slots : []).filter((s) => s.catch);
+        for (const s of catchSlots) entry.shares[s.id] = defaultShareFor(s, gp.targetShares || {}, gp.defaultShares || null);
+        normalizeShares(entry.shares, catchSlots.map((s) => s.id));
+        notify("Target shares reset to your default", "success");
+        rerender();
+      });
+    });
     const _defViewFront = () => defFrontTab || (gp.defFront && gp.defFront !== "auto" ? gp.defFront : gp.defBaseFront || "4-3");
     const _defViewEntry = () => {
       const front = _defViewFront();
@@ -47970,6 +48956,7 @@ var _CFB = (() => {
 
   // js/ui/views/history.js
   init_season();
+  init_rankings();
   init_state();
   init_utils();
   var activeTab2 = "program";
@@ -48197,14 +49184,47 @@ var _CFB = (() => {
     </div>`;
     }).join("");
   }
+  function renderClassTop25(school) {
+    var _a, _b;
+    const schools = ((_a = state.world) == null ? void 0 : _a.schools) || [];
+    const log = state.signingsLog || [];
+    if (!school || !schools.length || !log.length) return "";
+    const div = school.division;
+    const seasons = [...new Set(log.filter((s) => {
+      const sc2 = schools.find((x) => x.id === s.schoolId);
+      return sc2 && sc2.division === div;
+    }).map((s) => s.season))].sort((a, b) => b - a);
+    if (!seasons.length) return "";
+    const season = seasons[0];
+    const list = computeClassRankings(schools, log, div, season).filter((e) => e.size > 0).slice(0, 25);
+    if (!list.length) return "";
+    return `
+    <div class="card">
+      <div class="card-title">${escapeHtml(div)} RECRUITING \u2014 TOP 25 <span class="muted" style="font-weight:400">\xB7 Class of S${season}</span></div>
+      <table class="data-table">
+        <thead><tr><th>#</th><th>Program</th><th>Signees</th><th>Avg \u2605</th><th>Best \u2605</th></tr></thead>
+        <tbody>
+          ${list.map((e) => `
+            <tr${e.school.id === school.id ? ' class="hist-mine"' : ""}>
+              <td>${e.rank}</td>
+              <td>${escapeHtml(e.school.name)}${e.school.id === school.id ? " \u2605" : ""}</td>
+              <td>${e.size}</td>
+              <td>${e.avgStar.toFixed(1)}</td>
+              <td>${e.topStar.toFixed(1)}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+  }
   function renderClassesTab(school) {
     var _a;
     const mine = (state.signingsLog || []).filter((s) => s.schoolId === (school == null ? void 0 : school.id));
-    if (!mine.length) return `<div class="card"><p class="empty-hint">No signees yet \u2014 your first class shows up here on Signing Day.</p></div>`;
+    const top25 = renderClassTop25(school);
+    if (!mine.length) return `${top25}<div class="card"><p class="empty-hint">No signees yet \u2014 your first class shows up here on Signing Day.</p></div>`;
     const bySeason = {};
     for (const s of mine) (bySeason[_a = s.season] || (bySeason[_a] = [])).push(s);
     const seasonsDesc = Object.keys(bySeason).map(Number).sort((a, b) => b - a);
-    return seasonsDesc.map((sn) => {
+    return top25 + seasonsDesc.map((sn) => {
       const cls = bySeason[sn];
       const byPos = {};
       for (const s of cls) byPos[s.pos] = (byPos[s.pos] || 0) + 1;
@@ -48864,6 +49884,7 @@ var _CFB = (() => {
   init_portal();
   init_recruiting();
   init_season();
+  init_rankings();
   init_state();
   init_tips();
   init_utils();
@@ -49557,6 +50578,23 @@ var _CFB = (() => {
   </div>
 `;
   }
+  function liveClassRank(school) {
+    var _a;
+    if (!school) return null;
+    const schools = ((_a = state.world) == null ? void 0 : _a.schools) || [];
+    const season = state.season || 1;
+    const liveLog = [];
+    for (const r of state.world && state.world.recruits || []) {
+      if (!r.committed) continue;
+      if (r.decisionStatus !== "committed" && r.decisionStatus !== "signed") continue;
+      liveLog.push({ season, schoolId: r.committed, star: r.visionRating || 0 });
+    }
+    return classRankOf(schools, liveLog, school.id, season);
+  }
+  function ordinal3(n) {
+    const s = ["th", "st", "nd", "rd"], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
   function renderMyClass(school) {
     var _a, _b, _c;
     if (!school) return '<div class="card"><div class="empty-state">No program loaded.</div></div>';
@@ -49572,6 +50610,7 @@ var _CFB = (() => {
       var _a2;
       return s + (((_a2 = boardByRecruit[r.id]) == null ? void 0 : _a2.spent) || 0);
     }, 0);
+    const clsRank = liveClassRank(school);
     const needRows = classNeedRows(school, klass);
     const lostRows = (((_c = state.playerCoach) == null ? void 0 : _c.recruitBoard) || []).map((e) => {
       var _a2;
@@ -49584,6 +50623,7 @@ var _CFB = (() => {
       <div class="sum-stat"><div class="sum-val">${avgStar || "\u2014"}</div><div class="sum-label">Avg ${tipTerm("recruit-stars", "Visibility")}</div></div>
       <div class="sum-stat"><div class="sum-val">${avgTrue || "\u2014"}</div><div class="sum-label">Avg True</div></div>
       <div class="sum-stat"><div class="sum-val">${fmtMoney(totalSpent)}</div><div class="sum-label">Total Spent</div></div>
+      <div class="sum-stat"><div class="sum-val">${clsRank && clsRank.size > 0 ? ordinal3(clsRank.rank) : "\u2014"}</div><div class="sum-label">${tipTerm("class-rank", "Class Rank")}${clsRank && clsRank.size > 0 ? ` <span class="muted" style="font-weight:400">of ${clsRank.of}</span>` : ""}</div></div>
     </div>
   </div>
 
@@ -49738,8 +50778,8 @@ var _CFB = (() => {
     const pips = (lv) => "\u25CF".repeat(lv || 1);
     const chips = [];
     if (tl.bridge && BRIDGE_CATALOG[tl.bridge]) chips.push(`<span class="trait-chip trait-bridge" title="${escapeHtml(BRIDGE_CATALOG[tl.bridge].desc || "")}">\u2726 ${escapeHtml(BRIDGE_CATALOG[tl.bridge].name)}</span>`);
-    for (const t of tl.play || []) if (PLAY_CATALOG[t.k]) chips.push(`<span class="trait-chip">${escapeHtml(PLAY_CATALOG[t.k].name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
-    for (const t of tl.flaws || []) if (FLAW_CATALOG[t.k]) chips.push(`<span class="trait-chip trait-flaw">${escapeHtml(FLAW_CATALOG[t.k].name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
+    for (const t of tl.play || []) if (PLAY_CATALOG[t.k]) chips.push(`<span class="trait-chip" title="${escapeHtml(PLAY_CATALOG[t.k].desc || PLAY_CATALOG[t.k].name)}">${escapeHtml(PLAY_CATALOG[t.k].name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
+    for (const t of tl.flaws || []) if (FLAW_CATALOG[t.k]) chips.push(`<span class="trait-chip trait-flaw" title="${escapeHtml(FLAW_CATALOG[t.k].desc || FLAW_CATALOG[t.k].name)}">${escapeHtml(FLAW_CATALOG[t.k].name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
     return chips.length ? `<span class="trait-chip-row">${chips.join("")}</span>` : "";
   }
   function renderProfile(recruitId, school, isOpen) {
@@ -50291,6 +51331,7 @@ ${renderAutoRecruitLog()}`;
   init_constants();
   init_formations();
   init_player();
+  init_traits();
   init_state();
 
   // js/ui/colOrder.js
@@ -50349,6 +51390,24 @@ ${renderAutoRecruitLog()}`;
   init_utils();
   function posLabel(pos) {
     return pos === "LB" ? "ILB" : pos;
+  }
+  function miniTraits(p) {
+    const tl = p == null ? void 0 : p.traits;
+    if (!tl) return "";
+    const chips = [];
+    if (tl.bridge && BRIDGE_CATALOG[tl.bridge]) {
+      const b = BRIDGE_CATALOG[tl.bridge];
+      chips.push(`<span class="trait-mini trait-mini-bridge" title="${escapeHtml(b.desc || b.name)}">\u2726 ${escapeHtml(b.name)}</span>`);
+    }
+    for (const t of tl.play || []) {
+      const cat = PLAY_CATALOG[t.k];
+      if (cat) chips.push(`<span class="trait-mini" title="${escapeHtml(cat.desc || cat.name)}">${escapeHtml(cat.name)}</span>`);
+    }
+    for (const t of tl.flaws || []) {
+      const cat = FLAW_CATALOG[t.k];
+      if (cat) chips.push(`<span class="trait-mini trait-mini-flaw" title="${escapeHtml(cat.desc || cat.name)}">${escapeHtml(cat.name)}</span>`);
+    }
+    return chips.length ? `<span class="trait-mini-row">${chips.join("")}</span>` : "";
   }
   var sortCol = "compositeRating";
   var sortDir = 1;
@@ -50474,6 +51533,7 @@ ${renderAutoRecruitLog()}`;
     <td class="player-name-cell">
       <span class="player-name">${escapeHtml(fullName(p))}</span>
       ${p.redshirted ? '<span class="rs-badge">RS</span>' : ""}
+      ${miniTraits(p)}
     </td>
     <td><span class="class-badge class-${p.classYear.toLowerCase()}">${p.classYear}</span></td>
     <td><span class="rating-chip rating-${ratingColor(ovr)}${schemeCls}"${schemeTtl}>${ovr}</span></td>
@@ -50879,7 +51939,7 @@ ${renderAutoRecruitLog()}`;
     }
     return `
   <table class="data-table scout-history-table">
-    <thead><tr><th>SEASON</th><th>COACH</th><th>RECORD</th><th>CONF</th><th>RANK</th><th>\u2605</th><th>RESULT</th></tr></thead>
+    <thead><tr><th>SEASON</th><th>COACH</th><th>RECORD</th><th>CONF</th><th>RANK</th><th>CLASS</th><th>\u2605</th><th>RESULT</th></tr></thead>
     <tbody>
       ${hist.map((h) => {
       var _a;
@@ -50891,6 +51951,7 @@ ${renderAutoRecruitLog()}`;
           <td>${h.w}\u2013${h.l} <span class="muted">(${h.cw}\u2013${h.cl})</span></td>
           <td class="muted">${escapeHtml(h.conf || "")}${h.confChamp ? ' <span class="hist-conf-champ" title="Conference champion">\u{1F3C6}</span>' : ""}</td>
           <td>${h.rank != null ? `#${h.rank}` : '<span class="muted">\u2014</span>'}</td>
+          <td class="muted">${h.classRank != null ? `#${h.classRank}` : "\u2014"}</td>
           <td class="muted">${(_a = h.prestige) != null ? _a : "\u2014"}</td>
           <td>${h.post ? `<span class="${h.post === "National Champion" ? "hist-natty" : ""}">${escapeHtml(h.post)}</span>` : '<span class="muted">\u2014</span>'}</td>
         </tr>`;
@@ -52943,6 +54004,10 @@ ${renderAutoRecruitLog()}`;
         catchPt[0] = rnd() < 0.5 ? 7 : 93;
         catchPt[1] = clamp6(LOS - 5 * YPU, 3, 40);
       }
+      if (p.fieldPos != null && !screen) {
+        const _backEZY = LOS - (100 - p.fieldPos) * YPU - 10 * YPU;
+        if (catchPt[1] < _backEZY) catchPt[1] = _backEZY;
+      }
       const _screenDelay = screenKind === "bubble" ? 0.15 : screenKind === "tunnel" ? 0.55 : 0.62;
       const _catchDepthYds = Math.max(0, (LOS - catchPt[1]) / YPU);
       const _routeBreak = SNAP_END + clamp6(0.45 + _catchDepthYds / (SPD.WR * 1.4), 0.5, 2.1) + (p.playAction ? 0.3 : 0);
@@ -53196,7 +54261,9 @@ ${renderAutoRecruitLog()}`;
           const tGrab = _tipT != null ? _tipT : tCatch;
           const grabPt = _tipPt != null ? _tipPt : catchPt;
           const tBreak = Math.max(PRESNAP + 0.35, throwAt - 0.9);
-          best.behave = (t2, w2, a2) => t2 < tBreak ? prev ? prev(t2, w2, a2) : null : t2 < tGrab ? [grabPt[0], grabPt[1], best.speed] : [grabPt[0] + (rnd() < 0.5 ? -6 : 6), grabPt[1] + 6, best.speed];
+          const _retFwd = p.intTouchback ? 0 : 6;
+          const _retLat = p.intTouchback ? 0 : rnd() < 0.5 ? -6 : 6;
+          best.behave = (t2, w2, a2) => t2 < tBreak ? prev ? prev(t2, w2, a2) : null : t2 < tGrab ? [grabPt[0], grabPt[1], best.speed] : [grabPt[0] + _retLat, grabPt[1] + _retFwd, p.intTouchback ? 0 : best.speed];
           for (const s of catchers) {
             const pr = A[s.id].behave;
             A[s.id].behave = (t2, w2, a2) => t2 < tGrab + 0.22 ? pr ? pr(t2, w2, a2) : null : pursuePt(best, a2, a2.speed * 0.95);
@@ -55510,7 +56577,7 @@ ${renderAutoRecruitLog()}`;
       return { id, name, s };
     }).filter((row) => !!row.name);
   }
-  function ordinal3(n) {
+  function ordinal32(n) {
     return { 1: "1st", 2: "2nd", 3: "3rd", 4: "4th" }[n] || `${n}th`;
   }
   function describePlay(play, names) {
@@ -55936,7 +57003,7 @@ ${renderAutoRecruitLog()}`;
           const gap = p.runGap && ((_c = p.yards) != null ? _c : 0) <= 0 && !p.isScramble ? ` \u2014 stuffed in the ${escapeHtml(p.runGap)}` : "";
           covTag = ` <span class="pbp-cov">\xB7 ${pre}${escapeHtml(p.concept)}${gap}</span>`;
         }
-        const dd = p.down && p.distance != null ? `${ordinal3(p.down)} & ${p.distance}` : "";
+        const dd = p.down && p.distance != null ? `${ordinal32(p.down)} & ${p.distance}` : "";
         const form = p.offFormation ? `${p.offFormation} vs ${p.defFront || "?"}` : "";
         const clockStr = fmtPlayClock(p);
         const spot = fmtSpot(p.fieldPos);
@@ -55989,15 +57056,49 @@ ${renderAutoRecruitLog()}`;
     for (const t of tl.play || []) {
       const cat = PLAY_CATALOG[t.k];
       if (!cat) continue;
-      chips.push(`<span class="trait-chip" title="${escapeHtml(cat.hook || "")}">${escapeHtml(cat.name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
+      chips.push(`<span class="trait-chip" title="${escapeHtml(cat.desc || cat.name)}">${escapeHtml(cat.name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
     }
     for (const t of tl.flaws || []) {
       const cat = FLAW_CATALOG[t.k];
       if (!cat) continue;
-      chips.push(`<span class="trait-chip trait-flaw" title="${escapeHtml(cat.hook || "")}">${escapeHtml(cat.name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
+      chips.push(`<span class="trait-chip trait-flaw" title="${escapeHtml(cat.desc || cat.name)}">${escapeHtml(cat.name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
     }
     if (!chips.length) return "";
     return `<span class="trait-chip-row">${chips.join("")}</span>`;
+  }
+  var TRAIT_LEVEL_LABEL = ["", "I", "II", "III"];
+  function renderTraitDetail(p) {
+    var _a;
+    const tl = p == null ? void 0 : p.traits;
+    if (!tl) return "";
+    const lvl = (n) => TRAIT_LEVEL_LABEL[n] || "I";
+    const rows = [];
+    if (tl.bridge && BRIDGE_CATALOG[tl.bridge]) {
+      const b = BRIDGE_CATALOG[tl.bridge];
+      rows.push(`<div class="trait-detail-row trait-detail-bridge">
+      <div class="trait-detail-head"><span class="trait-detail-name">\u2726 ${escapeHtml(b.name)}</span><span class="trait-detail-tag">Bridge</span></div>
+      <div class="trait-detail-desc">${escapeHtml(b.desc || "")}</div></div>`);
+    }
+    for (const t of tl.play || []) {
+      const cat = PLAY_CATALOG[t.k];
+      if (!cat) continue;
+      rows.push(`<div class="trait-detail-row">
+      <div class="trait-detail-head"><span class="trait-detail-name">${escapeHtml(cat.name)}</span><span class="trait-detail-lv">${lvl(t.lv)}</span></div>
+      <div class="trait-detail-desc">${escapeHtml(cat.desc || "")}</div>
+      ${cat.grow ? `<div class="trait-detail-grow">Improves with: ${escapeHtml(cat.grow)}</div>` : ""}</div>`);
+    }
+    for (const t of tl.flaws || []) {
+      const cat = FLAW_CATALOG[t.k];
+      if (!cat) continue;
+      rows.push(`<div class="trait-detail-row trait-detail-flaw">
+      <div class="trait-detail-head"><span class="trait-detail-name">${escapeHtml(cat.name)}</span><span class="trait-detail-tag">Flaw</span></div>
+      <div class="trait-detail-desc">${escapeHtml(cat.desc || "")}</div></div>`);
+    }
+    if (!rows.length) return "";
+    return `<div class="card trait-detail-card">
+    <div class="card-header"><span class="card-title">TRAITS</span><span class="card-sub">how he plays</span></div>
+    <div class="trait-detail-list">${rows.join("")}</div>
+  </div>`;
   }
   function renderPlayerCardModal() {
     var _a, _b, _c;
@@ -56099,6 +57200,8 @@ ${renderAutoRecruitLog()}`;
             </div>`).join("")}
         </div>
       </div>
+
+      ${renderTraitDetail(p)}
     </div>
   </div>
 `;
@@ -57911,7 +59014,7 @@ ${renderAutoRecruitLog()}`;
     const as = p ? d.possession === "home" ? p.scoreDef : p.scoreOff : r.awayScore;
     const clock = p ? fmtPlayClock(p) || "\u2014:\u2014" : "FINAL";
     const half = p ? `${p.half === 2 ? "2nd" : "1st"} HALF` : "";
-    const dd = p && p.down ? `${ordinal3(p.down)} & ${p.distance}` : "";
+    const dd = p && p.down ? `${ordinal32(p.down)} & ${p.distance}` : "";
     const spot = p ? fmtSpot(p.fieldPos) || "" : "";
     const hasBall = p ? d.possession : null;
     const home = r.homeSchool || null;
