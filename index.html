@@ -3210,6 +3210,10 @@ input[type="range"] { accent-color: var(--team-1); }
   border-color: var(--red);
   box-shadow: 0 0 0 1px var(--red), 0 3px 10px rgba(255,82,82,0.4);
 }
+.field-slot.dropping {
+  border-color: var(--blue, #4a90d9);
+  box-shadow: 0 0 0 1px var(--blue, #4a90d9), 0 3px 10px rgba(74,144,217,0.4);
+}
 .fs-label {
   font-size: 9px; font-weight: 800; letter-spacing: 0.08em;
   color: var(--gold); text-align: center; margin-bottom: 1px;
@@ -3266,21 +3270,40 @@ input[type="range"] { accent-color: var(--team-1); }
 
 /* On-field blitz-share stepper (mirrors .fs-share, red accent) */
 .fs-blitz {
-  display: flex; align-items: center; justify-content: center;
-  gap: 3px; margin-top: 3px; border-top: 1px solid var(--border-sub); padding-top: 2px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  gap: 3px; margin-top: 4px; padding: 3px 4px; border-radius: 6px;
+  background: var(--bg-sunken, rgba(0,0,0,0.18));
+  border: 1px solid var(--border-sub);
 }
+.fs-blitz-tag {
+  flex-basis: 100%; text-align: center;
+  font-size: 8px; font-weight: 800; letter-spacing: 0.06em;
+  color: var(--text-2); opacity: 0.75; margin-bottom: 1px;
+}
+.fs-blitz.on { border-color: var(--red); background: rgba(255,82,82,0.12); }
+.fs-blitz.on .fs-blitz-tag { color: var(--red); opacity: 1; }
+.fs-drop.on { border-color: var(--blue, #4a90d9); background: rgba(74,144,217,0.14); }
+.fs-drop.on .fs-blitz-tag { color: var(--blue, #4a90d9); opacity: 1; }
 .fs-blitz-btn {
-  width: 16px; height: 16px; line-height: 1; border-radius: 4px;
+  width: 22px; height: 22px; line-height: 1; border-radius: 5px;
   background: var(--bg-raised); border: 1px solid var(--border);
-  color: var(--text-1); font-size: 12px; font-weight: 700; cursor: pointer;
+  color: var(--text-1); font-size: 15px; font-weight: 700; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
+  touch-action: manipulation; user-select: none;
 }
 .fs-blitz-btn:hover { background: var(--red); color: #fff; border-color: var(--red); }
+.fs-drop .fs-blitz-btn:hover { background: var(--blue, #4a90d9); border-color: var(--blue, #4a90d9); }
+.fs-blitz-btn:active { transform: translateY(1px); }
 .fs-blitz-val {
-  font-size: 10px; font-weight: 800; color: var(--red);
-  min-width: 22px; text-align: center; font-variant-numeric: tabular-nums;
+  font-size: 12px; font-weight: 800; color: var(--text-2);
+  min-width: 34px; text-align: center; font-variant-numeric: tabular-nums;
 }
-.blitzing .fs-blitz-val { text-shadow: 0 0 6px rgba(255,82,82,0.5); }
+.fs-blitz.on .fs-blitz-val { color: var(--red); }
+.fs-drop.on .fs-blitz-val { color: var(--blue, #4a90d9); }
+.fs-heat-lbl { font-size: 9px; font-weight: 800; letter-spacing: 0.06em; color: var(--text-2); }
+.fs-heat.on { border-color: var(--gold, #e8c05a); background: rgba(232,192,90,0.14); }
+.fs-heat.on .fs-heat-lbl, .fs-heat.on .fs-blitz-val { color: var(--gold, #e8c05a); }
+.fs-heat .fs-blitz-btn:hover { background: var(--gold, #e8c05a); border-color: var(--gold, #e8c05a); color: #000; }
 
 .blitz-legend {
   font-size: 11px; color: var(--text-2); display: flex; align-items: center;
@@ -8887,7 +8910,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "8e594395dc";
+globalThis.__BUILD__ = "3ca8a9ba3a";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -48220,9 +48243,9 @@ var _CFB = (() => {
   ${simple ? renderSimpleDefPanel(school, gp) : (() => {
       const heat = entry.heat != null ? entry.heat : null;
       return `<div class="blitz-legend">
-    <span class="blitz-dot"></span> <strong>PRESSURE PIE</strong> \u2014 one 100% allocation across the \u26A1/\u{1F6E1} dials: when the blitz fires, whose look is it. <strong>${blitzerCount}</strong> slice${blitzerCount !== 1 ? "s" : ""} dialed${blitzerCount === 0 ? " \u2014 auto (best rusher comes)" : ""}.
-    <span class="fs-blitz" style="margin-left:8px" title="How often pressure comes when this front is on the field \u2014 multiplies your Game Plan blitz rate (0 = half as often, 50 = as dialed, 100 = half again more)">
-      HEAT <button class="fs-blitz-btn" data-heat-step="-1">\u2212</button><span class="fs-blitz-val">${heat == null ? "auto" : heat}</span><button class="fs-blitz-btn" data-heat-step="1">+</button>${heat != null ? `<button class="fs-blitz-btn" data-heat-reset="1" title="Back to auto (Game Plan rate untouched)">\u21BA</button>` : ""}
+    <span class="blitz-dot"></span> <strong>PRESSURE PIE</strong> \u2014 when the blitz fires, whose look is it. <strong data-blitz-count>${blitzerCount}</strong> in the mix<span data-blitz-auto style="${blitzerCount === 0 ? "" : "display:none"}"> \u2014 auto (your best rusher comes)</span>.
+    <span class="fs-blitz fs-heat${heat != null ? " on" : ""}" data-heat-ctl style="margin-left:8px" title="How often pressure comes when this front is on the field \u2014 multiplies your Game Plan blitz rate (0 = half as often, 50 = as dialed, 100 = half again more)">
+      <span class="fs-heat-lbl">HEAT</span><button class="fs-blitz-btn" data-heat-step="-1" aria-label="Less heat">\u2212</button><span class="fs-blitz-val" data-heat-val>${heat == null ? "auto" : heat}</span><button class="fs-blitz-btn" data-heat-step="1" aria-label="More heat">+</button><button class="fs-blitz-btn" data-heat-reset="1" data-heat-reset-btn title="Back to auto (Game Plan rate untouched)" style="${heat != null ? "" : "display:none"}" aria-label="Reset heat to auto">\u21BA</button>
     </span>
     Base rate lives on <a data-nav="gameplan" class="link">Game Plan \xB7 Defense</a>.
   </div>`;
@@ -48393,9 +48416,11 @@ var _CFB = (() => {
     const simple = gameplanIsSimple();
     const shareBadge = !simple && opts.side === "offense" && slot.catch ? renderShareControl(slot, opts.entry) : opts.side === "offense" && slot.catch && simple ? renderSimpleShareBadge(slot, opts.entry) : "";
     const blitzControl = simple ? "" : opts.side === "defense" && opts.blitzEligible ? renderBlitzControl(slot, opts.blitzShares) : opts.side === "defense" && opts.dropEligible ? renderDropControl(slot, opts.blitzShares) : "";
-    const isBlitzing = opts.side === "defense" && ((_a = opts.blitzShares) == null ? void 0 : _a[slot.id]) > 0;
+    const hasShare = opts.side === "defense" && ((_a = opts.blitzShares) == null ? void 0 : _a[slot.id]) > 0;
+    const isBlitzing = hasShare && opts.blitzEligible;
+    const isDropping = hasShare && opts.dropEligible && !opts.blitzEligible;
     return `
-  <div class="field-slot${p ? "" : " unassigned"}${isBlitzing ? " blitzing" : ""}"
+  <div class="field-slot${p ? "" : " unassigned"}${isBlitzing ? " blitzing" : ""}${isDropping ? " dropping" : ""}"
        style="--fx:${fx}%;--fy:${fy}%"
        data-slot-id="${slot.id}" data-slot-pos="${slot.pos}"
        data-side="${opts.side}" data-container="${opts.containerId}">
@@ -48425,21 +48450,22 @@ var _CFB = (() => {
   function renderBlitzControl(slot, blitzShares) {
     const val = _pieShareOf(slot, blitzShares);
     return `
-  <div class="fs-blitz" title="His slice of the pressure pie \u2014 the share of fired blitzes where HE is the extra man. Slices sum to 100 across the front.">
-    <button class="fs-blitz-btn" data-blitz-step="-1" data-blitz-slot="${slot.id}">\u2212</button>
-    <span class="fs-blitz-val">${val}</span>
-    <button class="fs-blitz-btn" data-blitz-step="1" data-blitz-slot="${slot.id}">+</button>
+  <div class="fs-blitz${val > 0 ? " on" : ""}" data-blitz-ctl="${slot.id}" data-blitz-kind="blitz" title="His slice of the pressure pie \u2014 the share of fired blitzes where HE is the extra man. Slices sum to 100 across the front.">
+    <span class="fs-blitz-tag">\u26A1 BLITZ</span>
+    <button class="fs-blitz-btn" data-blitz-step="-1" data-blitz-slot="${slot.id}" aria-label="Less blitz for ${escapeHtml(slot.label)}">\u2212</button>
+    <span class="fs-blitz-val" data-blitz-val="${slot.id}">${val ? val + "%" : "\u2014"}</span>
+    <button class="fs-blitz-btn" data-blitz-step="1" data-blitz-slot="${slot.id}" aria-label="More blitz for ${escapeHtml(slot.label)}">+</button>
   </div>
 `;
   }
   function renderDropControl(slot, blitzShares) {
     const val = _pieShareOf(slot, blitzShares);
     return `
-  <div class="fs-blitz fs-drop" title="His slice of the pressure pie \u2014 the share of fired blitzes that are a FIRE ZONE through him: he drops into coverage and a backer comes behind. Undialed, he still bails naturally on ~${C.FZ_NATIVE_DROP_PCT}% of snaps.">
-    <span class="fs-drop-ico">\u{1F6E1}</span>
-    <button class="fs-blitz-btn" data-blitz-step="-1" data-blitz-slot="${slot.id}">\u2212</button>
-    <span class="fs-blitz-val">${val}</span>
-    <button class="fs-blitz-btn" data-blitz-step="1" data-blitz-slot="${slot.id}">+</button>
+  <div class="fs-blitz fs-drop${val > 0 ? " on" : ""}" data-blitz-ctl="${slot.id}" data-blitz-kind="drop" title="His slice of the pressure pie \u2014 the share of fired blitzes that are a FIRE ZONE through him: he drops into coverage and a backer comes behind. Undialed, he still bails naturally on ~${C.FZ_NATIVE_DROP_PCT}% of snaps.">
+    <span class="fs-blitz-tag">\u{1F6E1} DROP</span>
+    <button class="fs-blitz-btn" data-blitz-step="-1" data-blitz-slot="${slot.id}" aria-label="Less drop for ${escapeHtml(slot.label)}">\u2212</button>
+    <span class="fs-blitz-val" data-blitz-val="${slot.id}">${val ? val + "%" : "\u2014"}</span>
+    <button class="fs-blitz-btn" data-blitz-step="1" data-blitz-slot="${slot.id}" aria-label="More drop for ${escapeHtml(slot.label)}">+</button>
   </div>
 `;
   }
@@ -48481,6 +48507,30 @@ var _CFB = (() => {
       map[pick2] = Math.max(0, (map[pick2] || 0) + stepDir);
       drift -= stepDir;
     }
+  }
+  function repaintBlitzShares(map) {
+    let tot = 0;
+    for (const v of Object.values(map || {})) if (v > 0) tot += v;
+    let dialed = 0;
+    document.querySelectorAll("[data-blitz-ctl]").forEach((ctl) => {
+      const sid = ctl.dataset.blitzCtl;
+      const raw = map && map[sid] || 0;
+      const pct = raw > 0 && tot > 0 ? Math.round(raw / tot * 100) : 0;
+      if (raw > 0) dialed++;
+      const valEl = ctl.querySelector("[data-blitz-val]");
+      if (valEl) valEl.textContent = pct ? pct + "%" : "\u2014";
+      ctl.classList.toggle("on", raw > 0);
+      const slotEl = ctl.closest(".field-slot");
+      if (slotEl) {
+        const kind = ctl.dataset.blitzKind;
+        slotEl.classList.toggle("blitzing", raw > 0 && kind === "blitz");
+        slotEl.classList.toggle("dropping", raw > 0 && kind === "drop");
+      }
+    });
+    const cnt = document.querySelector("[data-blitz-count]");
+    if (cnt) cnt.textContent = String(dialed);
+    const auto = document.querySelector("[data-blitz-auto]");
+    if (auto) auto.style.display = dialed === 0 ? "" : "none";
   }
   function repaintOffShares(gp, formationId) {
     var _a, _b;
@@ -49045,9 +49095,18 @@ var _CFB = (() => {
           if (keys.length === 1) map[slotId] = 100;
           else setSplitRebalanced(map, keys, slotId, want);
         }
-        rerender();
+        repaintBlitzShares(map);
       });
     });
+    const repaintHeat = (entry) => {
+      const ctl = document.querySelector("[data-heat-ctl]");
+      const val = document.querySelector("[data-heat-val]");
+      const reset = document.querySelector("[data-heat-reset-btn]");
+      const set = entry.heat != null;
+      if (val) val.textContent = set ? String(entry.heat) : "auto";
+      if (reset) reset.style.display = set ? "" : "none";
+      if (ctl) ctl.classList.toggle("on", set);
+    };
     document.querySelectorAll("[data-heat-step]").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -49055,7 +49114,7 @@ var _CFB = (() => {
         const step = parseInt(btn.dataset.heatStep, 10);
         const cur = entry.heat != null ? entry.heat : 50;
         entry.heat = Math.max(0, Math.min(100, cur + step * 10));
-        rerender();
+        repaintHeat(entry);
       });
     });
     document.querySelectorAll("[data-heat-reset]").forEach((btn) => {
@@ -49063,7 +49122,7 @@ var _CFB = (() => {
         e.stopPropagation();
         const entry = _defViewEntry();
         delete entry.heat;
-        rerender();
+        repaintHeat(entry);
       });
     });
     (_c = document.getElementById("btn-auto-sort")) == null ? void 0 : _c.addEventListener("click", () => {
