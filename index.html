@@ -8910,7 +8910,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "3ca8a9ba3a";
+globalThis.__BUILD__ = "69b17bc91d";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -9776,10 +9776,12 @@ var _CFB = (() => {
         // This is what makes D1 look faster than D2 look faster than D3 on film.
         STAR_RATE_BY_TIER: { 1: 0.1, 2: 0.18, 3: 0.3 },
         // elevated-recruit fraction per tier [TUNE]
-        PRESTIGE_STAR_W: 0.01,
-        // star-roll prob shift per prestigeBonus pt (pb = (prestige−3)*2, range −4..+6) [TUNE]
-        PRESTIGE_BAND_W: 0.01,
-        // great+sky band mass shift per prestigeBonus pt [TUNE]
+        PRESTIGE_STAR_W: 0.02,
+        // star-roll prob shift per prestigeBonus pt. [playtest item 18, 2026-08-12]
+        // 0.01→0.02 so prestige moves the roster within a division; the coupling bonus
+        // is now division-relative (prestigeTalentBonus) — see js/engine/world.js.
+        PRESTIGE_BAND_W: 0.02,
+        // great+sky band mass shift per prestigeBonus pt [playtest item 18: 0.01→0.02]
         // Randomized conf sizes — mix produces ~100 schools/div organically (spec §B.2).
         // Ranges chosen as even-only (world.js snaps odd draws up) so the circle-method
         // scheduler never needs a dummy-bye — every team gets exactly CONF_GAMES games.
@@ -11556,7 +11558,7 @@ var _CFB = (() => {
         // table); base applies by protection alone.
         PROT_IDENTITY: {
           order: ["quick", "halfSlide", "bob", "maxProtect"],
-          labels: { quick: "Quick Game", halfSlide: "Half-Slide", bob: "BOB", maxProtect: "Max Protect" },
+          labels: { quick: "Quick Game", halfSlide: "Half-Slide", bob: "Big-on-Big", maxProtect: "Max Protect" },
           base: {
             quickShort: 0.62,
             // ball out on rhythm: sacks nearly impossible on schedule
@@ -20305,10 +20307,15 @@ var _CFB = (() => {
       if (stateSet(arr).size === 3) trySwapInto(cid, arr, 4, CAP_OPP[anchor[cid].division]);
     }
   }
+  function prestigeTalentBonus(prestige, division) {
+    var _a;
+    const mid = (_a = PRESTIGE_DIV_MID[division]) != null ? _a : 3;
+    return (prestige - 3) * 2 + (prestige - mid) * 2.5;
+  }
   function applyIdentityToSchool(school, qbPref, defFront, tier = null, pBonus = null) {
     const DIV_TIER = { D3: 1, D2: 2, D1: 3 };
     const t = tier != null ? tier : DIV_TIER[school.division] || 1;
-    const pb = pBonus != null ? pBonus : Math.round((school.prestige - 3) * 2);
+    const pb = pBonus != null ? pBonus : Math.round(prestigeTalentBonus(school.prestige, school.division));
     const shapePos = (pos, wantArch, n) => {
       const ps = school.roster.filter((p) => p.position === pos);
       for (let i = 0; i < Math.min(n, ps.length); i++) {
@@ -20462,7 +20469,7 @@ var _CFB = (() => {
     };
     school.roster = generateRoster(school);
     const tier = { D3: 1, D2: 2, D1: 3 }[division] || 1;
-    const pBonus = (prestige - 3) * 2;
+    const pBonus = prestigeTalentBonus(prestige, division);
     if (qbPref) {
       const qbs = school.roster.filter((p) => p.position === "QB");
       for (let i = 0; i < Math.min(3, qbs.length); i++) {
@@ -20617,7 +20624,7 @@ var _CFB = (() => {
   function generateRoster(school) {
     const DIV_TIER = { D3: 1, D2: 2, D1: 3 };
     const tier = DIV_TIER[school.division] || 1;
-    const prestigeBonus = (school.prestige - 3) * 2;
+    const prestigeBonus = prestigeTalentBonus(school.prestige, school.division);
     const total = Object.values(ROSTER_TARGETS).reduce((s, v) => s + v, 0);
     const cyPool = [];
     for (let k = 0; k < total; k++) cyPool.push(CLASS_YEARS[k % 4]);
@@ -20728,10 +20735,10 @@ var _CFB = (() => {
       greenDog: false,
       spyQB: false,
       targetShares: { WR1: 22, WR2: 20, WR3: 16, TE1: 20, RB1: 14 },
-      defaultShares: { X: 24, Z: 20, SL: 16, Y: 18, HB: 12 },
-      // item 16 — the coach's editable default target-share set, keyed by slot
-      // label (X/Z/SL/Y/HB). defaultShareFor prefers it; per-formation overrides
-      // live on the Depth Chart field view.
+      // item 16 — the coach's editable DEFAULT target shares, keyed by RECEIVER
+      // (WR1/WR2/WR3/TE1/RB1) so the default follows the man wherever he lines up.
+      // A formation slot maps to its receiver via defaultShareFor; per-formation
+      // overrides (keyed by position/slot) live on the Depth Chart field view.
       fourthDown: "Moderate",
       maxFGDist: 42,
       situations: {},
@@ -21071,7 +21078,7 @@ var _CFB = (() => {
     }
     return schedule;
   }
-  var D1_CONFS, STATIC_D1_SCHOOLS, D2_CONFS, D3_CONFS, PRESTIGE_WEIGHTS, D1_POWER_CLAMP, D1_MIDMAJOR_CLAMP, NICK_GLOBAL_CAP, LOC_JITTER_DEG, REGION_CITIES, STATE_TOKENS, DIRS, DENOMS_DEFAULT, DENOMS_BY_REGION, GAZ_CITY_NAMES, PERSON_NAMES, SAINT_NAMES, NICKS_CLASSIC, NICKS_REGIONAL, NICKS_TECH, NICKS_RELIGIOUS, NICKS_QUIRKY, NICK_AGGIES, COLOR_PAIRS, NAME_PATTERNS, CITY_SIZE_PREF, CAMPUS_SIZE_PREF, PATTERN_TYPE, PRIVATE_TYPES, REGION_CENTROIDS, cityKey, REAL_SCHOOL_STEMS, ANCHOR_RANK, REGION_NEIGHBORS, REGION_SPREAD, CONTINENTAL_STATES, TOKEN_STATES, WORLDGEN_INFO, SCHOOL_DATA, ALL_CONF_LIST, CONFERENCES, NONCONF_GAME_DAYS, CONF_GAME_DAYS;
+  var PRESTIGE_DIV_MID, D1_CONFS, STATIC_D1_SCHOOLS, D2_CONFS, D3_CONFS, PRESTIGE_WEIGHTS, D1_POWER_CLAMP, D1_MIDMAJOR_CLAMP, NICK_GLOBAL_CAP, LOC_JITTER_DEG, REGION_CITIES, STATE_TOKENS, DIRS, DENOMS_DEFAULT, DENOMS_BY_REGION, GAZ_CITY_NAMES, PERSON_NAMES, SAINT_NAMES, NICKS_CLASSIC, NICKS_REGIONAL, NICKS_TECH, NICKS_RELIGIOUS, NICKS_QUIRKY, NICK_AGGIES, COLOR_PAIRS, NAME_PATTERNS, CITY_SIZE_PREF, CAMPUS_SIZE_PREF, PATTERN_TYPE, PRIVATE_TYPES, REGION_CENTROIDS, cityKey, REAL_SCHOOL_STEMS, ANCHOR_RANK, REGION_NEIGHBORS, REGION_SPREAD, CONTINENTAL_STATES, TOKEN_STATES, WORLDGEN_INFO, SCHOOL_DATA, ALL_CONF_LIST, CONFERENCES, NONCONF_GAME_DAYS, CONF_GAME_DAYS;
   var init_world = __esm({
     "js/engine/world.js"() {
       init_spread();
@@ -21083,6 +21090,7 @@ var _CFB = (() => {
       init_situations();
       init_staff();
       init_utils();
+      PRESTIGE_DIV_MID = { D1: 3.6, D2: 2.1, D3: 1.6 };
       D1_CONFS = [
         // STATIC D1 — fixed & identical every world. 2000-10 conference-landscape
         // analogue: 6 power (12 each) + 4 mid-major (12 each) = 120 fictional schools.
@@ -24099,7 +24107,6 @@ var _CFB = (() => {
   }
   function defaultShareFor(slot, legacy, defaults) {
     var _a, _b, _c, _d, _e, _f, _g;
-    if (defaults && slot.label && defaults[slot.label] != null) return defaults[slot.label];
     const byLabel = {
       X: (_a = legacy.WR1) != null ? _a : 24,
       Z: (_b = legacy.WR2) != null ? _b : 20,
@@ -36838,7 +36845,7 @@ var _CFB = (() => {
         "target-share": {
           term: "Target Shares",
           chapter: "calling-a-game",
-          body: `How often each receiving role is the intended man on a pass. It's a lean, not a script \u2014 the quarterback still reads the coverage and takes what's open, so a featured target sees more looks but never all of them. Shares are set by role (X, Z, slot, tight end, back), so they follow whoever lines up there. The Game Plan sets your standing default; the Depth Chart field view lets you tweak it formation by formation.`
+          body: `How often each receiver is the intended man on a pass. It's a lean, not a script \u2014 the quarterback still reads the coverage and takes what's open, so a featured target sees more looks but never all of them. Your standing DEFAULT is set by receiver (WR1, WR2, slot, tight end, back), so a man's share follows him wherever he lines up. On the Depth Chart field view you can override it per FORMATION by position \u2014 give the X or the slot a different mix out of a specific set.`
         },
         "rpo": {
           term: "RPO",
@@ -36953,7 +36960,7 @@ var _CFB = (() => {
         "attributes": {
           term: "Attributes",
           chapter: "reading-a-player",
-          body: `The raw tools \u2014 speed, power, awareness, the rest. Overall reads them through the lens of the position, but the attributes themselves are what every snap is contested on.`
+          body: `The raw tools \u2014 Overall reads them through the lens of the position, but the attributes themselves are what every snap is contested on. The shorthand you'll see around the game: SPD speed \xB7 AGI agility \xB7 PWR power \xB7 STR strength \xB7 JMP jumping \xB7 HND hands \xB7 SEC ball security \xB7 TEC technique \xB7 AWR awareness \xB7 CON conditioning \xB7 WE work ethic.`
         },
         "awareness": {
           term: "Awareness (AWR)",
@@ -37662,9 +37669,8 @@ var _CFB = (() => {
   </div>`;
   }
   function renderDefaultSharesRow(gp) {
-    if (!gp.defaultShares) gp.defaultShares = Object.assign({}, DEFAULT_SHARE_FALLBACK);
-    const ds = gp.defaultShares;
-    const total = DEFAULT_SHARE_SLOTS.reduce((s, [k]) => s + (ds[k] != null ? ds[k] : DEFAULT_SHARE_FALLBACK[k]), 0);
+    if (!gp.targetShares) gp.targetShares = Object.assign({}, DEFAULT_SHARE_FALLBACK);
+    const ds = gp.targetShares;
     return `
   <div class="gp-row">
     <label class="gp-label">Default ${tipTerm("target-share", "Target Shares")} <span class="gp-hint">(who the ball looks for)</span></label>
@@ -37679,7 +37685,7 @@ var _CFB = (() => {
         </div>`;
     }).join("")}
     </div>
-    <div class="gp-tip tip-info">\u25B8 Your standing pecking order for who gets thrown to \u2014 by role, not by name, so it follows whoever lines up there. The sim leans this way but always takes what the coverage gives. Want a different mix out of a specific formation? Tune it per-formation on the field view: <button type="button" class="btn-ghost btn-sm" data-nav="depthchart">Depth Chart \u2192</button></div>
+    <div class="gp-tip tip-info">\u25B8 Your standing pecking order by RECEIVER \u2014 your WR1 is your WR1 wherever he lines up, so his share follows the man, not the spot. The sim leans this way but always takes what the coverage gives. Want a different mix out of a specific FORMATION (by position \u2014 the X, the slot), tune it on the field view: <button type="button" class="btn-ghost btn-sm" data-nav="depthchart">Depth Chart \u2192</button></div>
   </div>`;
   }
   function renderOffenseDefaults(gp) {
@@ -39017,11 +39023,11 @@ var _CFB = (() => {
     root.querySelectorAll("[data-defshare]").forEach((sl) => {
       sl.addEventListener("input", (e) => {
         var _a2;
-        if (!gp.defaultShares) gp.defaultShares = {};
+        if (!gp.targetShares) gp.targetShares = {};
         const key = sl.dataset.defshare;
-        gp.defaultShares[key] = parseInt(e.target.value) || 0;
+        gp.targetShares[key] = parseInt(e.target.value) || 0;
         const v = (_a2 = sl.parentElement) == null ? void 0 : _a2.querySelector(".run-dir-val");
-        if (v) v.textContent = `${gp.defaultShares[key]}%`;
+        if (v) v.textContent = `${gp.targetShares[key]}%`;
       });
     });
   }
@@ -39360,7 +39366,7 @@ var _CFB = (() => {
         <button class="gp-option gp-option-sm${cell.protIdentity === v ? " active" : ""}"
                 data-sitset-field="protIdentity" data-sitset-val="${v}">${C.PROT_IDENTITY.labels[v]}</button>`).join("")}
     </div>
-    <div class="gp-tip tip-info">\u25B8 How the pocket is built HERE: Quick Game beats the house on 3rd &amp; medium, Max Protect buys the 2nd-and-long shot play, BOB trusts your five on the money down.</div>`
+    <div class="gp-tip tip-info">\u25B8 How the pocket is built HERE: Quick Game beats the pressure on 3rd &amp; medium, Max Protect buys the 2nd-and-long shot play, Big-on-Big trusts your five on the money down.</div>`
     )}
 
   ${group(
@@ -39991,13 +39997,13 @@ var _CFB = (() => {
       init_tips();
       init_utils();
       DEFAULT_SHARE_SLOTS = [
-        ["X", "X \u2014 Split End"],
-        ["Z", "Z \u2014 Flanker"],
-        ["SL", "Slot"],
-        ["Y", "Y \u2014 Tight End"],
-        ["HB", "Back"]
+        ["WR1", "WR1"],
+        ["WR2", "WR2"],
+        ["WR3", "Slot (WR3)"],
+        ["TE1", "Tight End"],
+        ["RB1", "Back"]
       ];
-      DEFAULT_SHARE_FALLBACK = { X: 24, Z: 20, SL: 16, Y: 18, HB: 12 };
+      DEFAULT_SHARE_FALLBACK = { WR1: 22, WR2: 20, WR3: 16, TE1: 20, RB1: 14 };
       CHK_CLASSES = [
         ["empty", "VS EMPTY", "no backs \u2014 4-5 wide, QB alone"],
         ["spread", "VS SPREAD", "3+ receivers \u2014 Spread, Air Raid, Trips, Pistol"],
@@ -40201,24 +40207,24 @@ var _CFB = (() => {
       ALL_FORMATIONS = Object.keys(FORMATIONS);
       DEF_FRONTS2 = ["4-3", "3-4", "Tite", "Nickel", "Big Nickel", "3-3-5", "4-4"];
       DEF_FRONT_DESCS = {
-        "4-3": "4 DL \xB7 3 LB \xB7 4 DB \u2014 balanced base, auto-subs to Nickel/Dime/46/5-2",
-        "3-4": "3 DL \xB7 4 LB \xB7 4 DB \u2014 versatile, blitz-friendly, auto-subs by situation",
-        "Nickel": "4 DL \xB7 2 LB \xB7 5 DB \u2014 the 4-2-5: spread-first base with a true nickelback, auto-subs heavy vs power",
-        "3-3-5": "3 DL \xB7 3 LB \xB7 5 DB \u2014 the odd stack: five DBs and stacked backers, disguise-first",
-        "Tite": "3 DL \xB7 4 LB \xB7 4 DB \u2014 4i-0-4i odd front: B-gaps closed by alignment, backers run free",
-        "4-4": "4 DL \xB7 4 LB \xB7 3 DB \u2014 the eight-man front: SPUR/BANDIT outside, one deep safety",
-        "Big Nickel": "4 DL \xB7 2 LB \xB7 5 DB \u2014 nickel with a ROVER (3rd safety) instead of a slot corner",
-        "Penny": "5 on the LOS \xB7 1 LB \xB7 5 DB \u2014 the light-box spread-run answer"
+        "4-3": "4 DL \xB7 3 LB \xB7 4 DB \u2014 the balanced base; auto-subs to nickel/dime on passing downs and heavy fronts in short yardage",
+        "3-4": "3 DL \xB7 4 LB \xB7 4 DB \u2014 an extra linebacker for a lineman: versatile, easy to disguise the blitz, subs by situation",
+        "Nickel": "4 DL \xB7 2 LB \xB7 5 DB \u2014 a fifth defensive back in for a linebacker: the spread-first base, subs heavier against power",
+        "3-3-5": "3 DL \xB7 3 LB \xB7 5 DB \u2014 five defensive backs behind stacked linebackers: built to disguise where the pressure comes from",
+        "Tite": "3 DL \xB7 4 LB \xB7 4 DB \u2014 the three linemen clog the inside gaps by alignment so the linebackers can run free to the ball",
+        "4-4": "4 DL \xB7 4 LB \xB7 3 DB \u2014 eight in the box: a heavy run front with a single safety deep",
+        "Big Nickel": "4 DL \xB7 2 LB \xB7 5 DB \u2014 nickel with a third safety instead of a slot corner: bigger, better against tight ends",
+        "Penny": "5 on the line \xB7 1 LB \xB7 5 DB \u2014 a light, spread-out front built to match spread-run teams"
       };
       DEF_FRONT_NEEDS = {
-        "4-3": "Wants 3-tech DTs, pass-rush DEs, a thumper MLB and rangy cover LBs.",
-        "3-4": "Wants a two-gap nose tackle, edge-rush OLBs and downhill inside LBs.",
-        "Nickel": "Wants a true NICKEL corner (quick, tackles), rangy cover LBs and speed ends.",
-        "3-3-5": "Wants a two-gap nose, hybrid run-and-cover stack OLBs and a third safety who tackles like a backer.",
-        "Tite": "Wants two-gap 4i ends, a stout nose and rangy space-backers at JACK/JOKER.",
-        "4-4": "Wants downhill bodies at all four backer spots and one truly rangy free safety.",
-        "Big Nickel": "Wants a ROVER \u2014 a hybrid safety who covers TEs and tackles like a backer.",
-        "Penny": "Wants two stand-up EDGE rushers, a two-gap nose and a sideline-to-sideline MIKE."
+        "4-3": "Wants penetrating tackles, pass-rushing ends, a downhill middle linebacker and rangy cover linebackers.",
+        "3-4": "Wants a big two-way nose tackle, edge-rushing outside linebackers and downhill inside linebackers.",
+        "Nickel": "Wants a quick nickel corner who can tackle, rangy cover linebackers and speed off the edge.",
+        "3-3-5": "Wants a big nose tackle, hybrid run-and-cover linebackers and a third safety who tackles like a linebacker.",
+        "Tite": "Wants big two-way ends, a stout nose tackle and rangy stand-up linebackers on the edge.",
+        "4-4": "Wants downhill bodies at all four linebacker spots and one truly rangy deep safety.",
+        "Big Nickel": "Wants a hybrid safety who can cover tight ends and tackle like a linebacker.",
+        "Penny": "Wants two stand-up edge rushers, a stout nose tackle and a sideline-to-sideline middle linebacker."
       };
       SIMPLE_DIALS = [
         {
@@ -48220,7 +48226,7 @@ var _CFB = (() => {
 
   <details class="dc-tip"${depthSecOpen["tip:defense"] ? " open" : ""} data-do-sec="tip:defense">
     <summary>How this screen works</summary>
-    <div class="dc-tip-body">${simple ? `Tap a slot to change who lines up there. Blitzers are picked automatically \u2014 your best pass-rushers come when a blitz fires. Set how aggressive below.` : `Tap a slot to assign. The \u26A1 and \u{1F6E1} dials share one PRESSURE PIE \u2014 a 100% split of whose look it is when the blitz fires. \u26A1 slice = that man is the extra rusher (he abandons his coverage to come). \u{1F6E1} slice (edge men in odd fronts) = a FIRE ZONE through him: he drops into coverage and a backer comes behind \u2014 same rush count, angles the protection never saw. HOW OFTEN pressure comes is the HEAT dial below, riding on top of your Game Plan blitz rate.`}</div>
+    <div class="dc-tip-body">${simple ? `Tap a slot to change who lines up there. Blitzers are picked automatically \u2014 your best pass-rushers come when a blitz fires. Set how aggressive below.` : `Tap a slot to assign. The \u26A1 dials are the PRESSURE PIE \u2014 a 100% split of whose look it is when the blitz fires: a dialed man is your extra rusher (he abandons his coverage to come). Fire zones \u2014 dropping an edge man into coverage while a backer comes behind \u2014 fire automatically at their natural rate; you don't set them. HOW OFTEN pressure comes is the HEAT dial below, riding on top of your Game Plan blitz rate.`}</div>
   </details>
 
   <div class="field-card def-field">
@@ -48415,12 +48421,11 @@ var _CFB = (() => {
     const injured = p && p.injuryGamesOut > 0;
     const simple = gameplanIsSimple();
     const shareBadge = !simple && opts.side === "offense" && slot.catch ? renderShareControl(slot, opts.entry) : opts.side === "offense" && slot.catch && simple ? renderSimpleShareBadge(slot, opts.entry) : "";
-    const blitzControl = simple ? "" : opts.side === "defense" && opts.blitzEligible ? renderBlitzControl(slot, opts.blitzShares) : opts.side === "defense" && opts.dropEligible ? renderDropControl(slot, opts.blitzShares) : "";
+    const blitzControl = simple ? "" : opts.side === "defense" && opts.blitzEligible ? renderBlitzControl(slot, opts.blitzShares) : "";
     const hasShare = opts.side === "defense" && ((_a = opts.blitzShares) == null ? void 0 : _a[slot.id]) > 0;
     const isBlitzing = hasShare && opts.blitzEligible;
-    const isDropping = hasShare && opts.dropEligible && !opts.blitzEligible;
     return `
-  <div class="field-slot${p ? "" : " unassigned"}${isBlitzing ? " blitzing" : ""}${isDropping ? " dropping" : ""}"
+  <div class="field-slot${p ? "" : " unassigned"}${isBlitzing ? " blitzing" : ""}"
        style="--fx:${fx}%;--fy:${fy}%"
        data-slot-id="${slot.id}" data-slot-pos="${slot.pos}"
        data-side="${opts.side}" data-container="${opts.containerId}">
@@ -48455,17 +48460,6 @@ var _CFB = (() => {
     <button class="fs-blitz-btn" data-blitz-step="-1" data-blitz-slot="${slot.id}" aria-label="Less blitz for ${escapeHtml(slot.label)}">\u2212</button>
     <span class="fs-blitz-val" data-blitz-val="${slot.id}">${val ? val + "%" : "\u2014"}</span>
     <button class="fs-blitz-btn" data-blitz-step="1" data-blitz-slot="${slot.id}" aria-label="More blitz for ${escapeHtml(slot.label)}">+</button>
-  </div>
-`;
-  }
-  function renderDropControl(slot, blitzShares) {
-    const val = _pieShareOf(slot, blitzShares);
-    return `
-  <div class="fs-blitz fs-drop${val > 0 ? " on" : ""}" data-blitz-ctl="${slot.id}" data-blitz-kind="drop" title="His slice of the pressure pie \u2014 the share of fired blitzes that are a FIRE ZONE through him: he drops into coverage and a backer comes behind. Undialed, he still bails naturally on ~${C.FZ_NATIVE_DROP_PCT}% of snaps.">
-    <span class="fs-blitz-tag">\u{1F6E1} DROP</span>
-    <button class="fs-blitz-btn" data-blitz-step="-1" data-blitz-slot="${slot.id}" aria-label="Less drop for ${escapeHtml(slot.label)}">\u2212</button>
-    <span class="fs-blitz-val" data-blitz-val="${slot.id}">${val ? val + "%" : "\u2014"}</span>
-    <button class="fs-blitz-btn" data-blitz-step="1" data-blitz-slot="${slot.id}" aria-label="More drop for ${escapeHtml(slot.label)}">+</button>
   </div>
 `;
   }
