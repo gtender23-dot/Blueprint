@@ -7336,6 +7336,105 @@ body *::after {
   .watch-drives { min-height: 56px; padding-top: 31px; }
 }
 
+/* ── Phone LANDSCAPE — the watch / coach viewer (turn the phone sideways) ──────
+   A short, wide screen. The default flex column puts the full-width field on top,
+   whose ~16:9 height overflows a ~400px-tall phone and shoves the controls off
+   the bottom. Here the field goes on the LEFT sized to the available HEIGHT (the
+   SVG letterboxes via its own preserveAspectRatio), and a compact control rail
+   sits on the RIGHT. Keyed on max-height so it catches every phone in landscape
+   (incl. the big ones that clear the 900px desktop-landscape width) and never a
+   real desktop/tablet. Purely CSS — the layout follows the device rotating, no
+   JS. (Playbook-Root era mobile pass, 2026-08-15.) */
+@media (orientation: landscape) and (max-height: 560px) {
+  .watch-live-overlay > .modal { width: 100%; max-width: none; }
+  .watch-live-overlay .result-tab-body { padding: 5px 7px; overflow: hidden; }
+
+  .watch-root {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(148px, 30vw, 240px);
+    grid-template-areas:
+      "field score"
+      "field feed"
+      "field controls"
+      "field drives";
+    grid-template-rows: auto auto 1fr auto;
+    gap: 5px 8px;
+    height: 100%;
+    min-height: 0;
+    align-items: start;
+    padding: 3px 2px;
+  }
+
+  /* The field fills the column height; the SVG's preserveAspectRatio letterboxes
+     the field so it never overflows and never distorts. */
+  .watch-board-wrap {
+    grid-area: field;
+    align-self: stretch;
+    height: 100%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .watch-board-wrap::before { content: none !important; } /* no "SIDELINE CAM" on a phone */
+  #watch-board, .watch-ink { width: 100%; height: 100%; max-height: 100%; }
+
+  /* Compact right rail: score, the play feed, the controls, the drive chart. */
+  .watch-bug { grid-area: score; align-self: start; }
+  .watch-ticker {
+    grid-area: feed;
+    min-height: 0;
+    max-height: 4.6em;
+    padding: 6px 8px;
+    font-size: .8em;
+    overflow: hidden;
+  }
+  .watch-ticker::before { content: none !important; } /* no "LIVE PLAY FEED" label */
+  .watch-controls.broadcast-bar {
+    grid-area: controls;
+    margin-top: 0;
+    padding: 5px 6px;
+    gap: 4px;
+    justify-content: flex-start;
+    align-self: start;
+  }
+  .watch-drives {
+    grid-area: drives;
+    align-self: end;
+    max-height: 3.4em;
+    overflow: hidden;
+  }
+  /* No room for the desktop-only extras on a phone (override the ≥900px reveal). */
+  .watch-desktop-insight,
+  .watch-desktop-only { display: none !important; }
+
+  /* Coaching (watch-call-mode): the field on the left, the call sheet as the
+     right rail, so you can watch and call at the same time. */
+  .game-result-modal.watch-call-mode .result-tab-body {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .watch-call-mode .watch-root {
+    max-height: none;
+    height: 100%;
+    flex: 1 1 auto;
+    grid-template-columns: 1fr;
+    grid-template-areas: "field";
+    grid-template-rows: 1fr;
+  }
+  .watch-call-mode .watch-call-embed {
+    flex: 0 0 clamp(200px, 40vw, 340px);
+    max-height: 100%;
+    margin: 0;
+    overflow-y: auto;
+  }
+  /* Once the play settles the board is dropped — hand the whole width to the sheet. */
+  .watch-board-collapsed .watch-root { display: none; }
+  .watch-board-collapsed .watch-call-embed { flex: 1 1 auto; }
+}
+
 @media (max-width: 640px) {
   .wsb-matchup { min-height: 43px; }
   .wsb-side { gap: 5px; padding: 5px 6px; }
@@ -9502,6 +9601,22 @@ body *::after {
 .assign-btn:disabled { opacity:.35; cursor:not-allowed; }
 .assign-del:hover { border-color:#d9534f; color:#ff9b97; }
 .assign-add-head { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; margin:2px 0 6px; }
+
+/* ── Play Composer on a phone ─────────────────────────────────────────────────
+   Each receiver row (glyph · name · route dropdown · flip) was laid out for a
+   wide screen; on a narrow phone the route dropdown gets crushed to a sliver and
+   the taps are tiny. On phone widths the row WRAPS: glyph + name + flip stay on
+   the top line, and the route dropdown drops to its own full-width line at a
+   thumb-sized height. (Mobile pass, 2026-08-15.) */
+@media (max-width: 560px) {
+  .assign-row { flex-wrap: wrap; row-gap: 7px; padding: 7px 9px; }
+  .assign-glyph, .assign-glyph-block { order: 0; }
+  .assign-name { order: 1; flex: 1 1 auto; font-size: 13px; }
+  .assign-btn { order: 2; width: 40px; height: 40px; }
+  .assign-route { order: 3; flex: 1 1 100%; min-width: 0; min-height: 40px; font-size: 14px; }
+  .play-form-pick select { min-height: 40px; font-size: 14px; }
+  .pb-name { min-height: 40px; font-size: 14px; }
+}
 .play-card-legend { display:flex; flex-wrap:wrap; gap:6px 12px; justify-content:center; margin-top:8px; }
 .play-card-leg { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color: var(--text-1); }
 .play-card-swatch { width:11px; height:11px; border-radius:3px; display:inline-block; }
@@ -9698,7 +9813,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "8759d3a969";
+globalThis.__BUILD__ = "d88b1ea30f";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -43031,6 +43146,10 @@ var _CFB = (() => {
       if (!k.startsWith("_")) delete school.gameplan[k];
     }
     Object.assign(school.gameplan, fresh);
+    try {
+      synthesizeTeamPlan(school, { force: true });
+    } catch (e) {
+    }
   }
   function renderPlanSlots(school) {
     var _a, _b;
@@ -43125,6 +43244,10 @@ var _CFB = (() => {
             if (!k.startsWith("_")) delete school2.gameplan[k];
           }
           Object.assign(school2.gameplan, merged);
+          try {
+            synthesizeTeamPlan(school2, { force: true });
+          } catch (e2) {
+          }
           notify(`"${book.name}" ${kind === "dpb" ? "offense" : "defense"} loaded`, "success");
         } catch (err) {
           notify("Could not load that book", "warning");
@@ -43148,6 +43271,10 @@ var _CFB = (() => {
             if (!k.startsWith("_")) delete school2.gameplan[k];
           }
           Object.assign(school2.gameplan, merged);
+          try {
+            synthesizeTeamPlan(school2, { force: true });
+          } catch (e2) {
+          }
           notify(`"${data.name || "Creation"}" ${kind === "pb" ? "offense" : "defense"} loaded`, "success");
           if (rep.changes.length) notify(`Updated for this build: ${rep.changes[0]}${rep.changes.length > 1 ? ` (+${rep.changes.length - 1} more)` : ""}`, "warning");
         } catch (err) {
@@ -43350,6 +43477,7 @@ var _CFB = (() => {
       init_defaultbooks();
       init_playbook();
       init_defbook();
+      init_teamplan();
       init_tips();
       init_utils();
       DEFAULT_SHARE_SLOTS = [
