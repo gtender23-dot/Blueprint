@@ -9870,6 +9870,69 @@ body *::after {
 .wdi-callcard { margin: 8px 10px 10px; padding: 6px 6px 7px; background: rgba(8, 15, 26, 0.5); border: 1px solid var(--border-sub, #2a3648); }
 .wdi-book { display: block; font-size: 9px; font-weight: 600; color: var(--text-2, #9fb3c8); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* ── Stage 7 (Playbook-Root): the Formation Designer ───────────────────── */
+.fc-slot-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; min-width: 0; flex-wrap: wrap; }
+.fc-slot-n { flex: 0 0 auto; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; border: 1px solid var(--border-sub, #2a3648); border-radius: 50%; color: var(--text-2, #9fb3c8); }
+.fc-select { min-width: 86px; }
+.fc-select-anchor { flex: 1 1 200px; min-width: 170px; }
+.fc-preview { max-width: 300px; }
+.fc-preview .formation-diagram { display: block; width: 100%; height: auto; }
+.fc-derived { margin-top: 8px; }
+.pb-msg.fc-warn { color: var(--gold, #eab308); }
+.fc-qb.active { outline: 2px solid var(--gold, #eab308); }
+
+/* ── Stage 3 remainder: the book update prompt ─────────────────────────── */
+.gp-book-update { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0 2px; padding: 7px 10px; border: 1px solid var(--gold, #eab308); background: rgba(234, 179, 8, 0.08); }
+.gp-book-update-msg { font-size: 12px; color: var(--text-0, #e5ecf5); }
+
+
+/* Viewer Act F: the director identifies the football reason for each shot. */
+.watch-director-bug {
+  position:absolute;
+  z-index:17;
+  top:38px;
+  right:10px;
+  display:none;
+  max-width:42%;
+  padding:4px 7px 3px;
+  color:var(--px-cyan,#63d7ef);
+  background:rgba(4,9,16,.88);
+  border-right:3px solid var(--px-cyan,#63d7ef);
+  font-size:7px;
+  font-weight:900;
+  letter-spacing:.13em;
+  line-height:1.15;
+  text-align:right;
+  text-transform:uppercase;
+  pointer-events:none;
+  text-shadow:0 1px 2px #000;
+}
+.watch-director-bug.on { display:block; }
+#watch-board .wp-focus-primary .wsp-shadow {
+  fill:rgba(255,213,74,.24);
+  stroke:var(--px-yellow,#ffd54a);
+  stroke-width:.34px;
+  transform:scale(1.3,.96);
+}
+#watch-board .wp-focus-secondary .wsp-shadow {
+  fill:rgba(99,215,239,.16);
+  stroke:var(--px-cyan,#63d7ef);
+  stroke-width:.24px;
+  transform:scale(1.14,.9);
+}
+#watch-board .wp-focus-primary .wsp-tag,
+#watch-board .wp-focus-secondary .wsp-tag { opacity:1 !important; }
+#watch-board .wp-focus-primary .wsp-tag { fill:var(--px-yellow,#ffd54a); }
+#watch-board.watch-focus-ball #wp-ball .wab-model {
+  filter:drop-shadow(0 0 .42px rgba(255,213,74,.96)) drop-shadow(0 0 .8px rgba(255,255,255,.6));
+}
+@media (max-width:700px) {
+  .watch-director-bug { top:27px; right:7px; max-width:48%; padding:3px 5px 2px; font-size:5.5px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  #watch-board.watch-focus-ball #wp-ball .wab-model { filter:drop-shadow(0 0 .45px rgba(255,213,74,.9)); }
+}
+
   </style>
 </head>
 <body>
@@ -9879,7 +9942,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "3a91172d67";
+globalThis.__BUILD__ = "45bc4375f8";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -14749,12 +14812,12 @@ var _CFB = (() => {
       t.meta = __spreadProps2(__spreadValues2({}, meta), { timestamp: Date.now() });
     });
   }
-  function saveGameplanToLibrary(coachId, name, gameplan) {
+  function saveGameplanToLibrary(coachId, name, gameplan, opts = {}) {
     let saved = false;
     updateCoach(coachId, (c) => {
       const lib = c.plans.gameplans;
       const existing = lib.findIndex((p) => p.name === name);
-      const entry = { name: name.slice(0, 24), gp: JSON.parse(JSON.stringify(gameplan)), saved: Date.now() };
+      const entry = { name: name.slice(0, 24), gp: JSON.parse(JSON.stringify(gameplan)), saved: Date.now(), overlayOnly: !!opts.overlayOnly };
       if (existing >= 0) {
         lib[existing] = entry;
         saved = true;
@@ -17612,7 +17675,7 @@ var _CFB = (() => {
     return out2;
   }
   function promoteCoordinatorToHC(state2, { sourceSchoolId, side, targetSchoolId = null, takeControl = true, pickAxes = null }) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i;
     const t = ensureTree(state2);
     if (!t) return { ok: false, reason: "Not a tree game." };
     const source = (_a = state2.world) == null ? void 0 : _a.schools.find((s) => s.id === sourceSchoolId);
@@ -17633,7 +17696,7 @@ var _CFB = (() => {
     const _picked = pickAxes || (Array.isArray(t.successionPicks) && t.successionPicks.length ? t.successionPicks : null);
     const inherit = dnaInheritance(t, { seasonsUnderTree: mentorSeasons, pickAxes: _picked });
     if (_picked && !pickAxes) delete t.successionPicks;
-    const profile = createCoach(((_e = coord.name) == null ? void 0 : _e.first) || "Coach", ((_f = coord.name) == null ? void 0 : _f.last) || "", {
+    const profile = createCoach(((_e = coord.name) == null ? void 0 : _e.first) || "Coach", ((_f2 = coord.name) == null ? void 0 : _f2.last) || "", {
       treeId: t.id,
       mentorId,
       dna: inherit
@@ -17838,7 +17901,7 @@ var _CFB = (() => {
     return "retire";
   }
   function buildRetirementCeremony(state2) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h;
     const t = ensureTree(state2);
     if (!t || !t.active) return null;
     const slot = t.slots[t.active];
@@ -17886,7 +17949,7 @@ var _CFB = (() => {
     const tenure = (pc == null ? void 0 : pc.tenureSeasons) || 0;
     return {
       record: {
-        name: `${((_e = pc == null ? void 0 : pc.name) == null ? void 0 : _e.first) || "Coach"} ${((_f = pc == null ? void 0 : pc.name) == null ? void 0 : _f.last) || ""}`.trim(),
+        name: `${((_e = pc == null ? void 0 : pc.name) == null ? void 0 : _e.first) || "Coach"} ${((_f2 = pc == null ? void 0 : pc.name) == null ? void 0 : _f2.last) || ""}`.trim(),
         age: (_g = pc == null ? void 0 : pc.age) != null ? _g : null,
         wins: (pc == null ? void 0 : pc.careerWins) || 0,
         losses: (pc == null ? void 0 : pc.careerLosses) || 0,
@@ -18135,7 +18198,45 @@ var _CFB = (() => {
       source: opts.source || "staff",
       plan: _extract(gp, DEF_FIELDS)
     };
+    if (gp._bookSourceId) {
+      book.source = "creator:" + gp._bookSourceId;
+      book.sourceId = String(gp._bookSourceId);
+      book.sourceSaved = gp._bookSourceSaved || 0;
+    }
+    if (gp._defbookSourceId) {
+      defbook.source = "creator:" + gp._defbookSourceId;
+      defbook.sourceId = String(gp._defbookSourceId);
+      defbook.sourceSaved = gp._defbookSourceSaved || 0;
+    }
     return { book, defbook, overlay };
+  }
+  function controllerOverlayOf(gameplan) {
+    const gp = gameplan || {};
+    const out2 = {};
+    for (const k of Object.keys(gp)) {
+      if (k.startsWith("_")) continue;
+      if (PLAN_BOOK_STRUCT_FIELDS.includes(k)) continue;
+      out2[k] = _clone(gp[k]);
+    }
+    return out2;
+  }
+  function applyControllerOverlay(gameplan, overlay, freshDefaults) {
+    const out2 = _clone(gameplan || {}) || {};
+    for (const k of Object.keys(out2)) {
+      if (k.startsWith("_") || PLAN_BOOK_STRUCT_FIELDS.includes(k)) continue;
+      delete out2[k];
+    }
+    const base = freshDefaults || {};
+    for (const k of Object.keys(base)) {
+      if (k.startsWith("_") || PLAN_BOOK_STRUCT_FIELDS.includes(k)) continue;
+      out2[k] = _clone(base[k]);
+    }
+    const ov = overlay || {};
+    for (const k of Object.keys(ov)) {
+      if (k.startsWith("_") || PLAN_BOOK_STRUCT_FIELDS.includes(k)) continue;
+      out2[k] = _clone(ov[k]);
+    }
+    return out2;
   }
   function synthesizeTeamPlan(school, opts = {}) {
     if (!school) return school;
@@ -18172,7 +18273,7 @@ var _CFB = (() => {
     if (db && db.plan && db.plan.defCalls && Object.keys(db.plan.defCalls).length) return db.plan.defCalls;
     return school.gameplan && school.gameplan.defCalls || null;
   }
-  var PLAN_FIELD_SIDE, TEAMPLAN_SCHEMA_VERSION, OFF_FIELDS, DEF_FIELDS;
+  var PLAN_FIELD_SIDE, TEAMPLAN_SCHEMA_VERSION, OFF_FIELDS, DEF_FIELDS, PLAN_BOOK_STRUCT_FIELDS;
   var init_teamplan = __esm({
     "js/engine/teamplan.js"() {
       PLAN_FIELD_SIDE = {
@@ -18229,6 +18330,23 @@ var _CFB = (() => {
       TEAMPLAN_SCHEMA_VERSION = 1;
       OFF_FIELDS = _sideFields("off");
       DEF_FIELDS = _sideFields("def");
+      PLAN_BOOK_STRUCT_FIELDS = [
+        "offFormation",
+        "offFormations",
+        "formationPlaybooks",
+        "defFormation",
+        "defBaseFront",
+        "defFrontMix",
+        "coverageScheme",
+        "pressureIdentity",
+        "pressureSource",
+        "greenDog",
+        "spyQB",
+        "defCalls",
+        "formChecks",
+        "fieldAssignments",
+        "weeklyPlan"
+      ];
     }
   });
 
@@ -18528,13 +18646,13 @@ var _CFB = (() => {
       return new Promise((res, rej) => {
         const req = store.getAll();
         req.onsuccess = (e) => res(e.target.result.filter((r) => String(r.slot).indexOf(".bak") === -1).map((r) => {
-          var _a, _b, _c, _d3, _e, _f, _g;
+          var _a, _b, _c, _d3, _e, _f2, _g;
           const isIncompat = ((_a = r.state) == null ? void 0 : _a._saveVersion) !== SAVE_VERSION;
           const school = isIncompat ? null : (_d3 = (_c = (_b = r.state) == null ? void 0 : _b.world) == null ? void 0 : _c.schools) == null ? void 0 : _d3.find((s) => {
             var _a2;
             return s.id === ((_a2 = r.state) == null ? void 0 : _a2.playerSchoolId);
           });
-          return { slot: r.slot, timestamp: r.timestamp, season: (_e = r.state) == null ? void 0 : _e.season, day: (_f = r.state) == null ? void 0 : _f.day, school: (school == null ? void 0 : school.name) || (isIncompat ? "(old save)" : (_g = r.state) == null ? void 0 : _g.playerSchoolId), record: (school == null ? void 0 : school.record) || null, incompatible: isIncompat };
+          return { slot: r.slot, timestamp: r.timestamp, season: (_e = r.state) == null ? void 0 : _e.season, day: (_f2 = r.state) == null ? void 0 : _f2.day, school: (school == null ? void 0 : school.name) || (isIncompat ? "(old save)" : (_g = r.state) == null ? void 0 : _g.playerSchoolId), record: (school == null ? void 0 : school.record) || null, incompatible: isIncompat };
         }));
         req.onerror = (e) => rej(e.target.error);
       });
@@ -18994,7 +19112,7 @@ var _CFB = (() => {
     return "base";
   }
   function getEffectivePlan(gameplan, weeklyPlan, sitKey) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2, _q, _r, _s, _t2, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2, _q, _r, _s, _t2, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa;
     const cell = gameplan.situations && gameplan.situations[sitKey] || {};
     return {
       sitKey,
@@ -19002,7 +19120,7 @@ var _CFB = (() => {
       tendency: (_b = cell.tendency) != null ? _b : null,
       passLeanShift: (_c = weeklyPlan == null ? void 0 : weeklyPlan.passLeanShift) != null ? _c : 0,
       passDepth: (_e = (_d3 = (weeklyPlan == null ? void 0 : weeklyPlan.passDepth) && WEEKLY_DEPTH_PRESETS[weeklyPlan.passDepth]) != null ? _d3 : cell.passDepth) != null ? _e : gameplan.passDepth,
-      qbRunPct: (_g = (_f = cell.qbRunPct) != null ? _f : gameplan.qbRunPct) != null ? _g : 0,
+      qbRunPct: (_g = (_f2 = cell.qbRunPct) != null ? _f2 : gameplan.qbRunPct) != null ? _g : 0,
       tempo: (_k = (_j = (_i = (_h = weeklyPlan == null ? void 0 : weeklyPlan.tempo) != null ? _h : cell.tempo) != null ? _i : SMART_AUTO_TEMPO[sitKey]) != null ? _j : gameplan.baseTempo) != null ? _k : "Normal",
       defFront: (_l = cell.defFront) != null ? _l : "auto",
       // W4 (§2): the aggression STOP is the dial now. A legacy cell/base plan
@@ -20740,7 +20858,7 @@ var _CFB = (() => {
     return pool;
   }
   function resolveFunnel(recruits, playerSchoolId, playerBoard, playerCoach, day, schools = null, events = null) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k;
     const commits = [];
     const seasonStarted = day >= 5;
     const aiCtx = schools ? buildAIContext(schools, recruits) : null;
@@ -20773,7 +20891,7 @@ var _CFB = (() => {
           const contenders = active.length;
           const thr = commitThreshold(recruit, contenders);
           const gap = L.interest - second;
-          const canClose = L.isPlayer ? !!(peEarly == null ? void 0 : peEarly.offered) : !((_f = aiCtx == null ? void 0 : aiCtx.full) == null ? void 0 : _f.has(L.schoolId));
+          const canClose = L.isPlayer ? !!(peEarly == null ? void 0 : peEarly.offered) : !((_f2 = aiCtx == null ? void 0 : aiCtx.full) == null ? void 0 : _f2.has(L.schoolId));
           const leaderKey = L.isPlayer ? "__player__" : L.schoolId;
           if (recruit._leadKey === leaderKey && recruit._ledLastWeek === day - 1) {
             recruit._leadWeeks = (recruit._leadWeeks || 0) + 1;
@@ -24975,7 +25093,7 @@ var _CFB = (() => {
     gp.situations = buildAISituations(bucket, gp.offFormations || [{ id: "Single Back", weight: 100 }], agg);
   }
   function aiSetWeeklyReaction(school, opponent, iq = "varsity") {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i;
     if (!(school == null ? void 0 : school.gameplan)) return;
     ensureAISituations(school);
     const wp = defaultWeeklyPlan();
@@ -24994,7 +25112,7 @@ var _CFB = (() => {
     else if (lean >= 0.56) shift = -3;
     if (shift !== 0) shift += randInt3(-2, 2);
     wp.runCommitShift = clamp2(Math.round(shift * IQ.mult), -18, 18);
-    const agg = (_f = (_e = (_d3 = school.coach) == null ? void 0 : _d3.personality) == null ? void 0 : _e.aggression) != null ? _f : 0.5;
+    const agg = (_f2 = (_e = (_d3 = school.coach) == null ? void 0 : _d3.personality) == null ? void 0 : _e.aggression) != null ? _f2 : 0.5;
     {
       const _pGap = ((opponent == null ? void 0 : opponent.prestige) || 1) - ((school == null ? void 0 : school.prestige) || 1);
       school.gameplan.surpriseOnside = _pGap >= 2 && agg > 0.62 && Math.random() < 0.15 ? "arm" : "never";
@@ -25370,7 +25488,7 @@ var _CFB = (() => {
     return `${((_a = p.name) == null ? void 0 : _a.first) || ""} ${((_b = p.name) == null ? void 0 : _b.last) || ""}`.trim();
   }
   function logAward(state2, category, scope, winner, events, division = null, quiet = false) {
-    var _a, _b, _c, _d3, _e, _f;
+    var _a, _b, _c, _d3, _e, _f2;
     if (!winner) return;
     const entry = {
       season: state2.season,
@@ -25380,7 +25498,7 @@ var _CFB = (() => {
       division: division != null ? division : void 0,
       schoolId: (_b = (_a = winner.school) == null ? void 0 : _a.id) != null ? _b : null,
       schoolName: (_d3 = (_c = winner.school) == null ? void 0 : _c.name) != null ? _d3 : null,
-      playerId: (_f = (_e = winner.player) == null ? void 0 : _e.id) != null ? _f : null,
+      playerId: (_f2 = (_e = winner.player) == null ? void 0 : _e.id) != null ? _f2 : null,
       playerName: winner.player ? playerName(winner.player) : null,
       coachName: winner.coach ? playerName(winner.coach) : null
     };
@@ -25391,7 +25509,7 @@ var _CFB = (() => {
     }
   }
   function logPositionAward(state2, scope, group, pos, winner, events, division = null, quiet = false) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h;
     if (!winner) return;
     const label = scope === "all-division" ? `All-${group}` : `All-${group}`;
     state2.awardsLog.push({
@@ -25405,7 +25523,7 @@ var _CFB = (() => {
       position: pos,
       schoolId: (_b = (_a = winner.school) == null ? void 0 : _a.id) != null ? _b : null,
       schoolName: (_d3 = (_c = winner.school) == null ? void 0 : _c.name) != null ? _d3 : null,
-      playerId: (_f = (_e = winner.player) == null ? void 0 : _e.id) != null ? _f : null,
+      playerId: (_f2 = (_e = winner.player) == null ? void 0 : _e.id) != null ? _f2 : null,
       playerName: winner.player ? playerName(winner.player) : null
     });
     if (!quiet) {
@@ -26098,7 +26216,7 @@ var _CFB = (() => {
     return fa;
   }
   function defaultShareFor(slot, legacy, defaults) {
-    var _a, _b, _c, _d3, _e, _f, _g;
+    var _a, _b, _c, _d3, _e, _f2, _g;
     const byLabel = {
       X: (_a = legacy.WR1) != null ? _a : 24,
       Z: (_b = legacy.WR2) != null ? _b : 20,
@@ -26106,7 +26224,7 @@ var _CFB = (() => {
       FL: (_d3 = legacy.WR3) != null ? _d3 : 14,
       Y: (_e = legacy.TE1) != null ? _e : 18,
       U: 10,
-      HB: (_f = legacy.RB1) != null ? _f : 12,
+      HB: (_f2 = legacy.RB1) != null ? _f2 : 12,
       FB: 4
     };
     return (_g = byLabel[slot.label]) != null ? _g : slot.pos === "WR" ? 16 : slot.pos === "TE" ? 14 : 10;
@@ -26195,17 +26313,17 @@ var _CFB = (() => {
     d.y += d.vy * dt;
   }
   function defaultFinish(carrier, defender) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k, _l;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k, _l;
     const c = carrier.attributes || {}, d = defender.attributes || {};
     const evade = ((_a = c.AGI) != null ? _a : 50) * 0.6 + ((_b = c.SPD) != null ? _b : 50) * 0.4 - (((_c = d.AGI) != null ? _c : 50) * 0.5 + ((_d3 = d.SPD) != null ? _d3 : 50) * 0.25 + ((_e = d.AWR) != null ? _e : 50) * 0.25 + 8);
-    const truck = ((_g = (_f = c.PWR) != null ? _f : c.STR) != null ? _g : 50) * 0.6 + ((_h = c.STR) != null ? _h : 50) * 0.4 - (((_i = d.STR) != null ? _i : 50) * 0.45 + ((_j = d.PWR) != null ? _j : 50) * 0.35 + ((_k = d.TEC) != null ? _k : 50) * 0.2 + 6);
+    const truck = ((_g = (_f2 = c.PWR) != null ? _f2 : c.STR) != null ? _g : 50) * 0.6 + ((_h = c.STR) != null ? _h : 50) * 0.4 - (((_i = d.STR) != null ? _i : 50) * 0.45 + ((_j = d.PWR) != null ? _j : 50) * 0.35 + ((_k = d.TEC) != null ? _k : 50) * 0.2 + 6);
     const gap = Math.max(evade, truck) - 8;
     const weightOver = Math.max(0, ((_l = carrier.weight) != null ? _l : 210) - 210);
     const broke = Math.random() < Math.max(0, Math.min(0.4, 0.03 + gap * 0.016 + weightOver * 75e-5));
     return { broke, style: broke ? truck > evade ? "truck" : "evade" : null };
   }
   function runFit(carrier, opts = {}) {
-    var _a, _b, _c, _d3, _e, _f, _g;
+    var _a, _b, _c, _d3, _e, _f2, _g;
     const { lane = 0.5, penetrator = null, vision = 0, trace = null } = opts;
     const scheme = opts.scheme || {};
     const readBend = scheme.read || 0;
@@ -26570,7 +26688,7 @@ var _CFB = (() => {
     return {
       yards,
       tacklerId: (_e = (_d3 = tackler == null ? void 0 : tackler.ref) == null ? void 0 : _d3.id) != null ? _e : null,
-      assistId: (_g = (_f = assist == null ? void 0 : assist.ref) == null ? void 0 : _f.id) != null ? _g : null,
+      assistId: (_g = (_f2 = assist == null ? void 0 : assist.ref) == null ? void 0 : _f2.id) != null ? _g : null,
       tflId: isTFL ? tackler.ref.id : null,
       brokenById,
       btStyle,
@@ -26608,7 +26726,7 @@ var _CFB = (() => {
     return mu + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
   }
   function resolvePocket(input, D = DIALS) {
-    var _a, _b, _c, _d3, _e, _f;
+    var _a, _b, _c, _d3, _e, _f2;
     const reps = input.reps || [];
     if (!reps.length) return { sacked: false, hurried: false };
     let numPen = 0;
@@ -26627,7 +26745,7 @@ var _CFB = (() => {
       const a = rep.r || {};
       const isEdge = rep.power || rep.speed || /^(DE|OLB|LB-Edge)/.test(rep.pos || "");
       const path = isEdge ? D.PATH_EDGE : D.PATH_INT;
-      const closeSpd = D.CLOSE_BASE + (((_e = a.SPD) != null ? _e : 50) * 0.6 + ((_f = a.AGI) != null ? _f : 50) * 0.4 - 55) * D.CLOSE_SLOPE;
+      const closeSpd = D.CLOSE_BASE + (((_e = a.SPD) != null ? _e : 50) * 0.6 + ((_f2 = a.AGI) != null ? _f2 : 50) * 0.4 - 55) * D.CLOSE_SLOPE;
       const traverse = path / Math.max(3, closeSpd);
       let shed;
       if (rep.blitzer) {
@@ -26732,7 +26850,7 @@ var _CFB = (() => {
     d.y += d.vy * dt;
   }
   function routeDuel(receiver, defender, passDepth, coverageType, pressHot = false, trace = null, scheme = null) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k;
     if (!defender) return coverageType === "zone" ? 0.84 : 1;
     const ra = receiver.attributes || {}, da = defender.attributes || {};
     const R = ROUTES[passDepth] || ROUTES.medium;
@@ -26771,7 +26889,7 @@ var _CFB = (() => {
     };
     let recDelay = 0;
     if (coverageType === "press") {
-      const jam = (((_e = da.STR) != null ? _e : 50) * 0.4 + ((_f = da.TEC) != null ? _f : 50) * 0.35 + ((_g = da.AGI) != null ? _g : 50) * 0.25 + 1) * traitMult(defender, "pressJam", 0.015);
+      const jam = (((_e = da.STR) != null ? _e : 50) * 0.4 + ((_f2 = da.TEC) != null ? _f2 : 50) * 0.35 + ((_g = da.AGI) != null ? _g : 50) * 0.25 + 1) * traitMult(defender, "pressJam", 0.015);
       const release = (((_h = ra.AGI) != null ? _h : 50) * 0.4 + ((_i = ra.TEC) != null ? _i : 50) * 0.35 + ((_j = ra.STR) != null ? _j : 50) * 0.25) * traitMult(receiver, "releaseArtist", 0.015);
       const jamGap = (jam - release) * (pressHot ? 1.08 : 1);
       if (jamGap >= 0) {
@@ -27043,7 +27161,7 @@ var _CFB = (() => {
     d.y += d.vy * dt;
   }
   function geoYAC(receiver, coveringDef, pursuitDefs, sep, _trace = null, depthKey = "short") {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k;
     const ra = receiver.attributes || {};
     const car = { x: 0, y: 0, top: spdYps(ra.SPD), acc: accel(ra.AGI), vx: 0, vy: 0 };
     const lean = (Math.random() - 0.5) * 0.6;
@@ -27264,7 +27382,7 @@ var _CFB = (() => {
         const reach = RADIUS + Math.min(0.9, closing * 0.05);
         if (gap < reach) {
           const openTackle = breakaway && d.backstop ? -0.14 : 0;
-          const pMake = 0.74 + (d.tkl - wiggle) * 5e-3 - (((_f = ra.AWR) != null ? _f : 50) - 41) * 16e-4 + openTackle + 0.02 * traitLv(d.ref, "openField");
+          const pMake = 0.74 + (d.tkl - wiggle) * 5e-3 - (((_f2 = ra.AWR) != null ? _f2 : 50) - 41) * 16e-4 + openTackle + 0.02 * traitLv(d.ref, "openField");
           if (_trace) _trace.push({ finish: d.cover ? "C" : d.backstop ? "S" : "R", p: +pMake.toFixed(2), gap: +gap.toFixed(2), reach: +reach.toFixed(2) });
           if (Math.random() < Math.max(0.25, Math.min(0.95, pMake))) {
             tackler = d;
@@ -28218,7 +28336,7 @@ var _CFB = (() => {
     return fam === "Cover 4" ? "deep quarter" : fam === "Cover 2" || fam === "Cover 2-Man" ? "deep half" : "deep third";
   }
   function assignCoverage(receivers, defPersonnel, defRoster, frontId, isZoneHeavy, coverageScheme = "balanced", wr1Id = null, blitzerDbId = null, pressLevel = "balanced") {
-    var _a, _b, _c, _d3, _e, _f, _g, _h;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h;
     const frontRoles = composedFrontRoles(frontId);
     const dbRoles = frontRoles.DB || [];
     const lbRoles = frontRoles.LB || [];
@@ -28346,10 +28464,10 @@ var _CFB = (() => {
       if (pressLevel === "off" && baseType === "press") effType = "offman";
       else if (!globalThis.__noShellId && baseType === "press" && pressLevel !== "press" && shellId === "two") effType = "offman";
       else effType = baseType;
-      const rvScheme = schemeFor(effType, i, receivers[i].passDepth, receiver, (_f = coverEntry == null ? void 0 : coverEntry.player) != null ? _f : null);
+      const rvScheme = schemeFor(effType, i, receivers[i].passDepth, receiver, (_f2 = coverEntry == null ? void 0 : coverEntry.player) != null ? _f2 : null);
       let sep = routeVsCoverage(
         receiver,
-        (_f = coverEntry == null ? void 0 : coverEntry.player) != null ? _f : null,
+        (_f2 = coverEntry == null ? void 0 : coverEntry.player) != null ? _f2 : null,
         receivers[i].passDepth,
         effType,
         rvScheme
@@ -28424,7 +28542,7 @@ var _CFB = (() => {
     return assigned;
   }
   function resolvePassPlay(playType, offPersonnel, defPersonnel, offRoster, defRoster, qb, offUnit, defUnit, offPlan, defPlan, frontId, shareByPlayerId = null, blitzShareByPlayerId = null, offFormationId = "Single Back", roleBySlotPlayer = null, dropShareById = null, fieldPos = 50) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2, _q, _r, _s, _t2, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2, _q, _r, _s, _t2, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa;
     const result = {
       type: playType,
       yards: 0,
@@ -28454,7 +28572,7 @@ var _CFB = (() => {
     _passCtx = {
       covStyle: (_c = (_b = defPlan == null ? void 0 : defPlan.covStyleEff) != null ? _b : defPlan == null ? void 0 : defPlan.covStyle) != null ? _c : "balanced",
       pressLevel: (_e = (_d3 = defPlan == null ? void 0 : defPlan.pressLevelEff) != null ? _d3 : defPlan == null ? void 0 : defPlan.pressLevel) != null ? _e : "balanced",
-      qbAggr: (_f = offPlan == null ? void 0 : offPlan.qbAggr) != null ? _f : 50,
+      qbAggr: (_f2 = offPlan == null ? void 0 : offPlan.qbAggr) != null ? _f2 : 50,
       // P1-3 (zone teaching style): spot-drop / balanced / match — threads into
       // the coverage duel's void + bust mechanics. Balanced = today exactly.
       zoneStyle: (defPlan == null ? void 0 : defPlan.zoneStyleEff) || (defPlan == null ? void 0 : defPlan.zoneStyle) || "balanced",
@@ -29665,7 +29783,7 @@ var _CFB = (() => {
     return { bite, read, outcome, biteP, readP };
   }
   function resolveOptionPlay(playType, offPersonnel, defPersonnel, offRoster, defRoster, offUnit, defUnit, gameplan, defPlan, frontId, formationId, qb, rbShares = null, rbPool = null, style = "triple") {
-    var _a, _b, _c, _d3, _e, _f, _g;
+    var _a, _b, _c, _d3, _e, _f2, _g;
     const speed = style === "speed";
     const find = (id) => offRoster.find((p) => p.id === id);
     const dfind = (id) => defRoster.find((p) => p.id === id);
@@ -29808,7 +29926,7 @@ var _CFB = (() => {
             throwerId: null,
             targetId: null,
             receiverId: null,
-            tacklerId: (_f = forceDef == null ? void 0 : forceDef.id) != null ? _f : null,
+            tacklerId: (_f2 = forceDef == null ? void 0 : forceDef.id) != null ? _f2 : null,
             assistId: null,
             tflId: null,
             sackerId: null,
@@ -29852,7 +29970,7 @@ var _CFB = (() => {
     );
   }
   function resolveRunPlay(playType, offPersonnel, defPersonnel, offRoster, defRoster, offUnit, defUnit, gameplan, frontId, formationId, qb, rbShares = null, rbPool = null, optionOverride = null) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2, _q, _r, _s;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2, _q, _r, _s;
     const result = {
       type: playType,
       yards: 0,
@@ -29912,7 +30030,7 @@ var _CFB = (() => {
           carrierId = isOutside ? (_b = (_a = rbIds[0]) != null ? _a : fbIds[0]) != null ? _b : null : (_d3 = (_c = fbIds[0]) != null ? _c : rbIds[0]) != null ? _d3 : null;
         }
       } else {
-        carrierId = isOutside ? (_f = (_e = rbIds[0]) != null ? _e : fbIds[0]) != null ? _f : null : (_h = (_g = fbIds[0]) != null ? _g : rbIds[0]) != null ? _h : null;
+        carrierId = isOutside ? (_f2 = (_e = rbIds[0]) != null ? _e : fbIds[0]) != null ? _f2 : null : (_h = (_g = fbIds[0]) != null ? _g : rbIds[0]) != null ? _h : null;
       }
       carrier = carrierId ? offRoster.find((p) => p.id === carrierId) : null;
     }
@@ -30288,7 +30406,7 @@ var _CFB = (() => {
     };
   }
   function pickPlayType(formationId, gameplan, sitTendency, down, distance, fieldPos, score, clock, varKey = null) {
-    var _a, _b, _c, _d3, _e, _f;
+    var _a, _b, _c, _d3, _e, _f2;
     const formInfo = FORMATIONS[aliasFormation(formationId)] || Object.values(FORMATIONS)[0];
     const formLean = (formInfo.passLean + variationPassLeanDelta(formationId, varKey)) * 0.5;
     let passRate;
@@ -30316,7 +30434,7 @@ var _CFB = (() => {
       return Math.random() < rushInPct / 100 ? "run_inside" : "run_outside";
     }
     let dep = gameplan.passDepth || { short: 40, medium: 40, deep: 20 };
-    const aggrShift = (((_f = gameplan.qbAggr) != null ? _f : 50) - 50) / 5;
+    const aggrShift = (((_f2 = gameplan.qbAggr) != null ? _f2 : 50) - 50) / 5;
     if (aggrShift) {
       dep = {
         short: Math.max(5, dep.short - aggrShift),
@@ -30599,7 +30717,7 @@ var _CFB = (() => {
   }
   function simulateDrive(offense, defense, gameState, log, opts = {}) {
     var _a2;
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2, _q, _r, _s, _t2, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya, _za, _Aa, _Ba, _Ca;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2, _q, _r, _s, _t2, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya, _za, _Aa, _Ba, _Ca;
     const { roster: offRoster, depth: offDepth, gameplan: offPlan, school: offSchool, ctx: offCtx } = offense;
     const { roster: defRoster, depth: defDepth, gameplan: defPlan, school: defSchool, ctx: defCtx } = defense;
     const R = opts.resume || null;
@@ -30947,7 +31065,7 @@ var _CFB = (() => {
                   type: "punt",
                   puntYds,
                   touchback: false,
-                  returnerId: (_f = returner == null ? void 0 : returner.id) != null ? _f : null,
+                  returnerId: (_f2 = returner == null ? void 0 : returner.id) != null ? _f2 : null,
                   punterId: (_g = (offDepth["P"] || [])[0]) != null ? _g : null,
                   returnYds: retYds,
                   returnTD: true,
@@ -32320,7 +32438,7 @@ var _CFB = (() => {
     if (tokenControlsSide(token, side) && ((_a = token.controlledSides) == null ? void 0 : _a.length) > 1) token.playerSide = side;
   }
   function playHalf(token, half, resume = null) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2;
     const {
       homeTeam,
       awayTeam,
@@ -32591,7 +32709,7 @@ var _CFB = (() => {
               }];
               log.push(`Squib kick \u2014 ${kickSchool.name} bounces it short, ${recvSchool.name} takes over at the ${fieldPos <= 50 ? fieldPos : 100 - fieldPos}`);
             } else {
-              const ko = kickoffOutcome(kickRoster, recvRoster, (((_f = recvSchool == null ? void 0 : recvSchool.depthOrder) == null ? void 0 : _f.RET) || [])[0], ((_g = kickSchool == null ? void 0 : kickSchool._dnaGrades) == null ? void 0 : _g.specialTeams) || 0, ((recvSchool == null ? void 0 : recvSchool.gameplan) == null ? void 0 : recvSchool.gameplan.retScheme) || null);
+              const ko = kickoffOutcome(kickRoster, recvRoster, (((_f2 = recvSchool == null ? void 0 : recvSchool.depthOrder) == null ? void 0 : _f2.RET) || [])[0], ((_g = kickSchool == null ? void 0 : kickSchool._dnaGrades) == null ? void 0 : _g.specialTeams) || 0, ((recvSchool == null ? void 0 : recvSchool.gameplan) == null ? void 0 : recvSchool.gameplan.retScheme) || null);
               const retName = ko.returner ? `${ko.returner.name.first[0]}. ${ko.returner.name.last}` : null;
               if (!token.koReturns) token.koReturns = [];
               if (!ko.touchback && ko.returner) {
@@ -34332,7 +34450,7 @@ var _CFB = (() => {
     return { id: "ad", label: "Prove-It", years: 2, jsDelta: 15, blurb: "Two years. The AD wants more before he commits \u2014 win and the next one is longer." };
   }
   function getExtensionOffer(state2) {
-    var _a, _b, _c, _d3, _e, _f;
+    var _a, _b, _c, _d3, _e, _f2;
     const data = (_a = state2.offseason) == null ? void 0 : _a.data;
     if (!data) return null;
     if (data.extensionOffer !== void 0) return data.extensionOffer;
@@ -34438,7 +34556,7 @@ var _CFB = (() => {
     coach.seasonGoals = { season: forSeason, goals: buildSeasonGoals(state2) };
   }
   function evaluateSeasonGoals(state2, events) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h;
     const coach = state2.playerCoach;
     const school = state2.world.schools.find((s) => s.id === state2.playerSchoolId);
     if (!coach || !school) return [];
@@ -34455,7 +34573,7 @@ var _CFB = (() => {
     for (const g of sg.goals) {
       let hit = false;
       if (g.id === "wins") hit = wins >= g.target;
-      if (g.id === "playoff") hit = !!((_f = bracket == null ? void 0 : bracket.seeds) == null ? void 0 : _f.includes(school.id));
+      if (g.id === "playoff") hit = !!((_f2 = bracket == null ? void 0 : bracket.seeds) == null ? void 0 : _f2.includes(school.id));
       if (g.id === "winning") hit = wins > games - wins;
       if (g.id === "rivalry") {
         const rg = (state2.schedule || []).find((x) => x.result && [x.homeId, x.awayId].includes(school.id) && [x.homeId, x.awayId].includes(g.rivalId));
@@ -34513,7 +34631,7 @@ var _CFB = (() => {
     };
     const rounds = [];
     (bracket.rounds || []).forEach((round, i) => {
-      var _a2, _b, _c, _d3, _e, _f;
+      var _a2, _b, _c, _d3, _e, _f2;
       const lines = [];
       for (const g of round.games || []) {
         if (!g.result) continue;
@@ -34521,7 +34639,7 @@ var _CFB = (() => {
         const lId = wId === g.homeId ? g.awayId : g.homeId;
         const upset = ((_a2 = seedOf(wId)) != null ? _a2 : 99) > ((_b = seedOf(lId)) != null ? _b : 99);
         const hs = (_d3 = (_c = g.result.homeScore) != null ? _c : g.result.home) != null ? _d3 : "";
-        const as = (_f = (_e = g.result.awayScore) != null ? _e : g.result.away) != null ? _f : "";
+        const as = (_f2 = (_e = g.result.awayScore) != null ? _e : g.result.away) != null ? _f2 : "";
         const score = hs !== "" && as !== "" ? wId === g.homeId ? `${hs}\u2013${as}` : `${as}\u2013${hs}` : "";
         lines.push(`${upset ? "\u26A0 " : ""}${nameOf(wId)} over ${nameOf(lId)}${score ? ` ${score}` : ""}`);
       }
@@ -34939,7 +35057,7 @@ var _CFB = (() => {
     return bar;
   }
   function autoRecruitForPlayer(state2, day) {
-    var _a, _b, _c, _d3, _e, _f;
+    var _a, _b, _c, _d3, _e, _f2;
     const level = recruitAssistLevel(state2);
     if (level === "off") return;
     const coach = state2.playerCoach;
@@ -35060,7 +35178,7 @@ var _CFB = (() => {
         daySpent += result.cost;
         if (action === "offer") securedByPos[pos] = (securedByPos[pos] || 0) + 1;
         logActs.push({
-          name: `${((_e = recruit.name) == null ? void 0 : _e.first) || ""} ${((_f = recruit.name) == null ? void 0 : _f.last) || ""}`.trim(),
+          name: `${((_e = recruit.name) == null ? void 0 : _e.first) || ""} ${((_f2 = recruit.name) == null ? void 0 : _f2.last) || ""}`.trim(),
           pos,
           action,
           cost: result.cost,
@@ -35075,7 +35193,7 @@ var _CFB = (() => {
     }
   }
   function advanceDay(state2, dispatch2) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2, _q;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2, _q;
     setRecruitDifficulty((_a = state2.settings) == null ? void 0 : _a.diffRecruiting);
     if (((_b = state2.settings) == null ? void 0 : _b.injuries) === false) {
       for (const s of state2.world.schools) s._injuriesOff = true;
@@ -35090,7 +35208,7 @@ var _CFB = (() => {
       const mine = state2.world.schools.find((s) => s.id === state2.playerSchoolId);
       if (mine == null ? void 0 : mine.gameplan) mine.gameplan._aiScheme = false;
     }
-    if (((_f = state2.playerCoach) == null ? void 0 : _f.status) === "unemployed") {
+    if (((_f2 = state2.playerCoach) == null ? void 0 : _f2.status) === "unemployed") {
       return [{ type: "warning", text: "You must accept a new job before continuing." }];
     }
     if (state2.pendingHalftime) {
@@ -36325,7 +36443,7 @@ var _CFB = (() => {
     return Math.max(lo, Math.min(hi, v));
   }
   function recordSigning(state2, recruit, schoolId, losers = [], source = "funnel") {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i;
     if (!state2.signingsLog) state2.signingsLog = [];
     const school = state2.world.schools.find((s) => s.id === schoolId);
     if (school) {
@@ -36353,7 +36471,7 @@ var _CFB = (() => {
     if (schoolId === state2.playerSchoolId && ((_e = (_d3 = state2.playerCoach) == null ? void 0 : _d3.contract) == null ? void 0 : _e.recruitBonus)) {
       const bonus = state2.playerCoach.contract.recruitBonus;
       state2.playerCoach.budget = (state2.playerCoach.budget || 0) + bonus;
-      (_i = (_f = state2.inbox) == null ? void 0 : _f.push) == null ? void 0 : _i.call(_f, {
+      (_i = (_f2 = state2.inbox) == null ? void 0 : _f2.push) == null ? void 0 : _i.call(_f2, {
         id: `bonus_${recruit.id}`,
         day: state2.day,
         subject: "AD Recruiting Bonus",
@@ -36488,7 +36606,7 @@ var _CFB = (() => {
     return player;
   }
   function finalizeSeasonRecords(state2) {
-    var _a, _b, _c, _d3, _e, _f;
+    var _a, _b, _c, _d3, _e, _f2;
     for (const school of state2.world.schools) {
       school.recentWins.unshift(school.record.wins);
       if (school.recentWins.length > 3) school.recentWins.pop();
@@ -36524,7 +36642,7 @@ var _CFB = (() => {
         else if (wins >= 10) badge("win10", `${wins}-win season`, "discipline", 8);
         const bracket = ((_e = state2.allPlayoffs) == null ? void 0 : _e[_mine.division]) || state2.playoffs;
         const ccIds = bracket == null ? void 0 : bracket.confChampIds;
-        if (Array.isArray(ccIds) ? ccIds.includes(_mine.id) : (_f = ccIds == null ? void 0 : ccIds.has) == null ? void 0 : _f.call(ccIds, _mine.id)) badge("confChamp", "Conference champion", "roadWarrior", 10);
+        if (Array.isArray(ccIds) ? ccIds.includes(_mine.id) : (_f2 = ccIds == null ? void 0 : ccIds.has) == null ? void 0 : _f2.call(ccIds, _mine.id)) badge("confChamp", "Conference champion", "roadWarrior", 10);
         if ((bracket == null ? void 0 : bracket.champion) === _mine.id) badge("natty", "National champion", "riverboat", 25);
         if (badges.length) addDnaXP(state2._coachId, xp, badges);
         if (state2.playerCoach) {
@@ -36947,7 +37065,7 @@ var _CFB = (() => {
     coach.lastDelta = delta;
   }
   function updateAICarousel(state2, events, openings) {
-    var _a, _b, _c, _d3, _e, _f, _g;
+    var _a, _b, _c, _d3, _e, _f2, _g;
     const games = C.CONF_GAMES + C.NONCONF_GAMES;
     const schools = state2.world.schools;
     const divisions = [...new Set(schools.map((s) => s.division))];
@@ -37012,7 +37130,7 @@ var _CFB = (() => {
         school.coach = null;
         school._lastVacancy = { reason, coachName: nm, season: state2.season };
         openings.push(school);
-        const line = reason === "fired" ? `${school.name} fired ${nm} after a ${(_g = (_f = school.recentWins) == null ? void 0 : _f[0]) != null ? _g : 0}-win season.` : reason === "lapsed" ? `${school.name} let ${nm}'s contract expire.` : reason === "retired" ? `${nm} announced retirement, leaving ${school.name}.` : `${school.name} has an opening.`;
+        const line = reason === "fired" ? `${school.name} fired ${nm} after a ${(_g = (_f2 = school.recentWins) == null ? void 0 : _f2[0]) != null ? _g : 0}-win season.` : reason === "lapsed" ? `${school.name} let ${nm}'s contract expire.` : reason === "retired" ? `${nm} announced retirement, leaving ${school.name}.` : `${school.name} has an opening.`;
         events.push({ type: "info", text: line });
       }
     }
@@ -37029,7 +37147,7 @@ var _CFB = (() => {
     return overperf * 2 + streak * 3 + rep * 0.8;
   }
   function cascadeCarousel(state2, events, openings) {
-    var _a, _b, _c, _d3, _e, _f;
+    var _a, _b, _c, _d3, _e, _f2;
     const schools = state2.world.schools;
     const resolved = /* @__PURE__ */ new Set();
     let guard = 0;
@@ -37074,7 +37192,7 @@ var _CFB = (() => {
       }
       const from = pick2.from;
       const moving = from.coach;
-      const nm = `${((_e = (_d3 = moving.name) == null ? void 0 : _d3.first) == null ? void 0 : _e[0]) || ""}. ${((_f = moving.name) == null ? void 0 : _f.last) || "Coach"}`;
+      const nm = `${((_e = (_d3 = moving.name) == null ? void 0 : _d3.first) == null ? void 0 : _e[0]) || ""}. ${((_f2 = moving.name) == null ? void 0 : _f2.last) || "Coach"}`;
       seat.coach = moving;
       moving.schoolId = seat.id;
       moving.prestige = seat.prestige;
@@ -37741,8 +37859,8 @@ var _CFB = (() => {
       CREATOR_KEY = "cfb-creator";
       CREATOR_BAK1 = "cfb-creator.bak1";
       CREATOR_BAK2 = "cfb-creator.bak2";
-      CREATOR_KINDS = ["playbooks", "defbooks", "plays", "teams", "leagues"];
-      CREATOR_CAPS = { playbooks: 30, defbooks: 30, plays: 80, teams: 32, leagues: 12 };
+      CREATOR_KINDS = ["playbooks", "defbooks", "plays", "formations", "teams", "leagues"];
+      CREATOR_CAPS = { playbooks: 30, defbooks: 30, plays: 80, formations: 16, teams: 32, leagues: 12 };
       NAME_MAX2 = 36;
     }
   });
@@ -38057,7 +38175,7 @@ var _CFB = (() => {
   }
   function renderFormationDiagram(fid, opts) {
     const o = opts || {};
-    const layout = o.variation ? _variationLayout(fid, o.variation) : OFF_FIELD_LAYOUTS[aliasFormation(fid)] || OFF_FIELD_LAYOUTS[fid];
+    const layout = o.slots ? { slots: o.slots } : o.variation ? _variationLayout(fid, o.variation) : OFF_FIELD_LAYOUTS[aliasFormation(fid)] || OFF_FIELD_LAYOUTS[fid];
     if (!layout) return "";
     const W = o.w || 180, H = o.h || 116;
     const padX = 12;
@@ -39317,7 +39435,7 @@ var _CFB = (() => {
     };
   }
   function processEvents(events, { suppressModal = false } = {}) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h;
     const visibleCommits = events.filter((event) => {
       var _a2, _b2, _c2;
       return event.type === "commit" && (event.schoolId === state.playerSchoolId || ((_a2 = state.settings) == null ? void 0 : _a2.rivalCommitNotifications) !== false && ((_c2 = (_b2 = state.playerCoach) == null ? void 0 : _b2.recruitBoard) == null ? void 0 : _c2.some((entry) => {
@@ -39361,7 +39479,7 @@ var _CFB = (() => {
         const { recruit, schoolId } = event;
         if (schoolId === state.playerSchoolId) {
           addInboxMessage("Commitment!", `${fullName(recruit)} (${recruit.position}) has committed to your program!`);
-        } else if (((_e = state.settings) == null ? void 0 : _e.rivalCommitNotifications) !== false && ((_g = (_f = state.playerCoach) == null ? void 0 : _f.recruitBoard) == null ? void 0 : _g.find((e) => e.recruitId === recruit.id))) {
+        } else if (((_e = state.settings) == null ? void 0 : _e.rivalCommitNotifications) !== false && ((_g = (_f2 = state.playerCoach) == null ? void 0 : _f2.recruitBoard) == null ? void 0 : _g.find((e) => e.recruitId === recruit.id))) {
           addInboxMessage("Lost Recruit", `${fullName(recruit)} (${recruit.position}) committed to ${((_h = getSchool(schoolId)) == null ? void 0 : _h.name) || "another school"}.`);
         }
         if (event === lastVisibleCommit && commitmentToast) {
@@ -39479,7 +39597,7 @@ var _CFB = (() => {
     state.ui.saves = await listSaves();
   }
   async function loadFromSlot(slot) {
-    var _a, _b, _c, _d3, _e, _f;
+    var _a, _b, _c, _d3, _e, _f2;
     const saved = await loadGame(slot);
     if (!saved) return false;
     if (saved._incompatible) {
@@ -39547,7 +39665,7 @@ var _CFB = (() => {
       ensureCareerFields(s.coach);
     }
     for (const s of (_d3 = (_c = state.world) == null ? void 0 : _c.schools) != null ? _d3 : []) {
-      const cap = (_f = (_e = C.PRESTIGE_MAX) == null ? void 0 : _e[s.division]) != null ? _f : 6;
+      const cap = (_f2 = (_e = C.PRESTIGE_MAX) == null ? void 0 : _e[s.division]) != null ? _f2 : 6;
       if (s.prestige > cap) s.prestige = cap;
       if (s.baseline > cap) s.baseline = cap;
       if (s.prestigeMax && s.prestigeMax > cap) s.prestigeMax = cap;
@@ -41147,7 +41265,7 @@ var _CFB = (() => {
     }
   }
   function schemeIdentityLine(gp) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j;
     const clampV = (v, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
     const R = (v) => Math.round(clampV(v) * 100);
     const passLean = (_a = PASS_TENDENCY[gp.tendency || "Balanced"]) != null ? _a : 0.5;
@@ -41173,7 +41291,7 @@ var _CFB = (() => {
     const evenness = forms.length <= 1 ? 0 : -shares.reduce((s, p) => p > 0 ? s + p * Math.log(p) : s, 0) / Math.log(forms.length);
     const spread = clampV((forms.length - 1) / 4);
     const motion = clampV(((_e = gp.motionRate) != null ? _e : 100) / 120);
-    const pa = clampV(((_f = gp.paRate) != null ? _f : 100) / 120);
+    const pa = clampV(((_f2 = gp.paRate) != null ? _f2 : 100) / 120);
     const rpo = clampV(((_g = gp.rpoRate) != null ? _g : 40) / 100);
     const jet = clampV(((_h = gp.jetRate) != null ? _h : 15) / 30);
     const draw = clampV(((_i = gp.drawRate) != null ? _i : 8) / 25);
@@ -41193,7 +41311,7 @@ var _CFB = (() => {
     return `${tempoWord.charAt(0).toUpperCase()}${tempoWord.slice(1)} ${leanWord}, ${aggWord}${decWord}`;
   }
   function renderIdentityCard(gp) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i;
     const school = getPlayerSchool();
     if (!school) return "";
     const roster = school.roster || [];
@@ -41257,7 +41375,7 @@ var _CFB = (() => {
       <span><b>${escapeHtml(schemeIdentityLine(gp))}</b></span></div>
     <div class="id-row"><span class="id-lbl">\u{1F3AD} Play action</span>
       <span><b>${paWord}</b> \xB7 ~${Math.round(wavg(PA_RATE) * 100 * ((_e = gp.paRate) != null ? _e : 100) / 100)}% of med/deep</span></div>
-    <div class="id-row"><span class="id-lbl">\u{1F525} Screens</span><span>~${(_f = gp.screenRate) != null ? _f : 14}% of short throws \u2014 jackpot vs the blitz</span></div>
+    <div class="id-row"><span class="id-lbl">\u{1F525} Screens</span><span>~${(_f2 = gp.screenRate) != null ? _f2 : 14}% of short throws \u2014 jackpot vs the blitz</span></div>
     ${rpoShare > 0.05 ? `<div class="id-row"><span class="id-lbl">\u{1F500} RPO</span><span>~${Math.round(rpoShare * ((_g = gp.rpoRate) != null ? _g : 40))}% of run calls carry the option</span></div>` : ""}
     ${(() => {
       var _a2;
@@ -41321,7 +41439,7 @@ var _CFB = (() => {
   </div>`;
   }
   function renderOffenseDefaults(gp) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2, _q, _r;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2, _q, _r;
     if (gp.runDirection) normalizeDistTo100(gp.runDirection, ["left", "middle", "right"]);
     if (gp.passDepth) normalizeDistTo100(gp.passDepth, ["short", "medium", "deep"]);
     return `<div class="card">
@@ -41448,7 +41566,7 @@ var _CFB = (() => {
               <span class="gp-slider-lo">0%</span>
               <input class="gp-slider" type="range" id="draw-rate" min="0" max="30" value="${(_e = gp.drawRate) != null ? _e : 8}" />
               <span class="gp-slider-hi">30%</span>
-              <span class="gp-slider-val" id="draw-rate-val">${(_f = gp.drawRate) != null ? _f : 8}%</span>
+              <span class="gp-slider-val" id="draw-rate-val">${(_f2 = gp.drawRate) != null ? _f2 : 8}%</span>
             </div>
             <div class="gp-tip tip-info">\u25B8 The run game's screen: catch a blitz (or a crash-keyed edge) upfield and the lane opens behind it. A disciplined MIKE sits in it for nothing. Works from every formation \u2014 crank it against pressure defenses, mute it against readers.</div>
           </div>
@@ -41679,7 +41797,7 @@ var _CFB = (() => {
       </div>`;
   }
   function renderHalftimeAdjust(gp) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k;
     const chipRow = (label, current, opts, key, fmt = (x) => x) => `
   <div class="ht-adj-row">
     <div class="ht-adj-head">
@@ -41793,7 +41911,7 @@ var _CFB = (() => {
           <span class="ht-adj-label">Screens</span>
           <span class="ht-adj-cur" id="screen-val">${(_e = gp.screenRate) != null ? _e : 14}%</span>
         </div>
-        <input class="gp-slider" type="range" id="screen-rate" min="0" max="30" value="${(_f = gp.screenRate) != null ? _f : 14}" />
+        <input class="gp-slider" type="range" id="screen-rate" min="0" max="30" value="${(_f2 = gp.screenRate) != null ? _f2 : 14}" />
       </div>
       ${chipRow(
       "Line-of-Scrimmage Freedom",
@@ -42199,7 +42317,7 @@ var _CFB = (() => {
     }
   }
   function wireDefaultsListeners(gp, { root = document } = {}) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k, _l, _m, _n, _o;
     gp.offFormations = normalizeFormations(gp.offFormations, gp.offFormation);
     root.querySelectorAll("[data-gp-workshop]").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -42314,7 +42432,7 @@ var _CFB = (() => {
       const el = root.querySelector("#jet-rate-val");
       if (el) el.textContent = `${e.target.value}%`;
     });
-    (_f = root.querySelector("#draw-rate")) == null ? void 0 : _f.addEventListener("input", (e) => {
+    (_f2 = root.querySelector("#draw-rate")) == null ? void 0 : _f2.addEventListener("input", (e) => {
       gp.drawRate = parseInt(e.target.value);
       const el = root.querySelector("#draw-rate-val");
       if (el) el.textContent = `${e.target.value}%`;
@@ -42786,7 +42904,7 @@ var _CFB = (() => {
 </div>`;
   }
   function renderSitPanel(gp, key) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2, _q, _r, _s, _t2, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2, _q, _r, _s, _t2, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J;
     const cell = (gp.situations || {})[key] || {};
     if (cell.passDepth) normalizeDistTo100(cell.passDepth, ["short", "medium", "deep"]);
     const baseForms = normalizeFormations(gp.offFormations, gp.offFormation);
@@ -42888,7 +43006,7 @@ var _CFB = (() => {
       "Option Rate",
       "optionRate",
       cell.optionRate != null,
-      `AUTO \u2014 ${(_f = gp.optionRate) != null ? _f : 70}%`,
+      `AUTO \u2014 ${(_f2 = gp.optionRate) != null ? _f2 : 70}%`,
       `<div class="gp-slider-wrap">
       <span class="gp-slider-lo">0%</span>
       <input class="gp-slider" type="range" id="sit-optrate" min="0" max="100" value="${(_h = (_g = cell.optionRate) != null ? _g : gp.optionRate) != null ? _h : 70}" />
@@ -43069,7 +43187,7 @@ var _CFB = (() => {
 </div>`;
   }
   function wireSituationListeners(gp, { getOpenKey, setOpenKey, root = document } = {}) {
-    var _a, _b, _c, _d3, _e, _f, _g;
+    var _a, _b, _c, _d3, _e, _f2, _g;
     const sitCell = () => {
       const k = getOpenKey();
       if (!k) return null;
@@ -43091,7 +43209,7 @@ var _CFB = (() => {
     });
     root.querySelectorAll("[data-sit-customize]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        var _a2, _b2, _c2, _d22, _e2, _f2, _g2, _h;
+        var _a2, _b2, _c2, _d22, _e2, _f22, _g2, _h;
         const field = btn.dataset.sitCustomize;
         const cell = sitCell();
         if (!cell) return;
@@ -43109,7 +43227,7 @@ var _CFB = (() => {
         else if (field === "jetRate") cell.jetRate = (_c2 = gp.jetRate) != null ? _c2 : 15;
         else if (field === "drawRate") cell.drawRate = (_d22 = gp.drawRate) != null ? _d22 : 8;
         else if (field === "protEmphasis") cell.protEmphasis = (_e2 = gp.protEmphasis) != null ? _e2 : 50;
-        else if (field === "qbAggr") cell.qbAggr = (_f2 = gp.qbAggr) != null ? _f2 : 50;
+        else if (field === "qbAggr") cell.qbAggr = (_f22 = gp.qbAggr) != null ? _f22 : 50;
         else if (["covShell", "covStyle", "pressLevel", "edgePlay", "optionKey", "tackleStyle"].includes(field))
           cell[field] = (_g2 = gp[field]) != null ? _g2 : "balanced";
         else if (field === "subPhilosophy") cell.subPhilosophy = (_h = gp.subPhilosophy) != null ? _h : "auto";
@@ -43250,7 +43368,7 @@ var _CFB = (() => {
       const el = root.querySelector("#sit-jetrate-val");
       if (el) el.textContent = `${e.target.value}%`;
     });
-    (_f = root.querySelector("#sit-runcommit")) == null ? void 0 : _f.addEventListener("input", (e) => {
+    (_f2 = root.querySelector("#sit-runcommit")) == null ? void 0 : _f2.addEventListener("input", (e) => {
       const cell = sitCell();
       if (!cell) return;
       cell.runCommit = parseInt(e.target.value);
@@ -43297,7 +43415,7 @@ var _CFB = (() => {
     };
     const fixId = (id) => {
       const m = legacyMap[id] || id;
-      return ALL_FORMATIONS.includes(m) ? m : "Single Back";
+      return ALL_FORMATIONS.includes(m) || FORMATION_PACKAGES[m] ? m : "Single Back";
     };
     if (Array.isArray(offFormations) && offFormations.length > 0) return offFormations.map((f) => __spreadProps2(__spreadValues2({}, f), { id: fixId(f.id) }));
     const validId = fixId(offFormation);
@@ -43316,10 +43434,26 @@ var _CFB = (() => {
       if (!k.startsWith("_")) delete school.gameplan[k];
     }
     Object.assign(school.gameplan, fresh);
+    delete school.gameplan._bookSourceId;
+    delete school.gameplan._bookSourceSaved;
+    delete school.gameplan._defbookSourceId;
+    delete school.gameplan._defbookSourceSaved;
     try {
       synthesizeTeamPlan(school, { force: true });
     } catch (e) {
     }
+  }
+  function bookUpdateBanner(school) {
+    if (!school) return "";
+    const rows = [];
+    for (const side of ["off", "def"]) {
+      const bk = side === "def" ? school.defbook : school.book;
+      if (!bk || !bk.sourceId) continue;
+      const entry = getCreation(side === "def" ? "defbooks" : "playbooks", bk.sourceId);
+      if (!entry || !((entry.saved || 0) > (bk.sourceSaved || 0))) continue;
+      rows.push(`<div class="gp-book-update"><span class="gp-book-update-msg">\u{1F4D6} A newer version of \u201C${escapeHtml(entry.name)}\u201D (${side === "def" ? "defense" : "offense"}) is in your Workshop.</span><button class="btn-ghost btn-sm" data-gp-bookupdate="${side}">Update the book \u2192 <span class="muted">(your dials & situations stay)</span></button></div>`);
+    }
+    return rows.join("");
   }
   function renderPlanSlots(school) {
     var _a, _b;
@@ -43353,7 +43487,7 @@ var _CFB = (() => {
       <optgroup label="Starter books \u2014 offense">${DEFAULT_OFF_BOOKS.map((b) => `<option value="dpb:${escapeHtml(b.name)}">${escapeHtml(b.name)}</option>`).join("")}</optgroup>
       <optgroup label="Starter books \u2014 defense">${DEFAULT_DEF_BOOKS.map((b) => `<option value="ddb:${escapeHtml(b.name)}">${escapeHtml(b.name)}</option>`).join("")}</optgroup>
     </select>
-  </div>`;
+  </div>${bookUpdateBanner(school)}`;
   }
   function setupListeners() {
     var _a, _b, _c, _d3;
@@ -43385,8 +43519,8 @@ var _CFB = (() => {
       const school2 = getPlayerSchool();
       const name = prompt("Name this game plan for your coach library:", "My System");
       if (!name || !school2) return;
-      const ok = saveGameplanToLibrary(state._coachId, name, school2.gameplan);
-      notify(ok ? `"${name}" saved to your coach library` : "Library is full (10 plans max)", ok ? "success" : "warning");
+      const ok = saveGameplanToLibrary(state._coachId, name, controllerOverlayOf(school2.gameplan), { overlayOnly: true });
+      notify(ok ? `"${name}" saved \u2014 your dials, weights & situations (loads onto any book)` : "Library is full (10 plans max)", ok ? "success" : "warning");
       rerender();
     });
     (_c = document.getElementById("gp-lib-load")) == null ? void 0 : _c.addEventListener("change", (e) => {
@@ -43414,6 +43548,13 @@ var _CFB = (() => {
             if (!k.startsWith("_")) delete school2.gameplan[k];
           }
           Object.assign(school2.gameplan, merged);
+          if (kind === "dpb") {
+            delete school2.gameplan._bookSourceId;
+            delete school2.gameplan._bookSourceSaved;
+          } else {
+            delete school2.gameplan._defbookSourceId;
+            delete school2.gameplan._defbookSourceSaved;
+          }
           try {
             synthesizeTeamPlan(school2, { force: true });
           } catch (e2) {
@@ -43441,6 +43582,16 @@ var _CFB = (() => {
             if (!k.startsWith("_")) delete school2.gameplan[k];
           }
           Object.assign(school2.gameplan, merged);
+          {
+            const _entry = getCreation(shelf, planName);
+            if (kind === "pb") {
+              school2.gameplan._bookSourceId = planName;
+              school2.gameplan._bookSourceSaved = (_entry == null ? void 0 : _entry.saved) || Date.now();
+            } else {
+              school2.gameplan._defbookSourceId = planName;
+              school2.gameplan._defbookSourceSaved = (_entry == null ? void 0 : _entry.saved) || Date.now();
+            }
+          }
           try {
             synthesizeTeamPlan(school2, { force: true });
           } catch (e2) {
@@ -43455,10 +43606,56 @@ var _CFB = (() => {
       }
       const p = (((_b2 = (_a2 = getCoach(state._coachId)) == null ? void 0 : _a2.plans) == null ? void 0 : _b2.gameplans) || []).find((x) => x.name === planName);
       if (!p) return;
-      applyPlanToSchool(school2, p.gp);
-      notify(`"${p.name}" loaded from library`, "success");
+      if (p.overlayOnly) {
+        const merged = applyControllerOverlay(school2.gameplan, p.gp, defaultGameplan());
+        for (const k of Object.keys(school2.gameplan)) {
+          if (!k.startsWith("_")) delete school2.gameplan[k];
+        }
+        Object.assign(school2.gameplan, merged);
+        try {
+          synthesizeTeamPlan(school2, { force: true });
+        } catch (e2) {
+        }
+        notify(`"${p.name}" loaded onto your current book`, "success");
+      } else {
+        applyPlanToSchool(school2, p.gp);
+        notify(`"${p.name}" loaded from library`, "success");
+      }
       rerender();
     });
+    document.querySelectorAll("[data-gp-bookupdate]").forEach((b) => b.addEventListener("click", () => {
+      const school2 = getPlayerSchool();
+      if (!school2) return;
+      const side = b.dataset.gpBookupdate;
+      const bk = side === "def" ? school2.defbook : school2.book;
+      if (!bk || !bk.sourceId) return;
+      const shelf = side === "def" ? "defbooks" : "playbooks";
+      const entry = getCreation(shelf, bk.sourceId);
+      if (!entry) return;
+      const rep = repairCreation(shelf, JSON.parse(JSON.stringify(entry.data)));
+      if (!rep.ok) {
+        notify(`"${entry.name}" can't load in this build \u2014 open it in the Workshop to rebuild it`, "warning");
+        return;
+      }
+      try {
+        const merged = side === "def" ? applyDefBookToGameplan(rep.data, school2.gameplan) : applyPlaybookToGameplan(rep.data, school2.gameplan);
+        for (const k of Object.keys(school2.gameplan)) {
+          if (!k.startsWith("_")) delete school2.gameplan[k];
+        }
+        Object.assign(school2.gameplan, merged);
+        if (side === "def") school2.gameplan._defbookSourceSaved = entry.saved || Date.now();
+        else school2.gameplan._bookSourceSaved = entry.saved || Date.now();
+        try {
+          synthesizeTeamPlan(school2, { force: true });
+        } catch (e2) {
+        }
+        notify(`\u{1F4D6} "${entry.name}" updated \u2014 your dials and situations carried over`, "success");
+        if (rep.changes.length) notify(`Updated for this build: ${rep.changes[0]}${rep.changes.length > 1 ? ` (+${rep.changes.length - 1} more)` : ""}`, "warning");
+      } catch (err) {
+        notify("Could not update the book", "warning");
+      }
+      rerender();
+    }));
     const school = getPlayerSchool();
     if (!school) return;
     const gp = school.gameplan;
@@ -44366,7 +44563,7 @@ var _CFB = (() => {
   }
   async function setupListeners2() {
     var _a2, _b2, _c2;
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k, _l, _m;
     (_a = document.getElementById("btn-mm-guide")) == null ? void 0 : _a.addEventListener("click", () => {
       state.ui.manualFromMenu = true;
       navigate("manual");
@@ -44443,7 +44640,7 @@ var _CFB = (() => {
       }
       rerender();
     });
-    (_f = document.getElementById("mm-back-coaches")) == null ? void 0 : _f.addEventListener("click", () => {
+    (_f2 = document.getElementById("mm-back-coaches")) == null ? void 0 : _f2.addEventListener("click", () => {
       mmCoachId = null;
       mmView = null;
       rerender();
@@ -45231,7 +45428,7 @@ var _CFB = (() => {
     if (l) ob.last = l.value.trim();
   }
   function setupListeners3() {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i;
     (_a = document.getElementById("btn-back-to-menu")) == null ? void 0 : _a.addEventListener("click", () => {
       legacyMode = false;
       navigate("mainmenu");
@@ -45334,7 +45531,7 @@ var _CFB = (() => {
       ob.defFront = b.dataset.obFront;
       rerender();
     }));
-    (_f = document.getElementById("ob-next-3")) == null ? void 0 : _f.addEventListener("click", () => {
+    (_f2 = document.getElementById("ob-next-3")) == null ? void 0 : _f2.addEventListener("click", () => {
       if (!ob.qbPref || !ob.defFront) return;
       obStep = 4;
       rerender();
@@ -48669,7 +48866,7 @@ var _CFB = (() => {
     return ((_b = (_a = stages[os.stage]) == null ? void 0 : _a.id) != null ? _b : null) === "staff";
   }
   function setupListeners18() {
-    var _a, _b, _c, _d3, _e, _f;
+    var _a, _b, _c, _d3, _e, _f2;
     document.querySelectorAll("[data-hire-market]").forEach((btn) => {
       btn.addEventListener("click", () => {
         if (!coordWindowOpen()) {
@@ -48741,12 +48938,12 @@ var _CFB = (() => {
       rerender();
     });
     (_c = document.querySelector(".stay-btn")) == null ? void 0 : _c.addEventListener("click", () => {
-      var _a2, _b2, _c2, _d4, _e2, _f2;
+      var _a2, _b2, _c2, _d4, _e2, _f3;
       const endBefore = (_b2 = (_a2 = state.playerCoach) == null ? void 0 : _a2.contract) == null ? void 0 : _b2.endSeason;
       const n = declineOffersWithLeverage(state);
       const extended = endBefore != null && (((_d4 = (_c2 = state.playerCoach) == null ? void 0 : _c2.contract) == null ? void 0 : _d4.endSeason) || 0) > endBefore;
       if (isTreeGame(state)) noteOfferDeclined(state);
-      notify(n > 0 ? `You turned down the offers \u2014 and the AD noticed. Seat +${C.OFFER_LEVERAGE_JS}, and a loyalty raise: +10% of base on next season's recruiting pool (stack ${((_e2 = state.playerCoach) == null ? void 0 : _e2.retentionStacks) || 1}/10${(((_f2 = state.playerCoach) == null ? void 0 : _f2.retentionStacks) || 1) >= 10 ? " \u2014 capped, double money" : ""})${extended ? ", plus a year added to your contract" : ""}. Leave for another job and every raise is forfeit.` : "You turned down the offers and stayed put.", "info", 7e3);
+      notify(n > 0 ? `You turned down the offers \u2014 and the AD noticed. Seat +${C.OFFER_LEVERAGE_JS}, and a loyalty raise: +10% of base on next season's recruiting pool (stack ${((_e2 = state.playerCoach) == null ? void 0 : _e2.retentionStacks) || 1}/10${(((_f3 = state.playerCoach) == null ? void 0 : _f3.retentionStacks) || 1) >= 10 ? " \u2014 capped, double money" : ""})${extended ? ", plus a year added to your contract" : ""}. Leave for another job and every raise is forfeit.` : "You turned down the offers and stayed put.", "info", 7e3);
     });
     setupHandoffListeners();
     document.querySelectorAll("[data-tree-switch]").forEach((btn) => {
@@ -48835,7 +49032,7 @@ var _CFB = (() => {
       state.ui.ceremonyPicks = [];
       rerender();
     });
-    (_f = document.getElementById("ceremony-confirm")) == null ? void 0 : _f.addEventListener("click", async () => {
+    (_f2 = document.getElementById("ceremony-confirm")) == null ? void 0 : _f2.addEventListener("click", async () => {
       const cer = state.ui.ceremony;
       if (!cer) return;
       const res = retireActiveCoach(state);
@@ -49740,7 +49937,7 @@ var _CFB = (() => {
     return w.kind === "regular" ? `${w.label} \xB7 ${getPhaseLabel()}` : w.label;
   }
   function gameWeekContent(school) {
-    var _a, _b, _c, _d3, _e, _f;
+    var _a, _b, _c, _d3, _e, _f2;
     const next = getUpcomingGame();
     const railHtml = seasonRailHtml(school, next);
     if (!next) {
@@ -49775,7 +49972,7 @@ var _CFB = (() => {
       railHtml,
       kicker: `Game Week \xB7 ${tag}`,
       title: `${isHome ? "vs" : "@"} ${oppRank ? `#${oppRank} ` : ""}${(opp == null ? void 0 : opp.name) || "TBD"}`,
-      sub: `${weekLabel(next.day)} \xB7 ${isHome ? "at home" : "on the road"} \xB7 they're ${fmtRecord(((_e = opp == null ? void 0 : opp.record) == null ? void 0 : _e.wins) || 0, ((_f = opp == null ? void 0 : opp.record) == null ? void 0 : _f.losses) || 0)}` + (byeAhead ? ` \xB7 bye week first \u2014 nothing to play until ${weekLabel(next.day)}` : ""),
+      sub: `${weekLabel(next.day)} \xB7 ${isHome ? "at home" : "on the road"} \xB7 they're ${fmtRecord(((_e = opp == null ? void 0 : opp.record) == null ? void 0 : _e.wins) || 0, ((_f2 = opp == null ? void 0 : opp.record) == null ? void 0 : _f2.losses) || 0)}` + (byeAhead ? ` \xB7 bye week first \u2014 nothing to play until ${weekLabel(next.day)}` : ""),
       body: gameWeekBody(next, school, opp, isHome)
     };
   }
@@ -49862,7 +50059,7 @@ var _CFB = (() => {
   </div>`;
   }
   function renderSeasonStrip(school) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k;
     const standings = getConferenceStandings();
     const injured = ((school == null ? void 0 : school.roster) || []).filter((p) => p.injuryGamesOut > 0);
     const boardCount = ((_b = (_a = state.playerCoach) == null ? void 0 : _a.recruitBoard) == null ? void 0 : _b.length) || 0;
@@ -49881,7 +50078,7 @@ var _CFB = (() => {
       <div class="card-header"><span class="card-title">THIS SEASON</span></div>
       <div class="record-display">
         <div class="record-big">${fmtRecord(((_d3 = school == null ? void 0 : school.record) == null ? void 0 : _d3.wins) || 0, ((_e = school == null ? void 0 : school.record) == null ? void 0 : _e.losses) || 0)}</div>
-        <div class="record-sub">${fmtRecord(((_f = school == null ? void 0 : school.record) == null ? void 0 : _f.confWins) || 0, ((_g = school == null ? void 0 : school.record) == null ? void 0 : _g.confLosses) || 0)} Conf.</div>
+        <div class="record-sub">${fmtRecord(((_f2 = school == null ? void 0 : school.record) == null ? void 0 : _f2.confWins) || 0, ((_g = school == null ? void 0 : school.record) == null ? void 0 : _g.confLosses) || 0)} Conf.</div>
       </div>
       <div class="stat-grid">
         <div class="stat-item">
@@ -51025,7 +51222,7 @@ var _CFB = (() => {
   }
   function setupListeners6() {
     var _a2;
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2;
     document.querySelectorAll("[data-poach]").forEach((btn) => {
       btn.addEventListener("click", () => {
         var _a22;
@@ -51181,7 +51378,7 @@ var _CFB = (() => {
         rerender();
       });
     });
-    (_f = document.getElementById("btn-decline-offers")) == null ? void 0 : _f.addEventListener("click", () => {
+    (_f2 = document.getElementById("btn-decline-offers")) == null ? void 0 : _f2.addEventListener("click", () => {
       var _a3, _b2, _c2, _d4, _e2;
       const endBefore = (_b2 = (_a3 = state.playerCoach) == null ? void 0 : _a3.contract) == null ? void 0 : _b2.endSeason;
       const n = declineOffersWithLeverage(state);
@@ -51918,7 +52115,7 @@ var _CFB = (() => {
     return scored.slice(0, n);
   }
   function slotLabelsByPlayer(school, side) {
-    var _a, _b, _c, _d3, _e, _f;
+    var _a, _b, _c, _d3, _e, _f2;
     const gp = school == null ? void 0 : school.gameplan;
     const out2 = {};
     try {
@@ -51939,7 +52136,7 @@ var _CFB = (() => {
         if (!layout) return out2;
         const r = resolveDefField(front, entry == null ? void 0 : entry.slots, entry == null ? void 0 : entry.blitzShares, buildActiveDepth(school), buildRatingById(school), posById(school), byId(school));
         for (const s of layout.slots) {
-          const pid = (_f = r == null ? void 0 : r.bySlot) == null ? void 0 : _f[s.id];
+          const pid = (_f2 = r == null ? void 0 : r.bySlot) == null ? void 0 : _f2[s.id];
           if (pid) out2[pid] = { label: s.label, pos: s.pos, role: s.role };
         }
       }
@@ -54133,7 +54330,7 @@ var _CFB = (() => {
     if (el && state.ui.defCard) state.ui.defCard.call.name = el.value;
   }
   function defListeners() {
-    var _a, _b, _c, _d3, _e, _f, _g;
+    var _a, _b, _c, _d3, _e, _f2, _g;
     document.querySelectorAll("[data-def-open]").forEach((b) => b.addEventListener("click", () => {
       const data = loadCreationData("defbooks", b.dataset.defOpen);
       if (data) {
@@ -54307,7 +54504,7 @@ var _CFB = (() => {
       state.ui.defCard = null;
       rerender();
     });
-    (_f = document.querySelector("[data-def-save]")) == null ? void 0 : _f.addEventListener("click", () => {
+    (_f2 = document.querySelector("[data-def-save]")) == null ? void 0 : _f2.addEventListener("click", () => {
       _syncName2();
       const db = _d();
       const v = validateDefBook(db);
@@ -54707,7 +54904,7 @@ var _CFB = (() => {
     if (g("te-c1")) t.colors = [g("te-c1").value, (g("te-c2") ? g("te-c2").value : (t.colors || [])[1]) || "#e2e8f0"];
   }
   function teamsListeners() {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k, _l, _m;
     document.querySelectorAll("[data-team-open]").forEach((b) => b.addEventListener("click", () => {
       const data = loadCreationData("teams", b.dataset.teamOpen);
       if (data) {
@@ -54748,7 +54945,7 @@ var _CFB = (() => {
       _sync();
       rerender();
     });
-    (_f = document.getElementById("te-c2")) == null ? void 0 : _f.addEventListener("input", () => {
+    (_f2 = document.getElementById("te-c2")) == null ? void 0 : _f2.addEventListener("input", () => {
       _sync();
       rerender();
     });
@@ -55083,7 +55280,7 @@ var _CFB = (() => {
     if (el && _d2()) _d2().name = el.value;
   }
   function divisionsListeners() {
-    var _a, _b, _c, _d3, _e, _f;
+    var _a, _b, _c, _d3, _e, _f2;
     document.querySelectorAll("[data-div-open]").forEach((b) => b.addEventListener("click", () => {
       const ed = leagueToEditor(loadCreationData("leagues", b.dataset.divOpen));
       if (ed) {
@@ -55235,12 +55432,407 @@ var _CFB = (() => {
         notify("Could not start: " + err.message, "warning");
       }
     });
-    (_f = document.querySelector("[data-dv-back]")) == null ? void 0 : _f.addEventListener("click", () => {
+    (_f2 = document.querySelector("[data-dv-back]")) == null ? void 0 : _f2.addEventListener("click", () => {
       state.ui.divContext = null;
       state.ui.div = null;
       state.ui.divId = null;
       state.ui.divPick = null;
       state.ui.divSearch = "";
+      rerender();
+    });
+  }
+
+  // js/ui/views/creatorform.js
+  init_state();
+  init_creator();
+
+  // js/engine/formcompose.js
+  init_concepts();
+  init_constants();
+  init_constants_field();
+  var FORMCOMPOSE_SCHEMA_VERSION = 1;
+  var FORM_NAME_MAX = 20;
+  var FORM_ANCHORS = {
+    wideL: { label: "Wide Left (on the line)", x: 0.05, y: 0.5, online: true, back: false },
+    flankL: { label: "Flanker Left", x: 0.08, y: 0.56, online: false, back: false },
+    slotL: { label: "Slot Left", x: 0.2, y: 0.56, online: false, back: false },
+    slotInL: { label: "Inside Slot Left", x: 0.3, y: 0.56, online: false, back: false },
+    tightL: { label: "Tight Left (on the line)", x: 0.24, y: 0.5, online: true, back: false },
+    wingL: { label: "Wing Left", x: 0.27, y: 0.56, online: false, back: false },
+    wideR: { label: "Wide Right (on the line)", x: 0.95, y: 0.5, online: true, back: false },
+    flankR: { label: "Flanker Right", x: 0.92, y: 0.56, online: false, back: false },
+    slotR: { label: "Slot Right", x: 0.8, y: 0.56, online: false, back: false },
+    slotInR: { label: "Inside Slot Right", x: 0.7, y: 0.56, online: false, back: false },
+    tightR: { label: "Tight Right (on the line)", x: 0.76, y: 0.5, online: true, back: false },
+    wingR: { label: "Wing Right", x: 0.73, y: 0.56, online: false, back: false },
+    bfDeep: { label: "Deep Back", x: 0.5, y: 0.87, online: false, back: true },
+    bfSet: { label: "Set Back", x: 0.5, y: 0.77, online: false, back: true },
+    bfOffL: { label: "Offset Back Left", x: 0.38, y: 0.74, online: false, back: true },
+    bfOffR: { label: "Offset Back Right", x: 0.62, y: 0.74, online: false, back: true }
+  };
+  var QB_DEPTH = { under: 0.62, pistol: 0.68, gun: 0.7 };
+  var FORM_POS = ["WR", "SLOT", "TE", "RB", "FB"];
+  function emptyCustomFormation(name) {
+    return {
+      schemaVersion: FORMCOMPOSE_SCHEMA_VERSION,
+      name: String(name || "New Formation").slice(0, FORM_NAME_MAX),
+      qb: "gun",
+      slots: [
+        { pos: "WR", anchor: "wideL" },
+        { pos: "SLOT", anchor: "slotL" },
+        { pos: "TE", anchor: "tightR" },
+        { pos: "WR", anchor: "wideR" },
+        { pos: "RB", anchor: "bfOffR" }
+      ]
+    };
+  }
+  function _builtinNames() {
+    const out2 = /* @__PURE__ */ new Set();
+    for (const k of Object.keys(FORMATIONS)) out2.add(k.toLowerCase());
+    out2.add(aliasFormation("Pro Set").toLowerCase());
+    out2.add("pro set");
+    return out2;
+  }
+  function validateCustomFormation(cf) {
+    const errors = [], warnings = [];
+    if (!cf || typeof cf !== "object") return { ok: false, errors: ["formation must be an object"], warnings };
+    const name = typeof cf.name === "string" ? cf.name.trim() : "";
+    if (!name) errors.push("the formation needs a name");
+    else if (_builtinNames().has(name.toLowerCase())) errors.push(`"${name}" is a built-in formation \u2014 pick another name`);
+    if (cf.qb != null && !(cf.qb in QB_DEPTH)) errors.push(`unknown QB depth "${cf.qb}"`);
+    const slots = Array.isArray(cf.slots) ? cf.slots : null;
+    if (!slots) return { ok: false, errors: [...errors, "slots must be an array"], warnings };
+    if (slots.length !== 5) errors.push(`a formation fields exactly 5 skill players (got ${slots.length})`);
+    const seen = /* @__PURE__ */ new Set();
+    let online = 0;
+    for (const s of slots) {
+      if (!s || !FORM_POS.includes(s.pos)) {
+        errors.push(`bad position "${s && s.pos}"`);
+        continue;
+      }
+      const a = FORM_ANCHORS[s.anchor];
+      if (!a) {
+        errors.push(`unknown spot "${s && s.anchor}"`);
+        continue;
+      }
+      if (seen.has(s.anchor)) errors.push(`two players on the same spot (${a.label})`);
+      seen.add(s.anchor);
+      const isBack = s.pos === "RB" || s.pos === "FB";
+      if (isBack && !a.back) errors.push(`${s.pos} must line up in the backfield (not ${a.label})`);
+      if (!isBack && a.back) errors.push(`${s.pos} can't line up in the backfield (${a.label})`);
+      if (a.online) online++;
+    }
+    if (online < 2) errors.push(`only ${5 + online} men on the line \u2014 the rules want 7 (put ${2 - online} more on the line)`);
+    const onlineSlots = slots.filter((s) => s && FORM_ANCHORS[s.anchor] && FORM_ANCHORS[s.anchor].online);
+    for (const s of onlineSlots) {
+      const a = FORM_ANCHORS[s.anchor];
+      const covered = onlineSlots.some((o) => {
+        if (o === s) return false;
+        const b = FORM_ANCHORS[o.anchor];
+        return a.x < 0.5 ? b.x < a.x : b.x > a.x;
+      });
+      if (covered) warnings.push(`the ${s.pos} at ${a.label} is COVERED \u2014 on the line with a teammate outside him, so he's ineligible`);
+    }
+    return { ok: errors.length === 0, errors, warnings };
+  }
+  function _pkgOf(cf) {
+    const n = { RB: 0, FB: 0, TE: 0, WR: 0 };
+    for (const s of cf.slots) {
+      if (s.pos === "RB") n.RB++;
+      else if (s.pos === "FB") n.FB++;
+      else if (s.pos === "TE") n.TE++;
+      else n.WR++;
+    }
+    return n;
+  }
+  function formationArchetype(pkg) {
+    const backs = (pkg.RB || 0) + (pkg.FB || 0), te = pkg.TE || 0, wide = pkg.WR || 0;
+    let best = null, bestD = Infinity;
+    for (const fid of Object.keys(FORMATIONS)) {
+      if (fid === "Wildcat") continue;
+      const p = FORMATION_PACKAGES[fid];
+      if (!p) continue;
+      const d = Math.abs((p.RB || 0) + (p.FB || 0) - backs) * 4 + Math.abs((p.TE || 0) - te) * 2 + Math.abs((p.WR || 0) - wide);
+      if (d < bestD) {
+        bestD = d;
+        best = fid;
+      }
+    }
+    return best || "Single Back";
+  }
+  function _playbookOf(pkg, archetype) {
+    const wide = pkg.WR || 0, backs = (pkg.RB || 0) + (pkg.FB || 0);
+    const base = FORMATION_PLAYBOOK[archetype] || [];
+    return base.filter((nm) => {
+      const pc = PASS_CONCEPTS[nm];
+      if (pc) {
+        if (pc.minWR && wide < pc.minWR) return false;
+        if ((nm === "Flea Flicker" || nm === "HB Pass" || nm === "Slip Screen" || nm === "RB Screen") && backs < 1) return false;
+        return true;
+      }
+      const rc = RUN_CONCEPTS[nm];
+      if (rc) {
+        if (nm === "Wildcat Power" || nm === "Jet Sweep") return false;
+        if ((nm === "Triple Option" || nm === "Speed Option") && backs < 2) return false;
+        if (nm === "QB Sneak" || nm === "Draw" || nm === "QB Power") return true;
+        return backs >= 1;
+      }
+      return false;
+    });
+  }
+  function _skillSlots(cf) {
+    const rows = cf.slots.map((s) => __spreadValues({ pos: s.pos }, FORM_ANCHORS[s.anchor]));
+    const recv = rows.filter((r) => r.pos === "WR" || r.pos === "SLOT").sort((a, b) => a.x - b.x);
+    const tes = rows.filter((r) => r.pos === "TE").sort((a, b) => a.x - b.x);
+    const backs = rows.filter((r) => r.pos === "RB" || r.pos === "FB").sort((a, b) => a.x - b.x);
+    const out2 = [];
+    const recvIds = [];
+    if (recv.length) recvIds.push(["WR_X", "X"]);
+    if (recv.length >= 2) recvIds.push(...[["WR_S", "SL"], ["WR_F", "F"], ["WR_V", "V"]].slice(0, recv.length - 2), ["WR_Z", "Z"]);
+    recv.forEach((r, i) => {
+      const [id, label] = recvIds[i];
+      const wide = Math.abs(r.x - 0.5) >= 0.3;
+      out2.push({ id, pos: r.pos, label, x: r.x, y: r.y, role: r.pos === "SLOT" ? "WR-Slot" : wide ? "WR-Deep" : "WR-Poss", catch: true });
+    });
+    const teIds = [["TE_Y", "Y"], ["TE_U", "U"], ["TE_W", "W"]];
+    tes.forEach((r, i) => {
+      const [id, label] = teIds[i];
+      out2.push({ id, pos: "TE", label, x: r.x, y: r.y, role: "TE-Receiving", catch: true });
+    });
+    let rbUsed = 0;
+    backs.forEach((r) => {
+      if (r.pos === "FB") out2.push({ id: "FB", pos: "RB", label: "FB", x: r.x, y: r.y, role: "FB-Lead", catch: true });
+      else out2.push({ id: rbUsed++ === 0 ? "RB_H" : "RB_2", pos: "RB", label: "HB", x: r.x, y: r.y, role: "RB-Power", catch: true });
+    });
+    return out2;
+  }
+  function compileFormation(cf) {
+    const v = validateCustomFormation(cf);
+    if (!v.ok) throw new Error(`compileFormation: invalid formation \u2014 ${v.errors[0]}`);
+    const name = cf.name.trim();
+    const pkg = _pkgOf(cf);
+    const archetype = formationArchetype(pkg);
+    const arch = FORMATIONS[archetype];
+    const skill = _skillSlots(cf);
+    const qbY = QB_DEPTH[cf.qb || "gun"];
+    const leftOf = skill.filter((s) => s.y <= 0.56 && s.x < 0.5).sort((a, b) => a.x - b.x);
+    const rightOf = skill.filter((s) => s.y <= 0.56 && s.x >= 0.5).sort((a, b) => a.x - b.x);
+    const backRows = skill.filter((s) => s.y > 0.56).sort((a, b) => a.y - b.y);
+    const layoutSlots = [...leftOf, ...OL_SLOTS, ...rightOf, { id: "QB", pos: "QB", label: "QB", x: 0.5, y: qbY }, ...backRows];
+    return {
+      id: name,
+      archetype,
+      pkg,
+      playbook: _playbookOf(pkg, archetype),
+      formationsRow: {
+        passLean: arch.passLean,
+        runIn: arch.runIn,
+        runOut: arch.runOut,
+        identity: arch.identity,
+        label: name,
+        desc: `Custom \u2014 plays from the ${archetype} family`
+      },
+      layout: { slots: layoutSlots }
+    };
+  }
+  var _registered = /* @__PURE__ */ new Set();
+  function _unregister(id) {
+    delete FORMATIONS[id];
+    delete FORMATION_PACKAGES[id];
+    delete FORMATION_PLAYBOOK[id];
+    delete OFF_FIELD_LAYOUTS[id];
+  }
+  function syncCustomFormations(entries) {
+    const keep = /* @__PURE__ */ new Set();
+    for (const e of Array.isArray(entries) ? entries : []) {
+      try {
+        const cf = e && e.data ? e.data : null;
+        if (!cf) continue;
+        const c = compileFormation(cf);
+        if (!_registered.has(c.id) && FORMATIONS[c.id]) continue;
+        FORMATIONS[c.id] = c.formationsRow;
+        FORMATION_PACKAGES[c.id] = c.pkg;
+        FORMATION_PLAYBOOK[c.id] = c.playbook;
+        OFF_FIELD_LAYOUTS[c.id] = c.layout;
+        _registered.add(c.id);
+        keep.add(c.id);
+      } catch (err) {
+      }
+    }
+    for (const id of [..._registered]) {
+      if (!keep.has(id)) {
+        _unregister(id);
+        _registered.delete(id);
+      }
+    }
+    return _registered.size;
+  }
+
+  // js/ui/views/creatorform.js
+  init_routeart();
+  function esc7(s) {
+    return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  }
+  function _f() {
+    return state.ui.form;
+  }
+  function _entries() {
+    return listCreations("formations").map((e) => ({ name: e.name, data: e.data }));
+  }
+  function resyncFormations() {
+    try {
+      return syncCustomFormations(_entries());
+    } catch (e) {
+      return 0;
+    }
+  }
+  function _persStr(pkg) {
+    const bits = [];
+    if ((pkg.RB || 0) + (pkg.FB || 0)) bits.push(`${(pkg.RB || 0) + (pkg.FB || 0)} back${(pkg.RB || 0) + (pkg.FB || 0) === 1 ? "" : "s"}`);
+    bits.push(`${pkg.TE || 0} TE`, `${pkg.WR || 0} WR`);
+    return bits.join(" \xB7 ");
+  }
+  function _tryCompile(cf) {
+    try {
+      return compileFormation(cf);
+    } catch (e) {
+      return null;
+    }
+  }
+  function renderFormList() {
+    const forms = listCreations("formations");
+    const rows = forms.length ? forms.map((f) => {
+      const c = _tryCompile(f.data);
+      const thumb = c ? `<span class="play-row-thumb">${renderFormationDiagram(f.name, { slots: c.layout.slots, w: 120, h: 76 })}</span>` : `<span class="play-row-thumb play-row-thumb-named">\u26A0\uFE0F</span>`;
+      const meta = c ? `${_persStr(c.pkg)} \xB7 ${c.playbook.length} plays \xB7 ${esc7(c.archetype)} family` : "needs repair \u2014 open to fix";
+      return `<div class="pb-row play-row">
+      <button class="pb-row-open" data-form-open="${esc7(f.id)}">${thumb}<span class="play-row-copy"><span class="pb-row-name">${esc7(f.name)}</span><span class="pb-row-meta">${meta}</span></span></button>
+      <button class="btn-mm-del" data-form-del="${esc7(f.id)}" title="Delete" aria-label="Delete ${esc7(f.name)}">\u2715</button>
+    </div>`;
+    }).join("") : `<div class="mm-lib-empty muted">No formations yet. Place five skill players over the line and save a look of your own.</div>`;
+    return `<div class="creator-hub">
+    <div class="creator-hub-head"><div class="creator-title">Formation Designer</div>
+      <div class="creator-sub">Five skill players, a QB depth, the line does the rest. Legal by the rulebook \u2014 crazy is fine, illegal isn't.</div></div>
+    <div class="pb-list">${rows}</div>
+    <div class="pb-actions">
+      <button class="btn-mm btn-mm-new" data-form-new="1">\uFF0B New formation</button>
+      <button class="btn-mm btn-mm-secondary" data-creator="hub">\u2190 Workshop</button>
+    </div>
+  </div>`;
+  }
+  function renderFormEditor() {
+    const cf = _f();
+    const v = validateCustomFormation(cf);
+    const c = v.ok ? _tryCompile(cf) : null;
+    const posOpts = (sel) => FORM_POS.map((p) => `<option value="${p}"${sel === p ? " selected" : ""}>${p}</option>`).join("");
+    const anchorOpts = (s) => {
+      const isBack = s.pos === "RB" || s.pos === "FB";
+      return Object.entries(FORM_ANCHORS).filter(([, a]) => a.back === isBack).map(([id, a]) => `<option value="${id}"${s.anchor === id ? " selected" : ""}>${esc7(a.label)}</option>`).join("");
+    };
+    const rows = cf.slots.map((s, i) => `
+    <div class="fc-slot-row">
+      <span class="fc-slot-n">${i + 1}</span>
+      <select class="form-input fc-select" data-fc-pos="${i}" aria-label="Player ${i + 1} position">${posOpts(s.pos)}</select>
+      <select class="form-input fc-select fc-select-anchor" data-fc-anchor="${i}" aria-label="Player ${i + 1} alignment">${anchorOpts(s)}</select>
+    </div>`).join("");
+    const qbRow = Object.keys(QB_DEPTH).map((k) => `<button type="button" class="def-preset fc-qb${(cf.qb || "gun") === k ? " active" : ""}" data-fc-qb="${k}"><span class="def-preset-name">${k === "under" ? "Under Center" : k === "pistol" ? "Pistol" : "Shotgun"}</span></button>`).join("");
+    const problems = v.errors.length ? v.errors.map((e) => `<div class="pb-msg err">\u26D4 ${esc7(e)}</div>`).join("") : "";
+    const warns = v.warnings.length ? v.warnings.map((w) => `<div class="pb-msg fc-warn">\u26A0\uFE0F ${esc7(w)}</div>`).join("") : "";
+    const derived = c ? `
+    <div class="fc-derived">
+      <div class="play-preview-head">${_persStr(c.pkg)} \xB7 plays from the <b>${esc7(c.archetype)}</b> family (${c.playbook.length} calls)</div>
+      <div class="gp-tip tip-info">\u25B8 The rulebook sets the numbers: your formation inherits the ${esc7(c.archetype)} identity, its call sheet filtered to what this alignment can run, and NO matchup edges \u2014 a designed look can never out-tune a shipped one.</div>
+    </div>` : "";
+    const preview = c ? renderFormationDiagram(cf.name || "Custom", { slots: c.layout.slots, w: 260, h: 160 }) : `<div class="mm-lib-empty muted">Fix the errors above to see the alignment.</div>`;
+    return `<div class="creator-hub">
+    <div class="creator-hub-head"><div class="creator-title">Formation Designer</div>
+      <div class="creator-sub">Place your five. The five linemen and the rulebook handle the rest.</div></div>
+    <div class="gp-row"><label class="gp-label">Name</label>
+      <input id="fc-name" class="form-input pb-name" maxlength="20" value="${esc7(cf.name || "")}" placeholder="e.g. Bearcat Trips" /></div>
+    <div class="gp-row"><label class="gp-label">Quarterback</label>
+      <div class="def-preset-row">${qbRow}</div></div>
+    <div class="gp-row"><label class="gp-label">The five</label>${rows}</div>
+    ${problems}${warns}
+    <div class="gp-row"><label class="gp-label">The look</label><div class="fc-preview">${preview}</div></div>
+    ${derived}
+    <div class="pb-actions">
+      <button class="btn-mm btn-mm-new" id="fc-save"${v.ok ? "" : " disabled"}>\u{1F4BE} Save formation</button>
+      <button class="btn-mm btn-mm-secondary" data-form-back="1">\u2190 All formations</button>
+    </div>
+  </div>`;
+  }
+  function renderFormTab() {
+    return `<div class="creator-wrapper">${_f() ? renderFormEditor() : renderFormList()}</div>`;
+  }
+  function formListeners() {
+    document.querySelectorAll("[data-form-new]").forEach((b) => b.addEventListener("click", () => {
+      state.ui.form = emptyCustomFormation();
+      state.ui.formId = null;
+      rerender();
+    }));
+    document.querySelectorAll("[data-form-open]").forEach((b) => b.addEventListener("click", () => {
+      const data = loadCreationData("formations", b.dataset.formOpen);
+      if (!data) return;
+      state.ui.form = data;
+      state.ui.formId = b.dataset.formOpen;
+      rerender();
+    }));
+    document.querySelectorAll("[data-form-del]").forEach((b) => b.addEventListener("click", () => {
+      deleteCreation("formations", b.dataset.formDel);
+      resyncFormations();
+      rerender();
+    }));
+    document.querySelectorAll("[data-form-back]").forEach((b) => b.addEventListener("click", () => {
+      state.ui.form = null;
+      state.ui.formId = null;
+      rerender();
+    }));
+    const cf = _f();
+    if (!cf) return;
+    const nameEl = document.getElementById("fc-name");
+    if (nameEl) nameEl.addEventListener("change", () => {
+      cf.name = nameEl.value.slice(0, 20);
+      rerender();
+    });
+    document.querySelectorAll("[data-fc-qb]").forEach((b) => b.addEventListener("click", () => {
+      cf.qb = b.dataset.fcQb;
+      rerender();
+    }));
+    document.querySelectorAll("[data-fc-pos]").forEach((el) => el.addEventListener("change", () => {
+      const i = parseInt(el.dataset.fcPos, 10);
+      const s = cf.slots[i];
+      if (!s) return;
+      s.pos = el.value;
+      const isBack = s.pos === "RB" || s.pos === "FB";
+      if (FORM_ANCHORS[s.anchor] && FORM_ANCHORS[s.anchor].back !== isBack) {
+        const taken = new Set(cf.slots.filter((x) => x !== s).map((x) => x.anchor));
+        const first = Object.entries(FORM_ANCHORS).find(([id, a]) => a.back === isBack && !taken.has(id));
+        s.anchor = first ? first[0] : s.anchor;
+      }
+      rerender();
+    }));
+    document.querySelectorAll("[data-fc-anchor]").forEach((el) => el.addEventListener("change", () => {
+      const i = parseInt(el.dataset.fcAnchor, 10);
+      if (cf.slots[i]) cf.slots[i].anchor = el.value;
+      rerender();
+    }));
+    const saveBtn = document.getElementById("fc-save");
+    if (saveBtn) saveBtn.addEventListener("click", () => {
+      const v = validateCustomFormation(cf);
+      if (!v.ok) {
+        notify(`\u26D4 ${v.errors[0]}`);
+        return;
+      }
+      const r = saveCreation("formations", cf.name, cf, state.ui.formId ? { id: state.ui.formId } : {});
+      if (!r.ok) {
+        notify(r.reason === "full" ? `The shelf is full (${r.cap}). Delete one first.` : "Couldn't save the formation.");
+        return;
+      }
+      state.ui.formId = r.id;
+      resyncFormations();
+      notify(`\u{1F4BE} ${cf.name} saved \u2014 it's now a formation your playbooks can carry.`);
+      state.ui.form = null;
+      state.ui.formId = null;
       rerender();
     });
   }
@@ -55267,6 +55859,7 @@ var _CFB = (() => {
       ${creatorCard("playbooks", "\u{1F4CB}", "Playbook Builder", "Pick formations, choose each one's plays, save a system.", n("playbooks"))}
       ${creatorCard("defbooks", "\u{1F6E1}\uFE0F", "Defensive Playbook", "Set your fronts, coverage, and pressure \u2014 a defense to load anywhere.", n("defbooks"))}
       ${creatorCard("plays", "\u270F\uFE0F", "Play Composer", "Name your own version of a play, or compose one from routes.", n("plays"))}
+      ${creatorCard("formations", "\u{1F4D0}", "Formation Designer", "Place your five over the line \u2014 a legal look of your own, playable in any book.", n("formations"))}
       ${creatorCard("leagues", "\u{1F3DF}\uFE0F", "Division Editor", "Edit a whole division \u2014 conferences, teams, prestige.", n("leagues"))}
       ${creatorCard("teams", "\u{1F3C8}", "Team Editor", "Build a single team's identity to drop into any world.", n("teams"))}
       ${creatorCard("replays", "\u{1F3AC}", "Film Room", "Play back and manage the highlight clips you've saved.", listReplays().length)}
@@ -55289,6 +55882,7 @@ var _CFB = (() => {
     if (tab === "playbooks") return renderPlaybooksTab();
     if (tab === "defbooks") return renderDefTab();
     if (tab === "plays") return renderPlaysTab();
+    if (tab === "formations") return renderFormTab();
     if (tab === "teams") return renderTeamsTab();
     if (tab === "leagues") return renderDivisionsTab();
     if (tab === "replays") return renderReplaysTab();
@@ -55305,6 +55899,8 @@ var _CFB = (() => {
       state.ui.defCard = null;
       state.ui.play = null;
       state.ui.playId = null;
+      state.ui.form = null;
+      state.ui.formId = null;
       state.ui.team = null;
       state.ui.teamId = null;
     };
@@ -55329,6 +55925,7 @@ var _CFB = (() => {
     if (state.ui.creatorTab === "playbooks") playbooksListeners();
     if (state.ui.creatorTab === "defbooks") defListeners();
     if (state.ui.creatorTab === "plays") playsListeners();
+    if (state.ui.creatorTab === "formations") formListeners();
     if (state.ui.creatorTab === "teams") teamsListeners();
     if (state.ui.creatorTab === "leagues") divisionsListeners();
     if (state.ui.creatorTab === "replays") replaysListeners();
@@ -55337,7 +55934,7 @@ var _CFB = (() => {
   // js/ui/views/seasonmodeview.js
   init_state();
   init_creator();
-  function esc7(s) {
+  function esc8(s) {
     return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   }
   function inEditor() {
@@ -55352,8 +55949,8 @@ var _CFB = (() => {
       <div class="creator-sub">One season, played like a dynasty \u2014 schedule, standings, stats, and you coach or watch every game. No recruiting, no offseason. Win the title.</div></div>
     <div class="sm-field"><span>Division</span><div class="sm-btns">${["D1", "D2", "D3"].map((d) => `<button class="sm-pick${src.division === d ? " on" : ""}" data-sm-div="${d}">${d}</button>`).join("")}</div></div>
     <div class="sm-field"><span>Starting world</span><div class="sm-btns">
-      <button class="sm-pick${!src.leagueId ? " on" : ""}" data-sm-league="">The real ${esc7(src.division)}</button>
-      ${customForDiv.map((l) => `<button class="sm-pick${src.leagueId === l.id ? " on" : ""}" data-sm-league="${esc7(l.id)}">${esc7(l.name)}</button>`).join("")}
+      <button class="sm-pick${!src.leagueId ? " on" : ""}" data-sm-league="">The real ${esc8(src.division)}</button>
+      ${customForDiv.map((l) => `<button class="sm-pick${src.leagueId === l.id ? " on" : ""}" data-sm-league="${esc8(l.id)}">${esc8(l.name)}</button>`).join("")}
     </div></div>
     <div class="sm-note muted">Next you'll customize the league (optional) and pick the team you want to play \u2014 great for taking a custom team for a spin.</div>
     <div class="pb-actions">
@@ -55759,7 +56356,7 @@ var _CFB = (() => {
   }
   var ARCHETYPES_BY_POS = ROLES_BY_POS;
   function cutLineInfo(recruit, playerEntry) {
-    var _a, _b, _c, _d3, _e, _f;
+    var _a, _b, _c, _d3, _e, _f2;
     const NEXT_CUT_N = { open: 8, top8: 5, top5: 3, top3: 1 };
     const NEXT_LABEL = { open: "Top 8 cut", top8: "Top 5 cut", top5: "Top 3 cut", top3: "Decision" };
     const STAGE_LABEL = { open: "Open", top8: "Top 8", top5: "Top 5", top3: "Top 3", committed: "Committed" };
@@ -55775,7 +56372,7 @@ var _CFB = (() => {
     const playerInterest = playerEntry && !playerEntry.eliminated ? playerEntry.interest || 0 : null;
     const margin = playerInterest != null && cutVal != null ? Math.round(playerInterest - cutVal) : null;
     const leader = pool[0] || null;
-    const scouted = hasScouted(state.playerCoach, recruit.id) || !!((_f = state.settings) == null ? void 0 : _f.revealScouting);
+    const scouted = hasScouted(state.playerCoach, recruit.id) || !!((_f2 = state.settings) == null ? void 0 : _f2.revealScouting);
     return {
       stage,
       stageLabel: STAGE_LABEL[stage] || stage,
@@ -55795,7 +56392,7 @@ var _CFB = (() => {
     return `<span class="funnel-chip funnel-${stage || "open"}">${LABELS[stage] || (stage || "open").toUpperCase()}</span>`;
   }
   function renderCutLineRow(recruit, entry, cli, school) {
-    var _a, _b, _c, _d3, _e, _f;
+    var _a, _b, _c, _d3, _e, _f2;
     if (recruit.committed) {
       const winner = recruit.committed === (school == null ? void 0 : school.id) ? "Your Program" : `<span class="team-link" data-scout-team="${recruit.committed}">${escapeHtml(((_a = state.world.schools.find((s) => s.id === recruit.committed)) == null ? void 0 : _a.name) || "another school")}</span>`;
       return `<span class="cutline-text muted">Signed with ${winner}</span>`;
@@ -55810,7 +56407,7 @@ var _CFB = (() => {
     return `
   <span class="cutline-stat"><span class="muted">${cli.nextLabel}:</span> <span class="cutline-val">${Math.round(cli.cutVal)}</span></span>
   <span class="cutline-margin ${marginClass}">${marginStr}</span>
-  <span class="cutline-lean muted">Lean: <span class="lean-${((_f = cli.leader) == null ? void 0 : _f.isPlayer) ? "you" : "rival"}">${leanName}</span></span>
+  <span class="cutline-lean muted">Lean: <span class="lean-${((_f2 = cli.leader) == null ? void 0 : _f2.isPlayer) ? "you" : "rival"}">${leanName}</span></span>
 `;
   }
   function renderTop3Row(recruit, cli) {
@@ -57301,14 +57898,14 @@ ${renderAutoRecruitLog()}`;
     const orderedCols = getOrder("roster", ROSTER_COLS);
     const CLASS_ORDER = { FR: 0, SO: 1, JR: 2, SR: 3 };
     const filtered = roster.filter((p) => (!filterPos || p.position === filterPos) && (!filterClass || p.classYear === filterClass)).sort((a, b) => {
-      var _a, _b, _c, _d3, _e, _f, _g, _h;
+      var _a, _b, _c, _d3, _e, _f2, _g, _h;
       if (sortCol === "name") {
         const an = `${((_a = a.name) == null ? void 0 : _a.last) || ""} ${((_b = a.name) == null ? void 0 : _b.first) || ""}`;
         const bn = `${((_c = b.name) == null ? void 0 : _c.last) || ""} ${((_d3 = b.name) == null ? void 0 : _d3.first) || ""}`;
         return sortDir * an.localeCompare(bn);
       }
       if (sortCol === "classYear") {
-        return sortDir * (((_e = CLASS_ORDER[b.classYear]) != null ? _e : 0) - ((_f = CLASS_ORDER[a.classYear]) != null ? _f : 0));
+        return sortDir * (((_e = CLASS_ORDER[b.classYear]) != null ? _e : 0) - ((_f2 = CLASS_ORDER[a.classYear]) != null ? _f2 : 0));
       }
       if (sortCol === "position") {
         return sortDir * (a.position || "").localeCompare(b.position || "");
@@ -57648,12 +58245,12 @@ ${renderAutoRecruitLog()}`;
   function sortRoster(roster) {
     const CY = { FR: 0, SO: 1, JR: 2, SR: 3 };
     return [...roster].sort((a, b) => {
-      var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k, _l;
+      var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k, _l;
       let diff = 0;
       if (scoutSortCol === "name") {
         diff = scoutSortDir * `${((_a = a.name) == null ? void 0 : _a.last) || ""}${((_b = a.name) == null ? void 0 : _b.first) || ""}`.localeCompare(`${((_c = b.name) == null ? void 0 : _c.last) || ""}${((_d3 = b.name) == null ? void 0 : _d3.first) || ""}`);
       } else if (scoutSortCol === "position") {
-        diff = scoutSortDir * (((_e = POS_ORDER2[a.position]) != null ? _e : 99) - ((_f = POS_ORDER2[b.position]) != null ? _f : 99));
+        diff = scoutSortDir * (((_e = POS_ORDER2[a.position]) != null ? _e : 99) - ((_f2 = POS_ORDER2[b.position]) != null ? _f2 : 99));
       } else if (scoutSortCol === "classYear") {
         diff = scoutSortDir * (((_g = CY[b.classYear]) != null ? _g : 0) - ((_h = CY[a.classYear]) != null ? _h : 0));
       } else if (scoutSortCol === "compositeRating") {
@@ -57949,7 +58546,7 @@ ${renderAutoRecruitLog()}`;
   init_utils();
   var settingsTab = "game";
   function renderSettings() {
-    var _a, _b, _c, _d3, _e, _f;
+    var _a, _b, _c, _d3, _e, _f2;
     const s = state.settings || {};
     const SETTINGS_TABS = [["game", "Game"], ["program", "Program"], ["save", "Save"], ["dev", "Dev"]];
     if (!SETTINGS_TABS.some(([id]) => id === settingsTab)) settingsTab = "game";
@@ -58190,14 +58787,14 @@ ${renderAutoRecruitLog()}`;
         <span class="card-title">\u{1F4DD} NOTEPAD</span>
         <span class="card-sub" id="dev-notepad-status">${state._coachId ? "travels with your coach" : "saved with your dynasty"}</span>
       </div>
-      <textarea class="dev-notepad" id="dev-notepad" rows="12" spellcheck="false" placeholder="Scratch notes \u2014 ideas, bugs, to-dos\u2026 anything. Follows your coach across every dynasty.">${escapeHtml((state._coachId ? (_f = getCoach(state._coachId)) == null ? void 0 : _f.notes : state.devNotes) || "")}</textarea>
+      <textarea class="dev-notepad" id="dev-notepad" rows="12" spellcheck="false" placeholder="Scratch notes \u2014 ideas, bugs, to-dos\u2026 anything. Follows your coach across every dynasty.">${escapeHtml((state._coachId ? (_f2 = getCoach(state._coachId)) == null ? void 0 : _f2.notes : state.devNotes) || "")}</textarea>
     </div>
     </div>
   </div>
 `;
   }
   function setupListeners15() {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2;
     document.querySelectorAll("[data-settings-tab]").forEach((btn) => {
       btn.addEventListener("click", () => {
         settingsTab = btn.dataset.settingsTab;
@@ -58205,11 +58802,11 @@ ${renderAutoRecruitLog()}`;
       });
     });
     (_a = document.getElementById("btn-rename-save")) == null ? void 0 : _a.addEventListener("click", () => {
-      var _a2, _b2, _c2, _d22, _e2, _f2, _g2, _h2, _i2, _j2;
+      var _a2, _b2, _c2, _d22, _e2, _f22, _g2, _h2, _i2, _j2;
       const school = (_b2 = (_a2 = state.world) == null ? void 0 : _a2.schools) == null ? void 0 : _b2.find((x) => x.id === state.playerSchoolId);
       if (!school) return;
       const nm = (_d22 = (_c2 = document.getElementById("rename-school")) == null ? void 0 : _c2.value) == null ? void 0 : _d22.trim();
-      const nk = (_f2 = (_e2 = document.getElementById("rename-nick")) == null ? void 0 : _e2.value) == null ? void 0 : _f2.trim();
+      const nk = (_f22 = (_e2 = document.getElementById("rename-nick")) == null ? void 0 : _e2.value) == null ? void 0 : _f22.trim();
       const st = (_h2 = (_g2 = document.getElementById("rename-stadium")) == null ? void 0 : _g2.value) == null ? void 0 : _h2.trim();
       if (nm) school.name = nm.slice(0, 34);
       if (nk) school.nick = nk.slice(0, 22);
@@ -58251,7 +58848,7 @@ ${renderAutoRecruitLog()}`;
       var _a2;
       (_a2 = document.getElementById("logo-file")) == null ? void 0 : _a2.click();
     });
-    (_f = document.getElementById("logo-file")) == null ? void 0 : _f.addEventListener("change", (e) => {
+    (_f2 = document.getElementById("logo-file")) == null ? void 0 : _f2.addEventListener("change", (e) => {
       var _a2, _b2, _c2;
       const file = (_a2 = e.target.files) == null ? void 0 : _a2[0];
       if (!file) return;
@@ -58794,13 +59391,13 @@ ${renderAutoRecruitLog()}`;
     "leaders-defense": { col: "__def", dir: -1 }
   };
   function sortValue(tbl, key, row, cols) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k, _l;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k, _l;
     if (key === "pos") return row.position || "";
     if (key === "name") return `${((_a = row.name) == null ? void 0 : _a.last) || ""} ${((_b = row.name) == null ? void 0 : _b.first) || ""}`;
     if (key === "yr") return (_c = { FR: 0, SO: 1, JR: 2, SR: 3 }[row.classYear]) != null ? _c : 0;
     if (key === "ovr") return row.compositeRating || 0;
     if (key === "g") return ((_d3 = row.stats) == null ? void 0 : _d3.games) || 0;
-    if (key === "wins") return (((_e = row.record) == null ? void 0 : _e.wins) || 0) - (((_f = row.record) == null ? void 0 : _f.losses) || 0);
+    if (key === "wins") return (((_e = row.record) == null ? void 0 : _e.wins) || 0) - (((_f2 = row.record) == null ? void 0 : _f2.losses) || 0);
     if (key === "school") return row._schoolName || row.name || "";
     if (key === "__yds") return (((_g = row.stats) == null ? void 0 : _g.rushYds) || 0) + (((_h = row.stats) == null ? void 0 : _h.recYds) || 0) + (((_i = row.stats) == null ? void 0 : _i.passYds) || 0);
     if (key === "__def") return (((_j = row.stats) == null ? void 0 : _j.tackles) || 0) + (((_k = row.stats) == null ? void 0 : _k.sacks) || 0) * 3 + (((_l = row.stats) == null ? void 0 : _l.ints) || 0) * 4;
@@ -59774,7 +60371,7 @@ ${renderAutoRecruitLog()}`;
   };
   var RUN_ALIAS = { "Wildcat Power": "Power", "Triple Option": "Inside Zone", "Speed Option": "Outside Zone", "Reverse": "Outside Zone" };
   function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k, _l, _m, _n;
     const t = String((p == null ? void 0 : p.type) || "");
     const isRun = (t.startsWith("run") || (p == null ? void 0 : p.isScramble)) && t !== "penalty";
     const isPass = t.startsWith("pass") && !(p == null ? void 0 : p.isScramble);
@@ -59866,7 +60463,7 @@ ${renderAutoRecruitLog()}`;
     };
     const PRESNAP = p.optionPhase === "jet" ? 0.95 : 0.55;
     const SNAP_ORIGIN = [50, LOS + 0.6];
-    const _qbDepthYds = Math.max(0, (((_g = (_f = off.find((s) => s.id === "QB")) == null ? void 0 : _f.by) != null ? _g : LOS + 3) - LOS) / YPU);
+    const _qbDepthYds = Math.max(0, (((_g = (_f2 = off.find((s) => s.id === "QB")) == null ? void 0 : _f2.by) != null ? _g : LOS + 3) - LOS) / YPU);
     const _snapDestSlot = p.optionPhase === "wildcat" ? off.find((s) => s.pos === "WILDCAT") || qbSlot : qbSlot;
     const _snapLatU = Math.abs(((_snapDestSlot == null ? void 0 : _snapDestSlot.bx) != null ? _snapDestSlot.bx : 50) - 50);
     const SNAP_T = clamp6(0.12 + _qbDepthYds * 0.028 + _snapLatU * 0.022, 0.12, 1.05);
@@ -61576,6 +62173,93 @@ ${renderAutoRecruitLog()}`;
     }
     return chosen.map((row) => row.id);
   }
+  var WATCH_DIRECTOR_FOCUS_LABELS = Object.freeze({
+    formation: "FORMATION",
+    snap: "SNAP",
+    pocket: "POCKET",
+    flight: "BALL IN FLIGHT",
+    result: "RESULT",
+    "run-after-catch": "RUN AFTER CATCH",
+    contact: "CONTACT",
+    "change-of-possession": "CHANGE OF POSSESSION",
+    score: "SCORE",
+    alignment: "ALIGNMENT",
+    kick: "KICK FLIGHT",
+    return: "RETURN",
+    finish: "FINISH"
+  });
+  function watchDirectorFocusLabel(reason) {
+    return WATCH_DIRECTOR_FOCUS_LABELS[reason] || String(reason || "play").replace(/-/g, " ").toUpperCase();
+  }
+  function replayDirectorFocus(script, p = {}, reason = "play") {
+    const actorIds = new Set((script && script.actors || []).map((actor) => actor.id));
+    const primary = [], secondary = [];
+    const add = (list, id) => {
+      if (id && actorIds.has(id) && !primary.includes(id) && !secondary.includes(id)) list.push(id);
+    };
+    const tackle = script && script.tackleCue || null;
+    const carrier = p.carrierSlotId || script && script.carryCue && script.carryCue.id || tackle && tackle.carrierId;
+    const target = p.targetSlotId || script && script.carryCue && script.carryCue.id;
+    const winningRusher = (script && script.rushCues || []).find((cue2) => cue2.win) || (script && script.rushCues || [])[0];
+    if (reason === "snap") add(primary, "QB");
+    else if (reason === "pocket") {
+      add(primary, "QB");
+      add(secondary, winningRusher && winningRusher.id);
+    } else if (reason === "flight" || reason === "result") {
+      add(primary, target);
+      add(secondary, script && script.covId);
+    } else if (reason === "run-after-catch") {
+      add(primary, target || carrier);
+      add(secondary, tackle && tackle.id);
+      add(secondary, tackle && tackle.assistId);
+    } else if (reason === "contact") {
+      add(primary, carrier);
+      add(secondary, tackle && tackle.id);
+      add(secondary, tackle && tackle.assistId);
+    } else if (reason === "change-of-possession") {
+      add(primary, script && script.pickId);
+      add(secondary, tackle && tackle.id);
+    } else if (reason === "score") {
+      add(primary, carrier || target || script && script.pickId);
+    }
+    return Object.freeze({
+      kind: reason || "play",
+      label: watchDirectorFocusLabel(reason),
+      primary: Object.freeze(primary),
+      secondary: Object.freeze(secondary),
+      ball: reason === "flight" || reason === "result" || reason === "change-of-possession"
+    });
+  }
+  function specialTeamsDirectorFocus(actors, reason = "play") {
+    const actorIds = new Set((actors || []).map((actor) => actor.id));
+    const primary = [], secondary = [];
+    const add = (list, id) => {
+      if (id && actorIds.has(id) && !primary.includes(id) && !secondary.includes(id)) list.push(id);
+    };
+    if (reason === "alignment") {
+      add(primary, "K");
+      add(secondary, "PR");
+      add(secondary, "KR2");
+    } else if (reason === "kick") {
+      add(primary, "K");
+      add(secondary, "H");
+      add(secondary, "LS");
+      add(secondary, "PR");
+    } else if (reason === "return") {
+      add(primary, "PR");
+      add(secondary, "KR2");
+    } else {
+      add(primary, "K");
+      add(secondary, "PR");
+    }
+    return Object.freeze({
+      kind: reason || "play",
+      label: watchDirectorFocusLabel(reason),
+      primary: Object.freeze(primary),
+      secondary: Object.freeze(secondary),
+      ball: reason === "kick"
+    });
+  }
 
   // js/ui/sprite.js
   init_utils();
@@ -61866,6 +62550,10 @@ ${renderAutoRecruitLog()}`;
 
   // js/ui/app.js
   init_utils();
+  try {
+    syncCustomFormations(listCreations("formations").map((e) => ({ name: e.name, data: e.data })));
+  } catch (e) {
+  }
   function hexToHsl(hex) {
     const r = parseInt(hex.slice(1, 3), 16) / 255;
     const g = parseInt(hex.slice(3, 5), 16) / 255;
@@ -62472,7 +63160,7 @@ ${renderAutoRecruitLog()}`;
     initWatchMode(parts.r, parts.d.possession === "home", { key: state.ui.replayClip, clip: state.ui.replayClip });
   }
   function renderApp() {
-    var _a, _b, _c, _d3, _e, _f, _g, _h;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h;
     const _scroll = captureScroll();
     const _viewChanged = state.ui.view !== lastRenderedView;
     setPenaltyScale(((_b = (_a = state.settings) == null ? void 0 : _a.penaltyRate) != null ? _b : 90) / 100);
@@ -62608,7 +63296,7 @@ ${renderAutoRecruitLog()}`;
           <div class="coach-school">${escapeHtml((school == null ? void 0 : school.name) || "")}</div>
           <div class="coach-meta">
             <span class="rep-badge">${escapeHtml((coach == null ? void 0 : coach.reputation) || "C")}</span>
-            ${renderPrestige((_g = (_f = school == null ? void 0 : school.prestige) != null ? _f : coach == null ? void 0 : coach.prestige) != null ? _g : 3, ((_h = C.PRESTIGE_MAX) == null ? void 0 : _h[school == null ? void 0 : school.division]) || 5)}
+            ${renderPrestige((_g = (_f2 = school == null ? void 0 : school.prestige) != null ? _f2 : coach == null ? void 0 : coach.prestige) != null ? _g : 3, ((_h = C.PRESTIGE_MAX) == null ? void 0 : _h[school == null ? void 0 : school.division]) || 5)}
           </div>
         </div>
         ${state.seasonMode ? "" : `<div class="budget-info">
@@ -62813,7 +63501,7 @@ ${renderAutoRecruitLog()}`;
 `;
   }
   function renderHalftimeTakeover() {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j;
     if (!state.ui.showHalftime || !state.pendingHalftime) return "";
     const { token, home, away } = state.pendingHalftime;
     const school = getPlayerSchool();
@@ -62896,7 +63584,7 @@ ${renderAutoRecruitLog()}`;
     })()}</div>
       </div>
       <div class="ht-resume-controls">
-        <button class="cm-switch cm-switch-sm${((_e = state.settings) == null ? void 0 : _e.liveWatch) !== false ? " on" : ""}" id="ht-coachmode" role="switch" aria-checked="${((_f = state.settings) == null ? void 0 : _f.liveWatch) !== false}">
+        <button class="cm-switch cm-switch-sm${((_e = state.settings) == null ? void 0 : _e.liveWatch) !== false ? " on" : ""}" id="ht-coachmode" role="switch" aria-checked="${((_f2 = state.settings) == null ? void 0 : _f2.liveWatch) !== false}">
           <span class="cm-track"><span class="cm-thumb"></span></span>
           <span class="cm-text"><span class="cm-name">\u25B6 Coach Mode</span><span class="cm-sub">${((_g = state.settings) == null ? void 0 : _g.liveWatch) !== false ? "Coach the 2nd half" : "Sim the 2nd half"}</span></span>
         </button>
@@ -63776,7 +64464,7 @@ ${renderAutoRecruitLog()}`;
   }
   function setupGlobalListeners() {
     var _a2, _b2, _c2;
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2, _q, _r, _s, _t2, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p2, _q, _r, _s, _t2, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R;
     document.querySelectorAll("[data-nav]").forEach((el) => {
       const activateNav = () => {
         state.ui.sidebarOpen = false;
@@ -63829,7 +64517,7 @@ ${renderAutoRecruitLog()}`;
         renderApp();
       }
     });
-    (_f = document.getElementById("tip-close")) == null ? void 0 : _f.addEventListener("click", () => {
+    (_f2 = document.getElementById("tip-close")) == null ? void 0 : _f2.addEventListener("click", () => {
       state.ui.activeTip = null;
       renderApp();
     });
@@ -64272,7 +64960,7 @@ ${renderAutoRecruitLog()}`;
       answerPlayCall(_decorateCall({ customPlay: b.dataset.csCallcustom, customPlayData: data }));
     }));
     document.querySelectorAll("[data-dc-callname]").forEach((b) => b.addEventListener("click", () => {
-      var _a3, _b3, _c3, _d4, _e2, _f2;
+      var _a3, _b3, _c3, _d4, _e2, _f3;
       var _a22, _b22, _c22;
       const nm = b.dataset.dcCallname;
       if (nm === "__clear" || state.ui.defCallName === nm) {
@@ -64292,7 +64980,7 @@ ${renderAutoRecruitLog()}`;
       if (call.pressLook != null) sel.pressLook = String(call.pressLook);
       if (call.dogGame != null) sel.dogGame = String(call.dogGame);
       if (call.runCommit != null) {
-        const standingRC = ((_f2 = (_e2 = (_d4 = (_c3 = (_b3 = (_a3 = state.pendingHalftime) == null ? void 0 : _a3.token) == null ? void 0 : _b3.pending) == null ? void 0 : _c3.drive) == null ? void 0 : _d4.sit) == null ? void 0 : _e2.standing) == null ? void 0 : _f2.runCommit) || 0;
+        const standingRC = ((_f3 = (_e2 = (_d4 = (_c3 = (_b3 = (_a3 = state.pendingHalftime) == null ? void 0 : _a3.token) == null ? void 0 : _b3.pending) == null ? void 0 : _c3.drive) == null ? void 0 : _d4.sit) == null ? void 0 : _e2.standing) == null ? void 0 : _f3.runCommit) || 0;
         sel.runCommit = String(call.runCommit - standingRC);
       }
       state.ui.defCall = sel;
@@ -64317,7 +65005,7 @@ ${renderAutoRecruitLog()}`;
       rerender();
     }));
     (document.getElementById("dc-send") || {}).onclick = () => {
-      var _a3, _b3, _c3, _d4, _e2, _f2;
+      var _a3, _b3, _c3, _d4, _e2, _f3;
       if (!callTapOk()) return;
       state.ui.defCallName = null;
       const sel = state.ui.defCall || {};
@@ -64327,7 +65015,7 @@ ${renderAutoRecruitLog()}`;
       }
       const call = __spreadProps2(__spreadValues2({}, sel), { _def: true });
       if (call.runCommit != null) {
-        const standingRC = ((_f2 = (_e2 = (_d4 = (_c3 = (_b3 = (_a3 = state.pendingHalftime) == null ? void 0 : _a3.token) == null ? void 0 : _b3.pending) == null ? void 0 : _c3.drive) == null ? void 0 : _d4.sit) == null ? void 0 : _e2.standing) == null ? void 0 : _f2.runCommit) || 0;
+        const standingRC = ((_f3 = (_e2 = (_d4 = (_c3 = (_b3 = (_a3 = state.pendingHalftime) == null ? void 0 : _a3.token) == null ? void 0 : _b3.pending) == null ? void 0 : _c3.drive) == null ? void 0 : _d4.sit) == null ? void 0 : _e2.standing) == null ? void 0 : _f3.runCommit) || 0;
         call.runCommit = standingRC + parseInt(call.runCommit, 10);
       }
       answerPlayCall(call);
@@ -64540,7 +65228,7 @@ ${renderAutoRecruitLog()}`;
     }, 3e4);
   }
   function renderKickoffModal() {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i;
     const k = state.ui.pendingKickoff;
     if (!k) return "";
     const school = getPlayerSchool();
@@ -64597,7 +65285,7 @@ ${renderAutoRecruitLog()}`;
         <div class="kickoff-adjust" id="kickoff-adjust">${renderHalftimeAdjust(gp)}</div>
         <div class="kickoff-simtype">
           <div class="kickoff-coachmode">
-            <button class="cm-switch${((_f = state.settings) == null ? void 0 : _f.liveWatch) !== false ? " on" : ""}" id="kickoff-coachmode" role="switch" aria-checked="${((_g = state.settings) == null ? void 0 : _g.liveWatch) !== false}">
+            <button class="cm-switch${((_f2 = state.settings) == null ? void 0 : _f2.liveWatch) !== false ? " on" : ""}" id="kickoff-coachmode" role="switch" aria-checked="${((_g = state.settings) == null ? void 0 : _g.liveWatch) !== false}">
               <span class="cm-track"><span class="cm-thumb"></span></span>
               <span class="cm-text">
                 <span class="cm-name">\u25B6 Coach Mode</span>
@@ -64703,7 +65391,7 @@ ${renderAutoRecruitLog()}`;
     return side === "home" ? tk.homeGP : tk.awayGP;
   }
   function renderTimeoutAdjustOverlay() {
-    var _a, _b, _c, _d3, _e, _f;
+    var _a, _b, _c, _d3, _e, _f2;
     if (!state.ui.showCallSheet || !state.ui.callTimeout || !state.ui.timeoutAdjust) return "";
     const token = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
     if (!(token == null ? void 0 : token.pending)) return "";
@@ -64712,7 +65400,7 @@ ${renderAutoRecruitLog()}`;
     const school = mySide === "home" ? token.homeSchool : token.awaySchool;
     const gp = token[`${mySide}GP`] || {};
     const _to = token.timeouts || {};
-    const toLeft = (_f = _to[mySide]) != null ? _f : C.TIMEOUTS_PER_HALF;
+    const toLeft = (_f2 = _to[mySide]) != null ? _f2 : C.TIMEOUTS_PER_HALF;
     return renderTimeoutAdjustModal(gp, toLeft, school);
   }
   function timeControlBar() {
@@ -64923,7 +65611,7 @@ ${renderAutoRecruitLog()}`;
   }
   function callSheetPanelHtml() {
     var _a2;
-    var _a, _b, _c, _d3, _e, _f, _g;
+    var _a, _b, _c, _d3, _e, _f2, _g;
     if (!((_b = (_a = state.pendingHalftime) == null ? void 0 : _a.token) == null ? void 0 : _b.pending)) return "";
     const token = state.pendingHalftime.token;
     if (token.pending.kind === "defcall") return defCallPanelHtml();
@@ -64934,7 +65622,7 @@ ${renderAutoRecruitLog()}`;
     const school = mySide === "home" ? token.homeSchool : token.awaySchool;
     const opp = mySide === "home" ? token.awaySchool : token.homeSchool;
     const gp = token[`${mySide}GP`] || {};
-    const _weightsBase = (_f = (_e = ctx2.conceptWeights) != null ? _e : gp.conceptWeights) != null ? _f : null;
+    const _weightsBase = (_f2 = (_e = ctx2.conceptWeights) != null ? _e : gp.conceptWeights) != null ? _f2 : null;
     const _fpbAll = ctx2.formationPlaybooks || gp.formationPlaybooks || null;
     const _fpbSel = state.ui.callFormation && _fpbAll ? _fpbAll[state.ui.callFormation] : null;
     const weights = _fpbSel && Object.keys(_fpbSel).length ? __spreadValues(__spreadValues({}, _weightsBase || {}), _fpbSel) : _weightsBase;
@@ -65356,7 +66044,7 @@ ${renderAutoRecruitLog()}`;
     return out2;
   }
   function mountLiveWatch() {
-    var _a, _b, _c, _d3, _e, _f, _g, _h;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h;
     const lw = state.ui.liveWatch;
     if (!lw || lw.boardDone) return;
     const exhTag = state._exhibition ? `-x${state._exhNonce || 0}` : "";
@@ -65405,7 +66093,7 @@ ${renderAutoRecruitLog()}`;
         awayScore: t.awayScore,
         playerNames: rosterNames(t)
       };
-      isHome = ((_f = t.homeSchool) == null ? void 0 : _f.id) === (school == null ? void 0 : school.id);
+      isHome = ((_f2 = t.homeSchool) == null ? void 0 : _f2.id) === (school == null ? void 0 : school.id);
     } else if (lw.stage === "final" && state.ui.lastGameResult) {
       const r = state.ui.lastGameResult;
       const fw = state.ui._finalWatched;
@@ -65514,6 +66202,7 @@ ${renderAutoRecruitLog()}`;
     <svg id="watch-ink" class="watch-ink" viewBox="-19 0 100 56" preserveAspectRatio="xMidYMid meet" aria-label="Replay telestrator"></svg>
     <div class="watch-camera-bug" id="watch-camera-bug">LIVE</div>
     <div class="watch-replay-bug" id="watch-replay-bug">INSTANT REPLAY</div>
+    <div class="watch-director-bug" id="watch-director-bug" aria-live="polite"></div>
     <div class="watch-flash" id="watch-flash"></div>
     <div class="watch-wipe" id="watch-wipe"></div>
     <div class="watch-banner" id="watch-banner"></div>
@@ -65958,6 +66647,32 @@ ${renderAutoRecruitLog()}`;
       node.classList.toggle("wp-label-featured", featured.has(actor.id));
     }
   }
+  function watchApplyDirectorFocus(playback, svg, script, p, nodes, specialTeams = false) {
+    const on = !!(playback.interactive && playback.director && playback.directorReason);
+    const bug = document.getElementById("watch-director-bug");
+    for (const node of Object.values(nodes)) {
+      node.classList.remove("wp-focus-primary", "wp-focus-secondary");
+    }
+    svg.classList.toggle("watch-focus-ball", false);
+    if (!on) {
+      delete svg.dataset.directorFocus;
+      if (bug) {
+        bug.textContent = "";
+        bug.classList.remove("on");
+      }
+      return null;
+    }
+    const focus = specialTeams ? specialTeamsDirectorFocus(script.actors || [], playback.directorReason) : replayDirectorFocus(script, p, playback.directorReason);
+    focus.primary.forEach((id) => nodes[id] == null ? void 0 : nodes[id].classList.add("wp-focus-primary"));
+    focus.secondary.forEach((id) => nodes[id] == null ? void 0 : nodes[id].classList.add("wp-focus-secondary"));
+    svg.classList.toggle("watch-focus-ball", focus.ball);
+    svg.dataset.directorFocus = focus.kind;
+    if (bug) {
+      if (bug.textContent !== focus.label) bug.textContent = focus.label;
+      bug.classList.add("on");
+    }
+    return focus;
+  }
   function watchWireInteractiveReplay(playback, svg, script, p, board, nodes) {
     const tools = document.getElementById("watch-replay-tools");
     const ink = document.getElementById("watch-ink");
@@ -66012,9 +66727,9 @@ ${renderAutoRecruitLog()}`;
         const cut = playback.directorPlan.at(playback.t);
         playback.directorReason = cut.reason;
         watchReplaySetCamera(playback, svg, script, nodes, cut.camera, true);
-        playback.renderInk();
-        playback.seek(playback.t);
       }
+      playback.renderInk();
+      playback.seek(playback.t);
       syncPlay();
     });
     if (camBtn) {
@@ -66439,7 +67154,7 @@ ${renderAutoRecruitLog()}`;
     let snapHeard = false;
     let whistleHeard = false;
     const tick = () => {
-      var _a2, _b2, _c2, _d22, _e2, _f, _g, _h, _i, _j, _k;
+      var _a2, _b2, _c2, _d22, _e2, _f2, _g, _h, _i, _j, _k;
       if (!svg.isConnected) {
         watchStopAnim();
         return;
@@ -66452,6 +67167,7 @@ ${renderAutoRecruitLog()}`;
         const directorBtn = document.getElementById("replay-director");
         if (directorBtn) directorBtn.title = `Director on: ${cut.reason}`;
       } else delete svg.dataset.directorReason;
+      watchApplyDirectorFocus(playback, svg, script, p, nodes);
       const cameraMode = playback.interactive ? normalizeWatchCamera(playback.cameraMode) : "broadcast";
       const projectPoint = (worldX, worldY, z = 0) => watchCameraPoint(cameraMode, worldX, worldY, z);
       svg.dataset.camera = cameraMode;
@@ -66805,7 +67521,7 @@ ${renderAutoRecruitLog()}`;
         }
       }
       for (const jc of jamCues) (_e2 = nodes[jc.id]) == null ? void 0 : _e2.classList.toggle("wp-blocking", t >= jc.start && t <= jc.end);
-      if (beatenCue) (_f = nodes[beatenCue.id]) == null ? void 0 : _f.classList.toggle("wp-stumbled", t >= beatenCue.start && t <= beatenCue.end);
+      if (beatenCue) (_f2 = nodes[beatenCue.id]) == null ? void 0 : _f2.classList.toggle("wp-stumbled", t >= beatenCue.start && t <= beatenCue.end);
       if (celebrateCue) {
         const on = t >= celebrateCue.start && t <= celebrateCue.end;
         const cn2 = nodes[celebrateCue.id];
@@ -67273,6 +67989,7 @@ ${renderAutoRecruitLog()}`;
         const directorBtn = document.getElementById("replay-director");
         if (directorBtn) directorBtn.title = `Director on: ${cut.reason}`;
       } else delete svg.dataset.directorReason;
+      watchApplyDirectorFocus(playback, svg, { actors }, p, nodes, true);
       const cameraMode = playback.interactive ? normalizeWatchCamera(playback.cameraMode) : "broadcast";
       if (!opts.replay && !kickHeard && t >= swingT) {
         kickHeard = true;
@@ -67566,6 +68283,7 @@ ${renderAutoRecruitLog()}`;
         const directorBtn = document.getElementById("replay-director");
         if (directorBtn) directorBtn.title = `Director on: ${cut.reason}`;
       } else delete svg.dataset.directorReason;
+      watchApplyDirectorFocus(playback, svg, { actors }, p, nodes, true);
       const cameraMode = playback.interactive ? normalizeWatchCamera(playback.cameraMode) : "broadcast";
       if (!opts.replay && !kickHeard && t >= runT) {
         kickHeard = true;
@@ -68359,7 +69077,7 @@ ${renderAutoRecruitLog()}`;
       info: { matchup: `${away} @ ${home}`, score: `${w.r.awayScore || 0}\u2013${w.r.homeScore || 0}`, week: p.half ? `${p.half === 1 ? "1st" : "2nd"} half` : "Replay" }
     });
     if (result.ok) {
-      w.clip = data;
+      if (w.clip) w.clip = data;
       notify("Saved to Film Room", "success");
     } else notify(result.reason === "full" ? "Film Room is full" : "Replay could not be saved", "warning");
     return result;
@@ -68491,7 +69209,7 @@ ${renderAutoRecruitLog()}`;
     }, ms / Math.max(0.2, speed || 1));
   }
   function watchTickBody(w, immediate = false) {
-    var _a, _b, _c, _d3, _e, _f, _g, _h, _i, _j;
+    var _a, _b, _c, _d3, _e, _f2, _g, _h, _i, _j;
     if (!document.getElementById("watch-board")) {
       watchStop();
       return;
@@ -68631,7 +69349,7 @@ ${renderAutoRecruitLog()}`;
         }, liveWallMs + 320);
       }
     } else if (item.kind === "result") {
-      const team = ((_f = item.d.possession === "home" ? w.r.homeSchool : w.r.awaySchool) == null ? void 0 : _f.name) || "";
+      const team = ((_f2 = item.d.possession === "home" ? w.r.homeSchool : w.r.awaySchool) == null ? void 0 : _f2.name) || "";
       ticker.innerHTML = `<span class="wt-result">${escapeHtml(team)}: ${formatDriveResult(item.d)}${item.d.points > 0 ? ` (+${item.d.points})` : ""}</span>`;
       holdMs = baseMs * 0.8;
       const dPlays = item.d.plays || [];
