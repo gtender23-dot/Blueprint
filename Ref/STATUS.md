@@ -1,9 +1,53 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-16 (Playbook-Root COMPLETE: Stages 1–7 + the Stage-3
-remainder all built + node-gated; viewer roadmap remainder + Act F status
-folded in; mobile pass)**.
+Last updated: **2026-08-16 (session reconcile: Act F committed + built onto
+source; Run/Pass-tab + landscape-scoreboard fixes; functional browser playtest
+of Stages 3–7 PASSED — visual eyeball still owed)**.
+
+## 2026-08-16 — SESSION RECONCILE: Act F shipped + two fixes + functional playtest
+
+Catch-up entry for a working session. Everything here is committed on `source`.
+
+**Viewer Act F converged.** Codex's director shot-purpose focus was uncommitted
+in the worktree; it is now committed on branch `codex/viewer2-act-f` (`8b3395d`,
+parent `fe36ec6`), ported onto `source` (`ee5accc`), and built into `dist`. The
+node-level focus probe passes 7/7 and the app bundles clean with the Act F wiring.
+**Still owed:** the Playwright End Zone/return browser scrub (visual only) — it
+can't run in the sandbox. (The old "BUILT, UNCOMMITTED" note lower down is updated.)
+
+**Game Plan Run Game / Pass Game tabs fixed (`753b45d`).** The Playbook-Root
+refactor (`cfb9bd2`) dropped the `selectedIds` declaration from
+`renderOffenseDefaults` but left its uses in those two sub-tabs, so opening either
+threw a ReferenceError and blanked the panel (Package/Playbook/Tempo were fine).
+Restored, derived from the loaded book's formations. Confirmed rendering live in
+the playtest below.
+
+**Landscape score/clock overlap fixed (`141dc64`).** In phone landscape the score
+bug is forced into the ~150–240px rail, but its compaction lived in a
+`max-width:640px` query that never fires in landscape (the phone is wide), so the
+full-size crests/scores overflowed onto the clock. Added rail-specific compaction
+inside the landscape media query. (CSS-only; visual eyeball on a phone still nice.)
+
+**Functional browser playtest of Stages 3–7 — PASSED (2026-08-16).** Drove the
+built `dist` in a real browser through: Play Now live coaching (formation pins,
+named calls, and the drill-down concept cards all read the book; the panel labels
+the source book; a called play executed, narrated, and ran the animation
+pipeline); the Game Plan controller (Load-a-plan lists builtin + Workshop books,
+the Package tab shows the book's looks as usage sliders, and **Run Game + Pass
+Game both render**); and the Formation Designer (Stage 7 authoring canvas opens
+with QB-depth + five position/placement pickers). **Zero console errors across
+every surface.** This DOWNGRADES the "⚠ BROWSER PLAYTEST OWED" markers on the
+Stage 4–7 sections below: a functional click-through has now passed with no
+crashes — what remains is a **visual eyeball** on fidelity (field animation,
+formation diagrams, the viewer draw-up), because screenshots couldn't be captured
+in-session (the renderer stays busy with the animation loop, so pixel fidelity was
+not verified).
+
+**Not ours, noted:** a parallel task also committed this window —
+`971522a Fix Film Room Save Clip latch + harden Act B scrub probe` (addresses the
+Act B "frozen scrub" gate-red bug below) and `cea1349 Checkpoint: Act F worktree
+mirror`.
 
 ## 2026-08-16 — GATE RED TRIAGE: the Act B "frozen scrub" was a REAL Film Room bug
 
@@ -835,10 +879,10 @@ substantial presentation acts before diminishing returns — a very convincing
 stylized multi-camera broadcast + coaching-film engine, not motion-capture
 realism.
 
-**Viewer Act F (director shot-purpose focus) — BUILT, UNCOMMITTED (Codex).**
-The work sits in the worktree `.codex-worktrees/viewer2-a1` on branch
-`codex/viewer2-act-f`, but the branch TIP is still `fe36ec6` (the Act E merge) —
-the Act F changes are uncommitted on disk (Aug 14). What's there: new pure focus
+**Viewer Act F (director shot-purpose focus) — COMMITTED + BUILT (2026-08-16).**
+Committed on branch `codex/viewer2-act-f` (`8b3395d`, parent `fe36ec6`), ported
+onto `source` (`ee5accc`), and built into `dist` — see the reconcile section at
+the top of this file. What's there: new pure focus
 selectors in `js/ui/watchcamera.js` (`replayDirectorFocus`,
 `specialTeamsDirectorFocus`, `watchDirectorFocusLabel`); a `#watch-director-bug`
 shot-purpose caption + `watchApplyDirectorFocus` primary/secondary focus treatment
@@ -846,9 +890,9 @@ in `js/ui/app.js`, cleared on manual-camera takeover; the `.watch-director-bug` 
 `wp-focus-primary/secondary` styling in `style.css`; and a new
 `tools/viewer_act_f_probe.mjs` (node-level focus assertions + a live Playwright
 End Zone/return scrub that asserts zero outcome mutation) plus a gate-manifest
-entry. Presentation-only. **Not yet committed, converged, gated, or built** — a
-handoff/convergence pass is owed (per the cadence in OPEN item 2, this would
-converge onto the latest tip and cut the next act base).
+entry. Presentation-only. Node-level focus probe passes 7/7 and the app bundles
+clean with Act F wired in. **Still owed:** the Playwright End Zone/return browser
+scrub (visual only) — unrunnable in the sandbox.
 
 ## Cosmetic UI — remaining (need browser / a design call)
 
