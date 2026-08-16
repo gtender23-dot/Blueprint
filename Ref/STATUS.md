@@ -1,9 +1,71 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-16 (session reconcile: Act F committed + built onto
-source; Run/Pass-tab + landscape-scoreboard fixes; functional browser playtest
-of Stages 3–7 PASSED — visual eyeball still owed)**.
+Last updated: **2026-08-16 (playtest 8-16 backlog + build order folded in;
+session reconcile: Act F committed + built; Run/Pass-tab + landscape fixes;
+functional browser playtest of Stages 3–7 PASSED — visual eyeball still owed)**.
+
+## 2026-08-16 — PLAYTEST 8-16 BACKLOG + THE BUILD ORDER
+
+Source: `test_notes_8-16.txt` (owner playtest). Two owner clarifications baked in:
+(a) the Formation Designer **auto-installs every concept that fits the formation's
+personnel so the player can immediately TEST them** on a live viewer; (b) notes
+#45–47 are **one thought** — the QB-runner / RPO model is undercooked, and the fix
+starts with a sim-realism AUDIT (designed-QB-run vs pass-to-RPO rates, real life
+vs our game), not UI.
+
+**Why an order at all:** owner's core constraint — *"it's very difficult to test
+without having it all done."* So the sequence front-loads the test INSTRUMENT and
+play-card FIDELITY, because those are what make everything else testable and are
+also the trust anchor (owner: the current play-card accuracy would make him
+refund). Each milestone ends in something you can actually test.
+
+**M1 — The test bench (the instrument, build FIRST).** One shared live viewer:
+even-matched teams, run this play, retry freely. Wired into BOTH the Play Composer
+(test the single concept you're building) and the Formation Designer (on save,
+auto-install the fitting concepts, then test them). Selecting a formation
+auto-selects its fitting plays; deselect what you don't want. *(notes #1, #23,
+part of #37.)* This is the measuring stick for M2–M3.
+
+**M2 — Per-variation play fidelity (the trust anchor).** Each formation VARIATION
+gets its OWN play sheet + personnel — today variations share one sheet, so there's
+no real per-variation variation (#43). Every play graphic drawn for that specific
+variation's alignment, every man's job shown (#12/#14); more card real estate /
+nested screens so OL blocking fits (#16). Then verify+fix the concrete diagram
+bugs ON THE BENCH: Spread Ace shows shotgun+RB-behind (#18), Pistol Diamond puts a
+slot WR in the FB spot (#20), Red-Zone Fade wrong (#19), plays drawn flipped vs the
+viewer orientation (#49). Answer the concept questions here (what "reverse" is,
+why sluggo-seam changed, trust in flea-flicker / HB-pass — #21).
+
+**M3 — RPO / QB-run realism (audit-GATED).** Audit first (#47) → design decision →
+RPOs with their OWN routes (not reused run plays), an RPO+QB-run play type, and
+correct designed-QB-run rates (#45/#46). Testable on the M1 bench.
+
+**M4 — Viewer / watch controls (independent, any time).** Keep the screen awake
+while watching (#7 — no wake-lock code exists today). Toggle to turn replays off
+(#9). Time-control redesign: sim-possession-skip-animation, sim-to-half/end, and a
+3-level "watch every play / coach big moments / coach every play" toggle so the
+coach jumps in and out; fix the broken FF button and stop labeling TEMPO as a time
+control (it's hurry-up/chew-clock strategy) (#51, #53–57). Landscape button →
+camera views when ready (#25).
+
+**M5 — Game-plan home + dial redistribution + Seasons + Def playbook (design-heavy,
+LAST).** Embed editable playbooks in dynasty/season that save to the LEAGUE save,
+with a button to push back to the Workshop version; move offensive identity here +
+add a defensive version; formation-usage dials live here (collapsed graphics #3);
+better look for simple game-planning (#41) — then brainstorm dial-home
+redistribution (#39). Seasons: playbook selection + starting options (#27), strip
+recruiting from Season settings (#29 — Season Mode already runs no-recruiting, so
+likely just stray settings). Def playbook: DE/RE/LE label consistency (#31),
+Bring-3 vs Bring-4 changes the graphic + audit bring-3 on a 4-man line (#33),
+pressure controls drift off the phone (#32).
+
+**Parallel / anytime — fast independent bug sweep:** flipped plays (#49), mobile
+overflow (new-game custom-division conference header #5; pressure controls #32).
+These need no design calls and can land whenever a slot opens.
+
+**Cross-cutting question to answer as we go (#35):** "what's wired cheap that
+deserves more attention?"
 
 ## 2026-08-16 — SESSION RECONCILE: Act F shipped + two fixes + functional playtest
 
