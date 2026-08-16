@@ -1,5 +1,5 @@
-# _night_run.ps1 — unattended overnight verification (owner request 2026-08-11).
-# Holds a process-scoped keep-awake (ES_SYSTEM_REQUIRED — auto-releases when
+# _night_run.ps1 -- unattended overnight verification (owner request 2026-08-11).
+# Holds a process-scoped keep-awake (ES_SYSTEM_REQUIRED -- auto-releases when
 # this process exits; no power settings are changed), then runs the full gate
 # and the night giants back-to-back. Drops _night_run_DONE.txt with both
 # verdicts so the morning check is one file.
@@ -20,8 +20,8 @@ $nightExit = $LASTEXITCODE
 
 $done = @(
   "finished $(Get-Date) (started $t0)"
-  "full  exit $fullExit  — $((Select-String -Path _night_full_log.txt -Pattern 'GATE' | Select-Object -Last 1).Line)"
-  "night exit $nightExit — $((Select-String -Path _night_giants_log.txt -Pattern 'GATE' | Select-Object -Last 1).Line)"
+  "full  exit $fullExit  -- $((Select-String -Path _night_full_log.txt -Pattern 'GATE' | Select-Object -Last 1).Line)"
+  "night exit $nightExit -- $((Select-String -Path _night_giants_log.txt -Pattern 'GATE' | Select-Object -Last 1).Line)"
 )
 $done | Out-File _night_run_DONE.txt
 [KeepAwake.Native]::SetThreadExecutionState(0x80000000) | Out-Null
