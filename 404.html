@@ -7433,7 +7433,20 @@ body *::after {
   /* Once the play settles the board is dropped — hand the whole width to the sheet. */
   .watch-board-collapsed .watch-root { display: none; }
   .watch-board-collapsed .watch-call-embed { flex: 1 1 auto; }
+
+  /* The score bug can render as a floating broadcast overlay; in the rail that
+     made it land ON TOP of the play feed. Pin it in-flow at the top of the rail
+     so the scoreboard and the play-by-play stack cleanly instead of overlapping. */
+  .watch-bug { position: relative; top: auto; left: auto; right: auto; bottom: auto; transform: none; width: 100%; z-index: 1; }
+  /* The "1ST HALF — LIVE" header ate a big band of a short screen — slim it. */
+  .watch-live-overlay .modal-header { padding: 3px 10px; min-height: 0; gap: 8px; }
+  .watch-live-overlay .modal-header h2 { font-size: 12px; margin: 0; line-height: 1.2; }
 }
+
+/* The on-field "play info" analysis overlay (front/coverage read) duplicates the
+   play-by-play feed — retired by owner call (2026-08-15). Kept in the DOM but
+   never shown, so nothing that populates it needs touching. */
+#watch-analysis { display: none !important; }
 
 @media (max-width: 640px) {
   .wsb-matchup { min-height: 43px; }
@@ -9823,7 +9836,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "6f4cb26555";
+globalThis.__BUILD__ = "e67381a0cc";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -59924,27 +59937,27 @@ ${renderAutoRecruitLog()}`;
       const backs = off.filter((s) => s.catch && (s.pos === "RB" || s.pos === "FB"));
       const seedId = String(p.receiverId || p.targetId || "");
       const side = seedId ? seedId.split("").reduce((s2, c) => s2 + c.charCodeAt(0), 0) % 2 ? 76 : 24 : 50;
-      const screen = !!p.isScreen;
+      const screen2 = !!p.isScreen;
       const _throwAway = !!p.throwAway;
       const _cn = String(p.concept || "");
       const tr = p.trace || null;
       const _traceTgt = p.targetSlotId ? [...catchers, ...backs].find((s) => s.id === p.targetSlotId) || null : null;
       const _traceIsBack = _traceTgt ? backs.includes(_traceTgt) : null;
-      const screenKind = !screen ? null : _traceTgt ? _traceIsBack ? "rb" : /Tunnel/i.test(_cn) ? "tunnel" : /Slip/i.test(_cn) ? "slip" : "bubble" : /Bubble/i.test(_cn) ? "bubble" : /Tunnel/i.test(_cn) ? "tunnel" : /Slip/i.test(_cn) ? "slip" : /RB Screen/i.test(_cn) ? "rb" : backs.length && !catchers.length ? "rb" : backs.some((b) => String(b.id) === String(p.targetSlotId || "")) ? "rb" : "bubble";
+      const screenKind = !screen2 ? null : _traceTgt ? _traceIsBack ? "rb" : /Tunnel/i.test(_cn) ? "tunnel" : /Slip/i.test(_cn) ? "slip" : "bubble" : /Bubble/i.test(_cn) ? "bubble" : /Tunnel/i.test(_cn) ? "tunnel" : /Slip/i.test(_cn) ? "slip" : /RB Screen/i.test(_cn) ? "rb" : backs.length && !catchers.length ? "rb" : backs.some((b) => String(b.id) === String(p.targetSlotId || "")) ? "rb" : "bubble";
       const _slotish = catchers.filter((s) => s.pos === "SLOT");
       const _outside = [...catchers].sort((a, b) => Math.abs(b.bx - 50) - Math.abs(a.bx - 50));
       const _fadeConcept = /Red-Zone Fade/i.test(_cn);
-      const tgtSlot = _traceTgt || (!screen ? _fadeConcept && _outside.length ? _outside[0] : catchers.length ? catchers.reduce((a, b) => Math.abs(b.bx - side) < Math.abs(a.bx - side) ? b : a) : backs[0] : screenKind === "rb" ? backs[0] || catchers[0] : screenKind === "tunnel" ? _outside[0] || catchers[0] || backs[0] : _slotish[0] || catchers.find((s) => Math.abs(s.bx - 50) < 35) || catchers[0] || backs[0]);
+      const tgtSlot = _traceTgt || (!screen2 ? _fadeConcept && _outside.length ? _outside[0] : catchers.length ? catchers.reduce((a, b) => Math.abs(b.bx - side) < Math.abs(a.bx - side) ? b : a) : backs[0] : screenKind === "rb" ? backs[0] || catchers[0] : screenKind === "tunnel" ? _outside[0] || catchers[0] || backs[0] : _slotish[0] || catchers.find((s) => Math.abs(s.bx - 50) < 35) || catchers[0] || backs[0]);
       const typAir = t === "pass_deep" ? 27 : t === "pass_medium" ? 15 : 6;
-      const air = screen ? -1.5 : p.complete && !p.turnover ? clamp6(((_h = p.yards) != null ? _h : 2) * 0.6, 2, typAir) : typAir;
+      const air = screen2 ? -1.5 : p.complete && !p.turnover ? clamp6(((_h = p.yards) != null ? _h : 2) * 0.6, 2, typAir) : typAir;
       const _tbx = (_i = tgtSlot == null ? void 0 : tgtSlot.bx) != null ? _i : 50;
       const _toBoundary = _tbx <= 50 ? -1 : 1;
-      const catchPt = !screen ? [clamp6(((_j = tgtSlot == null ? void 0 : tgtSlot.bx) != null ? _j : side) + (rnd() - 0.5) * 3, 4, 96), clamp6(LOS - air * YPU, 3, 40)] : screenKind === "tunnel" ? [clamp6(_tbx - _toBoundary * 10, 12, 88), LOS - 0.3] : screenKind === "rb" ? [clamp6(_tbx + (_tbx <= 50 ? -9 : 9), 6, 94), LOS + 1.8] : screenKind === "slip" ? [clamp6(_tbx - _toBoundary * 8, 6, 94), LOS + 0.8] : [clamp6(_tbx + _toBoundary * 6, 4, 96), LOS + 1.2];
+      const catchPt = !screen2 ? [clamp6(((_j = tgtSlot == null ? void 0 : tgtSlot.bx) != null ? _j : side) + (rnd() - 0.5) * 3, 4, 96), clamp6(LOS - air * YPU, 3, 40)] : screenKind === "tunnel" ? [clamp6(_tbx - _toBoundary * 10, 12, 88), LOS - 0.3] : screenKind === "rb" ? [clamp6(_tbx + (_tbx <= 50 ? -9 : 9), 6, 94), LOS + 1.8] : screenKind === "slip" ? [clamp6(_tbx - _toBoundary * 8, 6, 94), LOS + 0.8] : [clamp6(_tbx + _toBoundary * 6, 4, 96), LOS + 1.2];
       if (_throwAway) {
         catchPt[0] = rnd() < 0.5 ? 7 : 93;
         catchPt[1] = clamp6(LOS - 5 * YPU, 3, 40);
       }
-      if (p.fieldPos != null && !screen) {
+      if (p.fieldPos != null && !screen2) {
         const _backEZY = LOS - (100 - p.fieldPos) * YPU - 10 * YPU;
         if (catchPt[1] < _backEZY) catchPt[1] = _backEZY;
       }
@@ -59952,10 +59965,10 @@ ${renderAutoRecruitLog()}`;
       const _catchDepthYds = Math.max(0, (LOS - catchPt[1]) / YPU);
       const _routeBreak = SNAP_END + clamp6(0.45 + _catchDepthYds / (SPD.WR * 1.4), 0.5, 2.1) + (p.playAction ? 0.3 : 0);
       const _pocketBreakdown = SNAP_END + (p.hurried ? clamp6(1.15 - (((_k = p.pressureIds) == null ? void 0 : _k.length) || 1) * 0.12, 0.6, 1.15) : 2.4);
-      const throwAt = screen ? SNAP_END + _screenDelay : Math.max(SNAP_END + 0.45, Math.min(_routeBreak, _pocketBreakdown));
+      const throwAt = screen2 ? SNAP_END + _screenDelay : Math.max(SNAP_END + 0.45, Math.min(_routeBreak, _pocketBreakdown));
       const armF = p.qbArm != null ? clamp6(1 + (p.qbArm - 55) / 160, 0.86, 1.16) : 1;
       const _qbStartDepthU = Math.max(0, qbSlot.by - LOS);
-      const _quickSet = screen || p.rpo || t === "pass_short" && !p.playAction;
+      const _quickSet = screen2 || p.rpo || t === "pass_short" && !p.playAction;
       const _setDepthU = _quickSet ? _qbStartDepthU + 0.4 : t === "pass_deep" ? Math.max(_qbStartDepthU + 1.5, 5.4) : t === "pass_medium" ? Math.max(_qbStartDepthU + 1.1, 4.2) : (
         /* pass_short (3-step) */
         Math.max(_qbStartDepthU + 0.7, 3.2)
@@ -59968,9 +59981,9 @@ ${renderAutoRecruitLog()}`;
       const _setT = _dropStart + _dropDur;
       const _plantT = Math.max(_setT, throwAt - 0.16);
       const _bpSp = _quickSet ? 6.6 : 5.6;
-      const _isBoot = !screen && /Boot/i.test(_cn);
+      const _isBoot = !screen2 && /Boot/i.test(_cn);
       const _bootDir = _tbx >= 50 ? 1 : -1;
-      const _flushX = _isBoot ? _bootDir * clamp6(5 + rnd() * 2, 5, 7) : p.isScrambleThrow && !screen ? (rnd() < 0.5 ? -1 : 1) * clamp6(3 + rnd() * 3, 3, 6) : 0;
+      const _flushX = _isBoot ? _bootDir * clamp6(5 + rnd() * 2, 5, 7) : p.isScrambleThrow && !screen2 ? (rnd() < 0.5 ? -1 : 1) * clamp6(3 + rnd() * 3, 3, 6) : 0;
       const _relX = qbSlot.bx + _flushX;
       const _relY = _setY - _hitchU - (p.hurried ? 1.8 : 0.7) - 0.8;
       const _flightDist = Math.hypot(catchPt[0] - _relX, catchPt[1] - _relY);
@@ -59985,8 +59998,8 @@ ${renderAutoRecruitLog()}`;
         roll: visualRoll(p, 3)
       });
       throwCue = { start: Math.max(SNAP_END, throwAt - 0.34), release: throwAt, end: throwAt + 0.28, arm: (_l = p.qbArm) != null ? _l : null, style: _throwStyle };
-      if (p.hurried && !screen) pressCue = { start: Math.max(SNAP_END + 0.25, throwAt - 0.5), end: throwAt + 0.05 };
-      if (!screen && t === "pass_deep" && throwAt - SNAP_END > 1.35 && rnd() < 0.4) {
+      if (p.hurried && !screen2) pressCue = { start: Math.max(SNAP_END + 0.25, throwAt - 0.5), end: throwAt + 0.05 };
+      if (!screen2 && t === "pass_deep" && throwAt - SNAP_END > 1.35 && rnd() < 0.4) {
         const pt2 = SNAP_END + (throwAt - SNAP_END) * 0.45;
         pumpCue = { start: pt2 - 0.14, end: pt2 + 0.18 };
       }
@@ -60037,7 +60050,7 @@ ${renderAutoRecruitLog()}`;
       const ordered = [...catchers].sort((a2, b2) => Math.abs(b2.bx - 50) - Math.abs(a2.bx - 50));
       ordered.forEach((s, i) => {
         const mid = s.bx <= 50 ? 1 : -1;
-        const isScreenTgt = screen && s === tgtSlot && screenShape;
+        const isScreenTgt = screen2 && s === tgtSlot && screenShape;
         const shape0 = isScreenTgt ? screenShape : shapes[i % shapes.length];
         const shape = s === tgtSlot && tr && tr.dbl && DBL_SHAPE[shape0] ? DBL_SHAPE[shape0] : shape0;
         const wps = routeWaypoints(shape, s.bx, s.by, mid);
@@ -60074,10 +60087,10 @@ ${renderAutoRecruitLog()}`;
           end: tCatch
         });
         const base = waypointBehavior(wps, A[s.id].speed, PRESNAP);
-        A[s.id].behave = s === tgtSlot && !_throwAway && (!screen || screenShape) ? (t2, w2, a2) => t2 < PRESNAP ? null : t2 >= tCatch && p.complete && !p.turnover ? [catchPt[0], endY, schedSp(a2, [catchPt[0], endY], t2, tEnd, a2.speed)] : t2 >= (isScreenTgt ? throwAt : throwAt * 0.9) ? [catchPt[0], catchPt[1], a2.speed] : base(t2, w2, a2) : base;
+        A[s.id].behave = s === tgtSlot && !_throwAway && (!screen2 || screenShape) ? (t2, w2, a2) => t2 < PRESNAP ? null : t2 >= tCatch && p.complete && !p.turnover ? [catchPt[0], endY, schedSp(a2, [catchPt[0], endY], t2, tEnd, a2.speed)] : t2 >= (isScreenTgt ? throwAt : throwAt * 0.9) ? [catchPt[0], catchPt[1], a2.speed] : base(t2, w2, a2) : base;
       });
       for (const b of backs) {
-        if (screen && b === tgtSlot) {
+        if (screen2 && b === tgtSlot) {
           A[b.id].behave = (t2, w2, a2) => t2 < PRESNAP ? null : t2 >= tCatch && p.complete && !p.turnover ? [catchPt[0], endY, schedSp(a2, [catchPt[0], endY], t2, tEnd, a2.speed)] : [catchPt[0], catchPt[1], schedSp(a2, catchPt, t2, tCatch, 5.5)];
         } else if (b === tgtSlot && !_throwAway) {
           A[b.id].behave = (t2, w2, a2) => t2 < PRESNAP ? null : t2 >= tCatch && p.complete && !p.turnover ? [catchPt[0], endY, schedSp(a2, [catchPt[0], endY], t2, tEnd, a2.speed)] : p.playAction && t2 < PRESNAP + 0.45 ? [qbSlot.bx, LOS + 1.5, 6] : [catchPt[0], catchPt[1], schedSp(a2, catchPt, t2, tCatch, 5.8)];
@@ -60086,7 +60099,7 @@ ${renderAutoRecruitLog()}`;
         }
       }
       wireRush(p.blitzFired);
-      if (!screen) for (const s of catchers) {
+      if (!screen2) for (const s of catchers) {
         if (s.pos !== "TE" || s === tgtSlot) continue;
         const edgeD = defs.filter((d) => d.grp === "DL").sort((a2, b2) => Math.abs(a2.slot.bx - s.bx) - Math.abs(b2.slot.bx - s.bx))[0];
         if (!edgeD) break;
@@ -60095,7 +60108,7 @@ ${renderAutoRecruitLog()}`;
         blocks.push({ offId: s.id, defId: edgeD.id, start: PRESNAP + 0.1, end: PRESNAP + 0.4, rep: "chip" });
         break;
       }
-      if ((p.rbKeptIn === true || p.rbKeptIn == null && p.blitzFired) && !screen) {
+      if ((p.rbKeptIn === true || p.rbKeptIn == null && p.blitzFired) && !screen2) {
         const dog = defs.find((d) => d.grp === "LB" && d.behave);
         const pb = backs.find((b2) => b2 !== tgtSlot && A[b2.id] && A[b2.id] !== A.QB);
         if (dog && pb) {
@@ -60106,8 +60119,8 @@ ${renderAutoRecruitLog()}`;
         }
       }
       const ballAt = () => bl.x != null ? [bl.x, bl.y] : catchPt;
-      wireCoverage(screen ? [] : catchers, screen ? tCatch : throwAt + flight * 0.5, () => ballAt(), tr && tgtSlot && !screen ? { tgtId: tgtSlot.id, sep: tr.sep != null ? tr.sep : 0.45, tgtPt: catchPt } : null);
-      if (tr && tgtSlot && !screen && !_covActorId) {
+      wireCoverage(screen2 ? [] : catchers, screen2 ? tCatch : throwAt + flight * 0.5, () => ballAt(), tr && tgtSlot && !screen2 ? { tgtId: tgtSlot.id, sep: tr.sep != null ? tr.sep : 0.45, tgtPt: catchPt } : null);
+      if (tr && tgtSlot && !screen2 && !_covActorId) {
         const _zp = (p.covSlots || []).find((cs) => cs.r === tgtSlot.id);
         if (_zp) {
           const _zd = defs.find((d2) => d2.id === "D_" + _zp.d);
@@ -60118,14 +60131,14 @@ ${renderAutoRecruitLog()}`;
           }
         }
       }
-      if (tr && tr.rob && tgtSlot && !screen) {
+      if (tr && tr.rob && tgtSlot && !screen2) {
         const robD = defs.filter((d2) => d2.grp === "S" && d2.id !== _covActorId).sort((a2, b2) => Math.abs(a2.slot.bx - tgtSlot.bx) - Math.abs(b2.slot.bx - tgtSlot.bx))[0] || null;
         if (robD) {
           const _prevRob = robD.behave;
           robD.behave = (t2, w2, a2) => t2 < throwAt ? _prevRob ? _prevRob(t2, w2, a2) : null : t2 < tCatch + 0.35 ? [catchPt[0], catchPt[1] - 1.2, a2.speed] : _prevRob ? _prevRob(t2, w2, a2) : null;
         }
       }
-      if (screen) {
+      if (screen2) {
         if (screenKind === "bubble") {
           const sameSide = catchers.filter((s) => s !== tgtSlot && s.bx <= 50 === _tbx <= 50);
           const blocker = sameSide.sort((a, b) => Math.abs(b.bx - 50) - Math.abs(a.bx - 50))[0] || _outside.find((s) => s !== tgtSlot);
@@ -60177,7 +60190,7 @@ ${renderAutoRecruitLog()}`;
           const ly = oy + (catchPt[1] - oy) * u;
           const dx = catchPt[0] - ox, dy = catchPt[1] - oy;
           const fd = Math.hypot(dx, dy) || 1;
-          const bow = screen ? 0 : clamp6(fd * (t === "pass_deep" ? 0.1 : t === "pass_short" ? 0.045 : 0.07) * (2 - armF), 0, 2);
+          const bow = screen2 ? 0 : clamp6(fd * (t === "pass_deep" ? 0.1 : t === "pass_short" ? 0.045 : 0.07) * (2 - armF), 0, 2);
           const off2 = Math.sin(u * Math.PI) * bow * (catchPt[0] >= ox ? 1 : -1);
           pt = [lx + -dy / fd * off2, ly + dx / fd * off2];
         } else if (carrier) pt = [carrier.x, carrier.y];
@@ -65314,6 +65327,7 @@ ${renderAutoRecruitLog()}`;
     <button class="bc-btn bc-icon bc-play" id="watch-pause" title="Play / pause">\u23F8</button>
     ${isLive ? "" : `<button class="bc-btn bc-icon" id="watch-stepfwd" title="Step forward">\u23ED</button>`}
     <button class="bc-btn bc-speed" id="watch-speed" title="Playback speed">1\xD7</button>
+    <button class="bc-btn bc-text" id="watch-landscape" title="Rotate to landscape">\u2922 Landscape</button>
     <button class="bc-btn bc-text watch-desktop-only" id="watch-art" title="Show or hide the developing play trail">Play Art: On</button>
     ${clipMode ? "" : `<button class="bc-btn bc-text" id="watch-save-clip" title="Save this play to Film Room">Save Clip</button>`}
     ${isLive ? "" : `<button class="bc-btn bc-text" id="watch-nextdrive" title="Next drive">Next Drive \u23ED</button>`}
@@ -65357,6 +65371,42 @@ ${renderAutoRecruitLog()}`;
     document.getElementById("watch-speed").addEventListener("click", () => {
       w.speed = w.speed === 1 ? 2 : w.speed === 2 ? 0.5 : 1;
       document.getElementById("watch-speed").textContent = w.speed === 0.5 ? "\xBD\xD7" : `${w.speed}\xD7`;
+    });
+    const lsBtn = document.getElementById("watch-landscape");
+    if (lsBtn) lsBtn.addEventListener("click", async () => {
+      try {
+        const o = screen.orientation;
+        const isLandscape = o && typeof o.type === "string" && o.type.indexOf("landscape") === 0;
+        if (isLandscape) {
+          if (o && o.unlock) {
+            try {
+              o.unlock();
+            } catch (e) {
+            }
+          }
+          if (document.fullscreenElement && document.exitFullscreen) {
+            try {
+              await document.exitFullscreen();
+            } catch (e) {
+            }
+          }
+        } else {
+          const el = document.documentElement;
+          if (!document.fullscreenElement && el.requestFullscreen) {
+            try {
+              await el.requestFullscreen();
+            } catch (e) {
+            }
+          }
+          if (o && o.lock) {
+            try {
+              await o.lock("landscape");
+            } catch (e) {
+            }
+          }
+        }
+      } catch (e) {
+      }
     });
     const artBtn = document.getElementById("watch-art");
     const syncArt = () => {
