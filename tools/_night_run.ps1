@@ -8,8 +8,10 @@ Add-Type -Namespace KeepAwake -Name Native -MemberDefinition @'
 [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
 public static extern uint SetThreadExecutionState(uint esFlags);
 '@
-# ES_CONTINUOUS (0x80000000) | ES_SYSTEM_REQUIRED (0x00000001)
-[KeepAwake.Native]::SetThreadExecutionState(0x80000001) | Out-Null
+# ES_CONTINUOUS (0x80000000) | ES_SYSTEM_REQUIRED (0x00000001) = 2147483649.
+# Decimal + explicit cast: PowerShell 5.1 parses 0x80000001 as a NEGATIVE Int32
+# and refuses the UInt32 conversion (pwsh 7 handles the hex literal fine).
+[KeepAwake.Native]::SetThreadExecutionState([uint32]2147483649) | Out-Null
 
 Set-Location (Join-Path $PSScriptRoot '..')
 $t0 = Get-Date
@@ -24,4 +26,4 @@ $done = @(
   "night exit $nightExit -- $((Select-String -Path _night_giants_log.txt -Pattern 'GATE' | Select-Object -Last 1).Line)"
 )
 $done | Out-File _night_run_DONE.txt
-[KeepAwake.Native]::SetThreadExecutionState(0x80000000) | Out-Null
+[KeepAwake.Native]::SetThreadExecutionState([uint32]2147483648) | Out-Null
