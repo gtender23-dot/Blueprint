@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "sw.js",
   "scripts": {
-    "build": "node tools/build.mjs"
+    "build": "node tools/build.mjs",
+    "gate": "node tools/_gate.mjs",
+    "shipcheck": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/_night_run.ps1"
   },
   "keywords": [],
   "author": "",
