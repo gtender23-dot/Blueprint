@@ -26,6 +26,7 @@
 
 import { generateWorld, generateSchedule, generateRecruitPool } from '../js/engine/world.js';
 import { advanceDay, resumeFromHalftime, RECRUITING_OPEN }   from '../js/engine/season.js';
+import { devCtx }                                            from '../js/engine/offseason.js';
 import { initBudget }                                        from '../js/engine/recruiting.js';
 import { C }                                                 from '../js/constants.js';
 
@@ -67,9 +68,24 @@ function runCycle(openDay, floorDay) {
   RECRUITING_OPEN.start = openDay;
   C.RECRUITING_EARLY_FLOOR = floorDay;
   try {
+    // The preseason camp gate (offseason item 12) hard-blocks advanceDay at day 3
+    // until the coach CONFIRMS his positions — a click the dashboard makes as
+    // `devCtx(state).posReviewed = true`. A headless driver has no UI, so it must
+    // perform that same confirmation or advanceDay never advances (was a silent
+    // day-3 infinite loop → night-gate TIMEOUT). We mark it each preseason day so
+    // the flag is set at the moment the gate checks it, whatever re-init ran.
+    // STALL GUARD: if a day ever fails to advance across several calls, FAIL loud
+    // and fast rather than spinning — a future gate regression should be legible,
+    // not a 30-minute timeout with no diagnostic.
+    let stalls = 0;
     while (state.season === 1 && state.day <= LOCK) {
+      if (state.day <= 3) devCtx(state).posReviewed = true;
+      const before = state.day;
       advanceDay(state, () => {});
       while (state.pendingHalftime) resumeFromHalftime(state);
+      if (state.day === before && state.season === 1) {
+        if (++stalls > 3) throw new Error(`advanceDay STALLED at day ${state.day} — a gate is blocking the headless pipeline (check advanceDay early-returns)`);
+      } else stalls = 0;
     }
   } finally {
     RECRUITING_OPEN.start = origOpen;

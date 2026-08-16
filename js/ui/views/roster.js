@@ -1,12 +1,34 @@
 import { C, POSITIONS } from '../../constants.js';
 import { schemeAdjustedOVR } from '../../engine/formations.js';
 import { derivedArchetype } from '../../engine/player.js';
+import { BRIDGE_CATALOG, FLAW_CATALOG, PLAY_CATALOG } from '../../engine/traits.js';
 import { getPlayerSchool, navigate, rerender, state } from '../../state.js';
 import { getOrder, setupDrag } from '../colOrder.js';
 import { archetypeLabel, escapeHtml, fullName, ratingColor } from '../../utils.js';
 
 function posLabel(pos) {
   return pos === "LB" ? "ILB" : pos;
+}
+// Item 10 — a compact trait strip for the roster row (the full text lives on the
+// player card). Bridge + play + flaw, name only, each carrying its description as
+// a hover title; kept small so the row stays readable.
+function miniTraits(p) {
+  const tl = p == null ? void 0 : p.traits;
+  if (!tl) return "";
+  const chips = [];
+  if (tl.bridge && BRIDGE_CATALOG[tl.bridge]) {
+    const b = BRIDGE_CATALOG[tl.bridge];
+    chips.push(`<span class="trait-mini trait-mini-bridge" title="${escapeHtml(b.desc || b.name)}">✦ ${escapeHtml(b.name)}</span>`);
+  }
+  for (const t of tl.play || []) {
+    const cat = PLAY_CATALOG[t.k];
+    if (cat) chips.push(`<span class="trait-mini" title="${escapeHtml(cat.desc || cat.name)}">${escapeHtml(cat.name)}</span>`);
+  }
+  for (const t of tl.flaws || []) {
+    const cat = FLAW_CATALOG[t.k];
+    if (cat) chips.push(`<span class="trait-mini trait-mini-flaw" title="${escapeHtml(cat.desc || cat.name)}">${escapeHtml(cat.name)}</span>`);
+  }
+  return chips.length ? `<span class="trait-mini-row">${chips.join("")}</span>` : "";
 }
 var sortCol = "compositeRating";
 var sortDir = 1;
@@ -132,6 +154,7 @@ function renderPlayerRow(p, orderedCols, frontId) {
     <td class="player-name-cell">
       <span class="player-name">${escapeHtml(fullName(p))}</span>
       ${p.redshirted ? '<span class="rs-badge">RS</span>' : ""}
+      ${miniTraits(p)}
     </td>
     <td><span class="class-badge class-${p.classYear.toLowerCase()}">${p.classYear}</span></td>
     <td><span class="rating-chip rating-${ratingColor(ovr)}${schemeCls}"${schemeTtl}>${ovr}</span></td>

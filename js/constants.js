@@ -1,4 +1,4 @@
-var SAVE_VERSION, C, OVR_POS_ADJ, POS_WEIGHTS, ROLE_WEIGHTS, FRONT_ROLES, OUT_OF_POS, SUB_ADJACENT, SLOT_ELIGIBILITY, ARCHETYPE_DISTANCE, OFF_ROLE_BY_PLAY, FORMATION_ROLE_OVERRIDE, OFF_WEIGHTS, DEF_WEIGHTS, FORMATION_PACKAGES, FORMATION_WEIGHTS, DEF_FRONTS, DEF_FRONT_WEIGHTS, MATCHUP_MATRIX, FORMATION_SITUATIONAL, PRACTICE_SECONDARY, PRACTICE_TOOLS, DEFAULT_PRACTICE, PASS_TENDENCY, POSITIONS, ATTRIBUTES, MEASURED_ATTRS, ATTR_LABELS, attrLabel, PENALTY_CATALOG, CLASS_YEARS, ROSTER_TARGETS, STARTER_COUNTS, ROSTER_POS_MIN, ROSTER_POS_MAX, DEF_FRONT_COUNTS, FORMATIONS, FORMATION_ALIAS, aliasFormation, ATTR_FLOORS, RECRUIT_CORE, SIZE_BANDS, FORMATION_PLAYBOOK;
+var SAVE_VERSION, C, OVR_POS_ADJ, POS_WEIGHTS, ROLE_WEIGHTS, FRONT_ROLES, OUT_OF_POS, SUB_ADJACENT, SLOT_ELIGIBILITY, ARCHETYPE_DISTANCE, OFF_ROLE_BY_PLAY, FORMATION_ROLE_OVERRIDE, OFF_WEIGHTS, DEF_WEIGHTS, FORMATION_PACKAGES, FORMATION_WEIGHTS, DEF_FRONTS, DEF_FRONT_WEIGHTS, MATCHUP_MATRIX, FORMATION_SITUATIONAL, PRACTICE_SECONDARY, PRACTICE_TOOLS, DEFAULT_PRACTICE, PASS_TENDENCY, POSITIONS, ATTRIBUTES, MEASURED_ATTRS, ATTR_LABELS, attrLabel, PENALTY_CATALOG, CLASS_YEARS, ROSTER_TARGETS, STARTER_COUNTS, ROSTER_POS_MIN, ROSTER_POS_MAX, DEF_FRONT_COUNTS, FORMATIONS, FORMATION_ALIAS, aliasFormation, ATTR_FLOORS, RECRUIT_CORE, SIZE_BANDS, FORMATION_PLAYBOOK, FORMATION_VARIATIONS;
 
 SAVE_VERSION = 16;
 C = {
@@ -48,10 +48,12 @@ C = {
   // This is what makes D1 look faster than D2 look faster than D3 on film.
   STAR_RATE_BY_TIER: { 1: 0.1, 2: 0.18, 3: 0.3 },
   // elevated-recruit fraction per tier [TUNE]
-  PRESTIGE_STAR_W: 0.01,
-  // star-roll prob shift per prestigeBonus pt (pb = (prestige−3)*2, range −4..+6) [TUNE]
-  PRESTIGE_BAND_W: 0.01,
-  // great+sky band mass shift per prestigeBonus pt [TUNE]
+  PRESTIGE_STAR_W: 0.02,
+  // star-roll prob shift per prestigeBonus pt. [playtest item 18, 2026-08-12]
+  // 0.01→0.02 so prestige moves the roster within a division; the coupling bonus
+  // is now division-relative (prestigeTalentBonus) — see js/engine/world.js.
+  PRESTIGE_BAND_W: 0.02,
+  // great+sky band mass shift per prestigeBonus pt [playtest item 18: 0.01→0.02]
   // Randomized conf sizes — mix produces ~100 schools/div organically (spec §B.2).
   // Ranges chosen as even-only (world.js snaps odd draws up) so the circle-method
   // scheduler never needs a dummy-bye — every team gets exactly CONF_GAMES games.
@@ -127,7 +129,12 @@ C = {
   RUNCOMMIT_COV_SCALE: 12e-4,
   // Tempo: scales seconds-per-play. Hurry adds possessions for BOTH teams but
   // taxes fatigue (offense can't rotate, defense can't sub) — not a free lunch.
-  TEMPO_MULT: { Chew: 1.25, Normal: 1, Hurry: 0.72 },
+  // [TUNE 2026-08-14] Narrowed the spread: the old 1.25/0.72 gave a 1.74x snap
+  // ratio (~55 Chew vs ~95 Hurry), which made Hurry a stat/development exploit.
+  // 1.18/0.86 = ~1.37x (~61 vs ~84) — Hurry is still clearly the fastest tempo
+  // without doubling anyone's reps. Only affects games where a team PICKS a
+  // tempo; the default is Normal (=1), so stat_realism/AI baselines are untouched.
+  TEMPO_MULT: { Chew: 1.18, Normal: 1, Hurry: 0.86 },
   TEMPO_FATIGUE_OFF: 1.6,
   // on-field fatigue gain multiplier on Hurry snaps (offense) [TUNE Jul 2026: 1.35→1.60 — slower base clock means fewer Hurry snaps, tax needed a bump to stay visible]
   TEMPO_FATIGUE_DEF: 1.38,
@@ -1695,6 +1702,18 @@ C = {
   // decays TOWARD, so a fast creep normalised a hot streak almost as quickly as
   // it was earned. A run should take a few years to become who you are.
   PRESTIGE_BASELINE_CREEP: 0.05,
+  // [Season Mode / Division Editor, 2026-08-13] The D1 BLUE-BLOOD toggle. A
+  // per-school flag (school.blueBlood) the Division Editor sets — INERT by
+  // default (no procedural school is flagged, so the standing world is
+  // untouched). A blue blood (a) floors near the top of its band —
+  // prestigeMax − BLUE_BLOOD_FLOOR_DROP — so it never sinks to a mid-major, and
+  // (b) declines at BLUE_BLOOD_DECLINE_MULT of the normal rate, so a couple of
+  // down years don't erase the brand. It still MOVES within the major band and
+  // can still climb; the recruiting edge falls out for free (recruiting keys off
+  // prestige, and a blue blood stays high). D2/D3 don't use this — their
+  // powerhouses churn.
+  BLUE_BLOOD_FLOOR_DROP: 1,
+  BLUE_BLOOD_DECLINE_MULT: 0.5,
   // Job market (§10.2)
   JOB_REP_W: 0.5,
   JOB_WIN_W: 0.35,
@@ -1833,7 +1852,7 @@ C = {
   // table); base applies by protection alone.
   PROT_IDENTITY: {
     order: ["quick", "halfSlide", "bob", "maxProtect"],
-    labels: { quick: "Quick Game", halfSlide: "Half-Slide", bob: "BOB", maxProtect: "Max Protect" },
+    labels: { quick: "Quick Game", halfSlide: "Half-Slide", bob: "Big-on-Big", maxProtect: "Max Protect" },
     base: {
       quickShort: 0.62,
       // ball out on rhythm: sacks nearly impossible on schedule
@@ -2543,6 +2562,63 @@ FORMATIONS = {
   // ── Jumbo (Aug 2026) ───────────────────────────────────────────────────
   "Jumbo": { passLean: -0.4, runIn: 0.8, runOut: 0.2, identity: "run_inside", label: "Jumbo", desc: "Goal line \u2014 3 TE, FB + HB, no WR" }
 };
+// ── Formation Variations (Creativity Tools P1b, Aug 2026) ─────────────────
+// A variation = the base formation plus a SPARSE delta, never a copy. Allowed
+// deltas: `pkg` (absolute override of the listed personnel counts — must keep
+// five skill players on the field), `lean` (additive nudge to
+// passLean/runIn/runOut, renormalized), `matchup` (additive per-front nudge to
+// the MATCHUP_MATRIX row, clamped), `situational` (additive nudge to the
+// FORMATION_SITUATIONAL profile, clamped), `layout` (viewer alignment id —
+// consumed by constants_field.js, wired on the browser gate). A formation with
+// NO variation selected stays byte-identical (inert-by-default, the run-scheme
+// pattern). Selection rides the gameplan formation entry's `.variation` field,
+// so a saved gameplan or the P1 builder can carry one; AI never sets it.
+FORMATION_VARIATIONS = {
+  "Power-I": {
+    "big": { label: "Big", pkg: { TE: 3, WR: 0 }, lean: { runIn: 0.05 }, matchup: { "46/Bear": -0.03, "5-2": -0.03, "Nickel": 0.03, "Dime": 0.04 }, situational: { shortYardage: 0.04, thirdLong: -0.03 }, layout: "power_big" },
+    "twins": { label: "Twins", pkg: { TE: 1, WR: 2 }, lean: { passLean: 0.06, runIn: -0.05 }, matchup: { "Nickel": -0.03, "Dime": -0.02, "46/Bear": 0.03 }, situational: { thirdLong: 0.03, twoMinute: 0.03, shortYardage: -0.03 }, layout: "power_twins" }
+  },
+  "Spread": {
+    "trips": { label: "Trips", lean: { passLean: 0.03 }, matchup: { "Nickel": -0.02, "3-3-5": -0.02 }, situational: { thirdLong: 0.02 }, layout: "spread_trips" },
+    "ace": { label: "Ace", pkg: { TE: 2, WR: 2 }, lean: { passLean: -0.05, runIn: 0.05 }, matchup: { "46/Bear": -0.02, "5-2": -0.02, "Nickel": 0.02 }, situational: { shortYardage: 0.03, redZone: 0.03 }, layout: "spread_ace" }
+  },
+  "Air Raid": {
+    "empty": { label: "Empty", lean: { passLean: 0.05 }, matchup: { "Nickel": -0.02, "Dime": -0.03, "46/Bear": 0.03 }, situational: { thirdLong: 0.03, twoMinute: 0.03, shortYardage: -0.04 }, layout: "air_empty" },
+    "tight": { label: "Tight", lean: { passLean: -0.03 }, matchup: { "5-2": -0.03, "46/Bear": -0.03 }, situational: { shortYardage: 0.02 }, layout: "air_tight" }
+  },
+  "Pistol/RPO": {
+    "diamond": { label: "Diamond", pkg: { FB: 1, TE: 1, WR: 2, RB: 1 }, lean: { runIn: 0.06, passLean: -0.06 }, matchup: { "46/Bear": -0.03, "5-2": -0.02, "Nickel": 0.03 }, situational: { shortYardage: 0.04, redZone: 0.03 }, layout: "pistol_diamond" },
+    "trips": { label: "Trips", pkg: { TE: 0, WR: 4 }, lean: { passLean: 0.06 }, matchup: { "Nickel": -0.03, "Dime": -0.02, "46/Bear": 0.03 }, situational: { thirdLong: 0.03 }, layout: "pistol_trips" }
+  },
+  "Trips/Bunch": {
+    "closed": { label: "Closed", pkg: { TE: 2, WR: 2 }, lean: { runIn: 0.05, passLean: -0.05 }, matchup: { "46/Bear": -0.04, "5-2": -0.03, "Nickel": 0.03 }, situational: { shortYardage: 0.04, redZone: 0.03, thirdLong: -0.03 }, layout: "trips_closed" },
+    "open": { label: "Open", lean: { passLean: 0.05 }, matchup: { "Nickel": -0.03, "Dime": -0.03, "46/Bear": 0.03 }, situational: { thirdLong: 0.04, twoMinute: 0.03, shortYardage: -0.03 }, layout: "trips_open" }
+  },
+  "Single Back": {
+    "twins": { label: "Ace Twins", pkg: { TE: 1, WR: 3 }, lean: { passLean: 0.05, runIn: -0.04 }, matchup: { "Nickel": -0.03, "46/Bear": 0.03 }, situational: { thirdLong: 0.03, twoMinute: 0.03 }, layout: "sb_twins" },
+    "heavy": { label: "Heavy", pkg: { TE: 3, WR: 1 }, lean: { runIn: 0.05, passLean: -0.05 }, matchup: { "46/Bear": -0.03, "5-2": -0.03, "Nickel": 0.03, "Dime": 0.03 }, situational: { shortYardage: 0.04, redZone: 0.03 }, layout: "sb_heavy" }
+  },
+  "Empty": {
+    "trey": { label: "Trey", lean: { passLean: -0.03 }, matchup: { "46/Bear": -0.03, "5-2": -0.03 }, situational: { shortYardage: 0.03 }, layout: "empty_trey" },
+    "wide": { label: "Wide", lean: { passLean: 0.04 }, matchup: { "Nickel": -0.03, "Dime": -0.03, "46/Bear": 0.03 }, situational: { thirdLong: 0.03, twoMinute: 0.03 }, layout: "empty_wide" }
+  },
+  "Wishbone": {
+    "heavy": { label: "Heavy", pkg: { TE: 2, WR: 0 }, lean: { runIn: 0.05 }, matchup: { "46/Bear": -0.03, "5-2": -0.03, "Nickel": 0.03, "Dime": 0.04 }, situational: { shortYardage: 0.05, redZone: 0.04, thirdLong: -0.03 }, layout: "bone_heavy" },
+    "split": { label: "Split", pkg: { TE: 0, WR: 2 }, lean: { runOut: 0.05, passLean: 0.04 }, matchup: { "Nickel": -0.03, "46/Bear": 0.03 }, situational: { thirdLong: 0.03, twoMinute: 0.03 }, layout: "bone_split" }
+  },
+  "Flexbone": {
+    "twirl": { label: "Twirl", lean: { runOut: 0.05 }, matchup: { "Nickel": -0.02, "46/Bear": 0.02 }, situational: { twoMinute: 0.03 }, layout: "flex_twirl" },
+    "trips": { label: "Trips", pkg: { RB: 1, WR: 3 }, lean: { passLean: 0.05, runIn: -0.04 }, matchup: { "Nickel": -0.03, "Dime": -0.03 }, situational: { thirdLong: 0.03 }, layout: "flex_trips" }
+  },
+  "Wildcat": {
+    "unbalanced": { label: "Unbalanced", lean: { runOut: 0.05 }, matchup: { "46/Bear": -0.03, "5-2": -0.03, "Nickel": 0.04 }, situational: { shortYardage: 0.05, redZone: 0.04 }, layout: "wc_unbal" },
+    "slash": { label: "Slash", pkg: { TE: 1, WR: 1 }, lean: { passLean: 0.05 }, matchup: { "Nickel": -0.03, "Dime": -0.02 }, situational: { thirdLong: 0.03 }, layout: "wc_slash" }
+  },
+  "Jumbo": {
+    "goalline": { label: "Goal Line", lean: { runIn: 0.03 }, matchup: { "46/Bear": -0.03, "5-2": -0.03 }, situational: { shortYardage: 0.05, redZone: 0.05, thirdLong: -0.04 }, layout: "jumbo_gl" },
+    "tackleover": { label: "Tackle Over", lean: { runOut: 0.06 }, matchup: { "5-2": -0.03, "Nickel": 0.03 }, situational: { shortYardage: 0.04 }, layout: "jumbo_to" }
+  }
+};
 FORMATION_ALIAS = { "Pro Set": "Single Back" };
 aliasFormation = (id) => FORMATION_ALIAS[id] || id;
 ATTR_FLOORS = {
@@ -2680,17 +2756,17 @@ SIZE_BANDS = {
   }
 };
 FORMATION_PLAYBOOK = {
-  "Single Back": ["Inside Zone", "Power", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Red-Zone Fade", "Spot", "Sail", "Levels", "Sluggo Seam", "Reverse", "Flea Flicker", "HB Pass"],
-  "Power-I": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "RB Screen", "Smash", "Curl-Flat", "Y-Cross", "PA Deep Cross", "Red-Zone Fade", "QB Power", "Flea Flicker", "HB Pass"],
-  "Wishbone": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "RB Screen", "Curl-Flat", "Y-Cross", "PA Deep Cross", "Red-Zone Fade", "QB Power"],
-  "Flexbone": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Red-Zone Fade", "Spot", "Sail", "Levels", "Sluggo Seam", "QB Power", "Reverse"],
-  "Wildcat": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Wildcat Power", "Slant-Flat", "Stick", "RB Screen", "Y-Cross", "PA Deep Cross", "Red-Zone Fade", "QB Power"],
-  "Spread": ["Inside Zone", "Power", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Spot", "Sail", "Levels", "Sluggo Seam", "QB Power", "Reverse", "HB Pass", "Flea Flicker"],
-  "Trips/Bunch": ["Inside Zone", "Power", "QB Sneak", "Outside Zone", "Toss", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Spot", "Sail", "Levels", "Sluggo Seam", "Reverse", "HB Pass", "Flea Flicker"],
-  "Pistol/RPO": ["Inside Zone", "Power", "Trap", "QB Sneak", "Outside Zone", "Counter", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Flood", "Dagger", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Spot", "Sail", "Levels", "Sluggo Seam", "QB Power", "Reverse", "Flea Flicker"],
-  "Air Raid": ["Inside Zone", "QB Sneak", "Outside Zone", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Spot", "Sail", "Levels", "Sluggo Seam", "Reverse"],
-  "Jumbo": ["Inside Zone", "Power", "Iso", "Trap", "QB Sneak", "QB Power", "Counter", "Toss", "Draw", "RB Screen", "Slant-Flat", "Stick", "Y-Cross", "PA Deep Cross", "Red-Zone Fade"],
-  "Empty": ["QB Sneak", "Jet Sweep", "Draw", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "Tunnel Screen", "Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Spot", "Sail", "Levels", "Sluggo Seam", "QB Power"]
+  "Single Back": ["Inside Zone", "Split-Zone", "Power", "Boot", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Wham", "Buck Sweep", "Pin-and-Pull", "Dart", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Slip Screen", "Smash", "Seam-Read Smash", "Curl-Flat", "Y-Cross", "Flood", "PA Deep Cross", "Yankee", "Post-Wheel", "Mills (Post-Dig)", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "Spot", "Sail", "Levels", "Sluggo Seam", "Reverse", "Flea Flicker", "HB Pass"],
+  "Power-I": ["Inside Zone", "Power", "Boot", "Iso", "Trap", "QB Sneak", "Counter", "Toss", "Wham", "Buck Sweep", "Pin-and-Pull", "Dart", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "RB Screen", "Smash", "Curl-Flat", "Y-Cross", "PA Deep Cross", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "QB Power", "Flea Flicker", "HB Pass"],
+  "Wishbone": ["Inside Zone", "Power", "Boot", "Iso", "Trap", "QB Sneak", "Counter", "Toss", "Wham", "Buck Sweep", "Pin-and-Pull", "Dart", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "RB Screen", "Curl-Flat", "Y-Cross", "PA Deep Cross", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "QB Power"],
+  "Flexbone": ["Inside Zone", "Split-Zone", "Power", "Boot", "Iso", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Wham", "Buck Sweep", "Pin-and-Pull", "Dart", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Slip Screen", "Smash", "Seam-Read Smash", "Curl-Flat", "Y-Cross", "Flood", "PA Deep Cross", "Yankee", "Post-Wheel", "Mills (Post-Dig)", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "Spot", "Sail", "Levels", "Sluggo Seam", "QB Power", "Reverse"],
+  "Wildcat": ["Inside Zone", "Power", "Boot", "Iso", "Trap", "QB Sneak", "Counter", "Toss", "Wham", "Buck Sweep", "Pin-and-Pull", "Dart", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Wildcat Power", "Slant-Flat", "Stick", "RB Screen", "Y-Cross", "PA Deep Cross", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "QB Power"],
+  "Spread": ["Inside Zone", "Split-Zone", "Power", "Boot", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Wham", "Buck Sweep", "Pin-and-Pull", "Dart", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Slip Screen", "Smash", "Seam-Read Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Spacing", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "Spot", "Sail", "Levels", "Sluggo Seam", "QB Power", "Reverse", "HB Pass", "Flea Flicker"],
+  "Trips/Bunch": ["Inside Zone", "Split-Zone", "Power", "Boot", "QB Sneak", "Outside Zone", "Toss", "Wham", "Buck Sweep", "Pin-and-Pull", "Dart", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Slip Screen", "Smash", "Seam-Read Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Yankee", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Spacing", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "Spot", "Sail", "Levels", "Sluggo Seam", "Reverse", "HB Pass", "Flea Flicker"],
+  "Pistol/RPO": ["Inside Zone", "Split-Zone", "Power", "Boot", "Trap", "QB Sneak", "Outside Zone", "Counter", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Slip Screen", "Smash", "Seam-Read Smash", "Curl-Flat", "Flood", "Dagger", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Spacing", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "Spot", "Sail", "Levels", "Sluggo Seam", "QB Power", "Reverse", "Flea Flicker"],
+  "Air Raid": ["Inside Zone", "QB Sneak", "Outside Zone", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Slip Screen", "Smash", "Seam-Read Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Yankee", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Spacing", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "Spot", "Sail", "Levels", "Sluggo Seam", "Reverse"],
+  "Jumbo": ["Inside Zone", "Power", "Boot", "Iso", "Trap", "QB Sneak", "QB Power", "Counter", "Toss", "Wham", "Buck Sweep", "Pin-and-Pull", "Dart", "Draw", "RB Screen", "Slant-Flat", "Stick", "Y-Cross", "PA Deep Cross", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post"],
+  "Empty": ["QB Sneak", "Jet Sweep", "Draw", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "Tunnel Screen", "Slip Screen", "Smash", "Seam-Read Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Yankee", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Spacing", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "Spot", "Sail", "Levels", "Sluggo Seam", "QB Power"]
 };
 
 // W4 (§2): legacy migration — map an old numeric blitzPct to its nearest
@@ -2705,4 +2781,4 @@ function aggrStopFromBlitzPct(pct) {
   return "house";
 }
 
-export { ARCHETYPE_DISTANCE, ATTRIBUTES, ATTR_FLOORS, C, CLASS_YEARS, DEFAULT_PRACTICE, DEF_FRONTS, DEF_FRONT_COUNTS, DEF_FRONT_WEIGHTS, DEF_WEIGHTS, FORMATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, FORMATION_ROLE_OVERRIDE, FORMATION_SITUATIONAL, FORMATION_WEIGHTS, FRONT_ROLES, MATCHUP_MATRIX, MEASURED_ATTRS, OFF_ROLE_BY_PLAY, OFF_WEIGHTS, OUT_OF_POS, OVR_POS_ADJ, PASS_TENDENCY, PENALTY_CATALOG, POSITIONS, POS_WEIGHTS, PRACTICE_TOOLS, RECRUIT_CORE, ROLE_WEIGHTS, ROSTER_POS_MAX, ROSTER_POS_MIN, ROSTER_TARGETS, SAVE_VERSION, SIZE_BANDS, SLOT_ELIGIBILITY, STARTER_COUNTS, SUB_ADJACENT, aggrStopFromBlitzPct, aliasFormation, attrLabel, schemeRosterTargets, schemeStarterCounts, schemeStarterOverride, schoolSchemeFront };
+export { ARCHETYPE_DISTANCE, ATTRIBUTES, ATTR_FLOORS, C, CLASS_YEARS, DEFAULT_PRACTICE, DEF_FRONTS, DEF_FRONT_COUNTS, DEF_FRONT_WEIGHTS, DEF_WEIGHTS, FORMATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, FORMATION_VARIATIONS, FORMATION_ROLE_OVERRIDE, FORMATION_SITUATIONAL, FORMATION_WEIGHTS, FRONT_ROLES, MATCHUP_MATRIX, MEASURED_ATTRS, OFF_ROLE_BY_PLAY, OFF_WEIGHTS, OUT_OF_POS, OVR_POS_ADJ, PASS_TENDENCY, PENALTY_CATALOG, POSITIONS, POS_WEIGHTS, PRACTICE_TOOLS, RECRUIT_CORE, ROLE_WEIGHTS, ROSTER_POS_MAX, ROSTER_POS_MIN, ROSTER_TARGETS, SAVE_VERSION, SIZE_BANDS, SLOT_ELIGIBILITY, STARTER_COUNTS, SUB_ADJACENT, aggrStopFromBlitzPct, aliasFormation, attrLabel, schemeRosterTargets, schemeStarterCounts, schemeStarterOverride, schoolSchemeFront };

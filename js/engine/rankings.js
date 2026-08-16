@@ -121,6 +121,52 @@ function computeDivisionPoll(schools, schedule, division) {
   }
   return scored.map((e, i) => __spreadProps(__spreadValues({}, e), { rank: i + 1 }));
 }
+// Item 28 — recruiting class rankings. Within a division, score each program's
+// signed class 247-style: Σ visionRating^2.5 rewards a few elite over many
+// average, plus a small per-signee size term so a big solid class still counts.
+// visionRating in the log is 1–99 (the log's `star` field). Scaled by /1000 for
+// a readable "class points" number; the scaling is monotone so it never changes
+// the order — display only.
+var CLASS_SIZE_TERM = 1.5;
+function computeClassRankings(schools, signingsLog, division, season) {
+  const pool = (schools || []).filter((s) => s.division === division);
+  if (!pool.length) return [];
+  const byId = new Map(pool.map((s) => [s.id, s]));
+  const agg = /* @__PURE__ */ new Map();
+  for (const sg of signingsLog || []) {
+    if (sg.season !== season) continue;
+    if (!byId.has(sg.schoolId)) continue;
+    const vr = Math.max(1, Math.min(99, sg.star || 0));
+    let a = agg.get(sg.schoolId);
+    if (!a) agg.set(sg.schoolId, a = { sum: 0, size: 0, starSum: 0, top: 0 });
+    a.sum += Math.pow(vr, 2.5) / 1e3;
+    a.size += 1;
+    a.starSum += vr;
+    if (vr > a.top) a.top = vr;
+  }
+  const scored = pool.map((s) => {
+    const a = agg.get(s.id) || { sum: 0, size: 0, starSum: 0, top: 0 };
+    const score = a.sum + a.size * CLASS_SIZE_TERM;
+    return {
+      school: s,
+      score,
+      size: a.size,
+      avgStar: a.size ? a.starSum / a.size / 20 : 0,
+      topStar: a.top / 20
+    };
+  });
+  scored.sort(
+    (a, b) => b.score - a.score || b.size - a.size || (b.school.prestige || 0) - (a.school.prestige || 0)
+  );
+  return scored.map((e, i) => __spreadProps(__spreadValues({}, e), { rank: i + 1 }));
+}
+function classRankOf(schools, signingsLog, schoolId, season) {
+  const school = (schools || []).find((s) => s.id === schoolId);
+  if (!school) return null;
+  const list = computeClassRankings(schools, signingsLog, school.division, season);
+  const e = list.find((x) => x.school.id === schoolId);
+  return e ? { rank: e.rank, of: list.length, score: e.score, size: e.size, avgStar: e.avgStar } : null;
+}
 function rankMap(state2, division, topN = 25) {
   var _a;
   const poll = computeDivisionPoll(((_a = state2.world) == null ? void 0 : _a.schools) || [], state2.schedule || [], division);
@@ -137,4 +183,4 @@ MARGIN_CAP = 21;
 PRIOR_DECAY_GAMES = 8;
 PRESTIGE_CEIL = { D1: 6, D2: 4, D3: 3 };
 
-export { computeDivisionPoll, computeSOS, rankMap };
+export { classRankOf, computeClassRankings, computeDivisionPoll, computeSOS, rankMap };

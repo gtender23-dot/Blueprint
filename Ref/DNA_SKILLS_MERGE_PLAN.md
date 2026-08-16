@@ -1,7 +1,16 @@
 # Plan of Record — Unifying Coaching Skills & DNA
 
-**Status:** Design approved in part; some items still open (flagged below). **No code written yet.**
-Owner sign-off required before any building begins.
+**Status:** ~~Design approved in part; some items still open (flagged below). **No code written yet.**~~
+> **STATUS UPDATE — 2026-08-13 (verified against code): SUBSTANTIALLY SHIPPED.** The "no code
+> written yet" line is stale. `DNA_AXES` is now purely the on-field identity
+> (groundPound, airAttack, pressure, ballHawk, ballSecurity, discipline, riverboat,
+> roadWarrior, specialTeams, adjustments — `motivator` cut 2026-08-12), i.e. the two
+> competing cards are un-confused. Decision #1 (evaluator → folded into Recruiting, OFF
+> the DNA card) is live: `evaluator` runs in `recruiting.js` (`skillGradeIndex` /
+> `addSkillXP`), not on the crest. `developer` and `recruiter` were explicitly cut from
+> `DNA_AXES` and returned to the program tab (see the code comment in coachprofile.js).
+> Any remaining open items are the fine-grained ones flagged inline below — verify each
+> against code before treating it as work.
 
 ---
 

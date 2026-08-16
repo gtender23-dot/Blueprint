@@ -1,0 +1,106 @@
+{
+  "_README": [
+    "Hunks in cfb_mobile.html that NO valid ES-module source can reproduce, because the bundle",
+    "was hand-edited after esbuild produced it. Each was proven by building a minimal repro and",
+    "showing what esbuild actually emits — not assumed. Two independent adversarial audits",
+    "re-checked every entry and refuted none.",
+    "",
+    "The recurring causes:",
+    "  A. IDENTIFIER SHADOWING. The bundle is one IIFE scope, so esbuild must suffix any nested",
+    "     name that collides with a top-level one (ctx from ui/sound.js, pick from engine/lore.js,",
+    "     avg from engine/player.js, activeTab from views/recruiting.js). The hand-editor wrote the",
+    "     un-suffixed name. AUTH's own season.js chunk proves the rename: it emits `pick2` at one",
+    "     site and hand-written `pick` at another.",
+    "  B. CROSS-MODULE FREE VARIABLES. The hand-editor declared a binding in one module and read or",
+    "     assigned it from another with no import. Legal in one shared scope, impossible in ESM —",
+    "     and a ReferenceError under the native-ES-module dev path in index.html.",
+    "  C. HOISTING OUT OF THE __esm WRAPPER. esbuild hoists every top-level binding of a wrapped",
+    "     module into `var X;` plus an assignment inside init_<mod>(). The bundle has a few left",
+    "     inline in the module body.",
+    "  D. OPTIONAL-CHAINING TEMPS. esbuild allocates _a, _b, ... sequentially per function and never",
+    "     reuses or skips. The bundle carries dead temps and out-of-sequence names left behind when",
+    "     the hand-editor deleted the code that had allocated them.",
+    "  E. TREE-SHAKEN DEAD CODE. The bundle contains bindings with no remaining consumer. esbuild",
+    "     drops them, so no source can put them back.",
+    "",
+    "In every case the SOURCE holds the correct, idiomatic form. The rebuilt bundle differs from",
+    "cfb_mobile.html only in these names and placements — never in behaviour."
+  ],
+
+  "js~engine~season.js": {
+    "lines": 22,
+    "why": "A: un-suffixed ctx/pick/avg (AUTH's own chunk emits pick2 elsewhere, proving the rename). C: GRADE_LETTERS left in the module body though season.js is __esm-wrapped. D: dead temps _h,_i,_j in updateAICarousel; _a,_b,_c reused across two sites in cascadeCarousel; _a3,_b3 in a two-level arrow where esbuild numbers _a2,_b2. Plus an inner catch (e2) where the outer catch is not an ancestor scope"
+  },
+  "js~ui~views~depthchart.js": {
+    "lines": 11,
+    "why": "D: a vestigial `var _a2, _b2;` in renderDepthOrder's ids.map callback — the only occurrence of either name in the whole chunk, left behind when the do-slotbtn block was hand-deleted — which forces a renumbering cascade through the nested scopes. Plus 1 line from the FORMATION_PLAYBOOK relocation (see js~constants.js)"
+  },
+  "js~ui~app.js": {
+    "lines": 7,
+    "why": "B: the bundle uses PASS_CONCEPTS, flushSaveSync and saveGame with no import, so source must add them and emit the init_concepts()/init_persistence() calls the bundle lacks. A: a parameter named activeTab must become activeTab3 because top-level activeTab and activeTab2 exist in other chunks. Plus the groupTab arrangement (see js~state.js)"
+  },
+  "js~state.js": {
+    "lines": 6,
+    "why": "B: the bundle declares teamGroupTab/programGroupTab/statsGroupTab in app.js's region but assigns them from navigate() here. Assigning an imported binding is impossible in ESM, so they are declared and exported here with a setGroupTab setter — verified as the joint minimum (23 lines vs 37 for the bundle's shape, which also emits *2 suffixes and is invalid ESM). C: LEGACY_VIEW_MAP left inline in the module body though state.js is __esm-wrapped"
+  },
+  "js~ui~views~mainmenu.js": {
+    "lines": 5,
+    "why": "A: ctx → ctx2, forced by the top-level `let ctx` in ui/sound.js. D: a `_dsd` temp where esbuild names optional-call temps _a/_b"
+  },
+  "js~engine~world.js": {
+    "lines": 5,
+    "why": "C: `var REAL_SCHOOL_STEMS = new Set([...])` left inline in the module body while every sibling const is correctly hoisted. A: pick → pick2, forced by the top-level `function pick` in engine/lore.js"
+  },
+  "js~constants.js": {
+    "lines": 2,
+    "why": "B, resolved deliberately: the bundle declares FORMATION_PLAYBOOK in the depthchart view and lets sim.js reach it as a free variable. That is a ReferenceError under the native-ES-module dev path, so the table was relocated here — a leaf module both consumers already import. Costs 2 lines here and 1 in depthchart; the three alternatives were built and all scored worse"
+  },
+  "js~engine~development.js": {
+    "lines": 2,
+    "why": "A: the bundle has `const chance` where esbuild must emit `chance2`, because engine/lore.js has a top-level `chance()`. AUTH's own checkGameInjury in this same chunk uses chance2, so the file is internally inconsistent"
+  },
+  "js~engine~coachprofile.js": {
+    "lines": 3,
+    "why": "the bundle's __export list places noteCoachRecords out of alphabetical order, which esbuild always sorts. A: noteRecord's 5th parameter is spelled ctx where the top-level ctx in ui/sound.js forces ctx2"
+  },
+  "js~ui~views~dashboard.js": {
+    "lines": 3,
+    "why": "B: the bundle uses expectedWins/mandateText/seatState from engine/career.js with no import, so source must emit the init_career() call it lacks. D: a declared-but-unused `_c` and a pointless `(_b = ...)` assignment in renderExpectationsBar, left over from a hand-edit"
+  },
+  "js~engine~persistence.js": {
+    "lines": 3,
+    "why": "the bundle omits flushSaveSync from its __export list while ui/app.js calls it directly — esbuild always lists every export. D: `var _a, _b;` and `(_a = rec) == null` in loadGame, left over from an `e.target.result?.state` form the hand-editor replaced with a `rec` local (esbuild allocates no temp for a plain identifier base)"
+  },
+  "js~engine~portal.js": {
+    "lines": 3,
+    "why": "D: a mid-function `var _pa, _pb;` where esbuild hoists optional-chaining temps into the opening var list as _a, _b, ..."
+  },
+  "js~engine~rankings.js": {
+    "lines": 4,
+    "why": "E: divisionSOSRank exists in the bundle but nothing anywhere calls it (grepped every AUTH chunk), so esbuild tree-shakes it. Kept as a proper export in source"
+  },
+  "js~engine~recruiting.js": {
+    "lines": 2,
+    "why": "E: NARROW_START is dead in the bundle — buildNarrowSchedule was its only reader and the hand-editor deleted the function but left the constant. B: projectedPathToPlay is called cross-module with no import, so source must emit an init_portal() the bundle lacks"
+  },
+  "js~ui~views~gameplan.js": {
+    "lines": 2,
+    "why": "D: the bundle reuses _a/_b in the simple-mode halftime branch although esbuild already assigned them to the advanced branch's ?? lowerings in the same function"
+  },
+  "js~ui~views~recruiting.js": {
+    "lines": 2,
+    "why": "D: the bundle keeps dead temps _f/_g and uses _h where esbuild must emit _f — leftovers from the hand-deletion of the narrowSchedule expressions"
+  },
+  "js~ui~views~standings.js": {
+    "lines": 1,
+    "why": "B: the bundle declares _sosCache in schedule.js's region but reads and assigns it inside renderStandings(). It is only ever used here, so it was moved here; costs 1 line in each of the two chunks"
+  },
+  "js~ui~views~schedule.js": {
+    "lines": 1,
+    "why": "B: the mirror of the _sosCache move — the bundle has a declaration here that nothing in this module uses"
+  },
+  "js~ui~views~scheduling.js": {
+    "lines": 1,
+    "why": "B: the bundle calls scheduleGuarantee() with no import, so source must emit the init_portal() call it lacks"
+  }
+}

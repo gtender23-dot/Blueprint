@@ -1,4 +1,5 @@
 import { weekLabel } from '../../engine/season.js';
+import { computeClassRankings } from '../../engine/rankings.js';
 import { getPlayerSchool, rerender, state } from '../../state.js';
 import { escapeHtml, renderCrest } from '../../utils.js';
 
@@ -227,14 +228,47 @@ function renderAwardsTab(school) {
     </div>`;
   }).join("");
 }
+function renderClassTop25(school) {
+  var _a, _b;
+  const schools = ((_a = state.world) == null ? void 0 : _a.schools) || [];
+  const log = state.signingsLog || [];
+  if (!school || !schools.length || !log.length) return "";
+  const div = school.division;
+  const seasons = [...new Set(log.filter((s) => {
+    const sc = schools.find((x) => x.id === s.schoolId);
+    return sc && sc.division === div;
+  }).map((s) => s.season))].sort((a, b) => b - a);
+  if (!seasons.length) return "";
+  const season = seasons[0];
+  const list = computeClassRankings(schools, log, div, season).filter((e) => e.size > 0).slice(0, 25);
+  if (!list.length) return "";
+  return `
+    <div class="card">
+      <div class="card-title">${escapeHtml(div)} RECRUITING \u2014 TOP 25 <span class="muted" style="font-weight:400">\u00b7 Class of S${season}</span></div>
+      <table class="data-table">
+        <thead><tr><th>#</th><th>Program</th><th>Signees</th><th>Avg \u2605</th><th>Best \u2605</th></tr></thead>
+        <tbody>
+          ${list.map((e) => `
+            <tr${e.school.id === school.id ? ' class="hist-mine"' : ""}>
+              <td>${e.rank}</td>
+              <td>${escapeHtml(e.school.name)}${e.school.id === school.id ? " \u2605" : ""}</td>
+              <td>${e.size}</td>
+              <td>${e.avgStar.toFixed(1)}</td>
+              <td>${e.topStar.toFixed(1)}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+}
 function renderClassesTab(school) {
   var _a;
   const mine = (state.signingsLog || []).filter((s) => s.schoolId === (school == null ? void 0 : school.id));
-  if (!mine.length) return `<div class="card"><p class="empty-hint">No signees yet \u2014 your first class shows up here on Signing Day.</p></div>`;
+  const top25 = renderClassTop25(school);
+  if (!mine.length) return `${top25}<div class="card"><p class="empty-hint">No signees yet \u2014 your first class shows up here on Signing Day.</p></div>`;
   const bySeason = {};
   for (const s of mine) (bySeason[_a = s.season] || (bySeason[_a] = [])).push(s);
   const seasonsDesc = Object.keys(bySeason).map(Number).sort((a, b) => b - a);
-  return seasonsDesc.map((sn) => {
+  return top25 + seasonsDesc.map((sn) => {
     const cls = bySeason[sn];
     const byPos = {};
     for (const s of cls) byPos[s.pos] = (byPos[s.pos] || 0) + 1;

@@ -1,10 +1,10 @@
 import { DEF_BLITZ_ELIGIBLE, DEF_DROP_ELIGIBLE, DEF_FIELD_LAYOUTS, OFF_FIELD_LAYOUTS } from '../../constants_field.js';
 import { C, FORMATIONS, FORMATION_PLAYBOOK, SLOT_ELIGIBILITY, STARTER_COUNTS } from '../../constants.js';
-import { ensureFieldAssignments, resolveDefField, resolveOffField, SLOT_ELIGIBLE_POS } from '../../engine/fieldassign.js';
+import { defaultShareFor, ensureFieldAssignments, resolveDefField, resolveOffField, SLOT_ELIGIBLE_POS } from '../../engine/fieldassign.js';
 import { bridgeCoversSlot, bridgeOf, sizeFitForSlot } from '../../engine/traits.js';
 import { derivedArchetype, posAdjust, roleRating } from '../../engine/player.js';
 import { buildDepthChart, buildRoleSortedDepthOrder } from '../../engine/world.js';
-import { getPlayerSchool, navigate, rerender, state } from '../../state.js';
+import { getPlayerSchool, navigate, notify, rerender, state } from '../../state.js';
 import { tipTerm } from '../manual/tips.js';
 import { gameplanIsSimple } from './gameplan.js';
 import { archetypeLabel, escapeHtml, fullName, ratingColor } from '../../utils.js';
@@ -148,7 +148,7 @@ function renderOffense(school, gp, selectedOff) {
     </div>
   </div>
 
-  ${gameplanIsSimple() ? renderSimpleOffPanel(school, gp, catchSlots, entry, bySlot) : renderShareBar(catchSlots, entry.shares, shareTotal, school, bySlot)}
+  ${gameplanIsSimple() ? renderSimpleOffPanel(school, gp, catchSlots, entry, bySlot) : renderShareBar(catchSlots, entry.shares, shareTotal, school, bySlot, gp, fid)}
   ${renderDepthOrder(school, "offense")}
 `;
 }
@@ -610,7 +610,7 @@ function renderDefense(school, gp, front) {
 
   <details class="dc-tip"${depthSecOpen["tip:defense"] ? " open" : ""} data-do-sec="tip:defense">
     <summary>How this screen works</summary>
-    <div class="dc-tip-body">${simple ? `Tap a slot to change who lines up there. Blitzers are picked automatically \u2014 your best pass-rushers come when a blitz fires. Set how aggressive below.` : `Tap a slot to assign. The \u26A1 and \u{1F6E1} dials share one PRESSURE PIE \u2014 a 100% split of whose look it is when the blitz fires. \u26A1 slice = that man is the extra rusher (he abandons his coverage to come). \u{1F6E1} slice (edge men in odd fronts) = a FIRE ZONE through him: he drops into coverage and a backer comes behind \u2014 same rush count, angles the protection never saw. HOW OFTEN pressure comes is the HEAT dial below, riding on top of your Game Plan blitz rate.`}</div>
+    <div class="dc-tip-body">${simple ? `Tap a slot to change who lines up there. Blitzers are picked automatically \u2014 your best pass-rushers come when a blitz fires. Set how aggressive below.` : `Tap a slot to assign. The \u26A1 dials are the PRESSURE PIE \u2014 a 100% split of whose look it is when the blitz fires: a dialed man is your extra rusher (he abandons his coverage to come). Fire zones \u2014 dropping an edge man into coverage while a backer comes behind \u2014 fire automatically at their natural rate; you don't set them. HOW OFTEN pressure comes is the HEAT dial below, riding on top of your Game Plan blitz rate.`}</div>
   </details>
 
   <div class="field-card def-field">
@@ -633,9 +633,9 @@ function renderDefense(school, gp, front) {
   ${simple ? renderSimpleDefPanel(school, gp) : (() => {
     const heat = entry.heat != null ? entry.heat : null;
     return `<div class="blitz-legend">
-    <span class="blitz-dot"></span> <strong>PRESSURE PIE</strong> \u2014 one 100% allocation across the \u26a1/\u{1F6E1} dials: when the blitz fires, whose look is it. <strong>${blitzerCount}</strong> slice${blitzerCount !== 1 ? "s" : ""} dialed${blitzerCount === 0 ? " \u2014 auto (best rusher comes)" : ""}.
-    <span class="fs-blitz" style="margin-left:8px" title="How often pressure comes when this front is on the field \u2014 multiplies your Game Plan blitz rate (0 = half as often, 50 = as dialed, 100 = half again more)">
-      HEAT <button class="fs-blitz-btn" data-heat-step="-1">\u2212</button><span class="fs-blitz-val">${heat == null ? "auto" : heat}</span><button class="fs-blitz-btn" data-heat-step="1">+</button>${heat != null ? `<button class="fs-blitz-btn" data-heat-reset="1" title="Back to auto (Game Plan rate untouched)">\u21ba</button>` : ""}
+    <span class="blitz-dot"></span> <strong>PRESSURE PIE</strong> \u2014 when the blitz fires, whose look is it. <strong data-blitz-count>${blitzerCount}</strong> in the mix<span data-blitz-auto style="${blitzerCount === 0 ? "" : "display:none"}"> \u2014 auto (your best rusher comes)</span>.
+    <span class="fs-blitz fs-heat${heat != null ? " on" : ""}" data-heat-ctl style="margin-left:8px" title="How often pressure comes when this front is on the field \u2014 multiplies your Game Plan blitz rate (0 = half as often, 50 = as dialed, 100 = half again more)">
+      <span class="fs-heat-lbl">HEAT</span><button class="fs-blitz-btn" data-heat-step="-1" aria-label="Less heat">\u2212</button><span class="fs-blitz-val" data-heat-val>${heat == null ? "auto" : heat}</span><button class="fs-blitz-btn" data-heat-step="1" aria-label="More heat">+</button><button class="fs-blitz-btn" data-heat-reset="1" data-heat-reset-btn title="Back to auto (Game Plan rate untouched)" style="${heat != null ? "" : "display:none"}" aria-label="Reset heat to auto">\u21ba</button>
     </span>
     Base rate lives on <a data-nav="gameplan" class="link">Game Plan \xB7 Defense</a>.
   </div>`;
@@ -805,8 +805,12 @@ function renderFieldSlot(school, slot, playerId, opts) {
   const injured = p && p.injuryGamesOut > 0;
   const simple = gameplanIsSimple();
   const shareBadge = !simple && opts.side === "offense" && slot.catch ? renderShareControl(slot, opts.entry) : opts.side === "offense" && slot.catch && simple ? renderSimpleShareBadge(slot, opts.entry) : "";
-  const blitzControl = simple ? "" : opts.side === "defense" && opts.blitzEligible ? renderBlitzControl(slot, opts.blitzShares) : opts.side === "defense" && opts.dropEligible ? renderDropControl(slot, opts.blitzShares) : "";
-  const isBlitzing = opts.side === "defense" && ((_a = opts.blitzShares) == null ? void 0 : _a[slot.id]) > 0;
+  // Item 4 (owner, 2026-08-12): the fire-zone DROP dial is gone — in a 3-4/Penny
+  // the edge men HAVE to rush, so who drops is automatic (the sim's native
+  // fire-zone rate), not a control. Only the ⚡ blitz dial is user-facing now.
+  const blitzControl = simple ? "" : opts.side === "defense" && opts.blitzEligible ? renderBlitzControl(slot, opts.blitzShares) : "";
+  const hasShare = opts.side === "defense" && ((_a = opts.blitzShares) == null ? void 0 : _a[slot.id]) > 0;
+  const isBlitzing = hasShare && opts.blitzEligible;
   return `
   <div class="field-slot${p ? "" : " unassigned"}${isBlitzing ? " blitzing" : ""}"
        style="--fx:${fx}%;--fy:${fy}%"
@@ -841,21 +845,22 @@ function _pieShareOf(slot, blitzShares) {
 function renderBlitzControl(slot, blitzShares) {
   const val = _pieShareOf(slot, blitzShares);
   return `
-  <div class="fs-blitz" title="His slice of the pressure pie \u2014 the share of fired blitzes where HE is the extra man. Slices sum to 100 across the front.">
-    <button class="fs-blitz-btn" data-blitz-step="-1" data-blitz-slot="${slot.id}">\u2212</button>
-    <span class="fs-blitz-val">${val}</span>
-    <button class="fs-blitz-btn" data-blitz-step="1" data-blitz-slot="${slot.id}">+</button>
+  <div class="fs-blitz${val > 0 ? " on" : ""}" data-blitz-ctl="${slot.id}" data-blitz-kind="blitz" title="His slice of the pressure pie \u2014 the share of fired blitzes where HE is the extra man. Slices sum to 100 across the front.">
+    <span class="fs-blitz-tag">\u26a1 BLITZ</span>
+    <button class="fs-blitz-btn" data-blitz-step="-1" data-blitz-slot="${slot.id}" aria-label="Less blitz for ${escapeHtml(slot.label)}">\u2212</button>
+    <span class="fs-blitz-val" data-blitz-val="${slot.id}">${val ? val + "%" : "\u2014"}</span>
+    <button class="fs-blitz-btn" data-blitz-step="1" data-blitz-slot="${slot.id}" aria-label="More blitz for ${escapeHtml(slot.label)}">+</button>
   </div>
 `;
 }
 function renderDropControl(slot, blitzShares) {
   const val = _pieShareOf(slot, blitzShares);
   return `
-  <div class="fs-blitz fs-drop" title="His slice of the pressure pie \u2014 the share of fired blitzes that are a FIRE ZONE through him: he drops into coverage and a backer comes behind. Undialed, he still bails naturally on ~${C.FZ_NATIVE_DROP_PCT}% of snaps.">
-    <span class="fs-drop-ico">\u{1F6E1}</span>
-    <button class="fs-blitz-btn" data-blitz-step="-1" data-blitz-slot="${slot.id}">\u2212</button>
-    <span class="fs-blitz-val">${val}</span>
-    <button class="fs-blitz-btn" data-blitz-step="1" data-blitz-slot="${slot.id}">+</button>
+  <div class="fs-blitz fs-drop${val > 0 ? " on" : ""}" data-blitz-ctl="${slot.id}" data-blitz-kind="drop" title="His slice of the pressure pie \u2014 the share of fired blitzes that are a FIRE ZONE through him: he drops into coverage and a backer comes behind. Undialed, he still bails naturally on ~${C.FZ_NATIVE_DROP_PCT}% of snaps.">
+    <span class="fs-blitz-tag">\u{1F6E1} DROP</span>
+    <button class="fs-blitz-btn" data-blitz-step="-1" data-blitz-slot="${slot.id}" aria-label="Less drop for ${escapeHtml(slot.label)}">\u2212</button>
+    <span class="fs-blitz-val" data-blitz-val="${slot.id}">${val ? val + "%" : "\u2014"}</span>
+    <button class="fs-blitz-btn" data-blitz-step="1" data-blitz-slot="${slot.id}" aria-label="More drop for ${escapeHtml(slot.label)}">+</button>
   </div>
 `;
 }
@@ -898,6 +903,34 @@ function normalizeShares(map, keys) {
     drift -= stepDir;
   }
 }
+// Item 4 polish: patch the pressure-pie controls in place instead of a full
+// rerender, so a +/- press doesn't flicker or reset scroll and only the shares
+// that actually changed move. The pie still renormalizes under the hood (the sim
+// reads the shares), but the screen stays put.
+function repaintBlitzShares(map) {
+  let tot = 0;
+  for (const v of Object.values(map || {})) if (v > 0) tot += v;
+  let dialed = 0;
+  document.querySelectorAll("[data-blitz-ctl]").forEach((ctl) => {
+    const sid = ctl.dataset.blitzCtl;
+    const raw = (map && map[sid]) || 0;
+    const pct = raw > 0 && tot > 0 ? Math.round(raw / tot * 100) : 0;
+    if (raw > 0) dialed++;
+    const valEl = ctl.querySelector("[data-blitz-val]");
+    if (valEl) valEl.textContent = pct ? pct + "%" : "—";
+    ctl.classList.toggle("on", raw > 0);
+    const slotEl = ctl.closest(".field-slot");
+    if (slotEl) {
+      const kind = ctl.dataset.blitzKind;
+      slotEl.classList.toggle("blitzing", raw > 0 && kind === "blitz");
+      slotEl.classList.toggle("dropping", raw > 0 && kind === "drop");
+    }
+  });
+  const cnt = document.querySelector("[data-blitz-count]");
+  if (cnt) cnt.textContent = String(dialed);
+  const auto = document.querySelector("[data-blitz-auto]");
+  if (auto) auto.style.display = dialed === 0 ? "" : "none";
+}
 function repaintOffShares(gp, formationId) {
   var _a, _b;
   const entry = (_b = (_a = gp.fieldAssignments) == null ? void 0 : _a.offense) == null ? void 0 : _b[formationId];
@@ -932,17 +965,18 @@ function renderSimpleShareBadge(slot, entry) {
   if (featured >= 25) return `<div class="fs-featured" title="Featured target \u2014 the offense feeds him the ball (defenses bracket him)">\u2605</div>`;
   return "";
 }
-function renderShareBar(catchSlots, shares, shareTotal, school, bySlot) {
+function renderShareBar(catchSlots, shares, shareTotal, school, bySlot, gp, fid) {
   const roster = (school == null ? void 0 : school.roster) || [];
-  return `
-  <div class="card share-summary">
-    <div class="card-header"><span class="card-title">TARGET SHARE</span>
-      <span class="card-sub">who the QB looks for \xB7 per slot</span></div>
-    <div class="share-rows">
-      ${catchSlots.map((s) => {
+  const legacy = (gp == null ? void 0 : gp.targetShares) || {};
+  const defaults = (gp == null ? void 0 : gp.defaultShares) || null;
+  let anyDiffers = false;
+  const rows = catchSlots.map((s) => {
     const pid = bySlot[s.id];
     const p = pid ? roster.find((pl) => pl.id === pid) : null;
     const raw = (shares == null ? void 0 : shares[s.id]) || 0;
+    const def = defaultShareFor(s, legacy, defaults);
+    const differs = raw !== def;
+    if (differs) anyDiffers = true;
     return `
           <div class="share-row">
             <span class="share-slot-label">${escapeHtml(s.label)}</span>
@@ -950,8 +984,16 @@ function renderShareBar(catchSlots, shares, shareTotal, school, bySlot) {
             <input class="share-slider" type="range" min="0" max="100" step="5" value="${raw}"
                    data-share-slider="${s.id}">
             <span class="share-slot-pct" data-share-pct="${s.id}">${raw}%</span>
+            ${differs ? `<span class="share-diff-badge" title="Differs from your Game Plan default of ${def}%">\u2260 default</span>` : `<span class="share-diff-badge share-diff-none"></span>`}
           </div>`;
-  }).join("")}
+  }).join("");
+  return `
+  <div class="card share-summary">
+    <div class="card-header"><span class="card-title">TARGET SHARE</span>
+      <span class="card-sub">who the QB looks for \xB7 per slot</span>
+      ${anyDiffers && fid ? `<button class="btn-ghost btn-sm" type="button" data-share-reset="${escapeHtml(fid)}">Reset to default</button>` : ""}</div>
+    <div class="share-rows">
+      ${rows}
     </div>
   </div>
 `;
@@ -1431,6 +1473,20 @@ function setupListeners9() {
       repaintOffShares(gp, activeOffFormation);
     });
   });
+  document.querySelectorAll("[data-share-reset]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const fid = btn.dataset.shareReset;
+      const entry = gp.fieldAssignments.offense[fid];
+      if (!entry) return;
+      if (!entry.shares) entry.shares = {};
+      const layout = OFF_FIELD_LAYOUTS[fid];
+      const catchSlots = (layout ? layout.slots : []).filter((s) => s.catch);
+      for (const s of catchSlots) entry.shares[s.id] = defaultShareFor(s, gp.targetShares || {}, gp.defaultShares || null);
+      normalizeShares(entry.shares, catchSlots.map((s) => s.id));
+      notify("Target shares reset to your default", "success");
+      rerender();
+    });
+  });
   // BLITZ PIE (Ref/BLITZ_PIE_PLAN.md): the ⚡/🛡 dials share one 100%
   // allocation per front — a step rebalances the whole pie (carry-share
   // math). Also fixes a pre-existing scoping bug: this handler used to write
@@ -1459,9 +1515,18 @@ function setupListeners9() {
         if (keys.length === 1) map[slotId] = 100;
         else setSplitRebalanced(map, keys, slotId, want);
       }
-      rerender();
+      repaintBlitzShares(map);
     });
   });
+  const repaintHeat = (entry) => {
+    const ctl = document.querySelector("[data-heat-ctl]");
+    const val = document.querySelector("[data-heat-val]");
+    const reset = document.querySelector("[data-heat-reset-btn]");
+    const set = entry.heat != null;
+    if (val) val.textContent = set ? String(entry.heat) : "auto";
+    if (reset) reset.style.display = set ? "" : "none";
+    if (ctl) ctl.classList.toggle("on", set);
+  };
   document.querySelectorAll("[data-heat-step]").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -1469,7 +1534,7 @@ function setupListeners9() {
       const step = parseInt(btn.dataset.heatStep, 10);
       const cur = entry.heat != null ? entry.heat : 50;
       entry.heat = Math.max(0, Math.min(100, cur + step * 10));
-      rerender();
+      repaintHeat(entry);
     });
   });
   document.querySelectorAll("[data-heat-reset]").forEach((btn) => {
@@ -1477,7 +1542,7 @@ function setupListeners9() {
       e.stopPropagation();
       const entry = _defViewEntry();
       delete entry.heat;
-      rerender();
+      repaintHeat(entry);
     });
   });
   (_c = document.getElementById("btn-auto-sort")) == null ? void 0 : _c.addEventListener("click", () => {

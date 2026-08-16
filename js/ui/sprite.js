@@ -171,11 +171,17 @@ function spriteMarkup(a, face) {
 
   const flip = `<g class="wsp-flip"${face === "w" ? ' transform="scale(-1,1)"' : ""}>${vf}${vb}${vs}</g>`;
   const body = `<ellipse class="wsp-shadow" cx="0" cy="-.12" rx="1.38" ry=".3"/><g class="wsp-shell">${flip}</g>`;
+  const bodyExpr = a.body || { kind: "legacy", scaleX: 1, scaleY: 1, stride: 0.85, leanScale: 1 };
+  const bodyKind = ["lean", "balanced", "power", "massive"].includes(bodyExpr.kind) ? bodyExpr.kind : "legacy";
+  const bodyX = Number.isFinite(bodyExpr.scaleX) ? bodyExpr.scaleX : 1;
+  const bodyY = Number.isFinite(bodyExpr.scaleY) ? bodyExpr.scaleY : 1;
+  const stride = Number.isFinite(bodyExpr.stride) ? bodyExpr.stride : 0.85;
+  const leanScale = Number.isFinite(bodyExpr.leanScale) ? bodyExpr.leanScale : 1;
   const tag = `<text class="${off ? "wo-lbl" : "wd-lbl"} wsp-tag" x="0" y="${off ? "2.1" : "-7.35"}">${escapeHtml(String(a.label ?? ""))}</text>`;
   // NOTE: --wsp-lean must NOT be declared inline here — an element's own inline
   // custom property beats the inherited value, and spriteMotionTick sets the lean
   // on the .wp-actor ancestor. (An inline 0deg here kept every sprite bolt upright.)
-  return `<g class="wsp wsp-build-${build} wsp-modern-athlete wsp-reference-athlete wsp-uniform-authentic wsp-profile-${profile} wsp-stance-${setStyle}${rbPrototype ? " wsp-prototype-rb" : ""}${a.qb ? " wsp-qb" : ""}${gloveClass}${visorClass}${armSleeveClass}${kneeBraceClass}" data-jersey="${jerseyText}" style="--gait:${gait}s;--wsp-skin:${skin};--wsp-skin-shadow:${skinShadow}"><g class="wsp-athlete">${body}</g></g>${tag}`;
+  return `<g class="wsp wsp-build-${build} wsp-frame-${bodyKind} wsp-modern-athlete wsp-reference-athlete wsp-uniform-authentic wsp-profile-${profile} wsp-stance-${setStyle}${rbPrototype ? " wsp-prototype-rb" : ""}${a.qb ? " wsp-qb" : ""}${gloveClass}${visorClass}${armSleeveClass}${kneeBraceClass}" data-jersey="${jerseyText}" data-wsp-stride="${stride}" data-wsp-lean-scale="${leanScale}" style="--gait:${gait}s;--wsp-skin:${skin};--wsp-skin-shadow:${skinShadow};--wsp-body-x:${bodyX};--wsp-body-y:${bodyY}"><g class="wsp-athlete"><g class="wsp-identity-body">${body}</g></g></g>${tag}`;
 }
 
 function ballMarkup(x, y) {
@@ -188,7 +194,6 @@ function ballMarkup(x, y) {
 const WSP_TURN_V = 4.6;    // faster than this away from his combat side = turned and running
 const WSP_VERT_V = 1.6;    // min speed to face up/down screen
 const WSP_STRIDE = 0.85;   // ground covered per half-step (u)
-const WSP_CYCLE = WSP_STRIDE * 2; // full gait cycle (two steps) for the skeleton scrub
 const WSP_FACES = ["e", "w", "n", "s"];
 const WSP_LOCO_CLASSES = ["wsp-loco-still", "wsp-loco-start", "wsp-loco-walk", "wsp-loco-jog", "wsp-loco-sprint", "wsp-loco-brake", "wsp-loco-plant"];
 const WSP_ENTER_MOVE_V = 1.35;
@@ -213,7 +218,10 @@ function spriteMotionTick(node, x, y, sampleNow = performance.now()) {
   let m = node._wsm;
   if (!m) {
     const face = WSP_FACES.find((f) => node.classList.contains("wsp-face-" + f)) || "e";
-    node._wsm = { x, y, t: sampleNow, face, fwd: face, faceCandidate: face, faceAt: sampleNow, odo: 0, step: false, ph: 0, lean: 0, q: 0, vx: 0, vy: 0, accel: 0, rawDirX: 0, rawDirY: 0, movingAt: sampleNow, plantUntil: 0, cut: "", backpedal: false, shuffle: false, plantB: false, loco: "still", flip: node.querySelector(".wsp-flip"), still: true };
+    const puppet = node.querySelector(".wsp");
+    const stride = Number.parseFloat(puppet == null ? void 0 : puppet.dataset.wspStride);
+    const leanScale = Number.parseFloat(puppet == null ? void 0 : puppet.dataset.wspLeanScale);
+    node._wsm = { x, y, t: sampleNow, face, fwd: face, faceCandidate: face, faceAt: sampleNow, odo: 0, step: false, ph: 0, lean: 0, q: 0, vx: 0, vy: 0, accel: 0, rawDirX: 0, rawDirY: 0, movingAt: sampleNow, plantUntil: 0, cut: "", backpedal: false, shuffle: false, plantB: false, loco: "still", flip: node.querySelector(".wsp-flip"), still: true, stride: Number.isFinite(stride) ? Math.max(0.7, Math.min(1.15, stride)) : WSP_STRIDE, leanScale: Number.isFinite(leanScale) ? Math.max(0.65, Math.min(1.2, leanScale)) : 1 };
     node.classList.add("wsp-face-" + face, "wsp-still", "wsp-loco-still", "wsp-plant-a");
     if (node.dataset) node.dataset.locomotion = "still";
     return;
@@ -303,14 +311,16 @@ function spriteMotionTick(node, x, y, sampleNow = performance.now()) {
     }
     // Legs: an odometer, not a clock — stride is ground actually covered.
     m.odo += Math.hypot(dx, dy);
-    const step = Math.floor(m.odo / WSP_STRIDE) % 2 === 1;
+    const stride = m.stride || WSP_STRIDE;
+    const cycle = stride * 2;
+    const step = Math.floor(m.odo / stride) % 2 === 1;
     if (step !== m.step) {
       m.step = step;
       node.classList.toggle("wsp-stepB", step);
     }
     // Skeleton scrub: --ph in [0,1) positions every jointed limb along a
     // paused 1s gait-cycle animation (negative animation-delay trick).
-    const ph = Math.round(m.odo % WSP_CYCLE / WSP_CYCLE * 100) / 100;
+    const ph = Math.round(m.odo % cycle / cycle * 100) / 100;
     if (ph !== m.ph) {
       m.ph = ph;
       node.style.setProperty("--ph", ph);
@@ -357,6 +367,7 @@ function spriteMotionTick(node, x, y, sampleNow = performance.now()) {
   if (backpedal) tgt *= 0.48;
   if (loco === "brake") tgt *= -0.28;
   if (planting) tgt += m.cut === "right" ? 3.5 : m.cut === "left" ? -3.5 : 0;
+  tgt *= m.leanScale || 1;
   m.lean += (tgt - m.lean) * Math.min(1, idt * 10);
   const q = Math.round(m.lean * 2) / 2;
   if (q !== m.q) {

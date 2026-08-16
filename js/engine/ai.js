@@ -86,6 +86,34 @@ function aiFormationSheets(offFormations) {
   }
   return sheets;
 }
+// [Playbook-Root Stage 2] Deterministic scheme names for an AI staff's books.
+// PURE functions of the identity the staff already decided — they call NO
+// Math.random, so naming can never move the roll stream (a shifted stream would
+// change every downstream number and break the stat bands). The name is metadata
+// only: nothing in the sim reads school.book.name — the scout report and team
+// pages surface it. Football-plain labels, per the help-language rules.
+function aiOffenseSchemeName(primaryFormation, bucket) {
+  const runny = bucket === "runHeavy" || bucket === "run";
+  const passy = bucket === "pass" || bucket === "passHeavy";
+  switch (primaryFormation) {
+    case "Air Raid": return "Air Raid";
+    case "Empty": return "Empty Spread";
+    case "Spread": return runny ? "Spread Option" : passy ? "Spread Attack" : "Spread";
+    case "Trips/Bunch": return "Bunch Spread";
+    case "Pistol/RPO": return "Pistol RPO";
+    case "Flexbone": return "Flexbone Option";
+    case "Wishbone": return "Wishbone Option";
+    case "Power-I": return passy ? "Pro-Style" : "Power Run";
+    case "Jumbo": return "Ground & Pound";
+    case "Single Back": return passy ? "West Coast" : runny ? "Zone Run" : "Pro-Style";
+    default: return runny ? "Power Run" : passy ? "Pro Spread" : "Balanced Pro";
+  }
+}
+function aiDefenseSchemeName(defBaseFront, coverageScheme) {
+  if (defBaseFront === "3-3-5") return "3-3-5 Stack";
+  const cov = coverageScheme === "lockTop" ? " Man" : coverageScheme === "bracketTop" ? " Bracket" : "";
+  return `${defBaseFront || "4-3"}${cov}`;
+}
 function setAIGameplan(school) {
   var _a, _b, _c, _d;
   const roster = school.roster;
@@ -287,6 +315,11 @@ function setAIGameplan(school) {
     situations: buildAISituations(bucket, offFormations, agg),
     baseTempo
   }));
+  // [Playbook-Root Stage 2] Name the staff's books from the scheme it just
+  // authored. Deterministic + metadata-only (see aiOffenseSchemeName). Synthesis
+  // (teamplan.js) reads these into school.book.name / school.defbook.name.
+  school.gameplan._playbookName = aiOffenseSchemeName(primaryFormation, bucket);
+  school.gameplan._defbookName = aiDefenseSchemeName(defBaseFront, school.gameplan.coverageScheme);
 }
 // PASS 2 (Aug 2026): AI coordinators author SIGNATURE CALLS — two named
 // packages built from the staff's base front and temperament, weighted onto
@@ -528,4 +561,4 @@ COACH_IQ = {
   legend: { skip: 0, mult: 1.5 }
 };
 
-export { aiSetWeeklyReaction, optimizeDepthChart, setAIGameplan, setAIPracticePlan };
+export { aiSetWeeklyReaction, aiOffenseSchemeName, aiDefenseSchemeName, optimizeDepthChart, setAIGameplan, setAIPracticePlan };

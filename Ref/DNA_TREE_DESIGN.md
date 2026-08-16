@@ -1,6 +1,13 @@
 # COACHING TREE ROGUELITE — DNA, coordinators, careers as runs
 ### Design doc · brainstormed 2026-08-10 · **RATIFIED 2026-08-10 — ALL DECISION POINTS RULED (§10)**
-### STATUS: ready to build on owner's "go". Build order §11, pass 1 = age system.
+### STATUS: **BUILT (verified 2026-08-13).** The header below is stale — this shipped.
+### Every system specified is live and gated by its own CORE probe: age (coach_age_probe),
+### star ladder (star_unfold_probe), HC formation mastery (hc_mastery_probe), coordinator
+### identity (coordinator_identity_probe), ceremony/succession (ceremony_probe), player
+### retention (player_retention_probe), plus the tree slots / careers-as-runs and DNA crest.
+### The multi-coach playtest work (2026-08-12) drove tree slots, coordinators and hcMastery
+### directly. Original build-order note kept below for the record.
+### (was: ready to build on owner's "go". Build order §11, pass 1 = age system.)
 ### Companion memories: dna_tree_rework.md, longevity_brainstorm.md (project memory)
 ### House laws inherited: probes decide truth · stat_realism is the veto · exact-string
 ### edits in bundler idiom · no Buy-In/Coaching-Points · zero-migration on old saves

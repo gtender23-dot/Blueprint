@@ -78,8 +78,13 @@ await page.waitForSelector('.mm-build', { timeout: 20000 });
 await page.waitForTimeout(900);
 const warned = await staleCount();
 const txt = (await stamp()) || '';
+// The visible text is the plain-words ACTION ("update ready — reload once") —
+// phones can't hover — and the foreign hash lives in the tooltip for debugging
+// (mainmenu.js, 2026-08-15). Assert each where it actually is.
+const tip = await page.locator('.mm-build').first().getAttribute('title') || '';
 check(warned > 0, 'a foreign build cache IS reported (the stamp can now catch staleness)');
-check(txt.includes(FOREIGN), `the warning names the foreign build — "${txt.trim()}"`);
+check(/update ready/i.test(txt), `the visible stamp tells the player what to do — "${txt.trim()}"`);
+check(tip.includes(FOREIGN), `the tooltip names the foreign build — "${tip.slice(0, 90)}…"`);
 check(txt.includes(htmlId), 'the running build is still shown alongside it');
 
 check(errs.length === 0, `zero page errors${errs.length ? ' — got: ' + errs.slice(0, 3).join(' | ') : ''}`);

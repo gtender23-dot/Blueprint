@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Blueprint: College Football Dynasty</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,600&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div id="app">
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#6a7490;font-size:14px;">
+      Loading Blueprint…
+    </div>
+  </div>
+
+  <!--
+    ─────────────────────────────────────────────────────────────────────────
+    BLUEPRINT: College Football Dynasty — Run instructions
+    ─────────────────────────────────────────────────────────────────────────
+    This app uses ES Modules and cannot be opened as a plain file:// URL.
+
+    Option 1 (Easiest): VS Code + Live Server extension
+      → Right-click index.html → "Open with Live Server"
+
+    Option 2: Node.js one-liner
+      → npx serve .  (in the game/ folder)
+
+    Option 3: Python
+      → python -m http.server 8080  (in the game/ folder)
+    ─────────────────────────────────────────────────────────────────────────
+  -->
+
+  <script type="module">
+    import { init } from './js/ui/app.js';
+    init().catch(err => {
+      document.getElementById('app').innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:12px;color:#ff5252;font-family:monospace;">
+          <div style="font-size:18px;font-weight:700;">Failed to initialize</div>
+          <div style="font-size:12px;color:#6a7490;">${err.message}</div>
+          <div style="font-size:11px;color:#6a7490;">Open the browser console for details</div>
+        </div>
+      `;
+      console.error('Blueprint init error:', err);
+    });
+  </script>
+</body>
+</html>

@@ -65,11 +65,45 @@ PASS_CONCEPTS = {
     vs: { "Cover 0": 0.07, "Cover 1": 0.05, "Cover 2-Man": 0.03, "Cover 2": -0.01, "Cover 3": 0.01, "Cover 4": -0.02, "C3 Fire Zone": 0.07 },
     exec: { QB: { AWR: 0.6, TEC: 0.4 }, RB: { AGI: 0.5, HND: 0.5 } }
   },
+  // [Creativity Tools P1a MECHANIC, 2026-08-13] Slip Screen — a receiver slips
+  // behind the line on the BACKSIDE of jet/sweep action, outnumbering the defense
+  // away from the flow. A 4th screen kind (sim: WR target; viewer: backside slip
+  // geometry). Cashes in on over-pursuit and blitz; a disciplined C2 flat kills it.
+  "Slip Screen": {
+    depth: "short",
+    screen: "slip",
+    vs: { "Cover 0": 0.06, "Cover 1": 0.04, "Cover 2-Man": 0.03, "Cover 2": -0.02, "Cover 3": 0.02, "Cover 4": -0.02, "C3 Fire Zone": 0.06 },
+    exec: { QB: { AWR: 0.6, TEC: 0.4 }, WR: { AGI: 0.6, SPD: 0.4 } }
+  },
   // ── Dropback (medium) ──
   "Smash": {
     depth: "medium",
     vs: { "Cover 2": 0.09, "Cover 2-Man": 0.04, "Cover 0": 0.01, "Cover 1": -0.01, "Cover 3": -0.04, "Cover 4": -0.05, "C3 Fire Zone": -0.02 },
     exec: { QB: { AWR: 0.6, TEC: 0.4 }, WR: { TEC: 0.6, JMP: 0.4 } }
+  },
+  // [Creativity Tools P1a, 2026-08-13] Seam-Read Smash — Smash with the #2 running
+  // a seam that READS the safety (peel behind a rotating single-high, bend on
+  // two-high). Trades a little of base Smash's pure Cover-2 punch for real life
+  // vs single-high: Smash dies vs C3 (-0.04), this one is +0.02 there. The smarter,
+  // more coverage-neutral version.
+  "Seam-Read Smash": {
+    depth: "medium",
+    minWR: 2,
+    vs: { "Cover 2": 0.07, "Cover 2-Man": 0.04, "Cover 3": 0.02, "Cover 1": 0.01, "Cover 0": 0.01, "Cover 4": -0.04, "C3 Fire Zone": -0.03 },
+    exec: { QB: { AWR: 0.6, TEC: 0.4 }, WR: { TEC: 0.6, JMP: 0.4 } }
+  },
+  // [Creativity Tools P1a MECHANIC, 2026-08-13] Boot — play-action bootleg: the QB
+  // fakes the run, rolls to one side, and throws a flood/high-low on the move. The
+  // rollout gets him off the interior rush and holds the flat/curl defenders with
+  // the run fake — a man/single-high answer, capped by a disciplined two-high flat.
+  // The `boot` flag drives the viewer's designed QB rollout (reuses the lateral
+  // launch machinery); paNative shows the fake. Band-neutral: a normal vs-table.
+  "Boot": {
+    depth: "medium",
+    paNative: true,
+    boot: true,
+    vs: { "Cover 0": 0.04, "Cover 1": 0.05, "Cover 2-Man": 0.03, "Cover 2": -0.01, "Cover 3": 0.05, "Cover 4": -0.03, "C3 Fire Zone": 0.00 },
+    exec: { QB: { AWR: 0.5, TEC: 0.5 }, WR: { TEC: 0.5, SPD: 0.5 } }
   },
   "Curl-Flat": {
     depth: "medium",
@@ -139,6 +173,18 @@ PASS_CONCEPTS = {
     vs: { "Cover 1": 0.06, "Cover 3": 0.05, "Cover 0": -0.02, "Cover 2": -0.01, "Cover 2-Man": 0.01, "Cover 4": -0.05, "C3 Fire Zone": -0.02 },
     exec: { QB: { TEC: 0.6, AWR: 0.4 }, WR: { SPD: 0.5, TEC: 0.5 } }
   },
+  // [Creativity Tools P1a, 2026-08-13] Yankee — the two-man play-action MOF shot:
+  // a deep post over a dig/climb, built to kill single-high coverage (the post
+  // holds the one deep safety, the dig sits behind the run-frozen linebackers).
+  // Where PA Deep Cross is the crosser, this is the vertical post shot. Deadly vs
+  // C1/C3, capped by two-high safeties (C4).
+  "Yankee": {
+    depth: "deep",
+    paNative: true,
+    minWR: 2,
+    vs: { "Cover 1": 0.07, "Cover 3": 0.05, "Cover 2": 0.02, "Cover 0": 0.02, "Cover 2-Man": 0.01, "Cover 4": -0.05, "C3 Fire Zone": -0.02 },
+    exec: { QB: { AWR: 0.5, TEC: 0.5 }, WR: { SPD: 0.5, TEC: 0.5 } }
+  },
   "Mills (Post-Dig)": {
     depth: "deep",
     minWR: 2,
@@ -186,6 +232,107 @@ PASS_CONCEPTS = {
     depth: "deep",
     resolver: "hbpass",
     exec: { RB: { TEC: 0.6, AWR: 0.4 }, WR: { SPD: 0.6, TEC: 0.4 } }
+  },
+  // ── [Creativity Tools P1a, 2026-08-13] catalog expansion (batch B) ──────────
+  // Short quick game
+  "Spacing": {
+    depth: "short",
+    minWR: 3,
+    // hitches at spaced landmarks — sit in the zone holes; a man team just walls it
+    vs: { "Cover 0": -0.02, "Cover 1": -0.02, "Cover 2-Man": -0.03, "Cover 2": 0.04, "Cover 3": 0.05, "Cover 4": 0.03, "C3 Fire Zone": -0.01 },
+    exec: { QB: { AWR: 0.6, TEC: 0.4 }, WR: { TEC: 0.6, AWR: 0.4 } }
+  },
+  "Double Slants": {
+    depth: "short",
+    // quick rub — a man-coverage killer; zone hook/curl defenders sit in the throw
+    vs: { "Cover 0": 0.06, "Cover 1": 0.05, "Cover 2-Man": 0.05, "Cover 2": -0.02, "Cover 3": -0.02, "Cover 4": -0.03, "C3 Fire Zone": -0.03 },
+    exec: { QB: { TEC: 0.6, AWR: 0.4 }, WR: { AGI: 0.5, SPD: 0.5 } }
+  },
+  "Hoss": {
+    depth: "short",
+    // hitch-seam: the seam beats man, the hitch is the blitz-hot answer
+    vs: { "Cover 0": 0.05, "Cover 1": 0.04, "Cover 2-Man": 0.03, "Cover 2": 0.01, "Cover 3": -0.01, "Cover 4": -0.03, "C3 Fire Zone": 0.03 },
+    exec: { QB: { TEC: 0.5, AWR: 0.5 }, WR: { TEC: 0.5, SPD: 0.5 } }
+  },
+  // Medium dropback
+  "Drive": {
+    depth: "medium",
+    motion: true,
+    // shallow + dig behind it — a middle-of-field man beater with a zone answer
+    vs: { "Cover 0": 0.03, "Cover 1": 0.05, "Cover 2-Man": 0.03, "Cover 2": 0.00, "Cover 3": 0.03, "Cover 4": -0.02, "C3 Fire Zone": -0.03 },
+    exec: { QB: { AWR: 0.6, TEC: 0.4 }, WR: { TEC: 0.6, AGI: 0.4 } }
+  },
+  "Bench": {
+    depth: "medium",
+    // hitch-and-out at the numbers — punishes soft corners and spot-drop zone
+    vs: { "Cover 0": -0.02, "Cover 1": -0.02, "Cover 2-Man": -0.02, "Cover 2": 0.03, "Cover 3": 0.05, "Cover 4": 0.02, "C3 Fire Zone": -0.02 },
+    exec: { QB: { TEC: 0.6, AWR: 0.4 }, WR: { TEC: 0.6, SPD: 0.4 } }
+  },
+  "Stick-Nod": {
+    depth: "medium",
+    // stick with a go tag — burns a flat/curl defender who jumps the stick
+    vs: { "Cover 0": 0.02, "Cover 1": 0.02, "Cover 2-Man": 0.02, "Cover 2": 0.05, "Cover 3": 0.03, "Cover 4": -0.03, "C3 Fire Zone": -0.02 },
+    exec: { QB: { AWR: 0.6, TEC: 0.4 }, TE: { TEC: 0.5, SPD: 0.5 } }
+  },
+  // Deep shots
+  "Scissors": {
+    depth: "deep",
+    // post-corner switch release — a man-coverage deep beater
+    vs: { "Cover 0": 0.04, "Cover 1": 0.05, "Cover 2-Man": 0.04, "Cover 2": -0.02, "Cover 3": -0.01, "Cover 4": -0.03, "C3 Fire Zone": -0.03 },
+    exec: { QB: { TEC: 0.5, AWR: 0.5 }, WR: { SPD: 0.5, AGI: 0.5 } }
+  },
+  "Skinny Post": {
+    depth: "deep",
+    // bang-8: a quick skinny post threaded between the single-high safety and the
+    // hash — the single-high killer, dead vs two capping safeties (quarters)
+    vs: { "Cover 0": 0.02, "Cover 1": 0.05, "Cover 2-Man": 0.01, "Cover 2": 0.01, "Cover 3": 0.05, "Cover 4": -0.04, "C3 Fire Zone": -0.02 },
+    exec: { QB: { STR: 0.5, AWR: 0.5 }, WR: { SPD: 0.6, TEC: 0.4 } }
+  },
+  // ── [Creativity Tools P1a, 2026-08-13] catalog expansion (batch C → ≈40) ────
+  "Whip": {
+    depth: "short",
+    // whip/return: sell in, break out (or vice versa) — a quick man-coverage beater
+    vs: { "Cover 0": 0.05, "Cover 1": 0.05, "Cover 2-Man": 0.04, "Cover 2": -0.01, "Cover 3": 0.00, "Cover 4": -0.02, "C3 Fire Zone": 0.02 },
+    exec: { QB: { TEC: 0.5, AWR: 0.5 }, WR: { AGI: 0.6, TEC: 0.4 } }
+  },
+  "Follow": {
+    depth: "medium",
+    motion: true,
+    // two stacked crossers, one following the other — a man-coverage rub/pick
+    vs: { "Cover 0": 0.05, "Cover 1": 0.04, "Cover 2-Man": 0.04, "Cover 2": -0.01, "Cover 3": -0.02, "Cover 4": -0.03, "C3 Fire Zone": -0.02 },
+    exec: { QB: { AWR: 0.6, TEC: 0.4 }, WR: { AGI: 0.5, SPD: 0.5 } }
+  },
+  "Y-Option": {
+    depth: "medium",
+    choice: true,
+    // the tight end reads the defender's leverage and breaks to grass — coverage-neutral
+    vs: { "Cover 0": 0.04, "Cover 1": 0.04, "Cover 2-Man": 0.03, "Cover 2": 0.02, "Cover 3": 0.02, "Cover 4": -0.02, "C3 Fire Zone": -0.03 },
+    exec: { QB: { AWR: 0.6, TEC: 0.4 }, TE: { AWR: 0.5, TEC: 0.5 } }
+  },
+  "Deep Out": {
+    depth: "medium",
+    // 15-yard out at the numbers — an arm throw that carves soft/off zone
+    vs: { "Cover 0": -0.01, "Cover 1": 0.01, "Cover 2-Man": 0.02, "Cover 2": 0.02, "Cover 3": 0.04, "Cover 4": 0.01, "C3 Fire Zone": -0.03 },
+    exec: { QB: { STR: 0.6, TEC: 0.4 }, WR: { TEC: 0.6, SPD: 0.4 } }
+  },
+  "Comeback": {
+    depth: "deep",
+    // deep comeback — the answer to a corner giving cushion; needs arm and timing
+    vs: { "Cover 0": -0.01, "Cover 1": 0.02, "Cover 2-Man": 0.02, "Cover 2": 0.02, "Cover 3": 0.05, "Cover 4": 0.03, "C3 Fire Zone": -0.03 },
+    exec: { QB: { STR: 0.6, TEC: 0.4 }, WR: { TEC: 0.6, AGI: 0.4 } }
+  },
+  "Corner-Post": {
+    depth: "deep",
+    // double move: stem the corner, break back to the post — a deep man beater
+    vs: { "Cover 0": 0.04, "Cover 1": 0.05, "Cover 2-Man": 0.04, "Cover 2": 0.00, "Cover 3": -0.01, "Cover 4": -0.03, "C3 Fire Zone": -0.03 },
+    exec: { QB: { STR: 0.5, AWR: 0.5 }, WR: { SPD: 0.5, TEC: 0.5 } }
+  },
+  "Deep Over": {
+    depth: "deep",
+    motion: true,
+    // a backside receiver runs the deep over behind the coverage drop — single-high killer
+    vs: { "Cover 1": 0.05, "Cover 3": 0.04, "Cover 2": 0.02, "Cover 0": 0.02, "Cover 2-Man": 0.02, "Cover 4": -0.04, "C3 Fire Zone": -0.03 },
+    exec: { QB: { AWR: 0.6, TEC: 0.4 }, WR: { SPD: 0.6, TEC: 0.4 } }
   }
 };
 RUN_CONCEPTS = {
@@ -196,6 +343,18 @@ RUN_CONCEPTS = {
     vsBox: { loaded: -0.02, light: 0.04 },
     // PASS 5: RPO tag — the glance/pop off inside zone reads the box backer
     // (STACKER mesh). tag = the quick throw; conflict = the mesh role read.
+    rpo: { tag: "glance", conflict: "STACKER" },
+    exec: { OL: { TEC: 0.6, AGI: 0.4 }, RB: { AWR: 0.5, AGI: 0.5 } }
+  },
+  // [Creativity Tools P1a, 2026-08-13] Split-Zone — inside zone with a backside
+  // "split" block (an H-back/TE kicks the backside edge). That cutoff handles the
+  // extra loaded-box defender inside zone can't, and opens the cutback — so it is
+  // the same family but a touch better against a loaded box, worse against a light
+  // one (fewer bodies to widen). Reads the Mike; carries the same glance RPO.
+  // Renders on the inside-run resolver (type run_inside) — no new viewer art.
+  "Split-Zone": {
+    type: "run_inside",
+    vsBox: { loaded: 0.01, light: 0.03 },
     rpo: { tag: "glance", conflict: "STACKER" },
     exec: { OL: { TEC: 0.6, AGI: 0.4 }, RB: { AWR: 0.5, AGI: 0.5 } }
   },
@@ -270,7 +429,37 @@ RUN_CONCEPTS = {
   "Speed Option": { resolver: "option-speed" },
   "Jet Sweep": { resolver: "jet" },
   "Draw": { resolver: "draw" },
-  "Wildcat Power": { resolver: "wildcat" }
+  "Wildcat Power": { resolver: "wildcat" },
+  // ── [Creativity Tools P1a, 2026-08-13] catalog expansion (batch B) ──────────
+  "Wham": {
+    type: "run_inside",
+    // an interior DT left free, then washed by an H-back/FB "wham" block — turns
+    // a penetrating, loaded box against itself; less to work with vs a light one.
+    vsBox: { loaded: 0.03, light: -0.01 },
+    exec: { OL: { TEC: 0.5, AGI: 0.5 }, RB: { AWR: 0.6, AGI: 0.4 } }
+  },
+  "Buck Sweep": {
+    type: "run_outside",
+    pulls: true,
+    // both guards pull to lead outside — classic wing-T power on the perimeter
+    vsBox: { loaded: 0.01, light: 0.03 },
+    exec: { OL: { AGI: 0.6, STR: 0.4 }, RB: { SPD: 0.5, AWR: 0.5 } }
+  },
+  "Pin-and-Pull": {
+    type: "run_outside",
+    pulls: true,
+    // outside zone with pin-and-pull blocking — a perimeter runner that loves a
+    // light box and space to get the edge
+    vsBox: { loaded: -0.01, light: 0.04 },
+    exec: { OL: { AGI: 0.6, TEC: 0.4 }, RB: { SPD: 0.6, AGI: 0.4 } }
+  },
+  "Dart": {
+    type: "run_inside",
+    pulls: true,
+    // backside tackle pulls through for the down-block gap run — a Power cousin
+    vsBox: { loaded: 0.02, light: 0.02 },
+    exec: { OL: { STR: 0.5, AGI: 0.5 }, RB: { AWR: 0.5, AGI: 0.5 } }
+  }
 };
 
 // ── PASS 3 (Aug 2026): vs columns for the called coverage families ──────────

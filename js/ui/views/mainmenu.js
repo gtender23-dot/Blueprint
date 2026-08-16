@@ -54,11 +54,14 @@ function buildStampHtml() {
   probeCacheWitness();
   const w = _cacheWitness;
   const title = w ? `This device is mixing builds — the page is running ${buildId()} but the installed service worker still holds cache ${w}. Reload once and the new worker takes over.` : "Build ID of the code running right now. The service worker names its cache after the build that installed it — if the two ever disagree, a warning appears right here.";
-  return `<span class="mm-build" title="${escapeHtml(title)}">build ${escapeHtml(buildId())}${w ? ` <span class="mm-build-stale">⚠ cache ${escapeHtml(w)}</span>` : ""}</span>`;
+  // When a stale worker is detected, show the ACTION in plain words (phones
+  // can't hover the title). The hash stays in the tooltip for debugging.
+  return `<span class="mm-build" title="${escapeHtml(title)}">build ${escapeHtml(buildId())}${w ? ` <span class="mm-build-stale" title="${escapeHtml(title)}">⚠ update ready — reload once</span>` : ""}</span>`;
 }
 function renderMainMenu() {
   const saves = state.ui.saves || [];
   const autoSave = saves.find((s) => s.slot === "auto");
+  const seasonSave = saves.find((s) => s.slot === "season");
   const hasRecord = (autoSave == null ? void 0 : autoSave.record) && (autoSave.record.wins > 0 || autoSave.record.losses > 0);
   return `
   <div class="mainmenu-screen">
@@ -71,7 +74,7 @@ function renderMainMenu() {
         <p class="mm-subtitle">College Football Dynasty \xB7 D1 \xB7 D2 \xB7 D3</p>
       </div>
 
-      ${mmTreeId ? renderTreeHome() : mmCoachId ? renderCoachHome() : renderCoachSelect(autoSave)}
+      ${mmTreeId ? renderTreeHome() : mmCoachId ? renderCoachHome() : renderCoachSelect(autoSave, seasonSave)}
 
       <div class="mm-footer">
         <span class="mm-version">320+ Schools \xB7 29 Conferences \xB7 3 Divisions \xB7 Fixed D1 \xB7 Procedural D2/D3</span>
@@ -105,8 +108,8 @@ function renderTreeSelect() {
   }).join("")}
     ${trees.length < MAX_TREES ? mmNewTree ? `
       <div class="mm-newcoach">
-        <input class="form-input" id="mm-nt-first" type="text" placeholder="Coach first name" aria-label="Coach first name" maxlength="16" autocomplete="off" />
-        <input class="form-input" id="mm-nt-last" type="text" placeholder="Coach last name" aria-label="Coach last name" maxlength="16" autocomplete="off" />
+        <input class="form-input" id="mm-nt-first" type="text" placeholder="First name" aria-label="Coach first name" maxlength="16" autocomplete="off" />
+        <input class="form-input" id="mm-nt-last" type="text" placeholder="Last name" aria-label="Coach last name" maxlength="16" autocomplete="off" />
         <button class="btn-mm btn-mm-new" id="mm-nt-create">START →</button>
       </div>
       <p class="mm-tree-blurb">Your last name becomes the tree. You'll found a Division III program and build a coaching family from there.</p>` : `
@@ -115,7 +118,7 @@ function renderTreeSelect() {
       sending coordinators up, down and sideways, and play any of them — one per division. Retiring a coach banks
       his whole career into the tree for whoever comes next.</p>` : ""}`;
 }
-function renderCoachSelect(autoSave) {
+function renderCoachSelect(autoSave, seasonSave) {
   // [W9 \u00A712] The tree is now the ONLY start path. The legacy coach system
   // (YOUR COACHES list, per-coach worlds, new-coach creation, the legacy
   // autosave) is intentionally not rendered here \u2014 the code still exists and is
@@ -126,6 +129,9 @@ function renderCoachSelect(autoSave) {
     ${renderTreeSelect()}
     <div class="mm-section-label" style="margin-top:14px">EXHIBITION</div>
     <button class="btn-mm btn-mm-secondary" id="btn-mm-playnow">\u{1F3C8} PLAY NOW \u2014 coach or watch one game</button>
+    ${seasonSave ? `<button class="btn-mm btn-mm-new" id="btn-mm-season-resume">\u21ba RESUME SEASON${seasonSave.school ? ` \u2014 ${escapeHtml(seasonSave.school)}${seasonSave.record ? ` \xB7 ${seasonSave.record.wins}-${seasonSave.record.losses}` : ""}` : ""}</button>` : ""}
+    <button class="btn-mm btn-mm-secondary" id="btn-mm-season">\u{1F3C6} SEASON MODE \u2014 play one full season, your teams or ours</button>
+    <button class="btn-mm btn-mm-secondary" id="btn-mm-creator">\u{1F6E0}\ufe0f THE WORKSHOP \u2014 build playbooks, plays, teams &amp; leagues</button>
     <button class="btn-mm-guide" id="btn-mm-guide">\u{1F4D6} The Manual</button>
   </div>`;
 }
@@ -431,10 +437,25 @@ function formatDate(ts) {
 async function setupListeners2() {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
   (_a = document.getElementById("btn-mm-guide")) == null ? void 0 : _a.addEventListener("click", () => {
+    state.ui.manualFromMenu = true;
     navigate("manual");
   });
   (_b = document.getElementById("btn-mm-playnow")) == null ? void 0 : _b.addEventListener("click", () => {
     navigate("playnow");
+  });
+  document.getElementById("btn-mm-creator")?.addEventListener("click", () => {
+    state.ui.creatorTab = null;
+    navigate("creator");
+  });
+  document.getElementById("btn-mm-season")?.addEventListener("click", () => {
+    state.ui.season = state.ui.season || { phase: "setup" };
+    navigate("seasonmode");
+  });
+  document.getElementById("btn-mm-season-resume")?.addEventListener("click", async () => {
+    // The dedicated "season" save restores state.seasonMode, so loadFromSlot's
+    // navigate('dashboard') lands straight back in the season chrome.
+    const ok = await loadFromSlot("season");
+    if (!ok) notify("Could not resume — that season save is missing or from an older build.", "warning");
   });
   await refreshSaves();
   (_c = document.getElementById("btn-mm-continue")) == null ? void 0 : _c.addEventListener("click", async () => {

@@ -246,9 +246,10 @@ function ensureFieldAssignments(gp) {
     if (!entry.slots) entry.slots = {};
     if (!entry.shares) entry.shares = {};
     const legacy = gp.targetShares || {};
+    const defaults = gp.defaultShares || null;
     for (const s of layout.slots) {
       if (!s.catch) continue;
-      if (entry.shares[s.id] == null) entry.shares[s.id] = defaultShareFor(s, legacy);
+      if (entry.shares[s.id] == null) entry.shares[s.id] = defaultShareFor(s, legacy, defaults);
     }
   }
   for (const fid of Object.keys(DEF_FIELD_LAYOUTS)) {
@@ -265,8 +266,12 @@ function ensureFieldAssignments(gp) {
   }
   return fa;
 }
-function defaultShareFor(slot, legacy) {
+function defaultShareFor(slot, legacy, defaults) {
   var _a, _b, _c, _d, _e, _f, _g;
+  // A formation slot's default share maps to the RECEIVER default (targetShares,
+  // keyed WR1/WR2/WR3/TE1/RB1) — the default follows the man, the per-formation
+  // override on the field view is what ties to the position. (`defaults` param
+  // retained for call-site compatibility; the slot-label store is no longer used.)
   const byLabel = {
     X: (_a = legacy.WR1) != null ? _a : 24,
     Z: (_b = legacy.WR2) != null ? _b : 20,
@@ -334,7 +339,7 @@ MESH_AUTO_POOL = {
   SPACE: (d) => [...d.S || [], ...d.LB || [], ...d.CB || []]
 };
 
-export { ensureFieldAssignments, resolveDefField, resolveOffField };
+export { defaultShareFor, ensureFieldAssignments, resolveDefField, resolveOffField };
 
 // additional exports consumed by tools/ probes and the depth-chart picker —
 // the picker, the resolver and the probe all read the SAME eligibility table

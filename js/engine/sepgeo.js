@@ -188,7 +188,19 @@ function routeDuel(receiver, defender, passDepth, coverageType, pressHot = false
   const dist = Math.sqrt((rec.x - def.x) ** 2 + (rec.y - def.y) ** 2);
   if (trace) trace.dist = dist;
   const m = QMAP[`${passDepth}/${coverageType}`] || QMAP["medium/zone"];
-  return qsep(m, dist);
+  let sep = qsep(m, dist);
+  // Deep-zone AWR fix (2026-08-14): the duel's DEEP arming is positional (the
+  // defender triggers when the receiver reaches his depth), which washes the
+  // defender's eyes out at depth and even slightly INVERTED awareness there
+  // (raising zone AWR 20→99 barely moved deep separation, wrong way). Short and
+  // medium zones read AWR correctly via the trigger, so this touches deep only:
+  // a direct, MEAN-NEUTRAL awareness term. It is exactly 0 at AWR 50, so the
+  // average defender is unchanged (stat_realism unmoved) and only the SPREAD
+  // tilts the right way — a heady deep defender gives up less, a raw one more.
+  if (coverageType === "zone" && passDepth === "deep") {
+    sep -= (((da.AWR != null ? da.AWR : 50) - 50)) * 0.0019;
+  }
+  return Math.max(0, Math.min(1, sep));
 }
 var TICK3, spd, acc, rctMan, rctZone, ROUTES, QMAP, SEP_RECENTER, qsep;
 

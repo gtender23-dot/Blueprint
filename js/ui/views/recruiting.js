@@ -5,6 +5,7 @@ import { BRIDGE_CATALOG, FLAW_CATALOG, JOB_SIZE_WINDOWS, PLAY_CATALOG } from '..
 import { projectedPathToPlay } from '../../engine/portal.js';
 import { actionCost, buildFunnelPool, calibreVisible, createBoardEntry, displayedRating, hasScouted, setContactAlloc, takeAction, wantSatisfaction } from '../../engine/recruiting.js';
 import { defaultRecruitStrategy, getPhase, isRecruitingDay, recruitAssistLevel, weekLabel, weekShort } from '../../engine/season.js';
+import { classRankOf } from '../../engine/rankings.js';
 import { devForceSign, getBoardEntry, getPlayerSchool, getRecruit, notify, rerender, state } from '../../state.js';
 import { tipTerm } from '../manual/tips.js';
 import { archetypeLabel, escapeHtml, fmtMoney, fullName, ratingColor, recruitDistance, renderPlayerPortrait } from '../../utils.js';
@@ -704,6 +705,23 @@ function renderSignings(school) {
   </div>
 `;
 }
+function liveClassRank(school) {
+  var _a;
+  if (!school) return null;
+  const schools = ((_a = state.world) == null ? void 0 : _a.schools) || [];
+  const season = state.season || 1;
+  const liveLog = [];
+  for (const r of (state.world && state.world.recruits) || []) {
+    if (!r.committed) continue;
+    if (r.decisionStatus !== "committed" && r.decisionStatus !== "signed") continue;
+    liveLog.push({ season, schoolId: r.committed, star: r.visionRating || 0 });
+  }
+  return classRankOf(schools, liveLog, school.id, season);
+}
+function ordinal(n) {
+  const s = ["th", "st", "nd", "rd"], v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
 function renderMyClass(school) {
   var _a, _b, _c;
   if (!school) return '<div class="card"><div class="empty-state">No program loaded.</div></div>';
@@ -719,6 +737,7 @@ function renderMyClass(school) {
     var _a2;
     return s + (((_a2 = boardByRecruit[r.id]) == null ? void 0 : _a2.spent) || 0);
   }, 0);
+  const clsRank = liveClassRank(school);
   const needRows = classNeedRows(school, klass);
   const lostRows = (((_c = state.playerCoach) == null ? void 0 : _c.recruitBoard) || []).map((e) => {
     var _a2;
@@ -731,6 +750,7 @@ function renderMyClass(school) {
       <div class="sum-stat"><div class="sum-val">${avgStar || "\u2014"}</div><div class="sum-label">Avg ${tipTerm("recruit-stars", "Visibility")}</div></div>
       <div class="sum-stat"><div class="sum-val">${avgTrue || "\u2014"}</div><div class="sum-label">Avg True</div></div>
       <div class="sum-stat"><div class="sum-val">${fmtMoney(totalSpent)}</div><div class="sum-label">Total Spent</div></div>
+      <div class="sum-stat"><div class="sum-val">${clsRank && clsRank.size > 0 ? ordinal(clsRank.rank) : "\u2014"}</div><div class="sum-label">${tipTerm("class-rank", "Class Rank")}${clsRank && clsRank.size > 0 ? ` <span class="muted" style="font-weight:400">of ${clsRank.of}</span>` : ""}</div></div>
     </div>
   </div>
 
@@ -882,8 +902,8 @@ function recruitTraitRow(r) {
   const pips = (lv) => "\u25CF".repeat(lv || 1);
   const chips = [];
   if (tl.bridge && BRIDGE_CATALOG[tl.bridge]) chips.push(`<span class="trait-chip trait-bridge" title="${escapeHtml(BRIDGE_CATALOG[tl.bridge].desc || "")}">\u2726 ${escapeHtml(BRIDGE_CATALOG[tl.bridge].name)}</span>`);
-  for (const t of tl.play || []) if (PLAY_CATALOG[t.k]) chips.push(`<span class="trait-chip">${escapeHtml(PLAY_CATALOG[t.k].name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
-  for (const t of tl.flaws || []) if (FLAW_CATALOG[t.k]) chips.push(`<span class="trait-chip trait-flaw">${escapeHtml(FLAW_CATALOG[t.k].name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
+  for (const t of tl.play || []) if (PLAY_CATALOG[t.k]) chips.push(`<span class="trait-chip" title="${escapeHtml(PLAY_CATALOG[t.k].desc || PLAY_CATALOG[t.k].name)}">${escapeHtml(PLAY_CATALOG[t.k].name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
+  for (const t of tl.flaws || []) if (FLAW_CATALOG[t.k]) chips.push(`<span class="trait-chip trait-flaw" title="${escapeHtml(FLAW_CATALOG[t.k].desc || FLAW_CATALOG[t.k].name)}">${escapeHtml(FLAW_CATALOG[t.k].name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
   return chips.length ? `<span class="trait-chip-row">${chips.join("")}</span>` : "";
 }
 function renderProfile(recruitId, school, isOpen) {

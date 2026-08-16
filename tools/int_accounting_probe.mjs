@@ -45,6 +45,8 @@ let noPicker = 0;         // ...interception with no intPickerId
 let boxPassInt = 0;       // sum of per-player passInt (INTs thrown)
 let boxDbInt = 0;         // sum of per-player ints (INTs caught)
 let teamAccumInt = 0;     // sum of team-level ints (accumDriveStats, play.turnover)
+let ezTouchbacks = 0;     // item 9b — picks flagged as an end-zone touchback
+let ezTouchbackBadFP = 0; // ...that occurred at a field position a touchback can't come from
 
 for (let i = 0; i < GAMES; i++) {
   const rH = roster('H'), rA = roster('A');
@@ -58,6 +60,14 @@ for (let i = 0; i < GAMES; i++) {
     if (pl.turnoverType === 'INT') deprecatedString++;
     if (pl.turnoverType === 'interception' && pl.intPickerId != null) attributedPlays++;
     if (pl.intPickerId == null) noPicker++;
+    // item 9b — an end-zone pick becomes a touchback. It can only be flagged
+    // where the flat 100 - fieldPos mirror was WORSE than the 20 (fieldPos >= 80),
+    // so the fix never regresses the defense's spot — it only rescues the pick
+    // that used to hand the defense its own 1-5.
+    if (pl.intTouchback) {
+      ezTouchbacks++;
+      if (!(pl.fieldPos >= 80)) ezTouchbackBadFP++;
+    }
   }
 
   for (const st of [res.homeStats, res.awayStats]) teamAccumInt += st.ints || 0;
@@ -81,15 +91,24 @@ console.log(`  team-accum ints total          : ${teamAccumInt}`);
 // Teeth: every pick must be canonical, and both per-player ledgers must equal the
 // real interception count. (A tiny slack absorbs the rare pick-two / shared-play
 // edge but not a systematic drop.)
+console.log(`  end-zone touchbacks (item 9b)  : ${ezTouchbacks}  (${intPlays?((100*ezTouchbacks/intPlays).toFixed(1)):'0'}% of picks)`);
+
 const slack = Math.max(2, Math.round(intPlays * 0.01));
 const p1 = deprecatedString === 0;
 const p2 = noPicker === 0;
 const p3 = Math.abs(boxPassInt - intPlays) <= slack;
 const p4 = Math.abs(boxDbInt - intPlays) <= slack;
-const pass = p1 && p2 && p3 && p4;
+// item 9b — the end-zone touchback fires (a deep-heavy passing game throws into
+// the end zone often enough that some are picked) and never fires from a spot it
+// can't legally come from.
+const p5 = ezTouchbacks > 0;
+const p6 = ezTouchbackBadFP === 0;
+const pass = p1 && p2 && p3 && p4 && p5 && p6;
 console.log(`\n  [${p1?'PASS':'FAIL'}] no play uses the deprecated "INT" turnoverType`);
 console.log(`  [${p2?'PASS':'FAIL'}] every interception carries an intPickerId`);
 console.log(`  [${p3?'PASS':'FAIL'}] QB passInt total matches the interception count (${boxPassInt} vs ${intPlays})`);
 console.log(`  [${p4?'PASS':'FAIL'}] DB ints total matches the interception count (${boxDbInt} vs ${intPlays})`);
-console.log(pass ? '\nALL PASS ✅ — every pick lands in the box score' : '\n⚠ FAIL');
+console.log(`  [${p5?'PASS':'FAIL'}] the end-zone touchback path fires (${ezTouchbacks} picks)`);
+console.log(`  [${p6?'PASS':'FAIL'}] no touchback comes from fieldPos < 80 (${ezTouchbackBadFP} bad)`);
+console.log(pass ? '\nALL PASS ✅ — every pick lands in the box score, end-zone picks are touchbacks' : '\n⚠ FAIL');
 process.exit(pass ? 0 : 1);

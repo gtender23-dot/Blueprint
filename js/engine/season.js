@@ -9,8 +9,8 @@ import { applyRedshirt, autoRedshirtFreshmen, checkGameInjury, computeAutoRedshi
 import { advanceOffseasonStage, checkRivalryResult, evaluateConversions, evaluateSeasonGoals, initOffseason, initPreseason, pass7Rollover, preseasonAdvanceHook, slotRivalryGame } from './offseason.js';
 import { createWalkOn, emptyStats, refreshRatings } from './player.js';
 import { PLAY_CATALOG, growFlaw, growthFromGameStats, shrinkFlaw } from './traits.js';
-import { ensureTree, refreshAgenda, lockstepBlock, treeSeasonTick, syncActiveSlot, noteMoveUpHandoff, canRetire as canRetire2 } from './tree.js';
-import { computeDivisionPoll, computeSOS, rankMap } from './rankings.js';
+import { ensureTree, refreshAgenda, lockstepBlock, treeSeasonTick, syncActiveSlot, noteMoveUpHandoff, canRetire as canRetire2, activateSlot } from './tree.js';
+import { computeClassRankings, computeDivisionPoll, computeSOS, rankMap } from './rankings.js';
 import { actionCost, applyAIWeeklySpend, applyWeeklyContact, buildFunnelPool, createBoardEntry, distanceTier, divisionRank, fillRemainingSlots, initBudget, resolveFunnel, resolveRooms, setContactAlloc, setRecruitDifficulty, takeAction } from './recruiting.js';
 import { finishInteractiveGame, midGameReport, pinnedFirst, resumeFromCall, resumeFromDecision, setAutoCounter, simulateFirstHalf, simulateGame, simulateSecondHalf, stepSecondHalf } from './sim.js';
 import { defaultWeeklyPlan } from './situations.js';
@@ -284,6 +284,19 @@ function advanceDay(state2, dispatch2) {
   if (state2.pendingHalftime) {
     return [{ type: "warning", text: "Finish your halftime adjustments before continuing." }];
   }
+  state2._dispatch = dispatch2;
+  // ── [PLAYTEST 2026-08-12] MULTI-COACH WEEK GATE ──────────────────────────
+  // Playing your programs' games is a SEPARATE action from advancing the week:
+  // each is launched from the weekly agenda (Kickoff → pregame → halftime → final
+  // → box score), and the week cannot move until every one is played or simmed.
+  // Here we only refuse to advance while any remain. A single-coach save has one
+  // id, never trips this, and uses the classic single-game pause below.
+  if (coachedSchoolIds(state2).length > 1) {
+    const mine = coachedGamesForDay(state2, state2.day + 1);
+    if (mine.some((g) => !g.result)) {
+      return [{ type: "warning", text: "Play or sim each of your programs' games this week before you advance.", coachWeekGate: true }];
+    }
+  }
   // ── [W9 §12 T1] THE LOCKSTEP GATE ────────────────────────────────────────
   // Advancing requires resolving every other tree coach's game that week — play
   // it (TAKE OVER) or accept it (SOFT FINALIZE). Sits with the other advance
@@ -304,7 +317,9 @@ function advanceDay(state2, dispatch2) {
   } else if (((_g = state2.offseason) == null ? void 0 : _g.done) && state2.day < PHASES.JOBS.days[1] - 1) {
     state2.day = PHASES.JOBS.days[1] - 1;
   }
-  if (state2.day >= 1 && state2.day <= 4) {
+  if (state2.day >= 1 && state2.day <= 4 && !state2.seasonMode) {
+    // Season Mode has no preseason camp — it starts on day 4 and the first
+    // advance goes straight to Week 1's games, so this whole hook is skipped.
     const preEvents = [];
     const gate = preseasonAdvanceHook(state2, preEvents);
     if (!gate.ok) return gate.events;
@@ -364,7 +379,10 @@ function advanceDay(state2, dispatch2) {
       sch.pendingRedshirts = null;
     }
   }
-  if (isRecruitingDay(day)) {
+  if (isRecruitingDay(day) && !state2.seasonMode) {
+    // Season Mode has no recruiting — a single-season run doesn't build next
+    // year's class. Skipping the whole block means no board, no commits, no
+    // signing day, and none of the recruiting inbox traffic.
     const pc = state2.playerCoach;
     const pSchool = state2.world.schools.find((s) => s.id === state2.playerSchoolId);
     if (pc && pSchool) {
@@ -464,6 +482,18 @@ function advanceDay(state2, dispatch2) {
     finalizeSeasonRecords(state2);
     computeSeasonAwards(state2, events);
     attachSeasonRecap(state2);
+    if (state2.seasonMode) {
+      // Season Mode ends the moment the title is decided. Final records and
+      // season awards are already in; everything past this point is the dynasty
+      // offseason — the coaching carousel, firing, prestige rollover, next
+      // season — none of which belongs in a one-off run. Crown the champion and
+      // stop here, before updateJobSecurity / runJobMarket / initOffseason.
+      const _me = state2.world.schools.find((s) => s.id === state2.playerSchoolId);
+      const _dv = _me ? _me.division : "D1";
+      const _bracket = state2.allPlayoffs && state2.allPlayoffs[_dv] || state2.playoffs;
+      events.push({ type: "season-complete", division: _dv, champion: _bracket ? _bracket.champion : null });
+      return events;
+    }
     state2.pendingPoach = rollCoordinatorPoach(state2);
     // [DNA TREE §8 + §7] The player's own clock gets its teeth here. At
     // eligible age the question starts getting asked (one mail per season);
@@ -562,13 +592,19 @@ function advanceDay(state2, dispatch2) {
   }
   resolveStaleGames(state2, day, events);
   const dayGames = (state2.schedule || []).filter((g) => g.day === day && !g.result);
-  if (dayGames.length > 0) {
-    const { results, halftimeGame } = simulateGameDay(dayGames, state2);
+  // Multi-coach: the player's own programs' games were already played and booked
+  // by resolveCoachedWeek before the day advanced. Fold their results into the
+  // day's finalization (weekly awards, rivalry) — standings were already applied
+  // per game, so they are NOT re-counted here.
+  const coachedResults = (state2.coachWeek && state2.coachWeek.results) || [];
+  if (dayGames.length > 0 || coachedResults.length > 0) {
+    const { results, halftimeGame } = dayGames.length > 0 ? simulateGameDay(dayGames, state2) : { results: [], halftimeGame: null };
     for (const r of results) {
       updateStandings(state2, r);
       events.push({ type: "game", result: r.result });
     }
-    const weeklyCands = collectWeeklyCandidates(state2, results);
+    const allResults = [...coachedResults, ...results];
+    const weeklyCands = collectWeeklyCandidates(state2, allResults);
     if (halftimeGame) {
       state2.pendingWeeklyCands = { day, cands: weeklyCands };
     } else {
@@ -576,7 +612,11 @@ function advanceDay(state2, dispatch2) {
       state2.pendingWeeklyCands = null;
     }
     checkRedshirtBurns(state2, events);
-    checkRivalryResult(state2, results, events);
+    checkRivalryResult(state2, allResults, events);
+    if (!halftimeGame && state2.coachWeek) {
+      finishCoachedWeek(state2);
+      state2.coachWeek = null;
+    }
     if (halftimeGame) {
       state2.pendingHalftime = halftimeGame;
       events.push(pendingGameEvent(halftimeGame));
@@ -1065,6 +1105,16 @@ function finishPlayerGame(state2, pending2, result, adjEval) {
       state2._lastAdjEval = null;
     }
     updateStandings(state2, r);
+    if (pending2.coachWeek && state2.coachWeek) {
+      // One of the player's programs in a multi-coach week. Book the result and
+      // stop — the box score shows, and closing it launches the next program's
+      // game (or, when they're all done, unlocks the advance-week button). The
+      // day itself is not finalized until the player advances, at which point the
+      // normal finalization runs once, merging these results.
+      (state2.coachWeek.results = state2.coachWeek.results || []).push(r);
+      events2.push({ type: "game", result });
+      return events2;
+    }
     const stash = state2.pendingWeeklyCands;
     const dayCands = stash && stash.day === game.day ? stash.cands : [];
     state2.pendingWeeklyCands = null;
@@ -1427,7 +1477,9 @@ function creditBudgetBonus(state2, schoolId, amount, label, events) {
   if (!coach || !amount) return;
   coach.budget = (coach.budget || 0) + amount;
   if (schoolId === state2.playerSchoolId && events) {
-    events.push({ type: "info", text: `\u{1F4B0} +$${amount.toLocaleString()} recruiting budget \u2014 ${label}.` });
+    // Season Mode has no recruiting budget \u2014 keep the achievement note, drop the
+    // dynasty budget framing.
+    events.push({ type: "info", text: state2.seasonMode ? `\u{1F3C6} ${label}.` : `\u{1F4B0} +$${amount.toLocaleString()} recruiting budget \u2014 ${label}.` });
   }
 }
 function populateNextPlayoffRound(bracket, completedRound, state2 = null, events = null) {
@@ -1873,12 +1925,19 @@ function recordCareerBoards(state2, graduated) {
 function archiveSeasonIntoSchools(state2) {
   var _a, _b, _c;
   const rankByDiv = {};
+  const classRankByDiv = {};
   for (const d of ["D1", "D2", "D3"]) {
     try {
       const poll = computeDivisionPoll(state2.world.schools, state2.schedule || [], d);
       rankByDiv[d] = new Map(poll.map((e) => [e.school.id, e.rank]));
     } catch (e) {
       rankByDiv[d] = /* @__PURE__ */ new Map();
+    }
+    try {
+      const cr = computeClassRankings(state2.world.schools, state2.signingsLog || [], d, state2.season);
+      classRankByDiv[d] = new Map(cr.map((e) => [e.school.id, { rank: e.rank, size: e.size }]));
+    } catch (e) {
+      classRankByDiv[d] = /* @__PURE__ */ new Map();
     }
   }
   const bowlById = /* @__PURE__ */ new Map();
@@ -1909,6 +1968,9 @@ function archiveSeasonIntoSchools(state2) {
       if (b) post = b.result.winner === school.id ? "Bowl win" : "Bowl loss";
     }
     const rank = (_c = (_b = rankByDiv[school.division]) == null ? void 0 : _b.get(school.id)) != null ? _c : null;
+    const _crMap = classRankByDiv[school.division];
+    const _cr = _crMap ? _crMap.get(school.id) : null;
+    if (_cr && _cr.size > 0) school.lastClassRank = { rank: _cr.rank, season: state2.season };
     const _hc = school.coach;
     const _hcName = _hc && _hc.name ? `${_hc.name.first || ""} ${_hc.name.last || "Coach"}`.trim() : _hc ? "Coach" : null;
     const _hcYou = _hc && (_hc === state2.playerCoach || school.id === state2.playerSchoolId && !_hc.isAI);
@@ -1922,6 +1984,7 @@ function archiveSeasonIntoSchools(state2) {
       division: school.division,
       prestige: school.prestige,
       rank: rank != null && rank <= 25 ? rank : null,
+      classRank: _cr && _cr.size > 0 ? _cr.rank : null,
       confChamp: ((bracket == null ? void 0 : bracket.confChampIds) || []).includes(school.id),
       post,
       coach: _hcName,
@@ -2046,10 +2109,18 @@ function updatePrestige(state2) {
     const surge = Math.max(0, windowPct - C.PRESTIGE_SURGE_AT);
     const slump = Math.max(0, C.PRESTIGE_SLUMP_AT - windowPct);
     const form = C.PRESTIGE_W_WIN * (windowPct - 0.5) + C.PRESTIGE_W_SURGE * surge - C.PRESTIGE_W_SLUMP * slump;
-    const delta = form - C.PRESTIGE_W_DECAY * (school.prestige - school.baseline);
+    let delta = form - C.PRESTIGE_W_DECAY * (school.prestige - school.baseline);
     const lo = (_a = school.prestigeMin) != null ? _a : 1;
     const hi = (_c = school.prestigeMax) != null ? _c : ((_b = C.PRESTIGE_MAX) == null ? void 0 : _b[school.division]) || 5;
-    school.prestige = clamp4(school.prestige + delta, lo, hi);
+    // [Season Mode] D1 blue-blood toggle — inert unless school.blueBlood is set.
+    // Slower decline + a floor near the top of the band, so a brand program stays
+    // relevant. It still moves within the band and can still climb.
+    let effLo = lo;
+    if (school.blueBlood) {
+      if (delta < 0) delta *= C.BLUE_BLOOD_DECLINE_MULT;
+      effLo = Math.max(lo, hi - C.BLUE_BLOOD_FLOOR_DROP);
+    }
+    school.prestige = clamp4(school.prestige + delta, effLo, hi);
     school.baseline = clamp4(
       school.baseline + C.PRESTIGE_BASELINE_CREEP * (school.prestige - school.baseline),
       lo,
@@ -2522,6 +2593,162 @@ function coachedSchoolIds(state2) {
   if (state2.playerSchoolId) ids.add(state2.playerSchoolId);
   return [...ids];
 }
+// ─────────────────────────────────────────────────────────────────────────────
+// [PLAYTEST 2026-08-12] MULTI-COACH WEEK — coach EACH of your programs, or sim.
+// Owner: "give every type of customer the game they want — let them choose."
+//
+// When a player runs more than one program (a coaching tree), the week can NOT
+// advance until every one of his programs' games is handled. Each is surfaced
+// one at a time through the normal halftime machinery (which already gives
+// sim-to-halftime → adjust → watch-or-sim-to-final), so "coach it" and "let the
+// sim handle it" are both first-class. Games are resolved to a RESULT *before*
+// the league day advances, so day-finalization (weekly awards, standings,
+// redshirt burns, rivalry) runs exactly once, unchanged.
+//
+// A single-coach save has one id here, the resolver no-ops, and the classic
+// active-game pause inside simulateGameDay handles it byte-for-byte as before.
+// ─────────────────────────────────────────────────────────────────────────────
+function coachedGamesForDay(state2, day) {
+  const idSet = new Set(coachedSchoolIds(state2));
+  return (state2.schedule || []).filter(
+    (g) => g.day === day && !g.result && (idSet.has(g.homeId) || idSet.has(g.awayId))
+  );
+}
+function coachedSlotDivFor(state2, schoolId) {
+  var _a;
+  const slots = ((_a = state2.tree) == null ? void 0 : _a.slots) || {};
+  for (const [div, slot] of Object.entries(slots)) {
+    if (slot && !slot.retired && slot.schoolId === schoolId) return div;
+  }
+  return null;
+}
+function finishCoachedWeek(state2) {
+  const cw = state2.coachWeek;
+  if (!cw) return;
+  var _a;
+  if (cw.origActive && !cw.restored) {
+    const slot = (_a = state2.tree) == null ? void 0 : _a.slots[cw.origActive];
+    if (slot && !slot.retired) activateSlot(state2, cw.origActive);
+    cw.restored = true;
+  }
+}
+// Full-sim one coached game right now (the "let the sim handle it" choice or the
+// fallback when a game can't be steered), booking its result + standings + DNA.
+function simCoachedGameNow(state2, game) {
+  var _a, _b;
+  const home = state2.world.schools.find((s) => s.id === game.homeId);
+  const away = state2.world.schools.find((s) => s.id === game.awayId);
+  if (!home || !away) return null;
+  const h = gameDressed(home, state2.season);
+  const a = gameDressed(away, state2.season);
+  const result = simulateGame(home, away, h.roster, a.roster, h.depth, a.depth, home.gameplan, away.gameplan);
+  if (((_a = state2.settings) == null ? void 0 : _a.injuries) !== false) for (const player of home.roster) checkGameInjury(player, state2.day, home);
+  if (((_b = state2.settings) == null ? void 0 : _b.injuries) !== false) for (const player of away.roster) checkGameInjury(player, state2.day, away);
+  game.result = result;
+  updateStandings(state2, { game, result });
+  try {
+    trackCoachDNA(state2, null, game, result, []);
+  } catch (e) {
+  }
+  try {
+    for (const s of [home, away]) updateOLContinuity(s);
+  } catch (e) {
+  }
+  const cw = state2.coachWeek;
+  if (cw) (cw.results = cw.results || []).push({ game, result });
+  return result;
+}
+// Start the halftime pause for a specific coached game (the steering school is
+// made active first, so all the existing machinery keys off it correctly).
+function startCoachedGamePause(state2, game) {
+  const home = state2.world.schools.find((s) => s.id === game.homeId);
+  const away = state2.world.schools.find((s) => s.id === game.awayId);
+  if (!home || !away) return null;
+  const { halftimeToken } = runGameMaybeHalftime(home, away, state2);
+  if (!halftimeToken) return null;
+  return { token: halftimeToken, game, home, away, coachWeek: true, context: { kind: "regular", day: game.day } };
+}
+// Ensure the coached-week context exists for the day about to be played, keyed
+// so it survives across the individual game launches. origActive is the chair the
+// player was steering when the week began — restored once every game is done.
+function ensureCoachWeek(state2) {
+  var _a;
+  const day = state2.day + 1;
+  let cw = state2.coachWeek;
+  if (!cw || cw.day !== day) {
+    cw = state2.coachWeek = { day, origActive: ((_a = state2.tree) == null ? void 0 : _a.active) || null, sim: {}, results: [], restored: false };
+  }
+  return cw;
+}
+// Step 1 of the Kickoff button: make the game's chair active and open the week
+// context, returning the game + opponent so the UI can show pregame adjustments
+// and the kickoff/call-mode choice. The game itself starts on beginCoachedGame.
+function activateCoachedChair(state2, gameId) {
+  const game = (state2.schedule || []).find((g) => g.id === gameId);
+  if (!game || game.result) return null;
+  ensureCoachWeek(state2);
+  const idSet = new Set(coachedSchoolIds(state2));
+  const steerId = idSet.has(game.homeId) ? game.homeId : game.awayId;
+  const div = coachedSlotDivFor(state2, steerId);
+  if (div) activateSlot(state2, div);
+  const oppId = game.homeId === steerId ? game.awayId : game.homeId;
+  const opp = state2.world.schools.find((s) => s.id === oppId) || null;
+  return { game, opp, steerId };
+}
+// Step 2 (Kickoff): play (or sim) ONE of the player's programs' games. Activates that chair first so every downstream screen
+// (pregame, halftime, box score) keys off it. With sim=true it books the result
+// immediately; otherwise it pauses at halftime (after the pregame call mode) for
+// the player to coach. Returns { pending } / { simmed }.
+function beginCoachedGame(state2, gameId, sim = false) {
+  const game = (state2.schedule || []).find((g) => g.id === gameId);
+  if (!game || game.result) return { ok: false };
+  ensureCoachWeek(state2);
+  const idSet = new Set(coachedSchoolIds(state2));
+  const steerId = idSet.has(game.homeId) ? game.homeId : game.awayId;
+  const div = coachedSlotDivFor(state2, steerId);
+  if (div) activateSlot(state2, div);
+  if (sim) {
+    const result = simCoachedGameNow(state2, game);
+    return { ok: true, simmed: true, result, game };
+  }
+  const pending = startCoachedGamePause(state2, game);
+  if (!pending) {
+    const result = simCoachedGameNow(state2, game);
+    return { ok: true, simmed: true, result, game };
+  }
+  state2.pendingHalftime = pending;
+  return { ok: true, pending: true, game };
+}
+// Called once every coached game is played and the player advances: restore the
+// chair he started on. (The context itself is cleared by the day-finalization.)
+function restoreCoachWeekChair(state2) {
+  finishCoachedWeek(state2);
+}
+// "Let the sim handle it" from the halftime screen: full-sim the game currently
+// paused (leaving the result to be shown), and with rest=true sim every one of
+// the player's remaining games this week in one go.
+function simCurrentCoachedGame(state2, rest = false) {
+  const pending = state2.pendingHalftime;
+  const cw = ensureCoachWeek(state2);
+  if (pending == null ? void 0 : pending.coachWeek) {
+    const g = pending.game;
+    state2.pendingHalftime = null;
+    const result = simCoachedGameNow(state2, g);
+    const events = [{ type: "game", result }];
+    if (rest) {
+      for (const other of coachedGamesForDay(state2, cw.day)) {
+        if (!other.result) simCoachedGameNow(state2, other);
+      }
+    }
+    return events;
+  }
+  if (rest) {
+    for (const other of coachedGamesForDay(state2, cw.day)) {
+      if (!other.result) simCoachedGameNow(state2, other);
+    }
+  }
+  return [];
+}
 function startNewSeason(state2, dispatch2) {
   state2.playoffs = null;
   state2.allPlayoffs = null;
@@ -2773,4 +3000,4 @@ export { RECRUITING_OPEN, autoRecruitForPlayer, updateAICarousel, updateJobSecur
 export { updateStandings, applySnapCounts, tickMorale, updatePrestige };
 // PLAYTEST 2026-08-12: chair_isolation_probe asserts the redshirt window is
 // seeded for every chair, not just whoever is active at rollover.
-export { coachedSchoolIds };
+export { coachedSchoolIds, coachedGamesForDay, activateCoachedChair, beginCoachedGame, simCurrentCoachedGame, restoreCoachWeekChair };

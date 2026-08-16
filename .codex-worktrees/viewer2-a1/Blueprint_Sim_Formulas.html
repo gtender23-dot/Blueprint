@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blueprint — Sim Formula Reference</title>
+<style>
+  :root{
+    --bg:#0d1420; --panel:#131c2b; --panel2:#182335; --line:#26344b;
+    --ink:#e7edf6; --dim:#9fb0c9; --faint:#6f819e;
+    --accent:#4f8cff; --green:#3fbf7f; --amber:#f0b34a; --red:#f0685f; --purple:#a98bff;
+    --mono:"SF Mono",ui-monospace,"Cascadia Code",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  header.top{position:sticky;top:0;z-index:20;background:rgba(13,20,32,.94);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);padding:12px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  header.top h1{font-size:16px;margin:0;font-weight:650;letter-spacing:.2px}
+  header.top .tag{font-size:11px;color:var(--faint);border:1px solid var(--line);border-radius:20px;padding:2px 9px}
+  #search{margin-left:auto;background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+    border-radius:8px;padding:8px 12px;font-size:13px;width:min(320px,45vw);font-family:var(--sans)}
+  #search::placeholder{color:var(--faint)}
+
+  .wrap{display:grid;grid-template-columns:262px 1fr;gap:0;max-width:1280px;margin:0 auto}
+  nav.toc{position:sticky;top:57px;align-self:start;height:calc(100vh - 57px);overflow-y:auto;
+    padding:18px 14px 60px;border-right:1px solid var(--line);font-size:13px}
+  nav.toc .grp{color:var(--faint);text-transform:uppercase;letter-spacing:.6px;font-size:10.5px;
+    margin:16px 8px 6px;font-weight:700}
+  nav.toc a{display:block;color:var(--dim);padding:5px 9px;border-radius:6px;border-left:2px solid transparent}
+  nav.toc a:hover{background:var(--panel);text-decoration:none;color:var(--ink)}
+  nav.toc a.active{color:#fff;background:var(--panel2);border-left-color:var(--accent)}
+
+  main{padding:28px 34px 120px;min-width:0}
+  .lede{color:var(--dim);max-width:70ch;margin:0 0 22px}
+  .lede strong{color:var(--ink)}
+
+  section{scroll-margin-top:74px;margin:0 0 40px}
+  h2.sec{font-size:22px;margin:34px 0 4px;padding-top:10px;border-top:1px solid var(--line);font-weight:700}
+  h2.sec .num{color:var(--accent);font-variant-numeric:tabular-nums;margin-right:10px}
+  h3{font-size:16.5px;margin:26px 0 8px;color:#fff}
+  h4{font-size:14px;margin:18px 0 6px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+  p{margin:8px 0}
+
+  pre.f{background:#0a1018;border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:13px 15px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;
+    line-height:1.55;color:#cde0ff;margin:12px 0}
+  code{font-family:var(--mono);font-size:.88em;background:var(--panel2);padding:1.5px 5px;border-radius:4px;color:#d6e2f5}
+  pre.f code{background:none;padding:0}
+
+  .plain{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:11px 14px;margin:12px 0;
+    display:flex;gap:11px;align-items:flex-start}
+  .plain::before{content:"🏈";font-size:15px;line-height:1.4}
+  .plain div{color:var(--dim)}
+  .plain b{color:var(--ink);font-weight:600}
+
+  .flag{background:rgba(240,179,74,.07);border:1px solid rgba(240,179,74,.35);border-radius:8px;
+    padding:11px 14px;margin:12px 0;color:#f3d9a6;font-size:14px}
+  .flag.dead{background:rgba(240,104,95,.07);border-color:rgba(240,104,95,.35);color:#f4c1bd}
+  .flag.fixed{background:rgba(63,191,127,.07);border-color:rgba(63,191,127,.33);color:#bfe9d3}
+  .flag b{color:#fff}
+  .flag .lbl{font-weight:700;text-transform:uppercase;font-size:10.5px;letter-spacing:.7px;
+    padding:1px 7px;border-radius:20px;margin-right:8px;vertical-align:1px}
+  .flag .lbl{background:var(--amber);color:#1a1206}
+  .flag.dead .lbl{background:var(--red);color:#230a08}
+  .flag.fixed .lbl{background:var(--green);color:#04160d}
+
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:12.5px}
+  th,td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:var(--dim);font-weight:600;position:sticky}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono)}
+  tbody tr:nth-child(even){background:rgba(255,255,255,.015)}
+  .scroll{overflow-x:auto}
+
+  .pill{font-size:11px;font-family:var(--mono);padding:1px 6px;border-radius:4px;border:1px solid var(--line)}
+  .src{color:var(--faint);font-size:11.5px;font-family:var(--mono)}
+  .kv{color:var(--dim);font-size:13.5px}
+  .kv b{color:var(--ink)}
+  hr.soft{border:none;border-top:1px solid var(--line);margin:22px 0}
+  .hide{display:none !important}
+  .note{color:var(--faint);font-size:12.5px;font-style:italic}
+  @media(max-width:880px){
+    .wrap{grid-template-columns:1fr}
+    nav.toc{display:none}
+    main{padding:20px 16px 100px}
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Blueprint · Sim Formula Reference</h1>
+  <span class="tag">private dev reference</span>
+  <span class="tag">real coefficients</span>
+  <input id="search" type="search" placeholder="Filter sections… (e.g. separation, blitz, portal)">
+</header>
+
+<div class="wrap">
+<nav class="toc" id="toc">
+  <div class="grp">Start</div>
+  <a href="#read">How to read this</a>
+  <a href="#scales">Shared scales &amp; the ±0.01 rule</a>
+  <div class="grp">Players</div>
+  <a href="#attrs">1 · Attributes &amp; Overall</a>
+  <a href="#arche">2 · Archetypes</a>
+  <a href="#gen">3 · Recruit generation</a>
+  <a href="#pot">4 · Potential &amp; development caps</a>
+  <a href="#ras">5 · Athletics (RAS) &amp; size</a>
+  <div class="grp">The pass game</div>
+  <a href="#sep">6 · Separation / route duel</a>
+  <a href="#press">7 · Press jam</a>
+  <a href="#catch">8 · Completion &amp; interception</a>
+  <a href="#yac">9 · Yards after catch</a>
+  <a href="#pass-misc">10 · Reads, motion, blitz, small models</a>
+  <div class="grp">Pressure</div>
+  <a href="#block">11 · Block reps</a>
+  <a href="#pocket">12 · Pocket race (sacks)</a>
+  <a href="#scramble">13 · Scramble &amp; strip-sack</a>
+  <div class="grp">The run game</div>
+  <a href="#lane">14 · Lane quality &amp; point of attack</a>
+  <a href="#mesh">15 · Mesh, contact, breakaways</a>
+  <a href="#broken">16 · Broken tackles</a>
+  <div class="grp">Calls &amp; teams</div>
+  <a href="#ai">17 · Playcalling AI</a>
+  <a href="#st">18 · Special teams</a>
+  <div class="grp">Off the field</div>
+  <a href="#recruit">19 · Recruiting economy</a>
+  <a href="#portal">20 · Transfer portal</a>
+  <a href="#dev">21 · Development &amp; progression</a>
+  <a href="#season">22 · Rankings, awards, careers</a>
+  <a href="#dna">23 · Coach DNA cards</a>
+  <div class="grp">Appendix</div>
+  <a href="#drift">A · Drift &amp; inert features</a>
+</nav>
+
+<main id="main">
+
+<p class="lede" id="read-lede">This is a plain-language map of what your simulation actually computes, pulled directly from the current <code>js/</code> source and with the <strong>real numbers</strong> substituted in. It's a private tuning reference, so it prints coefficients freely — the "never show a coefficient" rule is for the in-game manual, not for you. Every formula cites its <span class="src">file:line</span>. Where a code comment, a probe, or your notes disagree with the arithmetic that's actually shipping, the math wins and the gap is <span style="color:var(--amber)">flagged</span>. The big payoff of doing it this way: it caught four "known bugs" from your notes that are <span style="color:var(--green)">already fixed</span> — and two features that are quietly <span style="color:var(--red)">inert</span>. See the <a href="#drift">appendix</a>.</p>
+
+<section id="read">
+<h2 class="sec"><span class="num">§</span>How to read this</h2>
+<p>A few conventions used everywhere below:</p>
+<ul class="kv">
+<li><code>clamp(x, lo, hi)</code> keeps a value between two bounds. <code>logistic(x) = 1/(1+e<sup>−x</sup>)</code> is the S-curve that turns "how much better is A than B" into a probability.</li>
+<li><code>randNorm(μ, σ)</code> is a bell-curve draw (mean μ, spread σ). <code>random()</code> is a flat 0–1 roll.</li>
+<li>Attributes are the 0–99 ratings: <b>SPD</b> speed, <b>AGI</b> agility, <b>PWR</b> power, <b>STR</b> strength, <b>JMP</b> jump, <b>HND</b> hands, <b>SEC</b> security, <b>TEC</b> technique, <b>AWR</b> awareness, plus meta <b>CON</b> conditioning and <b>WE</b> work ethic.</li>
+</ul>
+</section>
+
+<section id="scales">
+<h2 class="sec"><span class="num">§</span>Shared scales &amp; the ±0.01 rule</h2>
+<p>Two conversions recur across the whole on-field engine. Every "dot" that moves on the field uses the same attribute→physics scale:</p>
+<pre class="f">top speed   = 6.4 + SPD·0.028   yd/s     (SPD 50 → 7.8,  SPD 90 → 8.9)
+accel       = 7.0 + AGI·0.05    yd/s²
+defender scale is COMPRESSED:  attr' = 50 + (attr−50)·0.35   (chase geometry only)
+simulation tick = 0.1 s  (10 Hz)</pre>
+<p>And the number the whole passing game pivots on is <b>separation</b> (0–1, where 0.42 is a coin-flip window). It feeds the completion sigmoid at slope 5.0, which is why the codebase is so disciplined about it:</p>
+<div class="plain"><div><b>Every 0.01 of separation ≈ 1.2% of completion.</b> That's why a bug that quietly shifted the press bucket by 0.04 was worth four to five points of league-wide completion. When you tune anything upstream of a catch, watch the separation buckets, not the yardage.</div></div>
+</section>
+
+<!-- ============ PLAYERS ============ -->
+<section id="attrs">
+<h2 class="sec"><span class="num">1</span>Attributes &amp; Overall rating</h2>
+<p>Overall is a position-weighted average of the attributes, shifted onto a common scale so every position averages ~58 and OVRs compare across the roster. <span class="src">player.js:227–247</span></p>
+<pre class="f">raw = Σ(attr[a] × weight[a]) / Σ(weight[a])          over the 11 attributes
+OVR = clamp(raw + OVR_POS_ADJ[position], 1, 99)
+converted player: comp × (1 − convPenalty) for one season</pre>
+<p>Weights (divided by their own sum, so the row totals needn't be exact): <span class="src">constants.js:1000–1017</span></p>
+<div class="scroll"><table>
+<thead><tr><th>Pos</th><th class="n">SPD</th><th class="n">AGI</th><th class="n">PWR</th><th class="n">STR</th><th class="n">JMP</th><th class="n">HND</th><th class="n">SEC</th><th class="n">TEC</th><th class="n">AWR</th></tr></thead>
+<tbody>
+<tr><td>QB</td><td class="n">7</td><td class="n">7</td><td class="n">2</td><td class="n">17</td><td class="n">–</td><td class="n">–</td><td class="n">8</td><td class="n">25</td><td class="n">34</td></tr>
+<tr><td>RB</td><td class="n">19</td><td class="n">17</td><td class="n">10</td><td class="n">5</td><td class="n">–</td><td class="n">12</td><td class="n">10</td><td class="n">12</td><td class="n">15</td></tr>
+<tr><td>FB</td><td class="n">3</td><td class="n">3</td><td class="n">23</td><td class="n">14</td><td class="n">–</td><td class="n">13</td><td class="n">10</td><td class="n">16</td><td class="n">18</td></tr>
+<tr><td>WR</td><td class="n">19</td><td class="n">12</td><td class="n">2</td><td class="n">1</td><td class="n">10</td><td class="n">30</td><td class="n">6</td><td class="n">12</td><td class="n">8</td></tr>
+<tr><td>TE</td><td class="n">10</td><td class="n">9</td><td class="n">10</td><td class="n">8</td><td class="n">7</td><td class="n">26</td><td class="n">–</td><td class="n">15</td><td class="n">15</td></tr>
+<tr><td>OL</td><td class="n">2</td><td class="n">3</td><td class="n">24</td><td class="n">25</td><td class="n">–</td><td class="n">–</td><td class="n">–</td><td class="n">23</td><td class="n">23</td></tr>
+<tr><td>DE</td><td class="n">17</td><td class="n">12</td><td class="n">16</td><td class="n">22</td><td class="n">3</td><td class="n">–</td><td class="n">–</td><td class="n">16</td><td class="n">14</td></tr>
+<tr><td>DT</td><td class="n">11</td><td class="n">6</td><td class="n">22</td><td class="n">26</td><td class="n">3</td><td class="n">–</td><td class="n">–</td><td class="n">17</td><td class="n">15</td></tr>
+<tr><td>OLB</td><td class="n">27</td><td class="n">22</td><td class="n">6</td><td class="n">12</td><td class="n">3</td><td class="n">1</td><td class="n">–</td><td class="n">14</td><td class="n">15</td></tr>
+<tr><td>LB</td><td class="n">29</td><td class="n">17</td><td class="n">7</td><td class="n">11</td><td class="n">2</td><td class="n">1</td><td class="n">–</td><td class="n">12</td><td class="n">21</td></tr>
+<tr><td>CB</td><td class="n">31</td><td class="n">19</td><td class="n">2</td><td class="n">3</td><td class="n">8</td><td class="n">3</td><td class="n">–</td><td class="n">12</td><td class="n">22</td></tr>
+<tr><td>S</td><td class="n">29</td><td class="n">16</td><td class="n">4</td><td class="n">5</td><td class="n">6</td><td class="n">3</td><td class="n">–</td><td class="n">12</td><td class="n">25</td></tr>
+<tr><td>K / P</td><td class="n">–</td><td class="n">–</td><td class="n">25</td><td class="n">25</td><td class="n">–</td><td class="n">–</td><td class="n">–</td><td class="n">25</td><td class="n">25</td></tr>
+</tbody></table></div>
+<p class="note">CON and WE carry zero weight everywhere — they never enter OVR.</p>
+<p>Position normalization offsets (added to the raw average, ≈ 58 − that position's measured raw mean): <span class="src">constants.js:988–998</span></p>
+<pre class="f">QB −4.1   RB +5.0   FB +7.7   WR −3.4   TE +6.7   OL −1.3   DE +2.2
+DT +0.5   OLB +0.3  LB +3.4   CB +1.0   S −2.7    K −8.9    P −14.6</pre>
+<div class="plain"><div>OVR is an average, so positions that need many attributes get dragged toward the middle (raw TEs looked weak, punters looked elite). The offset fixes the cross-position scale <b>without</b> changing anyone's order within their own position.</div></div>
+
+<h3>Vision (scouted) rating — the whole scouting game</h3>
+<pre class="f">visionRating = round( posAdjust( mean(all 11 attributes) + 7.5 , position ) )</pre>
+<p>Vision is the <b>raw unweighted</b> average (what a naive eye sees); OVR is the <b>weighted</b> one (what actually plays). The <code>+7.5</code> (<code>VIS_CENTRE</code>) cancels the structural bias by which a weighted average beats a raw one, so the two live on one scale. <span class="src">player.js:604</span></p>
+<div class="plain"><div><b>truth − vision ≥ 12</b> is a "gem" (unspectacular numbers that happen to be the <i>right</i> numbers); vision ≫ truth is a "workout warrior." That gap is what your talent-evaluator skill exists to read.</div></div>
+</section>
+
+<section id="arche">
+<h2 class="sec"><span class="num">2</span>Archetypes — the relative-lean method</h2>
+<p>A player is classified by his <b>own</b> attribute contrasts, never an absolute bar, so it's division-proof. The building block: <span class="src">player.js:272–276</span></p>
+<pre class="f">axisLean(groupA, groupB) = avg(attrs in A) − avg(attrs in B)</pre>
+<p>Each position runs a small decision tree of lean thresholds (<code>ARCHETYPE_DERIVE</code>, <span class="src">player.js:78–223</span>). Examples:</p>
+<pre class="f">QB:  legLean = avg(SPD,AGI) − avg(STR,TEC)
+     legLean > −3 → Scrambler ; > −9 → Dual ;
+     else giLean(AWR−STR) > 5 → Game-Manager ; armLean(STR−TEC) > 5 → Gunslinger ; else Pocket
+CB:  zoneLean = avg(AWR,TEC) − SPD > −23 → Zone ; ballLean(HND−STR) > 20 → Ball ;
+     physLean(STR−AGI) > 2 → Press ; else Slot
+RB:  blockLean = avg(PWR,STR) − avg(SPD,AGI) > 26 & SPD<62 → FB tier ; else
+     Workhorse / Speed / Elusive / Power / Scat by the strongest lean</pre>
+<div class="plain"><div>Instead of "is he faster than the league," it asks "which of <i>his own</i> skills outweighs the rest" — so a 55-OVR D3 corner and a 95-OVR D1 corner with the same shape get the same label. (Many thresholds are deeply negative because a position's core stats structurally dominate; that's calibration, not a bug.)</div></div>
+</section>
+
+<section id="gen">
+<h2 class="sec"><span class="num">3</span>Recruit generation</h2>
+<p>The class is sized to league need: <code>poolSize = round(demand × 1.3)</code> where demand = graduating seniors + walk-on slots + roster vacancies. Each recruit's tier (1=D3, 2=D2, 3=D1) is drawn in proportion to the league's division counts. <span class="src">world.js:2684</span></p>
+<p>Attributes start from a tier base and get shaped in passes: <span class="src">player.js:411–638</span></p>
+<pre class="f">base = DIV_BASE_BY_TIER[tier] + (prestige−3)·2      DIV_BASE = {D3:19, D2:33, D1:49}
+star roll:  rand() < clamp(STAR_RATE[tier] + prestigeBonus·0.010, 0.02, 0.45)
+            STAR_RATE = {D3:0.10, D2:0.18, D1:0.30}
+core attr:  clamp(round(randNorm(base + threshold·0.6, 8)), 1, CORE_CAP)   CAP = {D3:78,D2:88,D1:95}
+build type: 6% "workout warrior" (measured +12..24, coached −6..16) ; 6% inverse ; 88% normal
+STR/PWR couple: STR = max(STR, base·0.35 + avg(SPD,AGI)·0.35 + N(0,6)) ;  PWR = 0.45·PWR + 0.55·STR + N(0,5)
+then: archetype skew → QB mobility molding → division physical caps → positional floors (tier-scaled)</pre>
+<div class="plain"><div>Most kids are "normal," but about one in eight is a boom/bust athlete-vs-technician — and that split is exactly what makes scouting matter. Strength and power are correlated on purpose, so you rarely get a 99-STR/40-PWR freak.</div></div>
+<div class="flag"><span class="lbl">flag</span><b>The "physical" caps aren't physical-only.</b> Comments call the capped set the five athletic attributes, but the real constant <code>CAPPED_ATTRS</code> is <b>nine</b> (everything except CON/WE) — so division ceilings and spawn caps also bind HND/SEC/TEC/AWR, contrary to the "athletic body" framing. <span class="src">constants.js:20</span></div>
+</section>
+
+<section id="pot">
+<h2 class="sec"><span class="num">4</span>Potential &amp; the development ceiling</h2>
+<p>A potential "band" is rolled (prestige tilts it), then each attribute gets a personal ceiling: <span class="src">player.js:337–369</span></p>
+<pre class="f">band spreads (mean growth above current):  average 15 · good 23 · great 33 · sky 47
+cap[a] = clamp( attr[a] + round(randNorm(spread, 6)), attr[a], ceil )
+work-ethic overage:  weBonus = clamp(round((WE−55)·0.22), 0, 7)   → softCap = physCap + weBonus
+archetype tilt:  signature attributes get up to +6 headroom above the division cap</pre>
+<div class="plain"><div>Everyone in a division shares a talent wall, but the attributes an archetype leans on can climb ~6 points higher, and a genuine grinder (high WE) can nudge the whole wall up 7 more. Note <code>spread</code> is the <i>mean</i> growth, not a spread — a "sky" attribute grows ~47 points on average.</div></div>
+</section>
+
+<section id="ras">
+<h2 class="sec"><span class="num">5</span>Athletics (RAS) &amp; size</h2>
+<p>Combine numbers generate <b>backward</b> from measured attributes through real NFL per-position percentile tables, then Athletics re-reads them as percentiles. <span class="src">player.js:747–846</span></p>
+<pre class="f">attr → NFL percentile:  pct = −0.60 + (attr/100)^1.05 × 1.70     (attr 50≈p22, 90≈p88, 99≈p108)
+forty  = drillAt(Forty,    1 − spdPct)      // timed drills invert
+bench  = drillAt(BenchReps, str·0.7 + pwr·0.3)
+broad  = drillAt(BroadJump, (jmp+pwr)/2)
+RAS    = mean(available percentiles) × 10    (rounded to 0.1)</pre>
+<p>Height/weight share one roll so tall/heavy and short/lean correlate: <span class="src">player.js:381–409</span></p>
+<pre class="f">hFrac  = clamp(randNorm(0.5, 0.22), 0, 1)          // shared by height & weight
+weight = clamp(round( w_base(hFrac) + (STR−50)·0.35 − ((SPD−50)+(AGI−50))·0.18 ), wMin−12, wMax+18)</pre>
+<div class="plain"><div>Raw ratings become believable 40 times, bench reps and verticals drawn from actual NFL position data; Athletics is just the average percentile those land at — an honest athleticism grade, not a separate invented stat.</div></div>
+<div class="flag fixed"><span class="lbl">note</span>RAS effectively spans ~1.0–9.0, not the "0–10" the comment claims, because in-range percentiles are floored/capped at 0.10/0.90.</div>
+</section>
+
+<!-- ============ PASS GAME ============ -->
+<section id="sep">
+<h2 class="sec"><span class="num">6</span>Separation — the route duel</h2>
+<p>A 10 Hz two-dot physics duel: the receiver runs a scripted route, the defender plays his technique, and the distance between them at the throw is rank-mapped to a 0–1 separation. Every catch, read, and INT reads this one number. <span class="src">sepgeo.js:104</span></p>
+<pre class="f">route scripts [stem yards, throw time, break time]:
+   short  [ 5, 1.6, 1.05]     medium [12, 2.4, 1.85]     deep [26, 3.0, 2.45]
+cut quality  = 1.0 + (TEC−50)·0.0045 + (AGI−50)·0.0032        // speed kept through a plant
+the sell     = clamp((rec.TEC − def.TEC)·0.0040, −0.20, 0.20) // route craft freezes the mirror
+man reaction = 0.12 + max(0, 78−AWR)·0.0016  (+ the sell)
+zone trigger = 0.07 + max(0, 88−AWR)·0.0015
+distance → sep:  sep = clamp( qinterp(QMAP[depth/technique], rawDistance) + 0.015, 0, 1 )</pre>
+<div class="plain"><div>The physics decide <b>who's open and why</b> (the rank); a per-bucket quantile map (<code>QMAP</code>) sets the <b>scale</b> the downstream catch math was built on. If no defender is in the play, separation is a flat 0.84 (zone) or 1.0.</div></div>
+</section>
+
+<section id="press">
+<h2 class="sec"><span class="num">7</span>The press jam</h2>
+<p>Two contested blends, cashed out as time. This is the July-2026 corrected model. <span class="src">sepgeo.js:131</span></p>
+<pre class="f">jam     = def.STR·0.40 + def.TEC·0.35 + def.AGI·0.25 + 1
+release = rec.AGI·0.40 + rec.TEC·0.35 + rec.STR·0.25
+jamGap  = (jam − release) × (pressHot ? 1.08 : 1)
+
+defender WINS (jamGap ≥ 0):
+   recDelay  = min(0.42, 0.14 + jamGap·0.0075)   // receiver held
+   def.lag   = recDelay                          // defender held the SAME beat (cancels!)
+   rec.acc  *= max(0.55, 1 − jamGap·0.0085)      // THE PAYOFF: laboured release
+receiver WINS (jamGap < 0):
+   def.lag   = min(0.38, 0.10 − jamGap·0.0065)   // beaten clean</pre>
+<div class="flag fixed"><span class="lbl">fixed</span><b>This is the load-bearing correction.</b> Delaying both men by the same beat cancels (shifting both along one path leaves the distance unchanged). The real effect of a won jam is the <b>degraded receiver acceleration</b> — he rebuilds speed, hits top speed later, breaks from a shallower point. The old bug delayed only the receiver while the corner free-ran, which <i>inverted</i> press (winning the jam made a corner worse). <code>PRESS_RECENTER</code> is now retired — the QMAP press buckets were refit against live post-fix distances.</div>
+</section>
+
+<section id="catch">
+<h2 class="sec"><span class="num">8</span>Completion &amp; interception</h2>
+<p>Completion is a sigmoid in separation, lifted by QB accuracy/arm and (on jump balls) size, cut by pressure and coverage. <span class="src">sim.js:726–777</span></p>
+<pre class="f">qbExec    = min( (QB.TEC·0.5 + QB.AWR·0.5 − 91)·0.0184 + 0.32 , 0.38 )
+armFactor = (armAttr − 50)·0.006      armAttr = PWR(short) | STR(deep) | avg(medium)
+sizeMismatch (medium/deep, tight windows) = (heightGap·0.040 + jumpGap·0.010)·clamp(1−sep,0,1)
+
+catchProb = clamp( logistic( (sep − 0.42)·5.0 + qbExec + armFactor + sizeMismatch
+                             − (hurried ?0.22:0) − (bracketed ?0.12:0) − (forced ?0.45:0) )
+                   × (1 + dnaAirBoost), 0.04, 0.97 )</pre>
+<p>At the 0.42 pivot an average QB lands ~62%; elite accuracy caps near 70–72%. On an incomplete with a covering defender, the pick branch fires: <span class="src">sim.js:791–859</span></p>
+<pre class="f">defRead   = DB.AWR·0.40 + SPD·0.22 + JMP·0.13 + HND·0.13 + TEC·0.12 + 2.9
+intProb   = clamp( 0.066·(1−sep)·(defRead/55)·depthMult × [qb·forced·passKey·style·aggr·dna·arm mults],
+                   0.003, 0.19 )
+depthMult = 1.5 deep / 1.0 else ;  style = zone 1.18 / man 0.85 ;  forced 1.6 ;  deep help safety gets a 2nd crack</pre>
+<div class="plain"><div>Both completion and picks scale with how covered the man is (<code>1−sep</code>): tighter windows drop the catch and raise the pick — most on deep balls, in zone, and when you force it to a covered star.</div></div>
+<div class="flag"><span class="lbl">flag</span>The header comment references <code>CATCH_SEP_SCALE</code> / <code>CATCH_TECH_SCALE</code> constants — <b>neither exists</b>. The slope is a hard-coded <code>5.0</code> and accuracy is the <code>qbExec</code> blend. Dead comment refs at <span class="src">sim.js:728,753</span>.</div>
+</section>
+
+<section id="yac">
+<h2 class="sec"><span class="num">9</span>Yards after catch</h2>
+<p>After the catch, the dots are released for a pursuit sim (caps: 5 s, 72 yd). The separation at the catch becomes the covering defender's literal head-start distance. <span class="src">yacgeo.js:61</span></p>
+<pre class="f">carrier: top = spd(SPD), acc = acc(AGI), first step at 45% speed (securing the ball)
+wiggle  = AGI·0.7 + TEC·0.3
+covering def starts at y = −(0.4 + sep·3.2)          // sep → head start
+vision  = clamp(3.2 + (AWR−41)·0.025, 2.4, 4.6)      // how far ahead he reads threats
+cut     = clamp(0.35 + (AWR−41)·0.0025 + (AGI−41)·0.0015, 0.20, 0.55)   // each cut bleeds speed
+finish (tackle):  pMake = 0.74 + (tkl − wiggle)·0.005 − (AWR−41)·0.0016   // miss = broken tackle
+variance: 38% "stretched" (soft zone) vs 42% "swarm" (defender sitting on the spot → the fat-zero column)
+cavalry: 2 more flankers arrive at t ≥ 1.4 s (why escapes become first downs, not TDs)</pre>
+<div class="plain"><div>Openness at the catch is the pursuit's head start; then speed and elusiveness race the closing angles. Every cut bleeds speed while the angles keep shrinking, so most YAC is short — big gains come from broken tackles and stretched zones, and deep safeties cap the breakaways.</div></div>
+</section>
+
+<section id="pass-misc">
+<h2 class="sec"><span class="num">10</span>Reads, motion, blitz &amp; small models</h2>
+<h4>QB read / progression <span class="src">sim.js:658–722</span></h4>
+<pre class="f">spreadFactor = clamp(0.50 − (AWR−60)/60, 0.15, 0.50)     // higher AWR → spreads the ball
+pool         = hurried ? top-2 by sep : all reads
+weight_i     = exp(−i·spreadFactor) × shareMult          // smart QB bails off a covered favorite
+under pressure the QB only sees his top two reads</pre>
+<h4>Pre-snap motion tell <span class="src">sim.js:654–656, 1845–1894</span></h4>
+<pre class="f">motionMisreadProb = clamp(0.14 + (dbAWR−50)·0.004 − (qbAWR−50)·0.003, 0.03, 0.45)
+mover.sep += (0.035 + calledMotion?0.02 + press?0.035) × styleMult(man 1.35 / zone 0.65)
+misread → chosen.sep −0.07 at the throw ; correct read → +0.02</pre>
+<div class="flag fixed"><span class="lbl">fixed</span>The old inversion (a sharp secondary was the <i>easiest</i> to read) and the "misread-prob-fed-as-read-edge" bug are <b>both fixed</b> here. The tell now correctly makes disciplined (high-AWR) secondaries harder to diagnose, and it is fully wired into the QB's read plus separation teeth — not the log-only string it used to be.</div>
+<h4>Safety-blitz deep void <span class="src">sim.js:1985–1998</span></h4>
+<pre class="f">deepest route.sep += 0.14 × (1 − (blitzDesign−50)/150) × (1 − dnaPressure·0.015)</pre>
+<p>Bringing a DB opens the deep middle — unless the blitz is well-disguised (high <code>blitzDesign</code>).</p>
+<h4>Odds and ends</h4>
+<pre class="f">drop        = clamp(0.065 − HND·0.0008, 0.015, 0.08)
+strip-sack  = 0.45 × clamp(1 − ((SEC·0.85+TEC·0.15)−50)·0.007, 0.45, 1.30) ; 40% become lost fumbles
+rhythm throw= clean pocket + first read → sep += (TEC−50)·0.0012   ("throws him open")
+pass yards  = max(0, round(randNorm(mean, sd))): short{5,2} med{10,3.4} deep{20,6.5} vdeep{38,13}
+              vdeep needs deep + sep>0.74 + WR-Deep archetype + rand<0.44</pre>
+</section>
+
+<!-- ============ PRESSURE ============ -->
+<section id="block">
+<h2 class="sec"><span class="num">11</span>Block reps — who wins the trench</h2>
+<p>Every rep is a weighted attribute contest run through one sigmoid. Losers "penetrate." <span class="src">sim.js:296–414</span></p>
+<pre class="f">repWin(off, def, ctx) = logistic( (off − def)/24 + ctx )      ctx = (offUnit − defUnit)/145
+PASS block:  blkVal = STR·0.30 + TEC·0.28 + PWR·0.22 + AWR·0.20 + center + mirror(AGI)
+RUN block:   blkVal = PWR·0.30 + AWR·0.28 + STR·0.22 + TEC·0.20 + 10.7
+             shedVal = STR·0.34 + AWR·0.28 + PWR·0.22 + TEC·0.16 + 4.6
+size term:   (blockerWt − rusherWt)·0.10 × (edge/speed rush ? 0.25 : 1)
+reach/pull mobility bonus: ((AGI−20)·0.6 + (SPD−20)·0.4)·0.7   (POA + puller only)</pre>
+<div class="plain"><div>Pass pro is strength + technique + a mobility term for mirroring speed; run blocking is drive (PWR/STR) + read (AWR). A weight mismatch tips the rep, and equal weights are neutral.</div></div>
+</section>
+
+<section id="pocket">
+<h2 class="sec"><span class="num">12</span>The pocket race — sacks &amp; hurries</h2>
+<p>The QB holds an internal clock; each rusher who won his rep sprints at the launch point. Fastest arrival &lt; clock = sack; just late = hurry. Zero penetrators = always clean. <span class="src">rushgeo.js:91–138</span></p>
+<pre class="f">clock    = 2.20 × (1 + (protectMult−1)·0.17) × (1 + paBite·0.26)
+collapse = 0.12 × (numPenetrators − 1)          // each extra rusher caves the pocket for everyone
+per rusher:
+   path     = 5.35 (edge) | 4.45 (interior)
+   closeSpd = 7.35 + ((SPD·0.6 + AGI·0.4) − 55)·0.010
+   free blitzer:  shed = 3.38 − 3.38·designPull + N(0,0.72)
+   beat block:    shed = 2.90 − (rPow − bPow)·0.0022 − (power ?0.22:0) + N(0,0.72)
+   arrival  = clamp(shed,0.55,5.00) + path/max(3,closeSpd) − collapse
+SACK if min(arrival) < clock ;  else HURRY if < clock × 1.50 × (1 + passKey·0.011) × (1 − paBite·0.26)</pre>
+<div class="plain"><div>Attribute influence here is deliberately flat (the block-win contest upstream already priced the players). The sack rate is carried by the <b>count</b> of free rushers via <code>collapse</code>, not any one rusher's speed — which is why sending more bodies works.</div></div>
+</section>
+
+<section id="scramble">
+<h2 class="sec"><span class="num">13</span>Scramble &amp; sack conversions</h2>
+<p>A pressured or sacked mobile QB can bail and run, measured relative to his <b>own</b> passing baseline (division-proof). <span class="src">sim.js:2120–2134</span></p>
+<pre class="f">mob = (SPD+AGI)/2 ;  pocket = (STR+TEC+AWR)/3 ;  lean = mob − pocket ;  absMob = (mob−50)/40
+scrambleChance = clamp( (absMob·0.5 + lean/40·0.6)·0.40 + 0.04, 0.02, 0.45 )
+on a sack:  × 0.55 if spied, × (zone 0.85 | man 1.10)
+on pressure (not sacked):  × 0.8   ← the bulk of scramble volume</pre>
+<div class="plain"><div>A dual-threat scrambles even without elite raw speed, because it's judged against how good a <i>passer</i> he is; a spy and man coverage shrink both the odds and the running lane.</div></div>
+</section>
+
+<!-- ============ RUN GAME ============ -->
+<section id="lane">
+<h2 class="sec"><span class="num">14</span>Lane quality &amp; point of attack</h2>
+<p>The fraction of blocking reps the line won, weighted 3× toward the point of attack. <span class="src">sim.js:2447–2551</span></p>
+<pre class="f">poaWeight = 3 at the point of attack, else 1
+   left run → POA slots [LT,LG] ; right → [RG,RT] ; middle → [LG,C,RG]
+laneQuality = clamp( Σ(poaWeight over held reps) / Σ(poaWeight over all reps)
+                     + optionLaneShift + containAdj, 0, 1 )
+puller kick-out (Power/Counter/Trap): +3 wins / +3 total if it holds
+                                       (but 40% chance the unblocked backside man penetrates)</pre>
+<div class="flag fixed"><span class="lbl">fixed</span><b>The "lane quality × 0" bug is not in the current source.</b> Your notes flagged <code>entry = 0.712 + lane·0.0</code>; on disk today <code>lane</code> is reconnected everywhere with live nonzero slopes (0.26/0.19 mesh shift, 0.028 entry, 0.12 LB-fill). The header comment documents the multiply-by-zero as a <i>past</i> state that's been fixed, restoring the intended ~1 yd monotonic lane→YPC swing. No dead run-path term found.</div>
+</section>
+
+<section id="mesh">
+<h2 class="sec"><span class="num">15</span>Mesh, contact &amp; breakaways</h2>
+<p>A won line moves the mesh point forward and lets the back hit the hole rolling. <span class="src">run2geo.js:63,138–144</span></p>
+<pre class="f">laneShift = (lane − 0.60) × (lane < 0.60 ? 0.26 : 0.19)    // downside steeper: penetration hurts more
+carrier start y = −3.92 − 0.16 + laneShift                 // mesh depth behind LOS
+entry = 0.712 + (lane − 0.60)·0.028 + (rand−0.5)·0.18 + clamp(vision·0.05, −0.12, 0.12)
+carrier.vy = top × entry                                    // downfield launch speed
+LB fill:  blockedP = clamp(0.67 + (lane−0.60)·0.12 + vision·0.10, 0.15, 0.92)  // higher lane → fewer free hats
+yards after contact (drag): car.y += min(2.6, max(0, vy−1.6)·0.155·drag)·clamp(y/2.5,0.35,1)
+breakaway: clear all but ≤1 man past ~9 yd → +14..38 yд ; clear everyone → +26..68 (house call)</pre>
+<div class="plain"><div>A penetrator only gets a capped diving ankle-grab, which is what keeps a won line "worth tenths, not whole yards." Breakaways are pure angle arithmetic — clean lanes feed them because the higher launch and fewer free hats get the back to the second level at pace — not an absolute-speed dice roll.</div></div>
+</section>
+
+<section id="broken">
+<h2 class="sec"><span class="num">16</span>Broken tackles</h2>
+<p>The back rolls both an escape and a truck and takes the better one; this redistributes tackle credit and lets the geometry roll on — it doesn't add yards directly. <span class="src">sim.js:949–965</span></p>
+<pre class="f">evadeGap = (AGI·0.55+SPD·0.27+TEC·0.18)car − (AGI·0.34+SPD·0.26+AWR·0.22+TEC·0.18)def
+truckGap = (PWR·0.55+STR·0.27+TEC·0.18)car − (STR·0.34+PWR·0.28+TEC·0.20+AWR·0.18)def
+chance   = clamp( 0.03 + (max(evadeGap,truckGap) − 8)·0.016
+                  + max(0, weight−210)·0.00075 + (AWR−41)·0.0018, 0, 0.40 )
+strip tackler: +break chance ; wrap tackler: −break chance ; cap 2 broken tackles per carry</pre>
+<div class="plain"><div>A 90-AWR back gets about +0.09 break chance; each pound over 210 adds ~0.00075. Capped at 40% per attempt and two per carry so it stays realistic.</div></div>
+</section>
+
+<!-- ============ CALLS + TEAMS ============ -->
+<section id="ai">
+<h2 class="sec"><span class="num">17</span>Playcalling AI</h2>
+<p>A school's run/pass identity comes from its own personnel, plus a philosophy roll. <span class="src">ai.js:334–378</span></p>
+<pre class="f">runScore  = (OL·1.0 + RB·0.8 + FB·0.6)/2.4
+passScore = (QB·1.0 + WR·0.8 + TE·0.4)/2.2
+lean      = (runScore − passScore) + randNorm(0,3)
+   > 8 Always Run · > 4 Heavy Run · > 1 Run · > −1 Balanced · > −4 Pass · > −8 Heavy Pass · else Always Pass</pre>
+<p>In-game pass rate by tendency (college skews run — note Balanced is 0.44): <span class="src">sim.js:2873–2948</span></p>
+<pre class="f">PASS_TENDENCY: Always Pass 0.82 · Heavy Pass 0.68 · Pass 0.58 · Balanced 0.44 · Run 0.41 · Heavy Run 0.32 · Always Run 0.18
+auto shifts: 3rd&≥7 +0.30 · 3rd&≤2 −0.25 · trailing >10 late +0.20 · leading >10 late −0.25
+Wildcat overrides passRate = wildcatPassRate/100 (cap 0.35)
+weekly reaction scaled by a coaching-IQ ladder: freshman ×0.6 (45% skip) … legend ×1.5</pre>
+<p>Situations map each snap to exactly one key (goal line → backed up → two-minute → red zone → 3rd &amp; short/med/long → …) and merge base + situation + weekly plan into the effective call. <span class="src">situations.js</span></p>
+</section>
+
+<section id="st">
+<h2 class="sec"><span class="num">18</span>Special teams</h2>
+<h4>Field goals — LIVE formula <span class="src">sim.js:2951–2974</span></h4>
+<pre class="f">leg = 0.5·STR + 0.5·PWR ;  acc = 0.5·TEC + 0.5·AWR        (default 40 if no specialist)
+rangeCenter = 46 + (leg − 50)·0.22 + dnaST·0.40
+accBonus    = (acc − 50)·0.045 + dnaST·0.01               // 0.045 = FG_TECH_SCALE
+prob = clamp( logistic( (rangeCenter − kickDistance)/8.5 + accBonus ), 0.01, 0.985 )
+kickDistance = yards-from-goal + 17   (a "40-yard FG" is already 40 here)</pre>
+<p>Worked (avg kicker leg=acc=60): 30 yd ≈ 93%, 40 ≈ 80%, 50 ≈ 56%, 57 ≈ 32%.</p>
+<div class="flag"><span class="lbl">flag</span><b>Your <code>tools/kicker_check.mjs</code> is stale.</b> It uses <code>rangeCenter = 38 + (str−50)·0.42</code>, spread 9, and raw str/tech — the <i>live</i> sim uses <code>46 + (leg−50)·0.22</code>, spread 8.5, and the STR+PWR / TEC+AWR blends plus a DNA term. When you did the kicker audit, trust <code>kicking_model_probe.mjs</code> (which measures through the real sim) over <code>kicker_check.mjs</code>. That live-measured probe still shows 50+ yard FGs a touch low vs real football (~34% vs ~45%), so a small long-range bump is the one defensible tuning target.</div>
+<h4>Punts <span class="src">sim.js:2977–2988</span></h4>
+<pre class="f">meanDist = 38 + leg·0.12 + (acc−50)·0.06        // 0.06 = PUNT_TECH_SCALE
+sigma    = clamp(7 − (acc−50)·0.05, 3, 8)       // accuracy tightens the spread
+distance = max(25, round(randNorm(meanDist, sigma)))    // no DNA term on punts</pre>
+</section>
+
+<!-- ============ OFF FIELD ============ -->
+<section id="recruit">
+<h2 class="sec"><span class="num">19</span>Recruiting economy</h2>
+<p>The master "fit" formula turns dollars into effective spend — the same money lands differently on different kids. <span class="src">recruiting.js:198</span></p>
+<pre class="f">effectiveSpend = dollars × distanceMod × prestigeMod × recruiterMult × repMult
+                 × rootsMult × wantMod × classNeedMod × ptMod
+
+distanceMod   = {local 1.25, near 1.0, mid 0.7, far 0.45} × 1/(1+max(0,d−700)/1800)
+prestigeMod   = clamp(0.5 + prestige·0.15, 0.5, 2.0)
+wantMod       = Π( satisfied ×1.24 · unsatisfied ×0.70 · neutral ×1.0 )   over 0–2 hidden wants
+classNeedMod  = need≥1 → up to ×1.35 ; stocked → mild penalty
+ptMod         = clamp(1 + lean·importance·0.40, 0.2, 1.9)   // open depth chart pulls PT-seekers</pre>
+<p>Interest moves on <b>share of the room</b>, not raw dollars — there's no bar to fill, only rivals to beat. <span class="src">recruiting.js:282</span></p>
+<pre class="f">share = yourBid / Σ(all bids) ;  fairShare = 1/numBidders
+uncontested:  +35.1 / week      contested:  move = 48 × (share − fairShare)
+non-bidders:  −2.2 / week
+commit threshold = clamp( 85 − WE·0.40 − fieldRelief, 28, 90 )   // narrowed race resolves sooner
+signs when the leader holds a real lead for N weeks: blowout 2 · clear 3 · dogfight 4 ; hard lock day 19</pre>
+<div class="plain"><div>Outbid the room and you climb; get outbid and the kid drifts. A kid nobody else wants closes fastest, and a high-work-ethic recruit commits sooner. Division is absolute — a lower-division school only wins if every higher one bows out.</div></div>
+</section>
+
+<section id="portal">
+<h2 class="sec"><span class="num">20</span>Transfer portal</h2>
+<p>Everyone in the portal is a playing-time seeker — buried, coachless, or on a sinking program. <span class="src">portal.js</span></p>
+<pre class="f">who leaves:  P = max( buried(depth≥2) 0.22, coach left 0.10, program collapsing 0.08 )
+gate:        canSign = playerTier ≤ schoolTier + 1        // reach at most one tier up
+pitch cost:  2000 + progressive $/pt (90 → 140 → 180 across 45-65 / 65-79 / 79+ bands)
+how a transfer ranks you:
+   adjustedOffer = roleScore + prestige·7 + distComfort + 0.75·√money
+   roleScore: starter 120 · rotation 55 · buried 3      ← role dominates
+early commit if the top offer beats #2 by 45 AND offers a starting job</pre>
+<div class="plain"><div>An open starting job at a small program beats a rich program that would bury him. Money is a diminishing √ term — it never dominates role and fit.</div></div>
+</section>
+
+<section id="dev">
+<h2 class="sec"><span class="num">21</span>Development &amp; progression</h2>
+<p>The annual practice tick grows attributes toward their caps; work ethic and class year drive the pace. <span class="src">development.js:7</span></p>
+<pre class="f">weMult  = 0.7 + (WE/99)·0.8                       // 0.7 … 1.5
+ageOf   = measured {FR .80, SO 1.10, JR 1.40, SR 1.50} · coached {FR 1.20 … SR 1.10}
+delta   = 48 × scale × facMult × weight × weMult × ageOf × devMult
+          × max(0.4, headroom/32) × randNorm(1, 0.15)
+potential tick: weGate = (weMult/1.1)^1.6         // WE gates raw talent HARD
+regression: JR/SR with WE<55 → clamp((55−WE)/200,0,0.22) chance to lose 1 COACHED point</pre>
+<div class="plain"><div>Bodies ramp hard through the college years; craft grows steadily. Talent blooms toward its ceiling even on the bench — but only if the work ethic is there. The gifted-and-lazy stall; loafers get sloppier (coached attrs), never slower (measured attrs never regress).</div></div>
+<div class="flag fixed"><span class="lbl">fixed</span><b>The spring-game multiplier bug isn't present.</b> Your notes flagged that normalizing minutes to proportions would cancel a <code>SPRING_DEV_MULT</code> on minutes. In the current code the 0.15 is passed as the <code>scale</code> argument, which multiplies the final delta directly and does <b>not</b> cancel — spring runs at ~15% of a full tick, as intended. <span class="src">offseason.js:483</span></div>
+</section>
+
+<section id="season">
+<h2 class="sec"><span class="num">22</span>Rankings, awards &amp; coaching careers</h2>
+<h4>National poll (per division, résumé-based) <span class="src">rankings.js:114–198</span></h4>
+<pre class="f">score = winPct·(1 − priorWeight·0.5) + resumePer·0.85 + prestigeNorm·priorWeight·0.9
+        + prestigeNorm·0.05 + sosBonus
+priorWeight = max(0, 1 − games/8)          // preseason prestige prior fully decays after 8 games
+win credit  += 0.5 + oppStrength + marginBonus(min(margin,21)/21·0.15)
+tiebreak: score → win% → SOS → fewer losses → prestige, then honor head-to-head between near-ties</pre>
+<h4>Coach expectation &amp; the hot seat <span class="src">career.js:5–15, season.js:2564–2628</span></h4>
+<pre class="f">expectedWins = round( (0.30 + prestige·0.10 + expectationBonus) × 12 )
+jobSecurity += 12·(actualWins − expectedWins) + 3·(prestige−3)     // start 60; hot ≤25; fired ≤0
+never-a-surprise: you can only be fired if the AD already put you "on notice" a prior season
+streak fire: two straight seasons ≥3 wins short of the mandate</pre>
+<h4>Award scorers (stat-line leaders) <span class="src">awards.js:76–143</span></h4>
+<pre class="f">QB    = passYds·0.04 + passTD·4 − passInt·2 + rushYds·0.05 + rushTD·4
+RB    = rushYds·0.1 + rushTD·6 + recYds·0.08 + recTD·5
+CB/S  = INT·6 + PBU·2 + tackles·0.4 + FF·3
+Coach of Year: gap = wins/12 − (0.3 + prestige·0.1)     // reward beating the prestige mandate</pre>
+<div class="plain"><div>Early in the year everyone's undefeated so prestige carries the poll; as games pile up, win% and quality-of-win take over. You're judged against a prestige-based win mandate — beat it to bank security, always with a one-year grace and a prior warning before any firing.</div></div>
+</section>
+
+<section id="dna">
+<h2 class="sec"><span class="num">23</span>Coach DNA cards — advertised vs. actual</h2>
+<p>Grades (0–10) are earned with XP (<code>round(40·g^1.7)</code>) and apply only to <b>your</b> team — AI schools never get DNA. The card's promise often uses a different constant than the live consumer. <span class="src">coachprofile.js, sim.js, season.js</span></p>
+<div class="scroll"><table>
+<thead><tr><th>Card</th><th>Advertised</th><th>Actual effect</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>groundPound</td><td>fatigue −1.5%/g</td><td>2nd-half fatigue ×(1−g·0.015) <i>and</i> a 3rd-&amp;-short power boost</td><td style="color:var(--green)">wired</td></tr>
+<tr><td>airAttack</td><td>deep acc +g%</td><td>deep completion += g·0.01</td><td style="color:var(--green)">wired</td></tr>
+<tr><td>ballSecurity</td><td>turnovers −g%</td><td>INT ×(1−g·0.01), fumble ×(1−g·0.01)</td><td style="color:var(--green)">wired</td></tr>
+<tr><td>ballHawk</td><td>takeaways +g%</td><td>contested-throw INT ×(1+g·0.01)</td><td style="color:var(--green)">wired</td></tr>
+<tr><td>riverboat</td><td>4th-down/2pt +g%</td><td>4th-down short-yardage power ×(1+g·0.01)</td><td style="color:var(--green)">wired</td></tr>
+<tr><td>roadWarrior</td><td>road penalty −g·8%</td><td>erases g·0.08 of the road offense deficit</td><td style="color:var(--green)">wired</td></tr>
+<tr><td>adjustments</td><td>halftime +g·10%</td><td>halftime strength = 1 + g·0.10</td><td style="color:var(--green)">wired</td></tr>
+<tr><td><b>pressure</b></td><td>blitz big-play risk −g·1.5%</td><td>coverage half live (DB-blitz deep only); pass-rush half <b>reads nothing</b></td><td style="color:var(--red)">half-dead</td></tr>
+<tr><td><b>specialTeams</b></td><td>FG range &amp; coverage +g%</td><td>fully wired, but the real effect is +0.40 <i>yards</i>/grade, not the +g% on the card</td><td style="color:var(--amber)">misleading</td></tr>
+<tr><td><b>discipline</b></td><td>pre-snap penalty −g·1.2%</td><td>pre-snap flag negated at prob g·0.012 — <b>works as described</b></td><td style="color:var(--green)">wired</td></tr>
+</tbody></table></div>
+<div class="flag dead"><span class="lbl">dead</span><b>pressure — the "bring heat" half is a no-op.</b> The live path passes <code>dnaPressure</code> into <code>resolvePocket</code>, but <code>rushgeo.js</code> never reads it (it's in the header comment and silently ignored). The sack/hurry boost <code>1 + g·0.006</code> exists only in inert debug branches. Only the narrow DB-blitz-deep coverage effect actually fires. <span class="src">rushgeo.js:89, sim.js:510,522</span></div>
+</section>
+
+<!-- ============ APPENDIX ============ -->
+<section id="drift">
+<h2 class="sec"><span class="num">A</span>Appendix — drift &amp; inert features</h2>
+<p>The single most useful output of writing this down: a consolidated list of places where the shipping math differs from a comment, a probe, or your own notes. Green = a "known bug" that's actually already fixed. Red = a feature that's silently doing nothing.</p>
+
+<div class="flag fixed"><span class="lbl">fixed</span><b>Run lane × 0</b> — reconnected with live slopes; ~1 yд monotonic lane→YPC swing restored. <span class="src">run2geo.js</span></div>
+<div class="flag fixed"><span class="lbl">fixed</span><b>Spring-dev multiplier</b> — passed as <code>scale</code>, doesn't cancel; runs at ~15% of a full tick. <span class="src">offseason.js:483</span></div>
+<div class="flag fixed"><span class="lbl">fixed</span><b>Motion tell inversion</b> — non-inverted and fully wired into the QB read + separation, not log-only. <span class="src">sim.js:654</span></div>
+<div class="flag fixed"><span class="lbl">fixed</span><b>Halftime shadow nesting</b> — un-nested, so it would apply every 2nd-half snap (see the red note below for the catch). <span class="src">sim.js:2000–2009</span></div>
+
+<div class="flag dead"><span class="lbl">inert</span><b>Halftime shadow &amp; protect (<code>_h2Shadow</code> / <code>_h2Protect</code>)</b> — the nesting bug is fixed and the math is calibrated, but <b>nothing in the bundle ever assigns these fields</b>, so they never fire. Consumer-only dead features. (The sibling <code>_hotTargetId</code> / <code>_h2DefLean</code> dials <i>are</i> wired.) <span class="src">sim.js:1464,2005</span></div>
+<div class="flag dead"><span class="lbl">inert</span><b>pressure DNA, pass-rush half</b> — <code>resolvePocket</code> ignores <code>dnaPressure</code>; the "more pressure" promise produces zero effect. <span class="src">rushgeo.js:89</span></div>
+<div class="flag dead"><span class="lbl">retired</span><b><code>PASS_RUSH_PRESSURE = 0.45</code></b> and the <code>collapseFrac²</code> sack roll — a frozen debug A/B path; live sacks come from the pocket race. <span class="src">sim.js:510</span></div>
+<div class="flag dead"><span class="lbl">retired</span><b><code>checkCommitments</code> / <code>battleStatus</code></b> — zero live call sites; kept only so a top-level import doesn't break the bundle. Live commits go through <code>resolveFunnel</code>. <span class="src">recruiting.js:400,539</span></div>
+
+<div class="flag"><span class="lbl">flag</span><b><code>CATCH_SEP_SCALE</code> / <code>CATCH_TECH_SCALE</code></b> — referenced only in comments; the catch slope is a literal <code>5.0</code>. <span class="src">sim.js:728</span></div>
+<div class="flag"><span class="lbl">flag</span><b><code>kicker_check.mjs</code> FG coefficients are stale</b> vs the live sim — use <code>kicking_model_probe.mjs</code> for the kicker audit. <span class="src">sim.js:2951</span></div>
+<div class="flag"><span class="lbl">flag</span><b><code>CAPPED_ATTRS</code> is 9 attributes</b> (all but CON/WE), not the 5 "athletic" ones the comments imply — division caps bind craft attributes too. <span class="src">constants.js:20</span></div>
+<div class="flag"><span class="lbl">flag</span><b>No <code>fitMultiplier</code> dead read exists.</b> Your notes flagged a "computed but never rendered" fit number; every fit multiplier in the code (<code>effectiveSpend</code>, the AI board <code>fit</code>, the on-field scheme <code>fitMult</code>) is live and consumed. Nothing to wire. <span class="src">recruiting.js:198,697</span></div>
+<div class="flag"><span class="lbl">flag</span><b><code>pressureLevel = 2</code> ("urgent") never occurs</b> — sacks return before the read, so the QB read only ever sees clean/hurried. <span class="src">sim.js:658</span></div>
+
+<hr class="soft">
+<p class="note">Generated from the current <code>js/</code> source by parsing every engine module and resolving each coefficient from <code>constants.js</code>. Formulas are transcribed faithfully; where a mechanism was too sprawling to reproduce in full it is summarized and marked. If you change a module a probe imports, re-run that probe — and if you retune any coefficient here, this document goes stale, so regenerate it.</p>
+</section>
+
+</main>
+</div>
+
+<script>
+// Section filter
+const q = document.getElementById('search');
+const sections = [...document.querySelectorAll('main section')];
+q.addEventListener('input', () => {
+  const t = q.value.trim().toLowerCase();
+  sections.forEach(s => {
+    const hit = !t || s.textContent.toLowerCase().includes(t);
+    s.classList.toggle('hide', !hit);
+  });
+});
+// Scroll-spy for the TOC
+const links = [...document.querySelectorAll('nav.toc a')];
+const map = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const a = map.get(e.target.id);
+      if (a) a.classList.add('active');
+    }
+  });
+}, { rootMargin: '-70px 0px -70% 0px', threshold: 0 });
+sections.forEach(s => { if (s.id) obs.observe(s); });
+</script>
+</body>
+</html>

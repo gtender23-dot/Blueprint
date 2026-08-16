@@ -180,6 +180,11 @@ function crestLuma(hex) {
   return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 }
 function crestLetters(school) {
+  // Explicit override wins: an editor-set crestText lets a user type the letters
+  // shown on the shield without disturbing `abbr` (used for dedup/display). Same
+  // sanitising as abbr — uppercase alphanumerics, 1–3 chars (the typography's range).
+  const override = String((school == null ? void 0 : school.crestText) || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3);
+  if (override) return override;
   const abbreviation = String((school == null ? void 0 : school.abbr) || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3);
   if (abbreviation) return abbreviation;
   const words = String((school == null ? void 0 : school.name) || "School").toUpperCase().match(/[A-Z0-9]+/g) || ["S"];
@@ -837,7 +842,7 @@ PORTRAIT_POSITION_COLORS = {
   P: "#52606f"
 };
 
-export { archetypeLabel, clamp2, distanceMiles, escapeHtml, fmtMoney, fmtRecord, fullName, logistic, rand, randInt3, randNorm, randomLocation, randomName, ratingColor, recruitDistance, renderCrest, renderPlayerPortrait, shuffle, uuid };
+export { archetypeLabel, clamp2, crestLetters, distanceMiles, escapeHtml, fmtMoney, fmtRecord, fullName, logistic, rand, randInt3, randNorm, randomLocation, randomName, ratingColor, recruitDistance, renderCrest, renderPlayerPortrait, shuffle, uuid };
 
 // additional exports consumed by tools/ probes
 export { clamp2 as clamp };

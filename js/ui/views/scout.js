@@ -215,7 +215,7 @@ function renderHistoryTab(school) {
   }
   return `
   <table class="data-table scout-history-table">
-    <thead><tr><th>SEASON</th><th>COACH</th><th>RECORD</th><th>CONF</th><th>RANK</th><th>\u2605</th><th>RESULT</th></tr></thead>
+    <thead><tr><th>SEASON</th><th>COACH</th><th>RECORD</th><th>CONF</th><th>RANK</th><th>CLASS</th><th>\u2605</th><th>RESULT</th></tr></thead>
     <tbody>
       ${hist.map((h) => {
     var _a;
@@ -227,6 +227,7 @@ function renderHistoryTab(school) {
           <td>${h.w}\u2013${h.l} <span class="muted">(${h.cw}\u2013${h.cl})</span></td>
           <td class="muted">${escapeHtml(h.conf || "")}${h.confChamp ? ' <span class="hist-conf-champ" title="Conference champion">\u{1F3C6}</span>' : ""}</td>
           <td>${h.rank != null ? `#${h.rank}` : '<span class="muted">\u2014</span>'}</td>
+          <td class="muted">${h.classRank != null ? `#${h.classRank}` : "\u2014"}</td>
           <td class="muted">${(_a = h.prestige) != null ? _a : "\u2014"}</td>
           <td>${h.post ? `<span class="${h.post === "National Champion" ? "hist-natty" : ""}">${escapeHtml(h.post)}</span>` : '<span class="muted">\u2014</span>'}</td>
         </tr>`;
@@ -277,6 +278,11 @@ function renderScout() {
         <div class="ts-item"><span>Sacks</span>${st.sacks || 0}</div>
         <div class="ts-item"><span>TO</span>${st.turnovers || 0}</div>
       </div>
+      ${school.book || school.defbook ? `
+      <div class="scout-teamstats scout-scheme">
+        <div class="ts-item"><span>Offense</span>${escapeHtml(school.book && school.book.name || "—")}</div>
+        <div class="ts-item"><span>Defense</span>${escapeHtml(school.defbook && school.defbook.name || "—")}</div>
+      </div>` : ""}
     </div>
 
     ${renderProgramPanel(school)}

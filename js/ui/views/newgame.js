@@ -3,9 +3,14 @@ import { getCoach } from '../../engine/coachprofile.js';
 import { generateCandidates } from '../../engine/staff.js';
 import { findStartProgram } from '../../engine/starts.js';
 import { CONFERENCES, SCHOOL_DATA, WORLDGEN_INFO, applyIdentityToSchool, availableStates, generatePlayerProgram, generateWorld } from '../../engine/world.js';
-import { navigate, rerender, startNewGame, startNewGamePrepared, state } from '../../state.js';
+import { navigate, notify, rerender, startNewGame, startNewGamePrepared, state } from '../../state.js';
+import { repairCreation } from '../../engine/creatorrepair.js';
+import { DEFAULT_OFF_BOOKS, DEFAULT_DEF_BOOKS, defaultOffBook, defaultDefBook } from '../../engine/defaultbooks.js';
 import { BLUEPRINT_MARK } from '../logo.js';
-import { gameplanIsSimple } from './gameplan.js';
+import { BUILTIN_PLANS, applyPlanToSchool, builtinPlan, gameplanIsSimple } from './gameplan.js';
+import { listCreations, loadCreationData } from '../../engine/creator.js';
+import { applyPlaybookToGameplan } from '../../engine/playbook.js';
+import { applyDefBookToGameplan } from '../../engine/defbook.js';
 import { escapeHtml, renderCrest } from '../../utils.js';
 
 function obGetWorld() {
@@ -18,6 +23,14 @@ function obGetWorld() {
   }
   return _obWorld;
 }
+// The onboarding renumbers itself to the steps actually SHOWN. A tree run (the
+// default start) locks "take the job" and skips the Situation step — without
+// this the header jumped STEP 1 -> STEP 3 and the progress dots left a gap.
+// obActiveSteps = every internal step shown (incl. the unnumbered Staff screen,
+// obStep 4); obNumberedSteps = only the user-facing numbered ones.
+function obActiveSteps() { return state._treeId ? [0, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5]; }
+function obNumberedSteps() { return state._treeId ? [0, 2, 3, 5] : [0, 1, 2, 3, 5]; }
+function obStepLabel(s) { const i = obNumberedSteps().indexOf(s); return i >= 0 ? `STEP ${i + 1}` : ""; }
 function renderNewGame() {
   if (legacyMode) return renderLegacy();
   if (state._coachProfileName && obStep === 0 && !ob.first && !ob.last) {
@@ -45,7 +58,7 @@ function renderNewGame() {
       <button class="btn-ghost" id="btn-back-to-menu">\u2190 Main Menu</button>
     </div>
     <div class="ob-progress">
-      ${[0, 1, 2, 3, 4, 5].map((i) => `<span class="ob-dot${i === obStep ? " active" : i < obStep ? " done" : ""}"></span>`).join("")}
+      ${obActiveSteps().map((i) => { const seq = obActiveSteps(); return `<span class="ob-dot${i === obStep ? " active" : seq.indexOf(i) < seq.indexOf(obStep) ? " done" : ""}"></span>`; }).join("")}
     </div>
     <div class="newgame-form-wrapper">
       <div class="newgame-card ob-card">
@@ -134,7 +147,7 @@ function stepSignature() {
   const gpMode = s.gameplanMode === "advanced" ? "advanced" : "simple";
   return `
   <div class="ob-step">
-    <div class="ob-kicker">STEP 1 \u2014 THE GROUND RULES</div>
+    <div class="ob-kicker">${obStepLabel(0)} \u2014 THE GROUND RULES</div>
     <h2 class="ob-headline">Set the terms, Coach ${escapeHtml(ob.last || "")}.</h2>
     <p class="ob-flavor">How hard the world pushes back, and how much of the chalkboard you want to run yourself. You can change all of this later in Settings.</p>
 
@@ -169,6 +182,28 @@ function stepSignature() {
     </div>`;
   })()}
 
+    <div class="ob-setting-row">
+      <div class="ob-setting-label">Starting Game Plan</div>
+      <div class="ob-setting-desc">A ready-made identity to open with. You can tweak every dial on the Game Plan screen, or load a different preset any time \u2014 nothing here is locked in.</div>
+      <select class="form-select" id="ob-start-plan" style="margin-top:6px;max-width:280px">
+        <option value=""${!ob.startPlan ? " selected" : ""}>Team default \u2014 let the staff set it</option>
+        ${(() => { const pbs = listCreations("playbooks"); return pbs.length ? `<optgroup label="Your custom playbooks">${pbs.map((pb) => `<option value="pb:${escapeHtml(pb.id)}"${ob.startPlan === "pb:" + pb.id ? " selected" : ""}>${escapeHtml(pb.data.name || "Untitled")}</option>`).join("")}</optgroup>` : ""; })()}
+        <optgroup label="Starter books">${DEFAULT_OFF_BOOKS.map((b) => `<option value="dpb:${escapeHtml(b.name)}"${ob.startPlan === "dpb:" + b.name ? " selected" : ""}>${escapeHtml(b.name)}</option>`).join("")}</optgroup>
+        <optgroup label="Preset schemes">${BUILTIN_PLANS.map((p) => `<option value="${escapeHtml(p.name)}"${ob.startPlan === p.name ? " selected" : ""}>${escapeHtml(p.name)}</option>`).join("")}</optgroup>
+      </select>
+      ${ob.startPlan && builtinPlan(ob.startPlan) ? `<div class="ob-setting-desc" style="margin-top:6px;opacity:.85">${escapeHtml(builtinPlan(ob.startPlan).blurb)}</div>` : ob.startPlan && ob.startPlan.startsWith("pb:") ? `<div class="ob-setting-desc" style="margin-top:6px;opacity:.85">Your custom playbook \u2014 your formations and concepts open the season.</div>` : ""}
+    </div>
+
+    <div class="ob-setting-row">
+      <div class="ob-setting-label">Starting Defense</div>
+      <div class="ob-setting-desc">Open with a starter defensive book or one of your own from the Workshop. Leave on the default and your staff sets the front and coverage.</div>
+      <select class="form-select" id="ob-start-def" style="margin-top:6px;max-width:280px">
+        <option value=""${!ob.startDef ? " selected" : ""}>Team default \u2014 let the staff set it</option>
+        ${(() => { const dbs = listCreations("defbooks"); return dbs.length ? `<optgroup label="Your defenses">${dbs.map((db) => `<option value="dd:${escapeHtml(db.id)}"${ob.startDef === "dd:" + db.id ? " selected" : ""}>${escapeHtml(db.data.name || "Untitled")}</option>`).join("")}</optgroup>` : ""; })()}
+        <optgroup label="Starter books">${DEFAULT_DEF_BOOKS.map((b) => `<option value="ddb:${escapeHtml(b.name)}"${ob.startDef === "ddb:" + b.name ? " selected" : ""}>${escapeHtml(b.name)}</option>`).join("")}</optgroup>
+      </select>
+    </div>
+
     <button class="btn-primary ob-next" id="ob-next-0" style="margin-top:16px">LET'S GO \u2192</button>
     <div class="ob-alt"><a href="#" id="ob-legacy-link">\u2026or take over an existing program instead</a></div>
   </div>
@@ -179,7 +214,7 @@ function stepSituation() {
   const cards = simpleLock ? CHALLENGE_CARDS.filter((c) => c.id === "takejob") : CHALLENGE_CARDS;
   return `
   <div class="ob-step">
-    <div class="ob-kicker">STEP 2 \u2014 THE SITUATION</div>
+    <div class="ob-kicker">${obStepLabel(1)} \u2014 THE SITUATION</div>
     <h2 class="ob-headline">What kind of job are you taking, Coach ${escapeHtml(ob.last || "")}?</h2>
     <p class="ob-flavor">${simpleLock ? "Simple game planning locks you to the grassroots start \u2014 take a Division III job and build it up. Switch to Advanced back in Step 1 for the other start types." : "Every program in this world has a hundred years of history behind it \u2014 banners, scandals, a legend or two, and a rival it has hated since 1926. Pick the story you want to walk into."}</p>
     <div class="ob-challenge-grid">
@@ -240,7 +275,7 @@ function stepJob() {
   if (isLore) {
     return `
     <div class="ob-step">
-      <div class="ob-kicker">STEP 3 \u2014 THE JOB</div>
+      <div class="ob-kicker">${obStepLabel(2)} \u2014 THE JOB</div>
       <h2 class="ob-headline">How big is the stage?</h2>
       <p class="ob-flavor">Pick a level. We'll find the program whose history matches your situation \u2014 the story chooses the school.</p>
       <div class="ob-card-grid">
@@ -273,7 +308,7 @@ function stepJob() {
   }
   return `
   <div class="ob-step">
-    <div class="ob-kicker">STEP 3 \u2014 THE JOB</div>
+    <div class="ob-kicker">${obStepLabel(2)} \u2014 THE JOB</div>
     <h2 class="ob-headline">${isOutpost ? "Which ocean?" : "Where does the story begin, Coach " + escapeHtml(ob.last || "") + "?"}</h2>
     <p class="ob-flavor">${isOutpost ? "Nobody plays football out here yet. You will found the program \u2014 and then recruit against 2,500 miles of open water for every kid on the mainland." : "Pick a state and a level, then choose the program you want to take over. Real towns, invented programs, and a hundred years of history already on the wall."}</p>
 
@@ -358,7 +393,7 @@ function renderSchoolPicker() {
 function stepIdentity() {
   return `
   <div class="ob-step">
-    <div class="ob-kicker">STEP 4 \u2014 THE BLUEPRINT</div>
+    <div class="ob-kicker">${obStepLabel(3)} \u2014 THE BLUEPRINT</div>
     <h2 class="ob-headline">What kind of football do you believe in?</h2>
     <p class="ob-flavor">This shapes the roster we recruit for your first season \u2014 your QB room and your defensive bodies arrive built for it.</p>
     <div class="ob-section-label">QUARTERBACK TYPE</div>
@@ -432,7 +467,7 @@ function stepReveal() {
   const stName = STATE_NAMES[s.state] || s.state;
   return `
   <div class="ob-step">
-    <div class="ob-kicker">STEP 5 \u2014 THE PRESS CONFERENCE</div>
+    <div class="ob-kicker">${obStepLabel(5)} \u2014 THE PRESS CONFERENCE</div>
     <div class="ob-reveal" style="--rv1:${s.colors[0]};--rv2:${s.colors[1]}">
       <div class="ob-reveal-banner">
         <span class="ob-reveal-logo">${renderCrest(s, 64)}</span>
@@ -564,6 +599,18 @@ function setupListeners3() {
     state.settings.recruitAssist = btn.dataset.obAssist;
     rerender();
   }));
+  {
+    const sp = document.getElementById("ob-start-plan");
+    if (sp) sp.addEventListener("change", (e) => {
+      ob.startPlan = e.target.value || null;
+      rerender();
+    });
+    const sd = document.getElementById("ob-start-def");
+    if (sd) sd.addEventListener("change", (e) => {
+      ob.startDef = e.target.value || null;
+      rerender();
+    });
+  }
   (_c = document.getElementById("ob-next-0")) == null ? void 0 : _c.addEventListener("click", () => {
     if (!ob.first && !ob.last) {
       if (state._coachProfileName) {
@@ -693,12 +740,46 @@ function setupListeners3() {
         state.playerCoach.jobSecurity = ob.custom.jobSecurity;
         state.playerCoach.budget = Math.round((state.playerCoach.budget || 0) * (ob.custom.budgetPct / 100));
       }
+      {
+        const school2 = state.world.schools.find((s) => s.id === state.playerSchoolId);
+        // apply* returns a NEW gameplan (never mutates), so the merged result has
+        // to be written back — replace the contents, keeping engine _fields.
+        const assignGp = (merged) => { for (const k of Object.keys(school2.gameplan)) { if (!k.startsWith("_")) delete school2.gameplan[k]; } Object.assign(school2.gameplan, merged); };
+        const startBuiltin = ob.startPlan && !ob.startPlan.startsWith("pb:") && !ob.startPlan.startsWith("dpb:") ? builtinPlan(ob.startPlan) : null;
+        if (startBuiltin && school2) applyPlanToSchool(school2, startBuiltin.gp);
+        else if (school2 && ob.startPlan && ob.startPlan.startsWith("dpb:")) {
+          // A starter book opens the season (always current-build-legal).
+          const book = defaultOffBook(ob.startPlan.slice(4));
+          if (book) { try { assignGp(applyPlaybookToGameplan(book, school2.gameplan)); } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's plan`, "warning"); } }
+        }
+        else if (school2 && ob.startPlan && ob.startPlan.startsWith("pb:")) {
+          // A custom playbook opens the season: copy its formations + concepts.
+          // Repair-on-load first — and never fail SILENTLY (the old bare catch
+          // meant a stale book simply didn't apply and nobody was told).
+          const pbRaw = loadCreationData("playbooks", ob.startPlan.slice(3));
+          if (pbRaw) {
+            const rep = repairCreation("playbooks", pbRaw);
+            if (rep.ok) { try { assignGp(applyPlaybookToGameplan(rep.data, school2.gameplan)); if (rep.changes.length) notify(`Playbook updated for this build: ${rep.changes[0]}`, "warning"); } catch (e) { notify(`Couldn't apply "${pbRaw.name || "playbook"}" — starting with the staff's plan`, "warning"); } }
+            else notify(`"${pbRaw.name || "Playbook"}" can't load in this build — starting with the staff's plan`, "warning");
+          }
+        }
+        // A custom defense opens the season alongside the offense (swaps only the
+        // defensive dials, so it composes with either preset or custom offense).
+        if (school2 && ob.startDef && ob.startDef.startsWith("ddb:")) {
+          const book = defaultDefBook(ob.startDef.slice(4));
+          if (book) { try { assignGp(applyDefBookToGameplan(book, school2.gameplan)); } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's defense`, "warning"); } }
+        } else if (school2 && ob.startDef && ob.startDef.startsWith("dd:")) {
+          const dbRaw = loadCreationData("defbooks", ob.startDef.slice(3));
+          if (dbRaw) {
+            const rep = repairCreation("defbooks", dbRaw);
+            if (rep.ok) { try { assignGp(applyDefBookToGameplan(rep.data, school2.gameplan)); if (rep.changes.length) notify(`Defense updated for this build: ${rep.changes[0]}`, "warning"); } catch (e) { notify(`Couldn't apply "${dbRaw.name || "defense"}" — starting with the staff's defense`, "warning"); } }
+            else notify(`"${dbRaw.name || "Defense"}" can't load in this build — starting with the staff's defense`, "warning");
+          }
+        }
+      }
       if (state._coachId) {
         const prof = getCoach(state._coachId);
         const school2 = state.world.schools.find((s) => s.id === state.playerSchoolId);
-        if (((_b2 = (_a2 = prof == null ? void 0 : prof.plans) == null ? void 0 : _a2.gameplans) == null ? void 0 : _b2[0]) && school2) {
-          Object.assign(school2.gameplan, JSON.parse(JSON.stringify(prof.plans.gameplans[0].gp)));
-        }
         if (((_d2 = (_c2 = prof == null ? void 0 : prof.plans) == null ? void 0 : _c2.practice) == null ? void 0 : _d2[0]) && school2) {
           const pp = JSON.parse(JSON.stringify(prof.plans.practice[0].pp));
           if (pp.positionPlans) school2.positionPlans = pp.positionPlans;

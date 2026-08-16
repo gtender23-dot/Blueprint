@@ -1,4 +1,4 @@
-import { ARCHETYPE_DISTANCE, C, DEF_FRONT_COUNTS, DEF_FRONT_WEIGHTS, FORMATION_PACKAGES, FORMATION_ROLE_OVERRIDE, FORMATION_SITUATIONAL, FORMATION_WEIGHTS, FRONT_ROLES, MATCHUP_MATRIX, OFF_ROLE_BY_PLAY, SIZE_BANDS, SLOT_ELIGIBILITY, aliasFormation } from '../constants.js';
+import { ARCHETYPE_DISTANCE, C, DEF_FRONT_COUNTS, DEF_FRONT_WEIGHTS, FORMATION_PACKAGES, FORMATION_ROLE_OVERRIDE, FORMATION_SITUATIONAL, FORMATION_VARIATIONS, FORMATION_WEIGHTS, FRONT_ROLES, MATCHUP_MATRIX, OFF_ROLE_BY_PLAY, SIZE_BANDS, SLOT_ELIGIBILITY, aliasFormation } from '../constants.js';
 import { derivedArchetype, roleRating } from './player.js';
 import { bridgeWaivesRole, sizeFitForRole } from './traits.js';
 
@@ -22,8 +22,36 @@ function fieldUnit(pos, count, depthChart, used) {
   }
   return out;
 }
-function resolvePersonnel(formationId, depthChart) {
-  const pkg = FORMATION_PACKAGES[aliasFormation(formationId)] || FORMATION_PACKAGES["Single Back"];
+// ── Formation Variations (Creativity Tools P1b) ───────────────────────────
+// A variation is a sparse delta over the base formation's data bundle. Every
+// hook below is inert when `varKey` is null/absent, so base play stays
+// byte-identical (the run-scheme inert-by-default pattern). Selection rides the
+// gameplan formation entry's `.variation` field; `pickedVariation` reads it back
+// once the roll has chosen a formation.
+function formationVariation(formationId, varKey) {
+  if (!varKey) return null;
+  const set = FORMATION_VARIATIONS[aliasFormation(formationId)];
+  return set && set[varKey] || null;
+}
+function variedPackage(formationId, varKey) {
+  const base = FORMATION_PACKAGES[aliasFormation(formationId)] || FORMATION_PACKAGES["Single Back"];
+  const v = formationVariation(formationId, varKey);
+  if (!v || !v.pkg) return base;
+  return { ...base, ...v.pkg };
+}
+function pickedVariation(offFormations, chosenId) {
+  const m = (offFormations || []).find((f) => f && f.variation && aliasFormation(f.id) === chosenId);
+  return m ? m.variation : null;
+}
+// Additive passLean nudge the sim applies on top of FORMATIONS[id].passLean.
+// (runIn/runOut deltas are descriptive data for the viewer/builder — the engine
+// only reads passLean, so only it is threaded live.)
+function variationPassLeanDelta(formationId, varKey) {
+  const v = formationVariation(formationId, varKey);
+  return v && v.lean && v.lean.passLean || 0;
+}
+function resolvePersonnel(formationId, depthChart, varKey = null) {
+  const pkg = variedPackage(formationId, varKey);
   if (!pkg) return null;
   const used = /* @__PURE__ */ new Set();
   const personnel = {
@@ -160,25 +188,28 @@ function assignRoles(players, roster, roleList) {
   }
   return assigned;
 }
-function rollFormation(offFormations, eligible = null) {
+// Roll a formation ENTRY (multi-look playbooks, Aug 2026): a gameplan can carry
+// the same formation several times — Base + variations, each its own weighted
+// entry — so the roll must return the WINNING ENTRY, not just an id. Returning
+// only the id (the pre-multi-look shape) made pickedVariation grab the first
+// variation-bearing entry for that id, which meant the Base look never played
+// and only one variation ever appeared regardless of the look weights.
+function rollFormationEntry(offFormations, eligible = null) {
   const liveAll = (offFormations || []).filter((f) => f && FORMATION_PACKAGES[aliasFormation(f.id)]);
-  if (!liveAll.length) return "Single Back";
+  if (!liveAll.length) return null;
   const live = eligible ? liveAll.filter((f) => eligible(aliasFormation(f.id))).length ? liveAll.filter((f) => eligible(aliasFormation(f.id))) : liveAll : liveAll;
   const total = live.reduce((s, f) => s + (f.weight || 0), 0);
-  let pick2 = live[live.length - 1].id;
-  if (total <= 0) {
-    pick2 = live[0].id;
-  } else {
-    let r = Math.random() * total;
-    for (const f of live) {
-      r -= f.weight || 0;
-      if (r <= 0) {
-        pick2 = f.id;
-        break;
-      }
-    }
+  if (total <= 0) return live[0];
+  let r = Math.random() * total;
+  for (const f of live) {
+    r -= f.weight || 0;
+    if (r <= 0) return f;
   }
-  return aliasFormation(pick2);
+  return live[live.length - 1];
+}
+function rollFormation(offFormations, eligible = null) {
+  const e = rollFormationEntry(offFormations, eligible);
+  return e ? aliasFormation(e.id) : "Single Back";
 }
 // W4 (§2): offensive personnel snapshot for the auto-sub picker.
 function offPersonnelOf(formationId) {
@@ -348,19 +379,27 @@ function effectiveRoleRating(player, pos, assignedRole) {
   // falloff outside, hard-capped (~8–10%). Kill-switch: __noSizeFit.
   return roleVal * fitMult * sizeFitForRole(player, assignedRole, SIZE_BANDS);
 }
-function getMatchupEdge(offFormation, defFront) {
+function getMatchupEdge(offFormation, defFront, varKey = null) {
   var _a, _b;
-  return (_b = (_a = MATCHUP_MATRIX[offFormation]) == null ? void 0 : _a[defFront]) != null ? _b : 1;
+  const base = (_b = (_a = MATCHUP_MATRIX[offFormation]) == null ? void 0 : _a[defFront]) != null ? _b : 1;
+  const v = formationVariation(offFormation, varKey);
+  if (!v || !v.matchup || v.matchup[defFront] == null) return base;
+  return Math.max(0.75, Math.min(1.25, base + v.matchup[defFront]));
 }
-function getSituationalMod(formationId, down, distance, clock, fieldPos) {
+function getSituationalMod(formationId, down, distance, clock, fieldPos, varKey = null) {
   const profile = FORMATION_SITUATIONAL[formationId];
   if (!profile) return 1;
   const distFromGoal = 100 - fieldPos;
-  if (distFromGoal <= 5) return profile.redZone;
-  if (down >= 3 && distance <= 2) return profile.shortYardage;
-  if (down >= 3 && distance >= 7) return profile.thirdLong;
-  if (clock < 120) return profile.twoMinute;
-  return profile.standard;
+  let bucket;
+  if (distFromGoal <= 5) bucket = "redZone";
+  else if (down >= 3 && distance <= 2) bucket = "shortYardage";
+  else if (down >= 3 && distance >= 7) bucket = "thirdLong";
+  else if (clock < 120) bucket = "twoMinute";
+  else bucket = "standard";
+  const base = profile[bucket];
+  const v = formationVariation(formationId, varKey);
+  if (!v || !v.situational || v.situational[bucket] == null) return base;
+  return Math.max(0.6, Math.min(1.35, base + v.situational[bucket]));
 }
 function schemeAdjustedOVR(player, frontId) {
   var _a;
@@ -405,4 +444,4 @@ SUB_CHAIN = {
   P: ["K"]
 };
 
-export { FRONT_PRESSURE_SIGNATURE, FRONT_SIG_LABEL, PERSONNEL_CLASSES, defUnitStrengthSchemeFit, getDefWeights, getMatchupEdge, getOffWeights, getSituationalMod, offPersonnelClass, offPersonnelOf, offUnitStrengthRoles, resolveDefPersonnel, resolvePersonnel, rollFormation, schemeAdjustedOVR, selectDefFront };
+export { FRONT_PRESSURE_SIGNATURE, FRONT_SIG_LABEL, PERSONNEL_CLASSES, defUnitStrengthSchemeFit, formationVariation, getDefWeights, getMatchupEdge, getOffWeights, getSituationalMod, offPersonnelClass, offPersonnelOf, offUnitStrengthRoles, pickedVariation, resolveDefPersonnel, resolvePersonnel, rollFormation, rollFormationEntry, schemeAdjustedOVR, selectDefFront, variationPassLeanDelta, variedPackage };

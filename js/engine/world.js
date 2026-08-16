@@ -1,5 +1,5 @@
 import { __spreadProps, __spreadValues } from '../_spread.js';
-import { C, CLASS_YEARS, DEFAULT_PRACTICE, ROSTER_TARGETS } from '../constants.js';
+import { C, CLASS_YEARS, DEFAULT_PRACTICE, ROSTER_TARGETS, POSITIONS } from '../constants.js';
 import { freshSkills } from './coach.js';
 import { generateProgramLore, generateRivalries } from './lore.js';
 import { createPlayer, createRecruit, derivedArchetype } from './player.js';
@@ -85,15 +85,18 @@ function pickToken(region, used, patternKey) {
 function tryPattern(patternKey, region, cls, used) {
   const campusPref = CAMPUS_SIZE_PREF[cls];
   const cityPref = CITY_SIZE_PREF[cls];
-  if (patternKey === "cu" || patternKey === "cs" || patternKey === "cc" || patternKey === "ct" || patternKey === "cd") {
+  if (patternKey === "cd" || patternKey === "cg") {
+    // Real cities NEVER take a university suffix ("<City> State/University/Tech"
+    // is exactly where real programs live). They take a denomination ("Selma
+    // Baptist") or a fictional geographic word ("Selma Ridge") instead — the
+    // university suffixes are reserved for the fictional landmark tokens below.
     const city2 = pickCity(region, used, cityPref, { nameBearing: true });
     if (!city2) return null;
     let name2;
-    if (patternKey === "cu") name2 = `${city2.c} University`;
-    else if (patternKey === "cs") name2 = `${city2.c} State`;
-    else if (patternKey === "cc") name2 = `${city2.c} College`;
-    else if (patternKey === "ct") name2 = `${city2.c} Tech`;
-    else {
+    if (patternKey === "cg") {
+      const geo = ["Ridge", "Basin", "Vale", "Heights", "Bluff", "Hollow", "Summit", "Prairie", "Grove", "Crossing", "Landing", "Point", "Highlands", "Cliffs", "Bend", "Reach", "Shoals", "Meadows"];
+      name2 = `${city2.c} ${geo[randInt3(0, geo.length - 1)]}`;
+    } else {
       const denoms = DENOMS_BY_REGION[region] || DENOMS_DEFAULT;
       name2 = `${city2.c} ${denoms[randInt3(0, denoms.length - 1)]}`;
     }
@@ -159,7 +162,7 @@ function makeIdentity(region, cls, used, opts = {}) {
       return res;
     }
   }
-  for (const key of opts.fallback || ["pc", "sn", "cd", "cc"]) {
+  for (const key of opts.fallback || ["pc", "sn", "cd", "cg"]) {
     const res = tryPattern(key, region, cls, used);
     if (res && !used.names.has(res.name) && !isRealSchoolName(res.name)) {
       used.names.add(res.name);
@@ -445,9 +448,20 @@ function generateSchools() {
   schools.push(...staticD1);
   const PROC_CONFS = ALL_CONFS.filter((c) => c.division !== "D1");
   const regionTally = {};
+  // [Season Mode Part B, 2026-08-13] D2/D3 conference TIERING. D1 keeps its
+  // power/mid-major split; D2/D3 were flat (every conference the same tier). Give
+  // each a small prestige offset so a strong conference and a weak one emerge —
+  // the hierarchy those divisions lacked. The offsets AVERAGE TO ~0 across the
+  // division (weighted more negative to offset the low-skew floor clamp), so the
+  // division MEAN — and thus the league's talent/balance — is preserved; only the
+  // between-conference SPREAD grows. Mean-neutral, verified by d2d3_tiering_ab.
+  const CONF_TIER_OFFSET = { D2: [1, 1, 1, 0, 0, 0, -1, -1, -1, -1], D3: [1, 1, 0, 0, -1, -1, -1, -1, -1] };
+  const _divConfSeq = { D2: 0, D3: 0 };
   for (const conf of PROC_CONFS) {
     const cls = conf.division === "D1" ? conf.conferenceClass : conf.division;
     const ceiling = cls === "power" ? 6 : cls === "midMajor" ? 3 : ((_a = C.PRESTIGE_MAX) == null ? void 0 : _a[conf.division]) || 5;
+    const _offArr = CONF_TIER_OFFSET[conf.division] || null;
+    const confOffset = _offArr ? _offArr[_divConfSeq[conf.division]++ % _offArr.length] : 0;
     const [lo, hi] = confSizeRange(conf);
     let PER_CONF = randInt3(lo, hi);
     if (PER_CONF % 2 !== 0) PER_CONF++;
@@ -471,7 +485,8 @@ function generateSchools() {
       const cityObj = ident.city || { c: "", s: "", lat: conf.lat, lng: conf.lng };
       const lat = +(cityObj.lat + (Math.random() * 2 - 1) * LOC_JITTER_DEG).toFixed(2);
       const lng = +(cityObj.lng + (Math.random() * 2 - 1) * LOC_JITTER_DEG).toFixed(2);
-      const prestige = pickPrestige(cls);
+      let prestige = pickPrestige(cls);
+      if (confOffset) prestige = Math.max(1, Math.min(ceiling, prestige + confOffset));
       const clamp7 = prestigeClamp(cls, conf.division);
       const flavor = makeFlavor(cls, ident.type, prestige, nickPick.n);
       confSchools.push({
@@ -583,6 +598,51 @@ function stateCentroid(state2) {
       n++;
     }
   return n ? { lat: lat / n, lng: lng / n } : null;
+}
+// A real city from the built-in gazetteer (REGION_CITIES) — constrained to a
+// state when given. Returns { c, s, lat, lng } or null.
+function cityInState(state2) {
+  const all = Object.values(REGION_CITIES).flat();
+  const inState = state2 ? all.filter((c) => c.s === state2) : [];
+  const pool = inState.length ? inState : all;
+  return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+}
+// Coin a full PROCEDURAL team identity sited in a real gazetteer city — a unique
+// (non-duplicate) fictional program with real coordinates for recruiting. Used
+// by the Creator's reroll and city assignment. Optionally pinned to a state.
+function coinTeamIdentity({ state: st = null } = {}) {
+  const city = cityInState(st) || { c: "Springfield", s: st || "IL", lat: 39.8, lng: -89.6 };
+  // NAME must be FICTIONAL — never "<real city> State" (that coins real programs
+  // like "Boise State", a trademark problem). Reuse the world generator's own
+  // identity maker, which builds names from fictional tokens AND rejects any that
+  // collide with a real school (isRealSchoolName). We keep only its name; the
+  // LOCATION is pinned to the chosen real city so recruiting distance still works.
+  const region = regionOfState(city.s) || Object.keys(REGION_CITIES)[0];
+  const used = {
+    names: /* @__PURE__ */ new Set(), abbrs: /* @__PURE__ */ new Set(), cities: /* @__PURE__ */ new Set(),
+    tokenPat: /* @__PURE__ */ new Set(), persons: /* @__PURE__ */ new Set(), saints: /* @__PURE__ */ new Set(), nickGlobal: {}
+  };
+  // makeIdentity names teams from the fictional landmark tokens ("Sawtooth
+  // State", "Bitterroot University") and rejects anything that collides with a
+  // real school (isRealSchoolName, now backstopped by the famous-program list),
+  // so we can use it directly — the whole point of the token cleanup. A geographic
+  // fallback covers the rare case it can't find a fresh name.
+  const GEO_SUFFIX = ["Ridge", "Basin", "Vale", "Heights", "Bluff", "Hollow", "Summit", "Prairie", "Grove", "Crossing", "Landing", "Point", "Highlands", "Cliffs"];
+  let ident = null;
+  for (let i = 0; i < 8 && !ident; i++) {
+    const cand = makeIdentity(region, "midMajor", used);
+    if (cand && cand.name && !isRealSchoolName(cand.name)) ident = cand;
+  }
+  const geoName = `${city.c} ${GEO_SUFFIX[Math.floor(Math.random() * GEO_SUFFIX.length)]}`;
+  const name = ident ? ident.name : (isRealSchoolName(geoName) ? `${city.c} Ridge` : geoName);
+  const nickPick = pickNickname({ cls: "midMajor", type: (ident && ident.type) || "stateUniversity", region }, /* @__PURE__ */ new Set(), used);
+  const nick = (nickPick && nickPick.n) ? nickPick.n : ((NICKS_CLASSIC[0] && NICKS_CLASSIC[0].n) || "Statesmen");
+  const cp = (COLOR_PAIRS && COLOR_PAIRS.length) ? COLOR_PAIRS[Math.floor(Math.random() * COLOR_PAIRS.length)] : ["#1e3a8a", "#e2e8f0"];
+  const j = () => (Math.random() * 2 - 1) * LOC_JITTER_DEG;
+  return {
+    name, nick, colors: [cp[0], cp[1]], state: city.s, city: city.c,
+    lat: +(city.lat + j()).toFixed(2), lng: +(city.lng + j()).toFixed(2)
+  };
 }
 function guaranteeStateCoverage(schools, allConfs, reserved = []) {
   const s2r = statesToRegions();
@@ -826,10 +886,28 @@ function mixConferenceStates(schools, allConfs) {
     if (stateSet(arr).size === 3) trySwapInto(cid, arr, 4, CAP_OPP[anchor[cid].division]);
   }
 }
+// [playtest item 18, 2026-08-12] The prestige→talent coupling. It is two terms:
+//   1. (prestige − 3) × 2   — the ABSOLUTE term, unchanged, which carries the
+//      division gap (D1 schools sit at higher prestige, so they get more here).
+//   2. (prestige − divMean) × 2.5 — the DIVISION-RELATIVE term, centered on the
+//      division's ACTUAL mean prestige so it averages to zero across the real
+//      school population (which skews low — most programs sit near the bottom of
+//      their division's star range, means ~D1 3.6 / D2 2.1 / D3 1.6). Centering on
+//      the range midpoint instead dragged the world OVR mean ~2 low and broke the
+//      pos_ovr_census calibration. This widens the within-division spread (a top
+//      program is clearly loaded vs a bottom one) WITHOUT moving the world's mean
+//      talent — so the tiers hold and the aggregate stat bands stay put. A
+//      program's whole star range was worth ~3.5 OVR of roster; it is now ~7–10.
+var PRESTIGE_DIV_MID = { D1: 3.6, D2: 2.1, D3: 1.6 };
+function prestigeTalentBonus(prestige, division) {
+  var _a;
+  const mid = (_a = PRESTIGE_DIV_MID[division]) != null ? _a : 3;
+  return (prestige - 3) * 2 + (prestige - mid) * 2.5;
+}
 function applyIdentityToSchool(school, qbPref, defFront, tier = null, pBonus = null) {
   const DIV_TIER = { D3: 1, D2: 2, D1: 3 };
   const t = tier != null ? tier : DIV_TIER[school.division] || 1;
-  const pb = pBonus != null ? pBonus : Math.round((school.prestige - 3) * 2);
+  const pb = pBonus != null ? pBonus : Math.round(prestigeTalentBonus(school.prestige, school.division));
   const shapePos = (pos, wantArch, n) => {
     const ps = school.roster.filter((p) => p.position === pos);
     for (let i = 0; i < Math.min(n, ps.length); i++) {
@@ -921,10 +999,10 @@ function generatePlayerProgram(world, { state: state2, division, qbPref, defFron
   DENOMS_BY_REGION[VKEY] = DENOMS_BY_REGION[homeRegion] || DENOMS_DEFAULT;
   const basePatterns = NAME_PATTERNS[cls];
   const cut = basePatterns.filter(([k]) => k === "pc" || k === "sn").reduce((s, [, w]) => s + w, 0);
-  const playerPatterns = basePatterns.filter(([k]) => k !== "pc" && k !== "sn").map(([k, w]) => [k, k === "cc" || k === "cd" || k === "cs" || k === "cu" ? w + Math.ceil(cut / 4) : w]);
+  const playerPatterns = basePatterns.filter(([k]) => k !== "pc" && k !== "sn").map(([k, w]) => [k, k === "cg" || k === "cd" ? w + Math.ceil(cut / 4) : w]);
   let ident;
   try {
-    ident = makeIdentity(VKEY, cls, used, { patterns: playerPatterns, fallback: ["cd", "cc", "pc", "sn"] });
+    ident = makeIdentity(VKEY, cls, used, { patterns: playerPatterns, fallback: ["cd", "cg", "pc", "sn"] });
   } finally {
     delete REGION_CITIES[VKEY];
     delete STATE_TOKENS[VKEY];
@@ -983,7 +1061,7 @@ function generatePlayerProgram(world, { state: state2, division, qbPref, defFron
   };
   school.roster = generateRoster(school);
   const tier = { D3: 1, D2: 2, D1: 3 }[division] || 1;
-  const pBonus = (prestige - 3) * 2;
+  const pBonus = prestigeTalentBonus(prestige, division);
   if (qbPref) {
     const qbs = school.roster.filter((p) => p.position === "QB");
     for (let i = 0; i < Math.min(3, qbs.length); i++) {
@@ -1025,6 +1103,61 @@ function generatePlayerProgram(world, { state: state2, division, qbPref, defFron
     if (school.rival.holderId === replaced.id) school.rival.holderId = school.id;
   }
   return { school, replaced, conference: { id: conf.id, name: conf.name, short: conf.short, division: conf.division } };
+}
+// ── Authored star players (Team Editor phase 2, Aug 2026) ──────────────────
+// Full 85-man authoring is impractical; the emotional core is a handful of NAMED
+// stars — your franchise QB, a stud edge. A star is { position, name, classYear,
+// caliber, archetype? }. coinStarPlayer builds a calibrated player (calibers are
+// tuned so Solid<Star<Superstar by compositeRating, verified in star_player_probe),
+// and applyTeamStars drops each onto a generated roster as the starter at its
+// spot (swapping out the weakest body there to keep position counts intact).
+var STAR_CALIBER = {
+  superstar: { tier: 3, bonus: 13, tries: 24, label: "Superstar" },
+  star: { tier: 3, bonus: 7, tries: 8, label: "Star" },
+  solid: { tier: 2, bonus: 2, tries: 3, label: "Solid" }
+};
+function coinStarPlayer({ position = "QB", classYear = "JR", caliber = "star", archetype = null, name = null } = {}) {
+  const pos = POSITIONS.includes(position) ? position : "QB";
+  const cy = CLASS_YEARS.includes(classYear) ? classYear : "JR";
+  const c = STAR_CALIBER[caliber] || STAR_CALIBER.star;
+  let best = null, bestArch = null;
+  for (let i = 0; i < c.tries; i++) {
+    const p = createPlayer(pos, cy, c.tier, c.bonus);
+    if (!best || p.compositeRating > best.compositeRating) best = p;
+    if (archetype && derivedArchetype(p) === archetype && (!bestArch || p.compositeRating > bestArch.compositeRating)) bestArch = p;
+  }
+  const chosen = (archetype && bestArch) ? bestArch : best;
+  if (name && String(name).trim()) chosen.name = String(name).trim().slice(0, 32);
+  return chosen;
+}
+function applyTeamStars(school, stars) {
+  if (!school || !Array.isArray(stars) || !stars.length) return school;
+  for (const st of stars) {
+    if (!st || !POSITIONS.includes(st.position)) continue;
+    const p = coinStarPlayer(st);
+    p.schoolId = school.id;
+    const atPos = school.roster.filter((x) => x.position === st.position).sort((a, b) => b.compositeRating - a.compositeRating);
+    if (atPos.length) { const weakest = atPos[atPos.length - 1]; school.roster = school.roster.filter((x) => x.id !== weakest.id); }
+    // The promise is STARTER, not "usually starter" (owner-ratified 2026-08-15):
+    // a loaded roster can out-roll a Solid/Star caliber, so if the best surviving
+    // body at the spot still outrates the authored star, nudge the star just
+    // above him — your named guy is genuinely the top player at his position.
+    const rival = school.roster.filter((x) => x.position === st.position).reduce((best, x) => !best || x.compositeRating > best.compositeRating ? x : best, null);
+    if (rival && rival.compositeRating >= p.compositeRating) p.compositeRating = Math.min(99, rival.compositeRating + 1);
+    // Depth sorting for the front-seven/secondary runs on roleRatings, so the
+    // star has to top those views too, against EVERY surviving teammate.
+    if (p.roleRatings) {
+      const peers = school.roster.filter((x) => x.position === st.position);
+      for (const role of Object.keys(p.roleRatings)) {
+        const top = peers.reduce((m, x) => Math.max(m, x.roleRatings && x.roleRatings[role] != null ? x.roleRatings[role] : 0), 0);
+        if (top >= p.roleRatings[role]) p.roleRatings[role] = Math.min(99, top + 1);
+      }
+    }
+    school.roster.push(p);
+  }
+  school.depthOrder = buildRoleSortedDepthOrder(school.roster);
+  school.depthChart = buildDepthChart(school.roster, school.gameplan, school.depthOrder);
+  return school;
 }
 function generateExhibitionTeam(division, prestige) {
   var _a;
@@ -1090,16 +1223,313 @@ function generateExhibitionTeam(division, prestige) {
   school.depthChart = buildDepthChart(school.roster, school.gameplan, school.depthOrder);
   return school;
 }
-function generateWorld() {
+// ── compileLeague (Creativity Tools, Aug 2026) ─────────────────────────────
+// Turns an author-friendly league blueprint (a `leagues` creation's .data, or a
+// one-team `seed` from the `teams` shelf) into the two source tables the
+// generateWorld(opts) seam accepts: { schools, conferences }. Pure — no globals
+// mutated, no RNG state assumed (it uses Math.random only for cosmetic jitter,
+// same as makeIdentity). Fails LOUD: a broken blueprint throws a readable Error
+// rather than compiling a broken world. See Ref/LEAGUE_BLUEPRINT.md for the
+// full shape + the adopted working defaults.
+var LEAGUE_DIVS = { D1: 1, D2: 1, D3: 1 };
+// conferenceClass in live data is "power" / "midMajor" / null; author blueprints
+// may say "power"/"midmajor"/"lowmajor". Normalize → the internal `cls` the
+// world-gen helpers (stadiumCapacity, makeFlavor) speak.
+function clsForConf(division, conferenceClass) {
+  if (division === "D1") return String(conferenceClass || "").toLowerCase() === "power" ? "power" : "midMajor";
+  return division;
+}
+function normConfClass(division, conferenceClass) {
+  if (division === "D1") return String(conferenceClass || "").toLowerCase() === "power" ? "power" : "midMajor";
+  return null;
+}
+function nationalCentroid() {
+  const vals = Object.values(REGION_CENTROIDS);
+  if (!vals.length) return { lat: 39.5, lng: -98.35 };
+  let lat = 0, lng = 0;
+  for (const v of vals) {
+    lat += v.lat;
+    lng += v.lng;
+  }
+  return { lat: lat / vals.length, lng: lng / vals.length };
+}
+function jitterGeo(pt) {
+  return {
+    lat: +(pt.lat + (Math.random() * 2 - 1) * LOC_JITTER_DEG).toFixed(2),
+    lng: +(pt.lng + (Math.random() * 2 - 1) * LOC_JITTER_DEG).toFixed(2)
+  };
+}
+// Distribute a school's prestige around its conference's tier, within the
+// division band. A roughly symmetric spread centered on the tier (mostly the
+// tier or ±1, occasionally ±2) so a blue-blood conference fills with strong
+// programs and a weak one with strugglers — the D2/D3 hierarchy the game lacks
+// today. Null tier centers on the band midpoint.
+function distributePrestige(tier, division) {
+  var _a;
+  const max = ((_a = C.PRESTIGE_MAX) == null ? void 0 : _a[division]) || 6;
+  const center = tier != null ? tier : Math.round((1 + max) / 2);
+  const t = Math.max(1, Math.min(max, center));
+  const r = Math.random();
+  const off = r < 0.34 ? 0 : r < 0.59 ? 1 : r < 0.84 ? -1 : r < 0.92 ? 2 : -2;
+  return Math.max(1, Math.min(max, t + off));
+}
+function compileLeague(blueprint) {
+  var _a;
+  const fail = (msg) => {
+    throw new Error(`compileLeague: ${msg}`);
+  };
+  if (!blueprint || typeof blueprint !== "object") fail("blueprint must be an object");
+  const mode = blueprint.mode === "replace" ? "replace" : "seed";
+  const bpConfs = Array.isArray(blueprint.conferences) ? blueprint.conferences : [];
+  const bpTeams = Array.isArray(blueprint.teams) ? blueprint.teams : [];
+  if (!bpTeams.length) fail("blueprint has no teams");
+  const warnings = [];
+
+  // Base tables. replace = empty; seed = deep clones of the procedural world so
+  // nothing module-level is mutated.
+  const outConfs = mode === "replace" ? {} : JSON.parse(JSON.stringify(CONFERENCES));
+  const baseSchools = mode === "replace" ? [] : JSON.parse(JSON.stringify(SCHOOL_DATA));
+
+  // ── validate + normalize conferences ────────────────────────────────────
+  for (const c of bpConfs) {
+    if (!c || !c.id) fail("a conference is missing an id");
+    if (!LEAGUE_DIVS[c.division]) fail(`conference ${c.id}: bad division ${JSON.stringify(c.division)}`);
+    if (mode === "replace" && outConfs[c.id]) fail(`duplicate conference id ${c.id}`);
+    // Optional conference PRESTIGE TIER (Season Mode / Division Editor): the
+    // center of the band its member schools' prestige distributes around at gen.
+    // This is the blue-blood/mid-major control, generalized to every division —
+    // it's what gives D2/D3 their own conference hierarchy. Validated to the
+    // division band if present; absent means schools carry their own prestige.
+    const cpMax = ((_a = C.PRESTIGE_MAX) == null ? void 0 : _a[c.division]) || 6;
+    if (c.prestige != null && !(c.prestige >= 1 && c.prestige <= cpMax)) fail(`conference ${c.id}: prestige tier ${c.prestige} out of band 1..${cpMax} for ${c.division}`);
+    outConfs[c.id] = {
+      name: String(c.name || c.id).slice(0, 48),
+      short: String(c.short || c.id).slice(0, 6),
+      division: c.division,
+      conferenceClass: normConfClass(c.division, c.conferenceClass),
+      prestige: c.prestige != null ? c.prestige : null
+    };
+  }
+
+  // ── validate teams ──────────────────────────────────────────────────────
+  const usedIds = new Set(baseSchools.map((s) => s.id));
+  const teamIds = new Set();
+  for (const t of bpTeams) {
+    if (!t || !t.id) fail("a team is missing an id");
+    if (teamIds.has(t.id)) fail(`duplicate team id ${t.id}`);
+    teamIds.add(t.id);
+    if (!t.name) fail(`team ${t.id}: missing name`);
+    if (!LEAGUE_DIVS[t.division]) fail(`team ${t.id}: bad division ${JSON.stringify(t.division)}`);
+    const conf = outConfs[t.conf];
+    if (!conf) fail(`team ${t.id}: conf ${JSON.stringify(t.conf)} not found (${mode === "seed" ? "no procedural or blueprint conference by that id" : "not in blueprint"})`);
+    if (conf.division !== t.division) fail(`team ${t.id}: division ${t.division} != conference ${t.conf} division ${conf.division}`);
+    // Prestige is now OPTIONAL — if absent it's distributed from the conference
+    // tier at build (below). Validated only when the author set it explicitly.
+    const pMax = ((_a = C.PRESTIGE_MAX) == null ? void 0 : _a[t.division]) || 6;
+    if (t.prestige != null && !(t.prestige >= 1 && t.prestige <= pMax)) fail(`team ${t.id}: prestige ${t.prestige} out of band 1..${pMax} for ${t.division}`);
+  }
+
+  // ── fill defaults + build engine-shaped schools ─────────────────────────
+  // abbr dedup runs against EVERY abbr in the final world, author-set or not.
+  const usedAbbrs = new Set(baseSchools.map((s) => s.abbr));
+  const built = [];
+  const needGeo = [];
+  for (const t of bpTeams) {
+    const conf = outConfs[t.conf];
+    const cls = clsForConf(t.division, conf.conferenceClass);
+    // Explicit team prestige wins; otherwise DISTRIBUTE around the conference
+    // tier (blue-blood conf -> its schools skew high, weak conf -> low), within
+    // the division band. No tier + no explicit -> centered on the band midpoint.
+    const prestige = typeof t.prestige === "number" ? t.prestige : distributePrestige(conf.prestige, t.division);
+    const type = t.type || "stateUniversity";
+    const flavor = makeFlavor(cls, type, prestige, t.nick || "Statesmen");
+    const clamp7 = prestigeClamp(cls, t.division);
+    // abbr: honor the author's, but ALWAYS dedup — on collision, auto-suffix + warn.
+    let abbr;
+    if (t.abbr && typeof t.abbr === "string") {
+      abbr = t.abbr.toUpperCase().slice(0, 4);
+      if (usedAbbrs.has(abbr)) {
+        const orig = abbr;
+        let n = 2;
+        while (usedAbbrs.has(abbr)) abbr = orig.slice(0, 3) + n++;
+        warnings.push(`team ${t.id}: abbr ${orig} collided → ${abbr}`);
+      }
+      usedAbbrs.add(abbr);
+    } else {
+      abbr = makeAbbr(t.name, usedAbbrs);
+    }
+    const school = {
+      id: t.id,
+      name: String(t.name).slice(0, 48),
+      nick: t.nick || "Statesmen",
+      abbr,
+      logo: t.logo || "\u{1F3C8}",
+      facilities: t.facilities || facilitiesFor(prestige),
+      staff: t.staff || staffFor(prestige, t.division),
+      conf: t.conf,
+      division: t.division,
+      lat: typeof t.lat === "number" ? t.lat : null,
+      lng: typeof t.lng === "number" ? t.lng : null,
+      city: t.city || "",
+      state: t.state || "",
+      type,
+      control: t.control || flavor.control,
+      enrollment: t.enrollment || flavor.enrollment,
+      founded: t.founded || flavor.founded,
+      stadium: t.stadium || flavor.stadium,
+      prestige,
+      baseline: t.baseline != null ? t.baseline : prestige,
+      prestigeMin: t.prestigeMin != null ? t.prestigeMin : clamp7.min,
+      prestigeMax: t.prestigeMax != null ? t.prestigeMax : clamp7.max,
+      colors: Array.isArray(t.colors) && t.colors.length === 2 ? t.colors : COLOR_PAIRS[Math.floor(Math.random() * COLOR_PAIRS.length)]
+    };
+    // Carry editor crest overrides (custom letters / rerolled shield) so a
+    // compiled custom league keeps the identity you drew.
+    if (t.crestText) school.crestText = t.crestText;
+    if (t.crestSeed) school.crestSeed = t.crestSeed;
+    // geo pass 1: explicit lat/lng > state centroid. Anything left goes to pass 2.
+    if (school.lat != null && school.lng != null) {
+      // author pin — keep as given
+    } else if (school.state && stateCentroid(school.state)) {
+      const g = jitterGeo(stateCentroid(school.state));
+      school.lat = g.lat;
+      school.lng = g.lng;
+    } else {
+      needGeo.push(school);
+    }
+    built.push(school);
+  }
+  // geo pass 2: unplaced schools land in their conference's footprint (mean of
+  // placed conf-mates), else the national centroid — so every school gets rivals.
+  for (const s of needGeo) {
+    const mates = built.filter((x) => x.conf === s.conf && x.lat != null && x.lng != null);
+    let pt;
+    if (mates.length) {
+      pt = { lat: mates.reduce((a, m) => a + m.lat, 0) / mates.length, lng: mates.reduce((a, m) => a + m.lng, 0) / mates.length };
+    } else {
+      pt = nationalCentroid();
+    }
+    const g = jitterGeo(pt);
+    s.lat = g.lat;
+    s.lng = g.lng;
+  }
+
+  // ── merge / assemble ────────────────────────────────────────────────────
+  let outSchools;
+  if (mode === "replace") {
+    outSchools = built;
+  } else {
+    // seed: blueprint teams REPLACE a procedural team of the same id (override),
+    // else are ADDED and one procedural team of the same division is trimmed from
+    // the largest procedural conference so division counts hold.
+    const base = baseSchools.slice();
+    const byId = new Map(base.map((s, i) => [s.id, i]));
+    for (const s of built) {
+      if (byId.has(s.id)) {
+        base[byId.get(s.id)] = s;
+      } else {
+        // trim one procedural team of the same division from the biggest conf
+        // that isn't a blueprint conf and can spare it (>2 members).
+        const confSize = {};
+        for (const b of base) if (b.division === s.division) confSize[b.conf] = (confSize[b.conf] || 0) + 1;
+        const bpConfIds = new Set(bpConfs.map((c) => c.id));
+        let victimConf = null, best = 2;
+        for (const [cid, n] of Object.entries(confSize)) {
+          if (!bpConfIds.has(cid) && n > best) {
+            best = n;
+            victimConf = cid;
+          }
+        }
+        if (victimConf) {
+          const vi = base.findIndex((b) => b.conf === victimConf && !teamIds.has(b.id));
+          if (vi >= 0) base.splice(vi, 1);
+        }
+        base.push(s);
+      }
+    }
+    outSchools = base;
+  }
+
+  // ── post-assembly validation (schedule sanity) ──────────────────────────
+  const confPop = {};
+  for (const s of outSchools) confPop[s.conf] = (confPop[s.conf] || 0) + 1;
+  for (const [cid, n] of Object.entries(confPop)) {
+    if (n < 2) fail(`conference ${cid} has ${n} team(s) — a conference needs at least 2 to play`);
+    if (n < 8) warnings.push(`conference ${cid} has only ${n} teams (light schedule)`);
+  }
+  return { schools: outSchools, conferences: outConfs, warnings };
+}
+// ── The division assembler (Season Mode / division-scoped leagues, Aug 2026) ─
+// A world is three division slots (D1/D2/D3). Each slot's source is either
+// 'static' (the real division from the module tables) or a custom division
+// blueprint ({conferences, teams} all of that division). assembleWorldSources
+// composes the chosen slots into the { schools, conferences } the generateWorld
+// seam accepts — so Season Mode passes ONE slot (a single-division world) and a
+// dynasty passes all three, mixing custom and procedural per division. See
+// Ref/SEASON_MODE.md. Static slots clone the real tables (never mutate them);
+// custom slots run through compileLeague (replace), which validates + fills
+// defaults + geo + dedups within the division. A final pass dedups abbreviations
+// ACROSS divisions, since compileLeague only guarantees uniqueness within one.
+function assembleWorldSources(sources) {
+  const fail = (msg) => {
+    throw new Error(`assembleWorldSources: ${msg}`);
+  };
+  if (!sources || typeof sources !== "object") fail("sources must be an object");
+  const divs = Object.keys(sources).filter((d) => LEAGUE_DIVS[d]);
+  if (!divs.length) fail("no valid division sources (expected D1/D2/D3)");
+  const outSchools = [];
+  const outConfs = {};
+  const warnings = [];
+  for (const div of divs) {
+    const source = sources[div];
+    if (!source || source === "static") {
+      for (const s of SCHOOL_DATA) if (s.division === div) outSchools.push(JSON.parse(JSON.stringify(s)));
+      for (const [id, c] of Object.entries(CONFERENCES)) if (c.division === div) outConfs[id] = __spreadValues({}, c);
+    } else {
+      const confs = (source.conferences || []).map((c) => __spreadProps(__spreadValues({}, c), { division: c.division || div }));
+      const teams = (source.teams || []).map((t) => __spreadProps(__spreadValues({}, t), { division: t.division || div }));
+      const compiled = compileLeague({ mode: "replace", conferences: confs, teams });
+      for (const s of compiled.schools) outSchools.push(s);
+      Object.assign(outConfs, compiled.conferences);
+      if (compiled.warnings) for (const w of compiled.warnings) warnings.push(`${div}: ${w}`);
+    }
+  }
+  const usedAbbrs = /* @__PURE__ */ new Set();
+  for (const s of outSchools) {
+    let a = s.abbr || "SCH";
+    if (usedAbbrs.has(a)) {
+      const orig = a;
+      let n = 2;
+      while (usedAbbrs.has(a)) a = orig.slice(0, 3) + n++;
+      warnings.push(`abbr ${orig} collided across divisions → ${a}`);
+      s.abbr = a;
+    }
+    usedAbbrs.add(a);
+  }
+  return { schools: outSchools, conferences: outConfs, warnings };
+}
+function generateWorld(opts = {}) {
+  // ── The world-source seam (Creativity Tools, Aug 2026) ──────────────────
+  // generateWorld now takes an options bag whose ONLY job today is to name the
+  // source tables the world is built from. Both default to the module globals,
+  // so `generateWorld()` and `generateWorld({})` are byte-identical to the
+  // pre-seam function — proven by creator_world_probe (seeded-RNG snapshot diff).
+  // This is the single door custom content walks through later: a custom LEAGUE
+  // is a replacement {schools, conferences} pair, and custom-TEAM injection is a
+  // modified `schools` array. Neither is wired yet — the league-blueprint shape
+  // is being spec'd first (see Ref/LEAGUE_BLUEPRINT.md). Inert by default,
+  // exactly like the formation-variation and creator-store seams.
+  const sourceSchools = (opts == null ? void 0 : opts.schools) || SCHOOL_DATA;
+  const sourceConferences = (opts == null ? void 0 : opts.conferences) || CONFERENCES;
   // World-scoped name dedup: SCHOOL_DATA staff were named at module load, so a
   // bare reset would let fresh HC rolls collide with the coordinators already
   // seated. Reset, then re-register the staff this world is actually keeping.
   resetCoachNames();
-  for (const s of SCHOOL_DATA) {
+  for (const s of sourceSchools) {
     if (s.staff && s.staff.oc && s.staff.oc.name) registerCoachName(s.staff.oc.name);
     if (s.staff && s.staff.dc && s.staff.dc.name) registerCoachName(s.staff.dc.name);
   }
-  const schools = SCHOOL_DATA.map((s) => __spreadProps(__spreadValues({}, s), {
+  const schools = sourceSchools.map((s) => __spreadProps(__spreadValues({}, s), {
     roster: [],
     record: { wins: 0, losses: 0, confWins: 0, confLosses: 0 },
     recentWins: [0, 0, 0],
@@ -1132,7 +1562,7 @@ function generateWorld() {
   generateRivalries(schools, distanceMiles);
   return {
     schools,
-    conferences: CONFERENCES,
+    conferences: sourceConferences,
     season: 1,
     recruits: []
     // filled at season start
@@ -1141,7 +1571,7 @@ function generateWorld() {
 function generateRoster(school) {
   const DIV_TIER = { D3: 1, D2: 2, D1: 3 };
   const tier = DIV_TIER[school.division] || 1;
-  const prestigeBonus = (school.prestige - 3) * 2;
+  const prestigeBonus = prestigeTalentBonus(school.prestige, school.division);
   const total = Object.values(ROSTER_TARGETS).reduce((s, v) => s + v, 0);
   const cyPool = [];
   for (let k = 0; k < total; k++) cyPool.push(CLASS_YEARS[k % 4]);
@@ -1252,6 +1682,10 @@ function defaultGameplan() {
     greenDog: false,
     spyQB: false,
     targetShares: { WR1: 22, WR2: 20, WR3: 16, TE1: 20, RB1: 14 },
+    // item 16 — the coach's editable DEFAULT target shares, keyed by RECEIVER
+    // (WR1/WR2/WR3/TE1/RB1) so the default follows the man wherever he lines up.
+    // A formation slot maps to its receiver via defaultShareFor; per-formation
+    // overrides (keyed by position/slot) live on the Depth Chart field view.
     fourthDown: "Moderate",
     maxFGDist: 42,
     situations: {},
@@ -1616,7 +2050,7 @@ STATIC_D1_SCHOOLS = [
   ["Fairhope", "Sand Vipers", "FAI", "Gainesville", "FL", 29.65, -82.33, ["#003894", "#FD6C00"], 5, "flagship"],
   ["Southaven", "Ironwolves", "SVN", "Oxford", "MS", 34.37, -89.52, ["#201546", "#C10F33"], 4, "flagship"],
   ["Tennessee Highlands", "Night Herons", "THL", "Knoxville", "TN", 35.96, -83.92, ["#FF8D00", "#635D5F"], 5, "stateUniversity"],
-  ["Marietta A&M", "Ironboars", "MAM", "Athens", "GA", 33.96, -83.38, ["#B20728", "#000000"], 6, "landGrant"],
+  ["Oconee A&M", "Ironboars", "OCA", "Athens", "GA", 33.96, -83.38, ["#B20728", "#000000"], 6, "landGrant"],
   ["Beaumont", "Ridgebacks", "BMT", "Nashville", "TN", 36.16, -86.78, ["#856246", "#000000"], 4, "privateCollege"],
   ["Auburndale", "Stonecats", "AUB", "Auburn", "AL", 32.61, -85.48, ["#03194A", "#F26600"], 5, "landGrant"],
   ["Delacroix", "Ashcats", "DLX", "Lafayette", "LA", 30.22, -92.02, ["#5C228D", "#BD996B"], 4, "regionalState"],
@@ -1626,29 +2060,29 @@ STATIC_D1_SCHOOLS = [
   // GREAT LAKES ALLIANCE (Big Ten analogue)
   ["Winslow", "Frost Lynx", "WIN", "Ann Arbor", "MI", 42.28, -83.74, ["#022456", "#FFC009"], 6, "flagship"],
   ["Sandborough", "Cave Bears", "SAN", "Columbus", "OH", 39.96, -83, ["#B00C00", "#5E6365"], 6, "stateUniversity"],
-  ["Kettering State", "Stormbucks", "KET", "East Lansing", "MI", 42.73, -84.48, ["#1C5135", "#FFFFFF"], 5, "landGrant"],
+  ["Red Cedar State", "Stormbucks", "RCS", "East Lansing", "MI", 42.73, -84.48, ["#1C5135", "#FFFFFF"], 5, "landGrant"],
   ["Northgate", "Thornbucks", "NGT", "South Bend", "IN", 41.7, -86.24, ["#011746", "#D18D02"], 5, "privateCollege"],
   ["Prairie Grove", "Bramble Boars", "PRG", "Madison", "WI", 43.07, -89.4, ["#BF050A", "#FFFFFF"], 5, "landGrant"],
   ["Ellsworth", "Gray Stags", "ELL", "Iowa City", "IA", 41.66, -91.53, ["#F3DA17", "#000000"], 4, "flagship"],
   ["Bellwether", "Iron Stags", "BEL", "State College", "PA", 40.79, -77.86, ["#051336", "#FFFFFF"], 6, "landGrant"],
-  ["Rockford Tech", "Timber Elk", "RKF", "West Lafayette", "IN", 40.43, -86.91, ["#A77E08", "#000000"], 4, "tech"],
+  ["Tippecanoe Tech", "Timber Elk", "TPT", "West Lafayette", "IN", 40.43, -86.91, ["#A77E08", "#000000"], 4, "tech"],
   ["Glenmoor", "Ledge Rams", "GLN", "Minneapolis", "MN", 44.97, -93.24, ["#860417", "#F4C235"], 4, "landGrant"],
   ["Harrowgate", "Steel Hawks", "HRW", "Evanston", "IL", 42.05, -87.69, ["#543685", "#FFFFFF"], 4, "privateCollege"],
   ["Danforth", "Cinder Hawks", "DAN", "Champaign", "IL", 40.11, -88.24, ["#152155", "#EC5430"], 4, "landGrant"],
   ["Sault Ridge", "Dawn Hawks", "SLT", "Bloomington", "IN", 39.17, -86.52, ["#940008", "#E9EADF"], 4, "stateUniversity"],
   // GREAT PLAINS (Big 12 analogue)
   ["Vandergriff", "Cragrams", "VDG", "Austin", "TX", 30.28, -97.74, ["#B74B07", "#FFFFFF"], 6, "flagship"],
-  ["Cimarron A&M", "Pale Herons", "CIM", "College Station", "TX", 30.63, -96.33, ["#560000", "#FFFFFF"], 5, "landGrant"],
+  ["Navasota A&M", "Pale Herons", "NVA", "College Station", "TX", 30.63, -96.33, ["#560000", "#FFFFFF"], 5, "landGrant"],
   ["Red River", "Dust Wolves", "RRV", "Norman", "OK", 35.22, -97.44, ["#7F1B1E", "#FFF3DB"], 6, "flagship"],
   ["Cedar Bluff", "Salt Terns", "CDB", "Ames", "IA", 42.03, -93.62, ["#BC143A", "#EBBA3D"], 3, "landGrant"],
   ["Fort Sumner", "Reef Rays", "FSM", "Lawrence", "KS", 38.97, -95.24, ["#0248AE", "#E4000B"], 3, "flagship"],
-  ["Wichita Falls State", "Dune Adders", "WFS", "Wichita", "KS", 37.69, -97.34, ["#000000", "#FFC100"], 3, "stateUniversity"],
+  ["Chisholm State", "Dune Adders", "CHM", "Wichita", "KS", 37.69, -97.34, ["#000000", "#FFC100"], 3, "stateUniversity"],
   ["Stillmark", "Coil Serpents", "STM", "Stillwater", "OK", 36.12, -97.06, ["#F86405", "#000000"], 4, "landGrant"],
   ["Cornerstone", "Storm Elk", "CST", "Lincoln", "NE", 40.81, -96.7, ["#D9103B", "#FFFFFF"], 5, "landGrant"],
   ["Brazos Springs", "Basilisks", "BRS", "Waco", "TX", 31.55, -97.11, ["#214B36", "#FFBC20"], 4, "privateCollege"],
   ["Lubbock Plains", "Rocs", "LBP", "Lubbock", "TX", 33.58, -101.86, ["#D10000", "#000000"], 4, "tech"],
   ["Mesa Verde", "Cockatrice", "MVD", "Boulder", "CO", 40.01, -105.27, ["#000000", "#DBB274"], 4, "flagship"],
-  ["Fort Collins State", "Manticores", "FCS", "Fort Collins", "CO", 40.57, -105.08, ["#264832", "#CEC26A"], 3, "landGrant"],
+  ["Poudre State", "Manticores", "PDR", "Fort Collins", "CO", 40.57, -105.08, ["#264832", "#CEC26A"], 3, "landGrant"],
   // PACIFIC COAST (Pac-10 analogue)
   ["Westmoreland", "Chimeras", "WML", "Los Angeles", "CA", 34.02, -118.29, ["#99000A", "#F8C102"], 5, "privateCollege"],
   ["Baycrest", "Kelpies", "BAY", "Berkeley", "CA", 37.87, -122.26, ["#082E6B", "#FFB014"], 4, "flagship"],
@@ -1658,7 +2092,7 @@ STATIC_D1_SCHOOLS = [
   ["Puget", "Cinders", "PUG", "Seattle", "WA", 47.65, -122.31, ["#462D89", "#B5A386"], 5, "flagship"],
   ["Palo Robles", "Emberjacks", "PLR", "Tempe", "AZ", 33.42, -111.93, ["#841746", "#FFC52F"], 4, "landGrant"],
   ["Tucson Mesa", "Foundrymen", "TCM", "Tucson", "AZ", 32.23, -110.95, ["#002762", "#C30C3E"], 4, "flagship"],
-  ["Corvallis State", "Kilnmen", "CVS", "Corvallis", "OR", 44.56, -123.28, ["#D34406", "#000000"], 3, "landGrant"],
+  ["Alsea State", "Kilnmen", "ALS", "Corvallis", "OR", 44.56, -123.28, ["#D34406", "#000000"], 3, "landGrant"],
   ["Spokane Falls", "Sentries", "SPF", "Pullman", "WA", 46.73, -117.18, ["#9C2828", "#646A67"], 3, "landGrant"],
   ["Golden Vale", "Teamsters", "GVL", "San Diego", "CA", 32.78, -117.07, ["#A20F22", "#000000"], 3, "stateUniversity"],
   ["Sacramento Delta", "Railmen", "SAC", "Sacramento", "CA", 38.56, -121.42, ["#003030", "#C0A98D"], 3, "stateUniversity"],
@@ -1666,7 +2100,7 @@ STATIC_D1_SCHOOLS = [
   ["Chapelfield", "Ember Hawks", "CHA", "Chapel Hill", "NC", 35.9, -79.05, ["#87B9D0", "#FFFFFF"], 6, "flagship"],
   ["Wolf Creek State", "Trackmen", "WCS", "Raleigh", "NC", 35.78, -78.68, ["#D30C00", "#FFFFFF"], 4, "landGrant"],
   ["Blue Ridge", "Switchmen", "BLR", "Charlottesville", "VA", 38.03, -78.51, ["#18254E", "#F94F16"], 4, "flagship"],
-  ["Piedmont Tech", "Colliers", "PMT", "Blacksburg", "VA", 37.23, -80.42, ["#6A013A", "#D5411F"], 5, "tech"],
+  ["New River Tech", "Colliers", "NRT", "Blacksburg", "VA", 37.23, -80.42, ["#6A013A", "#D5411F"], 5, "tech"],
   ["Clearwater", "Quarrymen", "CLW", "Coral Gables", "FL", 25.72, -80.28, ["#F77A18", "#0B5236"], 5, "privateCollege"],
   ["Seminole Bluff", "Ferrymen", "SBF", "Tallahassee", "FL", 30.42, -84.3, ["#0049A7", "#FCD002"], 4, "stateUniversity"],
   ["Duncastle", "Bargemen", "DUN", "Durham", "NC", 36, -78.94, ["#0055A2", "#FFFFFF"], 4, "privateCollege"],
@@ -1690,7 +2124,7 @@ STATIC_D1_SCHOOLS = [
   ["Louisville Falls", "Sluicers", "LVF", "Louisville", "KY", 38.25, -85.76, ["#A10005", "#000000"], 3, "cityUniversity"],
   // MIDLAND (MAC analogue)
   ["Toledo Bend", "Panhandlers", "TLB", "Toledo", "OH", 41.66, -83.61, ["#0A3F76", "#FFBE0A"], 4, "cityUniversity"],
-  ["Kalamazoo State", "Cloudbursts", "KZS", "Kalamazoo", "MI", 42.28, -85.61, ["#576F6E", "#9C7200"], 3, "regionalState"],
+  ["Gull Lake State", "Cloudbursts", "GLS", "Kalamazoo", "MI", 42.28, -85.61, ["#576F6E", "#9C7200"], 3, "regionalState"],
   ["Rockingham", "Downbursts", "RKG", "Mount Pleasant", "MI", 43.59, -84.77, ["#72002D", "#FFCF31"], 3, "regionalState"],
   ["Dayton Ridge", "Squalls", "DYR", "Dayton", "OH", 39.76, -84.19, ["#D3094A", "#073F8F"], 2, "religious"],
   ["Muncie Central", "Gales", "MNC", "Muncie", "IN", 40.19, -85.39, ["#B91033", "#FFFFFF"], 3, "regionalState"],
@@ -1698,7 +2132,7 @@ STATIC_D1_SCHOOLS = [
   ["Akron Summit", "Maelstroms", "AKS", "Akron", "OH", 41.08, -81.52, ["#0A2861", "#797948"], 2, "cityUniversity"],
   ["DeKalb", "Vortex", "DKB", "DeKalb", "IL", 41.93, -88.75, ["#D31134", "#000000"], 2, "regionalState"],
   ["Ypsilanti", "Riptides", "YPS", "Ypsilanti", "MI", 42.24, -83.61, ["#047139", "#FFFFFF"], 2, "regionalState"],
-  ["Peoria State", "Undertows", "PRS", "Peoria", "IL", 40.69, -89.59, ["#D1001E", "#01235A"], 2, "regionalState"],
+  ["Mackinaw State", "Undertows", "MKW", "Peoria", "IL", 40.69, -89.59, ["#D1001E", "#01235A"], 2, "regionalState"],
   ["Oxford Falls", "Breakers", "OXF", "Oxford", "OH", 39.51, -84.75, ["#BD1A25", "#FFFFFF"], 3, "regionalState"],
   ["Sandusky Bay", "Whitecaps", "SDB", "Sandusky", "OH", 41.45, -82.71, ["#0051A5", "#7B8885"], 1, "regionalState"],
   // SUMMIT (Mountain West analogue)
@@ -1707,7 +2141,7 @@ STATIC_D1_SCHOOLS = [
   ["High Sierra", "Monsoon", "HSR", "Las Vegas", "NV", 36.11, -115.14, ["#B80000", "#646473"], 2, "cityUniversity"],
   ["Reno Basin", "Sirocco", "RNB", "Reno", "NV", 39.54, -119.82, ["#053C5E", "#818387"], 2, "flagship"],
   ["Rio Grande", "Chinooks", "RGD", "Albuquerque", "NM", 35.08, -106.62, ["#B8053B", "#636463"], 2, "flagship"],
-  ["Las Cruces State", "Nor'easters", "LCS", "Las Cruces", "NM", 32.28, -106.75, ["#8F0637", "#FFFFFF"], 2, "landGrant"],
+  ["Organ Peak State", "Nor'easters", "ORG", "Las Cruces", "NM", 32.28, -106.75, ["#8F0637", "#FFFFFF"], 2, "landGrant"],
   ["Fort Laramie", "Whiteouts", "FTL", "Colorado Springs", "CO", 38.83, -104.82, ["#00307C", "#A5AEB3"], 3, "stateUniversity"],
   ["Fresno Basin", "Frostbite", "FRB", "Fresno", "CA", 36.81, -119.75, ["#D5002C", "#002E9B"], 3, "stateUniversity"],
   ["Boise Ridge", "Landslides", "BSR", "Boise", "ID", 43.6, -116.2, ["#002FA9", "#D84B10"], 4, "regionalState"],
@@ -1726,7 +2160,7 @@ STATIC_D1_SCHOOLS = [
   ["Arkansas Delta", "Aurora", "ARD", "Jonesboro", "AR", 35.84, -90.68, ["#CD0D39", "#000000"], 2, "regionalState"],
   ["Denton Plains", "Halos", "DNP", "Denton", "TX", 33.21, -97.13, ["#008B3E", "#FFFFFF"], 2, "cityUniversity"],
   ["San Marcos Hill", "Zeniths", "SMH", "San Marcos", "TX", 29.88, -97.94, ["#4E131D", "#5A6A6A"], 2, "regionalState"],
-  ["Ruston Tech", "Apogee", "RST", "Ruston", "LA", 32.53, -92.64, ["#002A8A", "#E51D25"], 3, "tech"],
+  ["Kisatchie Tech", "Apogee", "KST", "Ruston", "LA", 32.53, -92.64, ["#002A8A", "#E51D25"], 3, "tech"],
   // FRONTIER (Conference USA analogue)
   ["El Camino", "Perigee", "ELC", "El Paso", "TX", 31.77, -106.5, ["#001F43", "#F68200"], 2, "regionalState"],
   ["Bayou City", "Vertex", "BYC", "Houston", "TX", 29.72, -95.34, ["#D20E2D", "#FFFFFF"], 3, "cityUniversity"],
@@ -2411,73 +2845,134 @@ STATE_TOKENS = {
   // state names) so "University of ___" / "___ State" / "___ Tech" patterns
   // can never reproduce a real university. D1 is static and never uses these.
   Southeast: [
-    { t: "Piedmont", states: ["GA"], uOf: 1, st: 1, tech: 1, am: 1, dir: 1, sat: 1 },
-    { t: "Catawba", states: ["NC", "SC"], uOf: 1, st: 1, dir: 1 },
-    { t: "Tidewater", states: ["VA"], uOf: 1, st: 1, tech: 1, dir: 1 }
+    { t: "Tidewater", states: ["VA"], uOf: 1, st: 1, tech: 1, dir: 1 },
+    { t: "Okefenokee", states: ["GA"], uOf: 1, st: 1, dir: 1, sat: 1 },
+    { t: "Altamaha", states: ["GA"], st: 1, dir: 1 },
+    { t: "Uwharrie", states: ["NC"], uOf: 1, st: 1, dir: 1 },
+    { t: "Pamlico", states: ["NC"], st: 1, dir: 1 },
+    { t: "Santee", states: ["SC"], uOf: 1, st: 1, dir: 1 },
+    { t: "Rappahannock", states: ["VA"], uOf: 1, st: 1, dir: 1 }
   ],
   DeepSouth: [
-    { t: "Talladega", states: ["AL"], uOf: 1, st: 1, am: 1, dir: 1, sat: 1 },
     { t: "Yazoo", states: ["MS"], uOf: 1, st: 1, dir: 1 },
-    { t: "Acadiana", states: ["LA"], uOf: 1, st: 1, tech: 1, dir: 1, sat: 1 }
+    { t: "Acadiana", states: ["LA"], uOf: 1, st: 1, tech: 1, dir: 1, sat: 1 },
+    { t: "Tombigbee", states: ["AL", "MS"], uOf: 1, st: 1, am: 1, dir: 1 },
+    { t: "Atchafalaya", states: ["LA"], st: 1, dir: 1 },
+    { t: "Cahaba", states: ["AL"], uOf: 1, st: 1, dir: 1 },
+    { t: "Tallapoosa", states: ["AL"], st: 1, am: 1, dir: 1 },
+    { t: "Sipsey", states: ["AL"], st: 1, dir: 1 }
   ],
   MidSouth: [
-    { t: "Cumberland", states: ["TN"], uOf: 1, st: 1, tech: 1, dir: 1, sat: 1 },
     { t: "Bluegrass", states: ["KY"], uOf: 1, st: 1, dir: 1 },
-    { t: "Ozark", states: ["AR"], uOf: 1, st: 1, tech: 1, dir: 1, sat: 1 }
+    { t: "Pennyrile", states: ["KY"], uOf: 1, st: 1, dir: 1 },
+    { t: "Sequatchie", states: ["TN"], uOf: 1, st: 1, dir: 1 },
+    { t: "Nolichucky", states: ["TN"], st: 1, dir: 1 },
+    { t: "Petit Jean", states: ["AR"], st: 1, dir: 1 },
+    { t: "Buffalo River", states: ["AR"], uOf: 1, st: 1, dir: 1 }
   ],
   MidAtlantic: [
-    { t: "Allegheny", states: ["PA"], uOf: 1, st: 1, dir: 1 },
-    { t: "Chesapeake", states: ["MD"], uOf: 1, st: 1 },
-    { t: "Monongahela", states: ["WV"], uOf: 1, st: 1, tech: 1 },
-    { t: "Brandywine", states: ["DE"], uOf: 1, st: 1 },
-    { t: "Raritan", states: ["NJ"], uOf: 1, st: 1, tech: 1 }
+    { t: "Monongahela", states: ["WV"], uOf: 1, st: 1, tech: 1, dir: 1 },
+    { t: "Brandywine", states: ["DE", "PA"], uOf: 1, st: 1, dir: 1 },
+    { t: "Raritan", states: ["NJ"], uOf: 1, st: 1, tech: 1, dir: 1 },
+    { t: "Laurel Highlands", states: ["PA"], st: 1, dir: 1 },
+    { t: "Pocono", states: ["PA"], uOf: 1, st: 1, dir: 1 },
+    { t: "Delmarva", states: ["MD", "DE"], st: 1, dir: 1 },
+    { t: "Canaan", states: ["WV"], st: 1, dir: 1 },
+    { t: "Patapsco", states: ["MD"], uOf: 1, st: 1, dir: 1 }
   ],
   Northeast: [
     { t: "Green Mountain", states: ["VT"], uOf: 1, st: 1, tech: 1, dir: 1 },
     { t: "Nutmeg", states: ["CT"], uOf: 1, st: 1, dir: 1 },
     { t: "Yankee", states: ["MA", "NH", "VT", "CT", "RI", "ME"], uOf: 1 },
-    { t: "Penobscot", states: ["ME"], uOf: 1, st: 1, dir: 1 }
+    { t: "Penobscot", states: ["ME"], uOf: 1, st: 1, dir: 1 },
+    { t: "Katahdin", states: ["ME"], st: 1, dir: 1 },
+    { t: "Winnipesaukee", states: ["NH"], st: 1, dir: 1 },
+    { t: "Monadnock", states: ["NH"], uOf: 1, st: 1, dir: 1 },
+    { t: "Narragansett", states: ["RI"], uOf: 1, st: 1, dir: 1 }
   ],
   GreatLakes: [
     { t: "Maumee", states: ["OH"], su: 1, st: 1, dir: 1 },
+    { t: "Sandusky", states: ["OH"], st: 1, dir: 1 },
     { t: "Huron", states: ["MI"], uOf: 1, st: 1, tech: 1, dir: 1 },
-    { t: "Wabash", states: ["IN"], su: 1, st: 1, tech: 1, dir: 1 }
+    { t: "Manistee", states: ["MI"], st: 1, dir: 1 },
+    { t: "Tippecanoe", states: ["IN"], su: 1, st: 1, tech: 1, dir: 1 },
+    { t: "Pokagon", states: ["IN", "MI"], uOf: 1, st: 1, dir: 1 }
   ],
   Midwest: [
-    { t: "Sangamon", states: ["IL"], uOf: 1, st: 1, dir: 1, sat: 1 },
+    { t: "Rock River", states: ["IL"], uOf: 1, st: 1, dir: 1, sat: 1 },
+    { t: "Vermilion", states: ["IL"], st: 1, dir: 1 },
     { t: "Ozarka", states: ["MO"], uOf: 1, st: 1, dir: 1 },
+    { t: "Gasconade", states: ["MO"], st: 1, dir: 1 },
     { t: "Flint Hills", states: ["KS"], uOf: 1, st: 1 },
-    { t: "Cedar", states: ["IA"], uOf: 1, st: 1, dir: 1 }
+    { t: "Konza", states: ["KS"], uOf: 1, st: 1, dir: 1 },
+    { t: "Cedar", states: ["IA"], uOf: 1, st: 1, dir: 1 },
+    { t: "Loess Hills", states: ["IA"], st: 1, dir: 1 }
   ],
   UpperMidwest: [
     { t: "Boundary Waters", states: ["MN"], uOf: 1, st: 1, dir: 1, sat: 1 },
+    { t: "Pipestone", states: ["MN"], st: 1, dir: 1 },
     { t: "Kettle", states: ["WI"], uOf: 1, st: 1, sat: 1 },
-    { t: "Coteau", states: ["ND", "SD"], st: 1 }
+    { t: "Namekagon", states: ["WI"], st: 1, dir: 1 },
+    { t: "Coteau", states: ["ND", "SD"], st: 1 },
+    { t: "Sheyenne", states: ["ND"], uOf: 1, st: 1, dir: 1 },
+    { t: "Driftless", states: ["WI", "MN"], uOf: 1, st: 1, dir: 1 }
   ],
   Plains: [
     { t: "Platte", states: ["NE"], uOf: 1, st: 1, sat: 1 },
+    { t: "Niobrara", states: ["NE"], st: 1, dir: 1 },
     { t: "Wind River", states: ["WY"], uOf: 1, st: 1 },
-    { t: "Smoky Hill", states: ["KS"], uOf: 1, st: 1 }
+    { t: "Medicine Bow", states: ["WY"], st: 1, dir: 1 },
+    { t: "Powder River", states: ["WY"], st: 1, dir: 1 },
+    { t: "Smoky Hill", states: ["KS"], uOf: 1, st: 1 },
+    { t: "Solomon", states: ["KS"], uOf: 1, st: 1 }
   ],
   MountainWest: [
     { t: "Front Range", states: ["CO"], uOf: 1, st: 1, dir: 1, sat: 1 },
+    { t: "Sangre de Cristo", states: ["CO"], st: 1, dir: 1 },
+    { t: "Yampa", states: ["CO"], st: 1, dir: 1 },
     { t: "Wasatch", states: ["UT"], uOf: 1, st: 1, tech: 1, dir: 1 },
-    { t: "Bitterroot", states: ["MT"], uOf: 1, st: 1, tech: 1, dir: 1 }
+    { t: "Uinta", states: ["UT"], st: 1, dir: 1 },
+    { t: "Bitterroot", states: ["MT"], uOf: 1, st: 1, tech: 1, dir: 1 },
+    { t: "Beartooth", states: ["MT"], st: 1, dir: 1 },
+    { t: "Yellowstone", states: ["MT"], uOf: 1, st: 1, dir: 1 }
   ],
   Southwest: [
     { t: "Brazos", states: ["TX"], uOf: 1, st: 1, am: 1, tech: 1, dir: 1, sat: 1 },
-    { t: "Sandia", states: ["NM"], uOf: 1, st: 1, tech: 1, dir: 1 }
+    { t: "Llano", states: ["TX"], st: 1, am: 1, dir: 1 },
+    { t: "Caprock", states: ["TX"], st: 1, tech: 1, dir: 1 },
+    { t: "Chisos", states: ["TX"], st: 1, dir: 1 },
+    { t: "Sandia", states: ["NM"], uOf: 1, st: 1, tech: 1, dir: 1 },
+    { t: "Gila", states: ["NM"], uOf: 1, st: 1, dir: 1 },
+    { t: "Mesilla", states: ["NM"], st: 1, dir: 1 },
+    { t: "Pecos", states: ["TX", "NM"], uOf: 1, st: 1, dir: 1 }
   ],
-  Hawaii: [{ t: "Kona", states: ["HI"], uOf: 1, st: 1, tech: 1, dir: 1 }],
-  Alaska: [{ t: "Denali", states: ["AK"], uOf: 1, st: 1, tech: 1, dir: 1 }],
+  Hawaii: [
+    { t: "Kona", states: ["HI"], uOf: 1, st: 1, tech: 1, dir: 1 },
+    { t: "Kohala", states: ["HI"], st: 1, dir: 1 },
+    { t: "Haleakala", states: ["HI"], uOf: 1, st: 1, dir: 1 }
+  ],
+  Alaska: [
+    { t: "Denali", states: ["AK"], uOf: 1, st: 1, tech: 1, dir: 1 },
+    { t: "Chugach", states: ["AK"], st: 1, dir: 1 },
+    { t: "Susitna", states: ["AK"], uOf: 1, st: 1, dir: 1 },
+    { t: "Brooks Range", states: ["AK"], st: 1, dir: 1 }
+  ],
   PacificNW: [
-    { t: "Willamette", states: ["OR"], uOf: 1, st: 1, tech: 1, dir: 1 },
     { t: "Cascade", states: ["WA"], uOf: 1, st: 1, dir: 1 },
-    { t: "Sawtooth", states: ["ID"], uOf: 1, st: 1, dir: 1 }
+    { t: "Palouse", states: ["WA", "ID"], st: 1, dir: 1 },
+    { t: "Sawtooth", states: ["ID"], uOf: 1, st: 1, dir: 1 },
+    { t: "Payette", states: ["ID"], st: 1, dir: 1 },
+    { t: "Snake River", states: ["ID"], uOf: 1, st: 1, dir: 1 },
+    { t: "Deschutes", states: ["OR"], uOf: 1, st: 1, tech: 1, dir: 1 },
+    { t: "Wallowa", states: ["OR"], st: 1, dir: 1 }
   ],
   California: [
-    { t: "Sierra Nevada", states: ["CA"], uOf: 1, dir: 1 },
-    { t: "Redwood", states: ["CA"], st: 1, tech: 1, dir: 1 }
+    { t: "Mojave", states: ["CA"], st: 1, tech: 1, dir: 1 },
+    { t: "Big Sur", states: ["CA"], uOf: 1, st: 1, dir: 1 },
+    { t: "Panamint", states: ["CA"], st: 1, dir: 1 },
+    { t: "Owens Valley", states: ["CA"], uOf: 1, st: 1, dir: 1 },
+    { t: "Tehachapi", states: ["CA"], st: 1, dir: 1 },
+    { t: "Carrizo", states: ["CA"], st: 1, dir: 1 }
   ]
 };
 DIRS = ["Northern", "Southern", "Eastern", "Western", "Central"];
@@ -2980,11 +3475,15 @@ COLOR_PAIRS = [
   ["#123456", "#F5A623"],
   ["#611C35", "#BFA06A"]
 ];
+// Real-city names take only the safe suffixes (cg = geographic, cd =
+// denomination, sat = token-city, pc/sn = person/saint). The university forms
+// (uOf/st/su/am/tech/poly) ride the fictional landmark tokens only, so a real
+// "<City> State/University/Tech" can't be coined.
 NAME_PATTERNS = {
-  power: [["uOf", 26], ["st", 22], ["su", 6], ["am", 9], ["tech", 9], ["cu", 14], ["cs", 10], ["poly", 2], ["dir", 2]],
-  midMajor: [["dir", 22], ["cs", 18], ["cu", 16], ["sat", 12], ["tech", 8], ["ct", 6], ["st", 8], ["su", 4], ["am", 3], ["uOf", 3]],
-  D2: [["cs", 25], ["sat", 19], ["dir", 12], ["cu", 10], ["cc", 8], ["cd", 8], ["pc", 6], ["sn", 6], ["ct", 3], ["su", 3]],
-  D3: [["pc", 20], ["sn", 16], ["cc", 20], ["cd", 10], ["sat", 12], ["cs", 10], ["cu", 4], ["ct", 3], ["dir", 3], ["poly", 2]]
+  power: [["uOf", 24], ["st", 22], ["su", 8], ["am", 10], ["tech", 10], ["cg", 10], ["sat", 8], ["poly", 4], ["dir", 4]],
+  midMajor: [["dir", 18], ["cg", 20], ["sat", 16], ["st", 12], ["su", 8], ["tech", 8], ["uOf", 6], ["am", 6], ["poly", 6]],
+  D2: [["cg", 22], ["sat", 20], ["dir", 12], ["cd", 10], ["pc", 8], ["sn", 8], ["st", 8], ["su", 6], ["tech", 6]],
+  D3: [["pc", 22], ["sn", 18], ["cg", 18], ["cd", 12], ["sat", 14], ["dir", 8], ["poly", 4], ["su", 4]]
 };
 // Weights, not an ordered list — see pickCity. Power programs still land in the
 // biggest places available; D2/D3 still skew small-town, but a weighted draw
@@ -3012,6 +3511,7 @@ PATTERN_TYPE = {
   cc: "privateCollege",
   ct: "tech",
   cd: "denominational",
+  cg: "regionalState",
   pc: "liberalArts",
   sn: "religious"
 };
@@ -3100,7 +3600,33 @@ REAL_SCHOOL_STEMS = /* @__PURE__ */ new Set([
   "Guilford",
   "Wingate",
   "Pfeiffer",
-  "Berry"
+  "Berry",
+  // ── Famous-program backstop (added 2026-08-15) ─────────────────────────────
+  // The token pool is now all fictional landmarks, but the CITY-bearing patterns
+  // ("<City> State/University/Tech") still draw from real gazetteer cities, so a
+  // real program could still be coined ("Boise State"). Reject the recognizable
+  // ones by stem: every state name (covers "<State> State/University/A&M/Tech")
+  // plus the best-known college cities/programs.
+  "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut",
+  "Delaware", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa",
+  "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan",
+  "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada",
+  "New Hampshire", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio",
+  "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota",
+  "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia",
+  "Wisconsin", "Wyoming",
+  "Boise", "Fresno", "Sacramento", "San Diego", "San Jose", "San Marcos", "Fullerton",
+  "Northridge", "Long Beach", "Auburn", "Clemson", "Boston", "Miami", "Syracuse",
+  "Villanova", "Georgetown", "Gonzaga", "Marquette", "Creighton", "Butler", "Xavier",
+  "Dayton", "Toledo", "Akron", "Kent", "Buffalo", "Temple", "Rutgers", "Purdue",
+  "Wichita", "Tulsa", "Tulane", "Memphis", "Houston", "Baylor", "Notre Dame", "Duke",
+  "Vanderbilt", "Stanford", "Princeton", "Harvard", "Yale", "Columbia", "Cornell",
+  "Fordham", "Providence", "Bradley", "Drake", "Valparaiso", "Belmont", "Liberty",
+  "Wake Forest", "Citadel", "Richmond", "Bucknell", "Lehigh", "Lafayette", "Colgate",
+  "Canisius", "Niagara", "Iona", "Manhattan", "Quinnipiac", "Marist", "Siena", "Hofstra",
+  "Wagner", "Rider", "Duquesne", "Drexel", "Towson", "Hampton", "Norfolk", "Old Dominion",
+  "Coastal Carolina", "Campbell", "Davidson", "Charleston", "Gonzaga", "Pepperdine",
+  "Santa Clara", "Loyola", "Bethune", "Tuskegee", "Grambling", "Jackson", "Hampton"
 ]);
 ANCHOR_RANK = {
   flagship: 0,
@@ -3154,4 +3680,4 @@ CONFERENCES = Object.fromEntries(
 NONCONF_GAME_DAYS = [5, 6, 7, 8];
 CONF_GAME_DAYS = [9, 10, 11, 13, 14, 15, 16, 17, 18];
 
-export { CONFERENCES, SCHOOL_DATA, WORLDGEN_INFO, applyIdentityToSchool, availableStates, buildDepthChart, buildRoleSortedDepthOrder, generateAICoach, generateExhibitionTeam, generatePlayerProgram, generateRecruitPool, generateSchedule, generateWorld, hashStr, repairRecruitLocations };
+export { CONFERENCES, SCHOOL_DATA, WORLDGEN_INFO, STAR_CALIBER, applyIdentityToSchool, applyTeamStars, availableStates, buildDepthChart, buildRoleSortedDepthOrder, assembleWorldSources, cityInState, coinStarPlayer, coinTeamIdentity, compileLeague, defaultGameplan, generateAICoach, generateExhibitionTeam, generatePlayerProgram, generateRecruitPool, generateSchedule, generateWorld, hashStr, repairRecruitLocations };

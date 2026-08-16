@@ -1,5 +1,13 @@
 # Blueprint: College Football Dynasty — project notes for Claude
 
+> ## ⚑ START HERE
+> **Before doing anything, read `Ref/STATUS.md`** — it is the living record of
+> where the project actually is right now (what's done, what's open) and, most
+> importantly, the **two-repo layout** that trips up fresh sessions. This file
+> (`CLAUDE.md`) is the *stable* architecture/build reference; `Ref/STATUS.md` is
+> the *current* state. If a request is vague ("check on the merge", "where are
+> we"), `Ref/STATUS.md` is the answer. Keep it updated as you finish work.
+
 ## Source of truth: `js/` and `style.css`
 
 The game is written as split ES modules under `js/`, plus `style.css`. **That is the

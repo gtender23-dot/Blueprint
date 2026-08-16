@@ -23,6 +23,111 @@ TIPS = {
     chapter: "reading-a-player",
     body: `A measure of how well a player fits the job his position asks of him, not of the athlete himself. Stand the same body at a different spot and the number changes, because the job changed.`
   },
+  "class-rank": {
+    term: "Class Rank",
+    chapter: "recruiting",
+    body: `Where your recruiting class stands against the other programs in your division. It leans hard on your best signees — a handful of blue-chippers outranks a long list of solid ones — with a smaller nudge for signing a full class. It updates live off current commitments and locks in on Signing Day.`
+  },
+  "target-share": {
+    term: "Target Shares",
+    chapter: "calling-a-game",
+    body: `How often each receiver is the intended man on a pass. It's a lean, not a script — the quarterback still reads the coverage and takes what's open, so a featured target sees more looks but never all of them. Your standing DEFAULT is set by receiver (WR1, WR2, slot, tight end, back), so a man's share follows him wherever he lines up. On the Depth Chart field view you can override it per FORMATION by position — give the X or the slot a different mix out of a specific set.`
+  },
+  "rpo": {
+    term: "RPO",
+    chapter: "calling-a-game",
+    body: `Run-Pass Option. One play that's both a run and a pass — the quarterback hands off or pulls it to throw depending on what one defender does after the snap. It puts that defender in a bind: crash the run and the throw is open, sit on the pass and the run has a lane.`
+  },
+  "base-front": {
+    term: "Base Front",
+    chapter: "defending-a-game",
+    body: `The shape you line up in — how many hands are in the dirt versus standing up. A 4-3 has four down linemen and three linebackers (balanced); a 3-4 trades a lineman for a fourth backer (more blitz disguise); Nickel and Dime swap a linebacker for an extra defensive back against spread teams; the heavier looks pack the middle against the run. The sim auto-subs to the right personnel by down and situation; this sets your starting point.`
+  },
+  "the-box": {
+    term: "The Box",
+    chapter: "defending-a-game",
+    body: `The defenders stacked near the line of scrimmage, in the area a run has to get through. Loading the box puts more bodies in run lanes — it stuffs the ground game but leaves receivers in tighter one-on-ones and is vulnerable to play-action. Lightening it does the opposite. It's the central run-or-pass gamble of defense.`
+  },
+  "option-assignment": {
+    term: "Option Assignment",
+    chapter: "defending-a-game",
+    body: `Against an option offense, every defender is given one man to take and told to take only him — the dive, the quarterback, or the pitch. Assignment-sound defense beats the option by making the offense wrong no matter who keeps the ball; guessing gets you blocked out of the play.`
+  },
+  "edge-discipline": {
+    term: "Edge Discipline",
+    chapter: "defending-a-game",
+    body: `What your outside rushers do at the snap. Contain sets a hard edge and turns everything back inside to your help — safe against outside runs and scrambles. Crash sends them hard upfield — more sacks and better against inside runs, but a quarterback or a jet sweep can get outside the moment they lose the edge.`
+  },
+  "robber": {
+    term: "Robber",
+    chapter: "defending-a-game",
+    body: `A safety who drops down and sits in the middle of the field underneath the deep coverage, hunting the intermediate throw — the dig, the crosser, the seam. He "robs" the route the quarterback thinks is open. The cost: he's left the deep middle, so the post behind him is live if the quarterback looks him off.`
+  },
+  "coverage-scheme": {
+    term: "Coverage Scheme",
+    chapter: "defending-a-game",
+    body: `Whether you play the receivers straight up or gang up on their best one. Lock puts your top corner on their top receiver everywhere he goes; Bracket puts two defenders on him, over and under. Doubling a star takes him away — but it means someone else is in single coverage or running free, so it bleeds against a balanced offense.`
+  },
+  "safety-shell": {
+    term: "Safety Shell",
+    chapter: "defending-a-game",
+    body: `How many safeties you keep deep. Single-high leaves one man back and drops the other into the box — great against the run, but one deep defender means the post and the go ball are live. Two-high keeps two back to take away the deep shots, at the cost of a lighter box. The central bargain of modern defense.`
+  },
+  "cushion": {
+    term: "Cushion",
+    chapter: "defending-a-game",
+    body: `How much space your corners give receivers in man coverage. Press jams them at the line and wrecks the timing of quick, rhythm routes — but a beaten jam is a step given up deep. Off (soft) coverage keeps everything in front and concedes the underneath throw. Only matters on man calls.`
+  },
+  "bracket-target": {
+    term: "Bracket Target",
+    chapter: "defending-a-game",
+    body: `When you're doubling a receiver (Lock or Bracket), this is who the double-team keys on — their top threat by default, or you can point it at their tight end, their slot, or whoever's getting the hot ball. Everyone else is in tighter coverage, so aim the bracket where it hurts them most.`
+  },
+  "option-game": {
+    term: "The Option",
+    chapter: "calling-a-game",
+    body: `Triple-option football: the quarterback reads unblocked defenders instead of blocking them. He can hand to the dive back, keep it himself, or pitch it to a trailing back — deciding each based on what the "read" defender does. It grinds and eats clock, and it makes a fast defense wrong by choice; the trade is it lives or dies on the quarterback's reads and ball security.`
+  },
+  "option-mix": {
+    term: "Option Mix",
+    chapter: "calling-a-game",
+    body: `When the read is a coin flip, which way you lean — give the dive up the middle, keep it with the quarterback on the edge, or pitch it to the trailing back. Dive-heavy grinds behind your power back; pitch-heavy hunts the edge with your fastest man. It's a lean, not a rule — the quarterback still takes what the defense gives.`
+  },
+  "pitch-aggressiveness": {
+    term: "Pitch Aggressiveness",
+    chapter: "calling-a-game",
+    body: `How willing the quarterback is to pitch the ball on the option. Loose pitches more often — more explosive edge plays, but more balls on the ground when the pitch is contested. Safe keeps it tighter and protects possession at the cost of some big plays.`
+  },
+  "chip-help": {
+    term: "Chip Help",
+    chapter: "calling-a-game",
+    body: `A running back, on his way out to his route, throws a quick shot into the edge rusher first — a "chip" — to slow him down and buy the quarterback an extra beat. The cost: a back who's busy chipping is a late, less-available checkdown, so your safety-valve thins exactly when the pressure is heaviest.`
+  },
+  "protection-style": {
+    term: "Protection Style",
+    chapter: "calling-a-game",
+    body: `How the pocket is built. Quick Game keeps it simple and gets the ball out on rhythm — the rush can't sack what's already thrown. Half-Slide, the modern default, blocks man to one side and zone-slides the other, sound against almost anything. Big-on-big trusts your five linemen one-on-one and lets the backs scan for blitzers. Max Protect keeps a tight end and back in to block — the deep-shot answer to heavy pressure, at the cost of bodies in the route.`
+  },
+  "qb-aggression": {
+    term: "QB Aggression",
+    chapter: "calling-a-game",
+    body: `The gunslinger dial. Push It hunts throws deeper than your called mix and trusts the quarterback to fit it in — more big plays, more risk. Protect It takes the safe throw and the checkdown. A sharp, high-awareness passer earns the right to push; a shaky one gives it back.`
+  },
+  "def-aggression": {
+    term: "Aggression",
+    chapter: "defending-a-game",
+    body: `How much you gamble on defense. At the quiet end you rush four and keep everyone home — bend but don't break. At the loud end you bring extra rushers on almost every dropback and man everyone up with no help behind — the max-risk approach that lives on sacks and dies on the one that gets loose. In between you pick your spots, and how well those spots are chosen depends on your coordinator.`
+  },
+  "pressure-style": {
+    term: "Pressure Style",
+    chapter: "defending-a-game",
+    body: `What your blitz actually looks like. A fire zone shows pressure, drops a lineman into coverage, and brings a linebacker behind him — the same number of rushers from unexpected angles, the low-risk blitz. Bringing linebackers downhill through the gaps gets home fast but empties the middle of the field. Sending a safety or slot corner off the edge is heat from a spot the protection isn't counting; bringing everyone is the all-out gamble with no help behind it.`
+  },
+  "zone-style": {
+    term: "Zone Style",
+    chapter: "defending-a-game",
+    body: `How your zone defenders are coached to play their areas. Match coverage travels with the routes that enter the zone — it takes away crossers, floods, and high-low combinations that pull spot-droppers out of position. Spot-drop just sinks to a landmark and sits in the throwing lane, simpler and steadier but easier to move with route design.`
+  },
   "role-fit": {
     term: "Role Fit",
     chapter: "reading-a-player",
@@ -41,7 +146,7 @@ TIPS = {
   "attributes": {
     term: "Attributes",
     chapter: "reading-a-player",
-    body: `The raw tools — speed, power, awareness, the rest. Overall reads them through the lens of the position, but the attributes themselves are what every snap is contested on.`
+    body: `The raw tools — Overall reads them through the lens of the position, but the attributes themselves are what every snap is contested on. The shorthand you'll see around the game: SPD speed · AGI agility · PWR power · STR strength · JMP jumping · HND hands · SEC ball security · TEC technique · AWR awareness · CON conditioning · WE work ethic.`
   },
   "awareness": {
     term: "Awareness (AWR)",

@@ -1,0 +1,181 @@
+The biggest remaining gap is no longer player detail—it is motion continuity. The models are approaching the right look, but College Bowl-style fluidity comes from convincing locomotion, synchronized contact, smooth cameras, and clean transitions.
+Highest-priority work
+True locomotion system
+Acceleration and deceleration frames.
+Speed-scaled walk, jog, sprint, and pursuit cycles.
+Planted feet so players stop skating across the turf.
+Gradual turning with realistic turn radius.
+Cuts, stutter steps, pivots, backpedals, shuffles, and crossovers.
+Smooth transitions between every movement state.
+Momentum continuing through catches, hits, and whistles.
+
+Directional animation coverage
+Front, back, left, and right movement.
+Diagonal three-quarter poses.
+Correct limb ordering when direction changes.
+No visibly mirrored jersey numbers, equipment, or ball arms.
+Direction-specific throwing, catching, tackling, and blocking.
+
+Position-specific movement
+Quarterbacks: dropbacks, pocket slides, resets, rollouts and scrambling.
+Running backs: low pad level, sharp cuts, jukes and ball protection.
+Receivers: releases, stems, breaks, tracking and toe-tap catches.
+Linemen: short power steps, anchors, pulls and recovery steps.
+Defensive linemen: get-off, hand fighting, rip/swim and pursuit.
+Linebackers: read steps, shuffle, downhill trigger and coverage turn.
+Defensive backs: press, backpedal, hip turn, trail and ball reaction.
+Kickers/punters: dedicated approach rhythms and follow-throughs.
+
+Football-contact system
+Blocker and defender meet at one synchronized contact point.
+Hands attach visually to shoulder pads instead of passing through bodies.
+Drive blocks, reach blocks, double teams, pulls and pass sets.
+Rush moves, shed direction and realistic blocker recovery.
+Wrap tackles, shoulder tackles, diving tackles and gang tackles.
+Broken tackles that begin from the actual collision.
+Fallen players remain grounded briefly instead of instantly disappearing.
+Small piles without turning players into one unreadable mass.
+
+Ball ownership and flight
+Ball visibly transfers from center to quarterback.
+Proper mesh-point handoffs and play-action fakes.
+Ball attached to the correct carrying arm.
+Quarterback windup, release point and follow-through synchronized to flight.
+Real spiraling pass arc rather than a moving football icon.
+Receiver hands meet the ball at the catch point.
+Deflections change the ball’s trajectory.
+Fumbles bounce and tumble independently.
+Punts, kickoffs and field goals use distinct spin and flight behavior.
+
+Presentation upgrades
+Broadcast-quality camera
+Anticipatory tracking that leads the play instead of chasing it.
+Smooth acceleration and braking.
+Contextual zoom for deep throws, returns and goal-line plays.
+Stable framing at the snap.
+Controlled camera movement during turnovers.
+Short celebration hold before advancing.
+Replay camera with cleaner framing and slower contact moments.
+Scoreboard and overlays permanently constrained outside playable space.
+
+Depth and layering
+Correct front-to-back player sorting.
+Arms, ball and bodies layered correctly during contact.
+Consistent shadows tied to every player’s feet.
+Jumping players separate from their grounded shadows.
+Ball can pass visually in front of or behind players correctly.
+Goalposts, sidelines and officials use proper field-depth layers.
+
+Turf interaction
+Cleat shadows and subtle foot-contact marks.
+Small grass or rubber-pellet effects on cuts.
+Turf spray on hard tackles and slides.
+End-zone paint interaction.
+Weather-sensitive footing as a later option.
+Effects kept restrained so the game remains readable.
+
+More animation variety
+Multiple idle stances.
+Different run-cycle timing between players.
+Alternate catch and tackle outcomes.
+Celebration variants by position and situation.
+Exhaustion and injury body language.
+Players looking toward the ball instead of always facing their travel direction.
+Sideline players reacting to nearby action.
+
+Stadium life
+Animated sidelines and benches.
+Chain crew and down marker movement.
+Officials following the play and signaling results.
+Goalpost net reaction.
+Crowd parallax and section-based reactions.
+Band, mascot and student-section motion.
+Stadium-specific color and architecture packages.
+Consistent letter-shield branding throughout.
+
+Field polishPermanent team-specific end-zone colors.
+Correct inward-facing right end-zone lettering.
+Better turf texture without visual noise.
+Hash marks, numbers and yard lines rendered consistently at every camera scale.
+Conference, bowl and midfield marks.
+Goal-line pylons and boundary depth.
+Wet, snowy and worn-field variants eventually.
+
+Broadcast graphicsCleaner scorebug hierarchy.
+Animated possession indicator.
+Down-and-distance transitions.
+Play clock urgency state.
+Drive summaries and scoring banners.
+Player identification lower thirds.
+Turnover and touchdown presentation.
+Replay wipe and replay indicator.
+All overlays respecting the field-safe region.
+
+Audio synchronized to graphicsSnap sound aligned with the snap frame.
+Pad contact aligned with collision.
+Footstep cadence scaled to player speed.
+Catch, deflection, tackle and whistle synchronization.
+Crowd reaction based on home/away result.
+Punt and place-kick sounds separated.
+Stadium ambience that rises naturally during important plays.
+
+Player-model improvements
+Expanded anatomy librarySkill-player, quarterback, linebacker and lineman frames.
+Slimmer waists and modern shoulder-pad silhouettes.
+Modern compact helmets.
+Thinner articulated arms and visible elbows.
+Longer legs with better thigh-to-calf proportions.
+Equipment variation without returning to the “muscle ball” look.
+
+Uniform and equipment systemReliable palette masks for helmets, jerseys, pants and accessories.
+Numbers that remain readable without dominating the sprite.
+Home, away, alternate and bowl uniforms.
+Gloves, sleeves, visors, towels and arm bands.
+Helmet stripe and facemask variations.
+Skin-tone consistency across every pose.
+Position-appropriate equipment frequency.
+
+Procedural player individualityHeight and weight variation within safe silhouette limits.
+Slight stance and stride variation.
+Different equipment combinations.
+Animation cadence influenced by position and athleticism.
+Avoid scaling heads, helmets or limbs independently enough to deform them.
+
+Technical work required for fluidity
+Animation state controller
+   Every player needs a controlled sequence such as:
+   set → first step → accelerate → run → cut → contact → recover → celebrate
+   This prevents poses from abruptly snapping between unrelated frames.
+Path smoothingCurved movement instead of straight-line teleport interpolation.
+Steering around teammates.
+Separation so players do not occupy identical coordinates.
+Real pursuit angles.
+Route breaks with controlled speed loss.
+Ballcarrier path responding to blocks and leverage.
+
+Frame pacing and performanceStable 60 FPS target.
+Reuse player elements rather than reconstructing the field every play.
+Cache sprite markup.
+Preload animation and audio assets.
+Reduce expensive effects while the camera is moving.
+Automatic quality setting for weaker computers.
+Test full 22-player scrums, returns and stadium effects together.
+
+Visual regression testingAutomated screenshots for every formation and play family.
+Checks for missing limbs, wrong colors and mirrored equipment.
+Foot-sliding measurement.
+Ball-to-hand alignment checks.
+Contact-distance checks.
+Camera and scoreboard safe-area checks.
+Home/away and left/right orientation coverage.
+End-zone color and lettering stability.
+Animation-state leakage between plays.
+
+Recommended milestone order
+M19 — Locomotion: eliminate skating with acceleration, planted feet, turning, cuts, backpedals and state blending.
+M20 — Contact: synchronized blocking, tackling, shedding, broken tackles and grounded finishes.
+M21 — Ball mechanics: complete exchanges, handoffs, throws, catches, deflections and fumbles.
+M22 — Camera and replay: anticipatory broadcast tracking, contextual zoom and replay presentation.
+M23 — Stadium and broadcast: officials, sidelines, crowd life, field polish and graphics.
+M24 — Variation and optimization: equipment, body types, alternate animations, 60 FPS and full regression coverage.
+M19 should be next. Removing foot sliding and abrupt direction changes will create a larger perceived improvement than another player-model redraw. Once locomotion is convincing, the higher-realism anatomy will finally look like it belongs in motion.

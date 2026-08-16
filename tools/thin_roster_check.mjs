@@ -112,10 +112,18 @@ console.log('\n── 2. EMERGENCY BACKFILL FILLS QB SLOT ──');
     const filler = roster.find(p => p.id === qbFill);
     assert(filler != null, `Emergency QB filler exists in roster`);
     assert(filler?.position !== 'QB', `Filler is cross-position (${filler?.position}) — confirms Pass 3 fired`);
-    // Should be the best-rated available player
+    // Should be the best-rated AVAILABLE player — i.e. the best body NOT already
+    // assigned to another slot (a starter can't also emergency-fill QB) and NOT
+    // a specialist (Pass 3 excludes K/P — you don't move your kicker to QB). The
+    // old check compared against the best of the whole roster, which counted
+    // players already on the field (e.g. a 92 TE playing TE) and wrongly red.
+    const assignedElsewhere = new Set(
+      Object.entries(resolved.bySlot).filter(([slot, id]) => slot !== 'QB' && id).map(([, id]) => id)
+    );
     const bestAvail = Object.values(activeDepth).flat()
       .map(id => roster.find(p => p.id === id))
       .filter(Boolean)
+      .filter(p => !assignedElsewhere.has(p.id) && p.position !== 'K' && p.position !== 'P')
       .sort((a, b) => b.compositeRating - a.compositeRating)[0];
     assert(filler?.compositeRating >= (bestAvail?.compositeRating ?? 0),
       `Filler (rating ${filler?.compositeRating}) is the best available (best avail: ${bestAvail?.compositeRating})`);

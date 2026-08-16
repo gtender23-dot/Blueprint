@@ -1,8 +1,10 @@
 import { C } from '../../constants.js';
 import { setAIGameplan } from '../../engine/ai.js';
+import { synthesizeTeamPlan } from '../../engine/teamplan.js';
 import { instantiateSavedTeam, listSavedTeams } from '../../engine/coachprofile.js';
+import { listCreations, loadCreationData } from '../../engine/creator.js';
 import { ensureFieldAssignments } from '../../engine/fieldassign.js';
-import { generateExhibitionTeam } from '../../engine/world.js';
+import { generateExhibitionTeam, applyTeamStars } from '../../engine/world.js';
 import { endExhibition, navigate, rerender, startExhibition } from '../../state.js';
 import { escapeHtml, renderCrest } from '../../utils.js';
 
@@ -28,6 +30,10 @@ function makeTeam(side) {
   } catch (e) {
   }
   try {
+    synthesizeTeamPlan(school, { force: true });
+  } catch (e) {
+  }
+  try {
     ensureFieldAssignments(school.gameplan);
   } catch (e) {
   }
@@ -36,6 +42,30 @@ function makeTeam(side) {
 function ensureTeams() {
   if (!pn.home) pn.home = makeTeam("home");
   if (!pn.away) pn.away = makeTeam("away");
+}
+// Build a playable team from a Team Editor creation (identity only): generate a
+// roster at its division/prestige, then stamp the custom identity (name, mascot,
+// colors, crest) over it so your created team takes the field.
+function makeCreatorTeam(id, side) {
+  const c = loadCreationData("teams", id);
+  if (!c) return null;
+  const div = c.division || "D1";
+  const prestige = c.prestige != null ? c.prestige : 3;
+  pn.cfg[side].div = div;
+  pn.cfg[side].prestige = prestige;
+  const school = generateExhibitionTeam(div, prestige);
+  if (c.name) school.name = c.name;
+  if (c.nick) school.nick = c.nick;
+  if (Array.isArray(c.colors) && c.colors.length === 2) school.colors = c.colors;
+  if (c.state) school.state = c.state;
+  if (c.crestText) school.crestText = c.crestText;
+  if (c.crestSeed) school.crestSeed = c.crestSeed;
+  if (Array.isArray(c.stars) && c.stars.length) { try { applyTeamStars(school, c.stars); } catch (e) {} }
+  school._creatorTeam = true;
+  try { setAIGameplan(school); } catch (e) {}
+  try { synthesizeTeamPlan(school, { force: true }); } catch (e) {}
+  try { ensureFieldAssignments(school.gameplan); } catch (e) {}
+  return school;
 }
 function savedKey(team) {
   return `${team.coachId}|${team.id}`;
@@ -66,9 +96,11 @@ function sideLabel(side) {
 }
 function sourcePicker(side) {
   const saved = listSavedTeams();
+  const custom = listCreations("teams");
   return `<label class="pn-source-label" for="pn-source-${side}">TEAM SOURCE</label>
   <select class="form-select pn-source" id="pn-source-${side}" data-pn-source="${side}">
     <option value=""${pn.source[side] ? "" : " selected"}>Generate a new team</option>
+    ${custom.length ? `<optgroup label="Your custom teams">${custom.map((t) => `<option value="creator:${escapeHtml(t.id)}"${pn.source[side] === "creator:" + t.id ? " selected" : ""}>${escapeHtml(t.data.name)} \u2014 ${escapeHtml(t.data.division || "D1")}</option>`).join("")}</optgroup>` : ""}
     ${saved.length ? `<optgroup label="Saved dynasty teams">${saved.map((team) => {
     const key = savedKey(team);
     return `<option value="${escapeHtml(key)}"${pn.source[side] === key ? " selected" : ""}>${escapeHtml(team.name)} \u2014 ${escapeHtml(team.coachName)}</option>`;
@@ -91,7 +123,7 @@ function teamPanel(side, school) {
       <div class="pn-seg">
         ${DIVS.map((d) => `<button class="pn-seg-btn${div === d ? " active" : ""}" data-pn-div="${side}:${d}">${d}</button>`).join("")}
       </div>
-      <div class="pn-stars">${starRow(side)}<span class="pn-star-hint">prestige \u2014 roster strength</span></div>` : `<div class="pn-saved-meta">SAVED SNAPSHOT${(saved == null ? void 0 : saved.season) ? ` \xB7 SEASON ${saved.season}` : ""}${(saved == null ? void 0 : saved.record) ? ` \xB7 ${saved.record.wins || 0}\u2013${saved.record.losses || 0}` : ""}</div>`}
+      <div class="pn-stars">${starRow(side)}<span class="pn-star-hint">prestige \u2014 roster strength</span></div>` : (pn.source[side] || "").startsWith("creator:") ? `<div class="pn-saved-meta">CUSTOM TEAM \xB7 ${div}</div>` : `<div class="pn-saved-meta">SAVED SNAPSHOT${(saved == null ? void 0 : saved.season) ? ` \xB7 SEASON ${saved.season}` : ""}${(saved == null ? void 0 : saved.record) ? ` \xB7 ${saved.record.wins || 0}\u2013${saved.record.losses || 0}` : ""}</div>`}
     <div class="pn-card" style="--pn-c1:${((_a = school.colors) == null ? void 0 : _a[0]) || "#888"};--pn-c2:${((_b = school.colors) == null ? void 0 : _b[1]) || "#ccc"}">
       <div class="pn-card-head">
         <span class="pn-crest">${renderCrest(school, 40)}</span>
@@ -160,7 +192,10 @@ function playnowListeners() {
     const key = select.value;
     pn.source[side] = key;
     if (!key) pn[side] = makeTeam(side);
-    else {
+    else if (key.startsWith("creator:")) {
+      pn[side] = makeCreatorTeam(key.slice(8), side) || makeTeam(side);
+      if (!pn[side] || !pn[side]._creatorTeam) pn.source[side] = "";
+    } else {
       const entry = savedByKey(key);
       pn[side] = instantiateSavedTeam(entry, side) || makeTeam(side);
       if (!entry) pn.source[side] = "";

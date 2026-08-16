@@ -1,5 +1,14 @@
 # UI_OVERHAUL_PLAN.md — Commercial-Grade UI (drafted Aug 10, 2026, mobile session)
 
+> **STATUS UPDATE — 2026-08-13 (verified against code):** The Broadcast Package was
+> not just ratified, it was **BUILT**. `style.css` carries the ratified tokens
+> (`--bg-page #0A1626`, `--bg-card #13253C`, `--gold #F5B942`, the `Archivo` display
+> font, `--bc-gold`, ~41 broadcast-token references) and `app.js` has the scorebug /
+> broadcast chrome. The theme ships. What may remain is **per-view signature polish**
+> (the "angled lower-third tab on every card header" and clipped-corner ribbon applied
+> uniformly across all ~20 views) — a QA/consistency sweep, not the overhaul itself.
+> The original ratification note below is kept for the record.
+
 Status: ART DIRECTION RATIFIED (Aug 10) — **A: BROADCAST PACKAGE**, chosen
 from three live mocks ("#1 by far. Love it"). Editorial and Modern-App
 rejected; dark-terminal rejected earlier by name. Direction seed tokens:

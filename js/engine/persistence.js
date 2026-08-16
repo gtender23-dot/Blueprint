@@ -3,6 +3,7 @@ import { unfoldDnaToSkills } from './coachprofile.js';
 import { emptyStats, refreshRatings } from './player.js';
 import { registerCoachName, resetCoachNames } from './staff.js';
 import { ensureTree } from './tree.js';
+import { synthesizeLeaguePlans } from './teamplan.js';
 
 function _jsonUnsafeType(v) {
   if (v instanceof Set) return "Set";
@@ -103,6 +104,14 @@ function rehydrate(saved) {
   // meta-layer can never block a load.
   try {
     ensureTree(saved);
+  } catch (e) {
+  }
+  // [Playbook-Root Stage 1] Synthesis-on-load: a save from before the named
+  // object model existed gets book / defbook / planOverlay derived from its
+  // gameplan here (idempotent — a save that already carries a book is skipped).
+  // Byte-neutral: the gameplan object is left in place.
+  try {
+    synthesizeLeaguePlans(saved.world);
   } catch (e) {
   }
   return saved;

@@ -117,8 +117,11 @@ function gameHighlight(result, homeSchool, awaySchool) {
   if (!((_a = result == null ? void 0 : result.drives) == null ? void 0 : _a.length)) return null;
   const nameOf = nameLookup(result);
   let best = null, bestScore = 0, bestSide = null;
-  for (const d of result.drives) {
-    for (const p of d.plays || []) {
+  for (let di = 0; di < result.drives.length; di++) {
+    const d = result.drives[di];
+    const plays = d.plays || [];
+    for (let pi = 0; pi < plays.length; pi++) {
+      const p = plays[pi];
       const base = baseWeight(p);
       if (base <= 0) continue;
       const score = base * leverage(p);
@@ -152,8 +155,11 @@ function gameHighlights(result, homeSchool, awaySchool, n = 3) {
   if (!((_a = result == null ? void 0 : result.drives) == null ? void 0 : _a.length)) return [];
   const nameOf = nameLookup(result);
   const rows = [];
-  for (const d of result.drives) {
-    for (const p of d.plays || []) {
+  for (let di = 0; di < result.drives.length; di++) {
+    const d = result.drives[di];
+    const plays = d.plays || [];
+    for (let pi = 0; pi < plays.length; pi++) {
+      const p = plays[pi];
       const base = baseWeight(p);
       if (base <= 0) continue;
       const side = d.possession === "home" ? "home" : "away";
@@ -171,7 +177,9 @@ function gameHighlights(result, homeSchool, awaySchool, n = 3) {
         weight: base * leverage(p),
         td: !!p.td,
         turnover: !!p.turnover,
-        breakaway: !!p.breakaway
+        breakaway: !!p.breakaway,
+        driveIndex: di,
+        playIndex: pi
       });
     }
   }

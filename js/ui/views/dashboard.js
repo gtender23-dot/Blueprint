@@ -13,10 +13,10 @@ import { gameHighlight } from '../../engine/highlights.js';
 import { CLINIC_OPTIONS, FOCUS_GROUPS, PRESEASON_WEEKS, acceptExtension, acceptWalkOn, applicationOdds, applicationsLeft, applyForJob, buildSeasonGoals, conversionPenaltyFactor, convertPosition, cutDayConversionRecs, declineOffersWithLeverage, devCtx, effectiveRosterOver, getExtensionOffer, getJobOpenings, getWalkOnPool, graduatingSeniors, playSpringGame, playerHasPendingPostseason, playoffDigest, previewConversion, runDevCamp, setDevFocus, takeClinic, visibleStages } from '../../engine/offseason.js';
 import { advancePortalRound, canSchoolSign, frontRunner, pitchCost, playerDrop, playerPitch, portalScholarshipRoom, resolvePortal, roleFor } from '../../engine/portal.js';
 import { rankMap } from '../../engine/rankings.js';
-import { PHASES, REG_WEEK_COUNT, acceptJob, calendarWeek, getPhase, recruitAssistLevel, weekLabel, weekShort } from '../../engine/season.js';
+import { PHASES, REG_WEEK_COUNT, acceptJob, calendarWeek, coachedGamesForDay, coachedSchoolIds, getPhase, recruitAssistLevel, weekLabel, weekShort } from '../../engine/season.js';
 import { deriveSchemeIdentity, ensureAmbition, generateCandidates, makeSuccessionPromise, schemeStarTier } from '../../engine/staff.js';
 import { buildDepthChart } from '../../engine/world.js';
-import { advanceDay2, getConferenceStandings, getPhaseLabel, getPlayerSchool, getUpcomingGame, navigate, notify, notifyJobMoveCosts, rerender, skipToOffseason, state } from '../../state.js';
+import { advanceDay2, getConferenceStandings, getPhaseLabel, getPlayerSchool, getUpcomingGame, kickoffCoachedGame, navigate, notify, notifyJobMoveCosts, rerender, simCoachedGameFromAgenda, skipToOffseason, state } from '../../state.js';
 import { cue } from '../sound.js';
 import { renderBanquetBody, setupListeners4 } from './awards.js';
 import { renderScheduling, setupListeners5 } from './scheduling.js';
@@ -35,12 +35,14 @@ function renderDashboard() {
   const school = getPlayerSchool();
   const phase = getPhase(state.day);
   if (state.offseason && !state.offseason.done) return renderEventTakeover(school, "offseason");
-  if (phase === "PRESEASON") {
+  // Season Mode has no preseason or offseason — it always shows the game-week
+  // dashboard (or the playoff card once the bracket is live).
+  if (!state.seasonMode && phase === "PRESEASON") {
     if (state.day === 4 && devCtx(state).openerPrep) return renderEventTakeover(school, "gameweek");
     return renderEventTakeover(school, "preseason");
   }
   if (state.playoffs && phase === "PLAYOFFS") return renderEventTakeover(school, "playoffs");
-  if (phase === "JOBS") return renderEventTakeover(school, "jobs");
+  if (!state.seasonMode && phase === "JOBS") return renderEventTakeover(school, "jobs");
   return renderEventTakeover(school, "gameweek");
 }
 function renderDashboardStandings(standings, school) {
@@ -202,6 +204,7 @@ function renderEventTakeover(school, mode) {
     below = renderSeasonStrip(school);
     btnLabel = state.day === 4 ? "KICK OFF THE SEASON \u2192" : "ADVANCE WEEK \u2192";
   }
+  const coachWeekPending = coachedSchoolIds(state).length > 1 ? coachedGamesForDay(state, state.day + 1).filter((g) => !g.result).length : 0;
   return `
   <div class="view-dashboard event-takeover">
     <div class="view-header">
@@ -212,10 +215,8 @@ function renderEventTakeover(school, mode) {
         </h1>
         <div class="view-subtitle">Season ${state.season} &middot; ${escapeHtml(dashCalendarLine())}</div>
       </div>
-      <button class="btn-advance" id="btn-advance-day">${btnLabel}</button>
+      <button class="btn-advance${coachWeekPending ? " btn-advance-locked" : ""}" id="btn-advance-day"${coachWeekPending ? " disabled aria-disabled=\"true\" title=\"Play or sim each of your programs' games below first\"" : ""}>${coachWeekPending ? `PLAY YOUR GAMES FIRST (${coachWeekPending})` : btnLabel}</button>
     </div>
-
-    ${renderTreeAgenda()}
 
     ${renderHandoffCard()}
 
@@ -227,6 +228,8 @@ function renderEventTakeover(school, mode) {
       <p class="event-sub">${escapeHtml(sub)}</p>
       <div class="event-body">${body}</div>
     </div>
+
+    ${renderTreeAgenda()}
 
     ${below}
   </div>
@@ -244,32 +247,53 @@ function renderEventTakeover(school, mode) {
 // it. A one-slot tree, and every non-tree save, renders nothing at all.
 function renderTreeAgenda() {
   if (!isTreeGame(state)) return "";
-  refreshAgenda(state);
-  const rows = agendaRows(state);
-  if (!rows.length) return "";
-  const pending = agendaPending(state).length;
+  if (coachedSchoolIds(state).length <= 1) return "";
+  const day = state.day + 1;
+  const games = coachedGamesForDay(state, day);
+  if (!games.length) return "";
   const nameOf = (id) => {
     var _a2;
     return ((_a2 = state.world) == null ? void 0 : _a2.schools.find((s) => s.id === id)?.name) || "?";
   };
+  const divOf = (schoolId) => {
+    var _a2;
+    const slots = ((_a2 = state.tree) == null ? void 0 : _a2.slots) || {};
+    for (const [div, slot] of Object.entries(slots)) if (slot && !slot.retired && slot.schoolId === schoolId) return div;
+    return "";
+  };
+  const idSet = new Set(coachedSchoolIds(state));
+  const pending = games.filter((g) => !g.result).length;
   return `
     <div class="tree-agenda${pending ? " tree-agenda-blocking" : ""}">
       <div class="tree-agenda-hdr">
-        <span>YOUR OTHER PROGRAMS \xB7 THIS WEEK</span>
-        ${pending > 1 ? '<button class="btn-ghost btn-sm" id="tree-finalize-all">Accept all</button>' : ""}
+        <span>YOUR PROGRAMS \xB7 THIS WEEK</span>
+        ${pending ? `<span class="muted" style="font-weight:400">${pending} to play</span>` : '<span class="tree-agenda-done">✓ all played — advance the week</span>'}
       </div>
-      ${rows.map((r) => `
-        <div class="tree-agenda-row${r.status === "finalized" ? " done" : ""}">
+      ${games.map((g) => {
+    const mineId = idSet.has(g.homeId) ? g.homeId : g.awayId;
+    const oppId = mineId === g.homeId ? g.awayId : g.homeId;
+    const home = mineId === g.homeId;
+    const div = divOf(mineId);
+    let scoreTag = "";
+    if (g.result) {
+      const my = home ? g.result.homeScore : g.result.awayScore;
+      const th = home ? g.result.awayScore : g.result.homeScore;
+      const won = my > th;
+      scoreTag = `<span class="tree-agenda-done" style="color:${won ? "var(--green)" : "var(--red)"}">${won ? "W" : "L"} ${my}–${th}</span>`;
+    }
+    return `
+        <div class="tree-agenda-row${g.result ? " done" : ""}">
           <div class="tree-agenda-game">
-            <span class="tree-chair-div">${r.division}</span>
-            ${escapeHtml(nameOf(r.schoolId))} <span class="muted">${r.home ? "vs" : "at"} ${escapeHtml(nameOf(r.oppId))}</span>
+            ${div ? `<span class="tree-chair-div">${div}</span>` : ""}
+            ${escapeHtml(nameOf(mineId))} <span class="muted">${home ? "vs" : "at"} ${escapeHtml(nameOf(oppId))}</span>
           </div>
-          ${r.status === "finalized" ? '<span class="tree-agenda-done">✓ accepted</span>' : `<div class="tree-agenda-acts">
-                 <button class="btn-ghost btn-sm" data-tree-final="${r.division}">Soft finalize</button>
-                 <button class="btn-primary btn-sm" data-tree-take="${r.division}">Take over</button>
+          ${g.result ? scoreTag : `<div class="tree-agenda-acts">
+                 <button class="btn-ghost btn-sm" data-cw-sim="${escapeHtml(g.id)}">Sim</button>
+                 <button class="btn-primary btn-sm" data-cw-kick="${escapeHtml(g.id)}">Kickoff →</button>
                </div>`}
-        </div>`).join("")}
-      ${pending ? `<div class="tree-agenda-note">The week can't move until every one of these is played or accepted. That's the deal with running more than one program — one clock, one truth.</div>` : ""}
+        </div>`;
+  }).join("")}
+      ${pending ? `<div class="tree-agenda-note">Play or sim each of your programs this week. Kickoff runs the pregame, then halftime, then the final and the box score — close it and take over the next when you're ready. The week advances once they're all done.</div>` : ""}
     </div>`;
 }
 function dashCalendarLine() {
@@ -440,8 +464,8 @@ function renderSeasonStrip(school) {
       </div>
       <div class="dash-quick-stats">
         ${injured.length > 0 ? `<span class="dash-qs-item dash-qs-injury">INJ: ${injured.length}</span>` : `<span class="dash-qs-item dash-qs-ok">\u2713 Full health</span>`}
-        <span class="dash-qs-item">Board: ${boardCount}</span>
-        <span class="dash-qs-item">Commits: ${committed}</span>
+        ${state.seasonMode ? "" : `<span class="dash-qs-item">Board: ${boardCount}</span>
+        <span class="dash-qs-item">Commits: ${committed}</span>`}
       </div>
     </div>
 
@@ -488,7 +512,7 @@ function playoffContent(school) {
   let title, sub;
   if (isChampion) {
     title = `${div} Champions!`;
-    sub = "The trophy comes home. Continue on to the offseason.";
+    sub = state.seasonMode ? "The trophy comes home. Your season is complete." : "The trophy comes home. Continue on to the offseason.";
   } else if (upcoming) {
     const g = upcoming.game;
     const isHome = g.homeId === schoolId;
@@ -512,7 +536,7 @@ function playoffContent(school) {
   if (state.day >= 20 && state.day <= 23 && !playerHasPendingPostseason(state)) {
     body += `
     <button class="btn-primary" id="btn-skip-offseason" style="margin:8px 0;width:100%">
-      Skip to Offseason \u23E9
+      ${state.seasonMode ? "Sim to the Title \u23E9" : "Skip to Offseason \u23E9"}
     </button>
     <div class="playoff-digest">
       ${playoffDigest(state).map((r) => `
@@ -1680,46 +1704,40 @@ function setupListeners6() {
     for (const ev of events) if (ev == null ? void 0 : ev.text) notify(ev.text, /lost/i.test(ev.text) ? "warning" : "info", 4e3);
     rerender();
   });
-  // ── [W9 §12 T1] Agenda actions ──────────────────────────────────────────
+  // ── [PLAYTEST 2026-08-12] Multi-coach week agenda ────────────────────────
   setupHandoffListeners();
-  document.querySelectorAll("[data-tree-final]").forEach((b) => b.addEventListener("click", () => {
-    softFinalize(state, b.dataset.treeFinal);
-    rerender();
+  document.querySelectorAll("[data-cw-kick]").forEach((b) => b.addEventListener("click", async () => {
+    await kickoffCoachedGame(b.dataset.cwKick);
   }));
-  (_e = document.getElementById("tree-finalize-all")) == null ? void 0 : _e.addEventListener("click", () => {
-    softFinalizeAll(state);
-    rerender();
-  });
-  document.querySelectorAll("[data-tree-take]").forEach((b) => b.addEventListener("click", async () => {
-    const res = takeOver(state, b.dataset.treeTake);
-    if (!res.ok) {
-      notify(res.reason, "warning", 4e3);
-      return;
-    }
-    notify(`You're on the ${res.schoolName} sideline this week.`, "info", 3500);
-    rerender();
+  document.querySelectorAll("[data-cw-sim]").forEach((b) => b.addEventListener("click", async () => {
+    b.disabled = true;
+    await simCoachedGameFromAgenda(b.dataset.cwSim);
   }));
 
   (_d = document.getElementById("btn-advance-day")) == null ? void 0 : _d.addEventListener("click", async () => {
     var _a2, _b2, _c2, _d2, _e2;
     const btn = document.getElementById("btn-advance-day");
-    if (state.day === 4 && !devCtx(state).openerPrep) {
-      devCtx(state).openerPrep = true;
-      rerender();
-      return;
-    }
-    const atRisk = redshirtBurnRisks();
-    if (atRisk.length && !state.ui.redshirtBurnAck) {
-      state.ui.showRedshirtBurnWarn = atRisk;
-      rerender();
-      return;
-    }
-    state.ui.redshirtBurnAck = false;
-    const board = ((_a2 = state.playerCoach) == null ? void 0 : _a2.recruitBoard) || [];
-    if (state.day === 2 && board.length === 0 && !state.ui.recruitStartAck) {
-      state.ui.showRecruitStartWarn = true;
-      rerender();
-      return;
+    // Season Mode skips every preseason/recruiting advance gate (opener prep,
+    // redshirt-burn warning, empty-board warning) — none of them apply.
+    if (!state.seasonMode) {
+      if (state.day === 4 && !devCtx(state).openerPrep) {
+        devCtx(state).openerPrep = true;
+        rerender();
+        return;
+      }
+      const atRisk = redshirtBurnRisks();
+      if (atRisk.length && !state.ui.redshirtBurnAck) {
+        state.ui.showRedshirtBurnWarn = atRisk;
+        rerender();
+        return;
+      }
+      state.ui.redshirtBurnAck = false;
+      const board = ((_a2 = state.playerCoach) == null ? void 0 : _a2.recruitBoard) || [];
+      if (state.day === 2 && board.length === 0 && !state.ui.recruitStartAck) {
+        state.ui.showRecruitStartWarn = true;
+        rerender();
+        return;
+      }
     }
     if (btn) {
       btn.disabled = true;
