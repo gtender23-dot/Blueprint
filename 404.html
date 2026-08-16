@@ -9140,7 +9140,12 @@ body *::after {
 .ts-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; opacity: 0.7; }
 
 /* ── The Creator / Workshop (Creativity Tools UI) ─────────────────────────── */
-.creator-wrapper { max-width: 720px; margin: 0 auto; padding: 8px 4px 40px; }
+.creator-wrapper { max-width: 720px; margin: 0 auto; padding: 8px 4px 40px; min-width: 0; }
+/* The Workshop mounts inside .newgame-wrapper, which is display:flex — a flex
+   item keeps min-width:auto by default and won't shrink below its content, so on
+   a phone the play diagram / composer rows push the whole block past the screen
+   and body{overflow-x:hidden} clips the right edge (the "composer too big on
+   mobile" report). min-width:0 here + on the shrinkable children lets it fit. */
 .creator-hub-head { text-align: center; margin: 8px 0 22px; }
 .creator-title { font-size: 30px; font-weight: 800; letter-spacing: 0.5px; }
 .creator-sub { font-size: 13px; opacity: 0.7; margin-top: 6px; }
@@ -9616,6 +9621,11 @@ body *::after {
   .assign-route { order: 3; flex: 1 1 100%; min-width: 0; min-height: 40px; font-size: 14px; }
   .play-form-pick select { min-height: 40px; font-size: 14px; }
   .pb-name { min-height: 40px; font-size: 14px; }
+  /* Every composer piece stays inside the phone width — the diagram, the rows,
+     the coverage box and the dropdowns can all shrink to fit. */
+  .play-canvas, .assign-list, .assign-row, .play-preview, .play-cov { min-width: 0; max-width: 100%; }
+  .play-card-svg { max-width: 100%; height: auto; }
+  .play-form-pick, .play-form-pick select { min-width: 0; max-width: 100%; }
 }
 .play-card-legend { display:flex; flex-wrap:wrap; gap:6px 12px; justify-content:center; margin-top:8px; }
 .play-card-leg { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color: var(--text-1); }
@@ -9813,7 +9823,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "d88b1ea30f";
+globalThis.__BUILD__ = "6f4cb26555";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -54181,14 +54191,13 @@ var _CFB = (() => {
       <button class="pb-row-open" data-play-open="${esc3(p.id)}">${thumb}<span class="play-row-copy"><span class="pb-row-name">${esc3(p.name)}</span><span class="pb-row-meta">${sub}</span></span></button>
       <button class="btn-mm-del" data-play-del="${esc3(p.id)}" title="Delete" aria-label="Delete ${esc3(p.name)}">\u2715</button>
     </div>`;
-    }).join("") : `<div class="mm-lib-empty muted">No custom plays yet. Name an existing play, or compose one from routes.</div>`;
+    }).join("") : `<div class="mm-lib-empty muted">No custom plays yet. Compose one from route concepts.</div>`;
     return `<div class="creator-hub">
     <div class="creator-hub-head"><div class="creator-title">Play Composer</div>
-      <div class="creator-sub">Name your own version of a play, or build one from route concepts.</div></div>
+      <div class="creator-sub">Build a play from route concepts.</div></div>
     <div class="pb-list">${rows}</div>
     <div class="pb-actions">
       <button class="btn-mm btn-mm-new" data-play-new="compose">\uFF0B Compose from routes</button>
-      <button class="btn-mm btn-mm-new" data-play-new="name">\uFF0B Name a play</button>
       <button class="btn-mm btn-mm-secondary" data-creator="hub">\u2190 Workshop</button>
     </div>
   </div>`;
