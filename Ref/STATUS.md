@@ -5,6 +5,29 @@ Last updated: **2026-08-16 (Playbook-Root COMPLETE: Stages 1–7 + the Stage-3
 remainder all built + node-gated; viewer roadmap remainder + Act F status
 folded in; mobile pass)**.
 
+## 2026-08-16 — GATE RED TRIAGE: the Act B "frozen scrub" was a REAL Film Room bug
+
+Owner's local full gate: 77 OK / 4 FAIL. Three of the four are the standing
+flaky ledger exactly as documented (size_fit boundary tail, tipdrill unseeded,
+act_a_finish_live no-eligible-window). The fourth — `viewer_act_b_probe`
+"scrubber rerenders a deterministic play frame" — was reproduced in the cloud
+container (same 1-fail) and diagnosed to the bottom:
+
+- The probe's pinned seed now lands "Save Clip" on a PENALTY play, and a
+  penalty whistle clip is dead-ball BY DESIGN — identical scrub frames are
+  correct there. (This is why the 08-15 note saw it fail cloud-side with
+  unrelated code: roll-stream drift, not a scrubber regression.)
+- Chasing that exposed a REAL user-facing bug: `watchSaveActiveClip` latched
+  `w.clip = data` after the FIRST successful save in a LIVE watch, and the
+  `w.clip ?` branch then re-saved that SAME first clip on every later Save
+  Clip for the rest of the game — a 4th-quarter TD clip silently stored the
+  1st-quarter play again. FIXED: the latch now only refreshes when `w.clip`
+  already exists (clip playback — the replay screen's re-save-with-camera/
+  telestrator path, which still passes its probe check).
+- `viewer_act_b_probe` now saves-with-retry until the clip holds a SCRIMMAGE
+  snap (motion for the scrub check) and asserts it — 23/0, ×3 in the cloud
+  container. record_call + live_book_call re-proof green.
+
 ## 2026-08-16 — PLAYBOOK-ROOT: STAGE 3 REMAINDER (overlay saves + update prompt)
 ## BUILT + NODE-GATED — the 7-stage re-rooting is now FULLY BUILT
 ## ⚠ BROWSER PLAYTEST OWED (joins the standing Stages 4–7 playtest)

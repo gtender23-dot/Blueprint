@@ -6815,7 +6815,14 @@ function watchSaveActiveClip(w) {
     info: { matchup: `${away} @ ${home}`, score: `${w.r.awayScore || 0}–${w.r.homeScore || 0}`, week: p.half ? `${p.half === 1 ? "1st" : "2nd"} half` : "Replay" }
   });
   if (result.ok) {
-    w.clip = data;
+    // [2026-08-16 fix] Only refresh w.clip when this session IS clip playback
+    // (the replay screen re-saving with new camera/telestrator data). In a
+    // LIVE watch, latching the first save here made line 6809's w.clip branch
+    // hijack every LATER save — Save Clip on a 4th-quarter touchdown silently
+    // re-saved the first quarter's clip, for the whole rest of the game (the
+    // Act B probe's "frozen scrub" red was this: it kept re-saving a dead-ball
+    // penalty clip).
+    if (w.clip) w.clip = data;
     notify("Saved to Film Room", "success");
   } else notify(result.reason === "full" ? "Film Room is full" : "Replay could not be saved", "warning");
   return result;

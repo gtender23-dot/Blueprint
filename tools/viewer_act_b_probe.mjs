@@ -46,8 +46,30 @@ await page.click('[data-pn-mode="watch"]');
 await page.click('#pn-start');
 await page.waitForSelector('#watch-board [data-wpa]', { timeout: 25_000 });
 await page.waitForSelector('#watch-save-clip', { timeout: 5_000 });
-await page.click('#watch-save-clip');
-await page.waitForTimeout(250);
+// [2026-08-16] The scrub check below needs MOTION, and a penalty whistle clip
+// is dead-ball BY DESIGN (the Act B contract: a flag play asserts nothing),
+// so identical scrub frames on one are correct behavior. Which play is active
+// when the save button first appears depends on the pinned seed's roll
+// stream, which shifts with every engine change — the old single blind click
+// started landing on a flag (first seen cloud-side 2026-08-15, then locally).
+// Save-with-retry until the clip holds a scrimmage snap.
+let savedType = null;
+for (let tries = 0; tries < 14 && !savedType; tries++) {
+  await page.click('#watch-save-clip');
+  await page.waitForTimeout(250);
+  savedType = await page.evaluate(() => {
+    const rows = JSON.parse(localStorage.getItem('cfb-replays') || '[]');
+    const data = rows.length ? rows[rows.length - 1].data : null;
+    const p = data && data.game && data.game.drives && data.game.drives[0] && data.game.drives[0].plays[0];
+    if (p && /^(pass|run)/.test(String(p.type || ''))) return p.type;
+    localStorage.removeItem('cfb-replays');
+    localStorage.removeItem('cfb-replays.bak1');
+    localStorage.removeItem('cfb-replays.bak2');
+    return null;
+  });
+  if (!savedType) await page.waitForTimeout(1200);
+}
+check(!!savedType, 'saved clip captured a scrimmage snap (motion for the scrub check)', String(savedType));
 
 const saved = await page.evaluate(() => {
   const rows = JSON.parse(localStorage.getItem('cfb-replays') || '[]');
