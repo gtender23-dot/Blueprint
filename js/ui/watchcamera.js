@@ -156,6 +156,97 @@ function selectWatchLabels(entries, opts = {}) {
   return chosen.map((row) => row.id);
 }
 
+const WATCH_DIRECTOR_FOCUS_LABELS = Object.freeze({
+  formation: "FORMATION",
+  snap: "SNAP",
+  pocket: "POCKET",
+  flight: "BALL IN FLIGHT",
+  result: "RESULT",
+  "run-after-catch": "RUN AFTER CATCH",
+  contact: "CONTACT",
+  "change-of-possession": "CHANGE OF POSSESSION",
+  score: "SCORE",
+  alignment: "ALIGNMENT",
+  kick: "KICK FLIGHT",
+  return: "RETURN",
+  finish: "FINISH"
+});
+
+function watchDirectorFocusLabel(reason) {
+  return WATCH_DIRECTOR_FOCUS_LABELS[reason] || String(reason || "play").replace(/-/g, " ").toUpperCase();
+}
+
+function replayDirectorFocus(script, p = {}, reason = "play") {
+  const actorIds = new Set((script && script.actors || []).map((actor) => actor.id));
+  const primary = [], secondary = [];
+  const add = (list, id) => {
+    if (id && actorIds.has(id) && !primary.includes(id) && !secondary.includes(id)) list.push(id);
+  };
+  const tackle = script && script.tackleCue || null;
+  const carrier = p.carrierSlotId || script && script.carryCue && script.carryCue.id || tackle && tackle.carrierId;
+  const target = p.targetSlotId || script && script.carryCue && script.carryCue.id;
+  const winningRusher = (script && script.rushCues || []).find((cue) => cue.win) || (script && script.rushCues || [])[0];
+  if (reason === "snap") add(primary, "QB");
+  else if (reason === "pocket") {
+    add(primary, "QB");
+    add(secondary, winningRusher && winningRusher.id);
+  } else if (reason === "flight" || reason === "result") {
+    add(primary, target);
+    add(secondary, script && script.covId);
+  } else if (reason === "run-after-catch") {
+    add(primary, target || carrier);
+    add(secondary, tackle && tackle.id);
+    add(secondary, tackle && tackle.assistId);
+  } else if (reason === "contact") {
+    add(primary, carrier);
+    add(secondary, tackle && tackle.id);
+    add(secondary, tackle && tackle.assistId);
+  } else if (reason === "change-of-possession") {
+    add(primary, script && script.pickId);
+    add(secondary, tackle && tackle.id);
+  } else if (reason === "score") {
+    add(primary, carrier || target || script && script.pickId);
+  }
+  return Object.freeze({
+    kind: reason || "play",
+    label: watchDirectorFocusLabel(reason),
+    primary: Object.freeze(primary),
+    secondary: Object.freeze(secondary),
+    ball: reason === "flight" || reason === "result" || reason === "change-of-possession"
+  });
+}
+
+function specialTeamsDirectorFocus(actors, reason = "play") {
+  const actorIds = new Set((actors || []).map((actor) => actor.id));
+  const primary = [], secondary = [];
+  const add = (list, id) => {
+    if (id && actorIds.has(id) && !primary.includes(id) && !secondary.includes(id)) list.push(id);
+  };
+  if (reason === "alignment") {
+    add(primary, "K");
+    add(secondary, "PR");
+    add(secondary, "KR2");
+  } else if (reason === "kick") {
+    add(primary, "K");
+    add(secondary, "H");
+    add(secondary, "LS");
+    add(secondary, "PR");
+  } else if (reason === "return") {
+    add(primary, "PR");
+    add(secondary, "KR2");
+  } else {
+    add(primary, "K");
+    add(secondary, "PR");
+  }
+  return Object.freeze({
+    kind: reason || "play",
+    label: watchDirectorFocusLabel(reason),
+    primary: Object.freeze(primary),
+    secondary: Object.freeze(secondary),
+    ball: reason === "kick"
+  });
+}
+
 export {
   WATCH_CAMERA_ORDER,
   normalizeWatchCamera,
@@ -166,5 +257,8 @@ export {
   watchProjectionDepth,
   buildReplayDirectorPlan,
   buildSpecialTeamsDirectorPlan,
-  selectWatchLabels
+  selectWatchLabels,
+  watchDirectorFocusLabel,
+  replayDirectorFocus,
+  specialTeamsDirectorFocus
 };

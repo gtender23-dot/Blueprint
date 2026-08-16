@@ -96,6 +96,8 @@ export const MANIFEST = [
     note: 'Viewer Act D - true perspective End Zone projection plus replay-clock parity for punts, kickoffs, field goals and PATs: pause/scrub/rate/camera/export controls, complete 22-man special-teams casts, projected football height, and presentation-only geometry.' },
   { name: 'viewer_act_e_probe.mjs', tier: 'core', kind: 'pw', timeoutSec: 180,
     note: 'Viewer Act E - deterministic phase-aware replay director across scrimmage and special teams, End Zone/Coach label decluttering that preserves featured players, grounded projection-height football shadows, manual camera takeover, and recorded-outcome immutability.' },
+  { name: 'viewer_act_f_probe.mjs', tier: 'core', kind: 'pw', timeoutSec: 180,
+    note: 'Viewer Act F - football-purpose shot labels and restrained principal focus: quarterback/rusher, target/coverage/ball, carrier/tacklers, and special-teams operation/return pairs; manual camera takeover clears the treatment and outcomes remain immutable.' },
   { name: 'pos_ovr_census_probe.mjs', tier: 'core', kind: 'node', timeoutSec: 300,
     note: 'playtest item 3 — every position (K/P exempt) averages 58 ± 1.6 OVR. OVR_POS_ADJ claims to BE this measurement; it rotted when AWR joined the CB/DE cores after the Jul 2026 census and nobody re-ran it, leaving corners +6.2 over safeties. Fails loudly the next time a core list, weight row or attribute band moves without a re-derive. `--derive` prints a corrected block.' },
   { name: 'ovr_adj_ab.mjs', tier: 'core', kind: 'node', timeoutSec: 600,

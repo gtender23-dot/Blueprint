@@ -40,7 +40,7 @@ import { renderSettings, setupListeners15 } from './views/settings.js';
 import { renderStandings, setupListeners13 } from './views/standings.js';
 import { renderStats, setupListeners14 } from './views/stats.js';
 import { buildPlayScript, sampleTrack, buildCameraPlan, buildOfficialsPlan, selectSecondaryMotion, buildBroadcastCommentary } from './watchphys.js';
-import { normalizeWatchCamera, nextWatchCamera, watchCameraLabel, projectWatchPoint, watchProjectionScale, watchProjectionDepth, buildReplayDirectorPlan, buildSpecialTeamsDirectorPlan, selectWatchLabels } from './watchcamera.js';
+import { normalizeWatchCamera, nextWatchCamera, watchCameraLabel, projectWatchPoint, watchProjectionScale, watchProjectionDepth, buildReplayDirectorPlan, buildSpecialTeamsDirectorPlan, selectWatchLabels, replayDirectorFocus, specialTeamsDirectorFocus } from './watchcamera.js';
 import { spriteMarkup, ballMarkup, spriteMotionTick, wspPlace } from './sprite.js';
 import { stadiumPause, stadiumReact, stadiumStart } from './sound.js';
 import { archetypeLabel, escapeHtml, fullName, ratingColor, renderCrest, renderPlayerPortrait } from '../utils.js';
@@ -3833,6 +3833,7 @@ function initWatchMode(r, isHome, opts = {}) {
     <svg id="watch-ink" class="watch-ink" viewBox="-19 0 100 56" preserveAspectRatio="xMidYMid meet" aria-label="Replay telestrator"></svg>
     <div class="watch-camera-bug" id="watch-camera-bug">LIVE</div>
     <div class="watch-replay-bug" id="watch-replay-bug">INSTANT REPLAY</div>
+    <div class="watch-director-bug" id="watch-director-bug" aria-live="polite"></div>
     <div class="watch-flash" id="watch-flash"></div>
     <div class="watch-wipe" id="watch-wipe"></div>
     <div class="watch-banner" id="watch-banner"></div>
@@ -4299,6 +4300,34 @@ function watchApplyLabelPlan(cameraMode, actors, actorPts, nodes, featuredIds = 
     node.classList.toggle("wp-label-featured", featured.has(actor.id));
   }
 }
+function watchApplyDirectorFocus(playback, svg, script, p, nodes, specialTeams = false) {
+  const on = !!(playback.interactive && playback.director && playback.directorReason);
+  const bug = document.getElementById("watch-director-bug");
+  for (const node of Object.values(nodes)) {
+    node.classList.remove("wp-focus-primary", "wp-focus-secondary");
+  }
+  svg.classList.toggle("watch-focus-ball", false);
+  if (!on) {
+    delete svg.dataset.directorFocus;
+    if (bug) {
+      bug.textContent = "";
+      bug.classList.remove("on");
+    }
+    return null;
+  }
+  const focus = specialTeams
+    ? specialTeamsDirectorFocus(script.actors || [], playback.directorReason)
+    : replayDirectorFocus(script, p, playback.directorReason);
+  focus.primary.forEach((id) => nodes[id] == null ? void 0 : nodes[id].classList.add("wp-focus-primary"));
+  focus.secondary.forEach((id) => nodes[id] == null ? void 0 : nodes[id].classList.add("wp-focus-secondary"));
+  svg.classList.toggle("watch-focus-ball", focus.ball);
+  svg.dataset.directorFocus = focus.kind;
+  if (bug) {
+    if (bug.textContent !== focus.label) bug.textContent = focus.label;
+    bug.classList.add("on");
+  }
+  return focus;
+}
 function watchWireInteractiveReplay(playback, svg, script, p, board, nodes) {
   const tools = document.getElementById("watch-replay-tools");
   const ink = document.getElementById("watch-ink");
@@ -4353,9 +4382,9 @@ function watchWireInteractiveReplay(playback, svg, script, p, board, nodes) {
       const cut = playback.directorPlan.at(playback.t);
       playback.directorReason = cut.reason;
       watchReplaySetCamera(playback, svg, script, nodes, cut.camera, true);
-      playback.renderInk();
-      playback.seek(playback.t);
     }
+    playback.renderInk();
+    playback.seek(playback.t);
     syncPlay();
   });
   if (camBtn) {
@@ -4742,6 +4771,7 @@ function watchBoard(p, durMs, board = null, opts = {}) {
       const directorBtn = document.getElementById("replay-director");
       if (directorBtn) directorBtn.title = `Director on: ${cut.reason}`;
     } else delete svg.dataset.directorReason;
+    watchApplyDirectorFocus(playback, svg, script, p, nodes);
     const cameraMode = playback.interactive ? normalizeWatchCamera(playback.cameraMode) : "broadcast";
     const projectPoint = (worldX, worldY, z = 0) => watchCameraPoint(cameraMode, worldX, worldY, z);
     svg.dataset.camera = cameraMode;
@@ -5624,6 +5654,7 @@ function watchBoardKick(svg, p, board, opts = {}) {
       const directorBtn = document.getElementById("replay-director");
       if (directorBtn) directorBtn.title = `Director on: ${cut.reason}`;
     } else delete svg.dataset.directorReason;
+    watchApplyDirectorFocus(playback, svg, { actors }, p, nodes, true);
     const cameraMode = playback.interactive ? normalizeWatchCamera(playback.cameraMode) : "broadcast";
     if (!opts.replay && !kickHeard && t >= swingT) {
       kickHeard = true;
@@ -5935,6 +5966,7 @@ function watchBoardKickoff(svg, p, board, opts = {}) {
       const directorBtn = document.getElementById("replay-director");
       if (directorBtn) directorBtn.title = `Director on: ${cut.reason}`;
     } else delete svg.dataset.directorReason;
+    watchApplyDirectorFocus(playback, svg, { actors }, p, nodes, true);
     const cameraMode = playback.interactive ? normalizeWatchCamera(playback.cameraMode) : "broadcast";
     if (!opts.replay && !kickHeard && t >= runT) {
       kickHeard = true;

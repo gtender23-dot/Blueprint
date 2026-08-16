@@ -9868,3 +9868,51 @@ body *::after {
 /* ── Stage 3 remainder: the book update prompt ─────────────────────────── */
 .gp-book-update { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0 2px; padding: 7px 10px; border: 1px solid var(--gold, #eab308); background: rgba(234, 179, 8, 0.08); }
 .gp-book-update-msg { font-size: 12px; color: var(--text-0, #e5ecf5); }
+
+
+/* Viewer Act F: the director identifies the football reason for each shot. */
+.watch-director-bug {
+  position:absolute;
+  z-index:17;
+  top:38px;
+  right:10px;
+  display:none;
+  max-width:42%;
+  padding:4px 7px 3px;
+  color:var(--px-cyan,#63d7ef);
+  background:rgba(4,9,16,.88);
+  border-right:3px solid var(--px-cyan,#63d7ef);
+  font-size:7px;
+  font-weight:900;
+  letter-spacing:.13em;
+  line-height:1.15;
+  text-align:right;
+  text-transform:uppercase;
+  pointer-events:none;
+  text-shadow:0 1px 2px #000;
+}
+.watch-director-bug.on { display:block; }
+#watch-board .wp-focus-primary .wsp-shadow {
+  fill:rgba(255,213,74,.24);
+  stroke:var(--px-yellow,#ffd54a);
+  stroke-width:.34px;
+  transform:scale(1.3,.96);
+}
+#watch-board .wp-focus-secondary .wsp-shadow {
+  fill:rgba(99,215,239,.16);
+  stroke:var(--px-cyan,#63d7ef);
+  stroke-width:.24px;
+  transform:scale(1.14,.9);
+}
+#watch-board .wp-focus-primary .wsp-tag,
+#watch-board .wp-focus-secondary .wsp-tag { opacity:1 !important; }
+#watch-board .wp-focus-primary .wsp-tag { fill:var(--px-yellow,#ffd54a); }
+#watch-board.watch-focus-ball #wp-ball .wab-model {
+  filter:drop-shadow(0 0 .42px rgba(255,213,74,.96)) drop-shadow(0 0 .8px rgba(255,255,255,.6));
+}
+@media (max-width:700px) {
+  .watch-director-bug { top:27px; right:7px; max-width:48%; padding:3px 5px 2px; font-size:5.5px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  #watch-board.watch-focus-ball #wp-ball .wab-model { filter:drop-shadow(0 0 .45px rgba(255,213,74,.9)); }
+}
