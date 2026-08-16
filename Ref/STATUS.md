@@ -1,9 +1,58 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-16 (Playbook-Root STAGES 4–7 built + node-gated —
-Stage 7 = the Formation Designer; Stages 1–2 + Stage 3 partial; viewer roadmap
-remainder + Act F status folded in; mobile pass)**.
+Last updated: **2026-08-16 (Playbook-Root COMPLETE: Stages 1–7 + the Stage-3
+remainder all built + node-gated; viewer roadmap remainder + Act F status
+folded in; mobile pass)**.
+
+## 2026-08-16 — PLAYBOOK-ROOT: STAGE 3 REMAINDER (overlay saves + update prompt)
+## BUILT + NODE-GATED — the 7-stage re-rooting is now FULLY BUILT
+## ⚠ BROWSER PLAYTEST OWED (joins the standing Stages 4–7 playtest)
+
+The two owed Stage-3 pieces (this file's old "OWED" ledger) are in. The third
+piece — the full defCalls→defbook.calls relocation — stays deliberately NOT
+done: the read seam (`defBookCalls`) + compile seam already landed in Stage 4,
+and the physical move would break the Stage-1 partition law for zero
+user-visible gain.
+
+**What shipped:**
+- **"Save plan" saves OVERLAYS** (the controller). `controllerOverlayOf` /
+  `applyControllerOverlay` + `PLAN_BOOK_STRUCT_FIELDS` (teamplan.js): a saved
+  coach-library plan is now dials + concept weights + target shares +
+  situations + team knobs — NOT a frozen copy of the book, and no longer
+  drags one career's roster-bound `fieldAssignments` (player ids!) into the
+  portable library. Loading an overlay plan applies it ONTO whatever book you
+  carry (book byte-identical, probe-proven); unnamed controller fields reset
+  to defaults (the "no hidden leftovers" law applyPlanToSchool already
+  enforced). Old full-snapshot plans in existing coach libraries keep loading
+  exactly as before (`overlayOnly` flag on new entries; coachprofile.js).
+  Quick-slots A/B/C intentionally stay full snapshots (same-book weekly
+  variants).
+- **The snapshot-vs-library UPDATE PROMPT.** Workshop loads (pb:/dd:) stamp
+  the book's creation identity — `gameplan._bookSourceId/_bookSourceSaved`
+  (+ `_defbookSource*`), underscore fields so they survive the load handlers'
+  wipe, every forced re-synthesis (splitTeamPlan copies them onto
+  `book.source/sourceId/sourceSaved`), and save round-trips. Full-plan and
+  starter-book loads clear the relevant stamps. The Game Plan screen shows a
+  banner per side when the source creation's `saved` stamp is newer: "📖 A
+  newer version of “X” is in your Workshop — Update the book → (your dials &
+  situations stay)". One tap: repair-on-load → one-side re-apply → restamp →
+  re-synthesize; overlays survive by construction (the one-side appliers
+  carry everything they don't govern).
+
+**Gate:** new **`book_update_probe`** (23/0, in the CORE manifest): stamps
+ride/land/survive/clear correctly; update detection + apply preserves
+situations/team knobs/the other side and clears the prompt; overlay saves
+leak no structure and overlay loads keep the book byte-identical with
+compile ≡ gameplan throughout. Re-proof green: playbook_root 24/0 ·
+plan_side 21/0 · ai_book_name 11/0 · record_call 12/0 · live_book_call 13/0
+· draw_up 21/0 · formation_compose 39/0 · playbook_shape 24/0 · defbook 26/0
+· save_migration ALL PASS. Clean esbuild bundle + CSS parse.
+
+**⚠ OWED (browser):** load a Workshop book in a dynasty → edit that book in
+the Workshop (resave) → back to the Game Plan → the update banner appears →
+tap it → looks change, dials/situations don't, banner clears. Save a plan →
+load a different book → load the saved plan → book stays, dials apply.
 
 ## 2026-08-16 — PLAYBOOK-ROOT REFACTOR: STAGE 7 (the designers — Formation Designer)
 ## BUILT + NODE-GATED — ⚠ BROWSER PLAYTEST OWED (the moat feature)

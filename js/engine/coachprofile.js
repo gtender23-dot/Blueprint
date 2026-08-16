@@ -148,12 +148,16 @@ function noteTreeMeta(treeId, meta) {
     t.meta = __spreadProps(__spreadValues({}, meta), { timestamp: Date.now() });
   });
 }
-function saveGameplanToLibrary(coachId, name, gameplan) {
+function saveGameplanToLibrary(coachId, name, gameplan, opts = {}) {
   let saved = false;
   updateCoach(coachId, (c) => {
     const lib = c.plans.gameplans;
     const existing = lib.findIndex((p) => p.name === name);
-    const entry = { name: name.slice(0, 24), gp: JSON.parse(JSON.stringify(gameplan)), saved: Date.now() };
+    // Stage 3: a plan saved with overlayOnly is the coach's CONTROLLER (dials,
+    // weights, situations \u2014 see teamplan.js controllerOverlayOf), loadable
+    // onto ANY book. Old full-snapshot entries (no flag) keep loading as full
+    // replacements \u2014 nothing in a coach's existing library changes meaning.
+    const entry = { name: name.slice(0, 24), gp: JSON.parse(JSON.stringify(gameplan)), saved: Date.now(), overlayOnly: !!opts.overlayOnly };
     if (existing >= 0) {
       lib[existing] = entry;
       saved = true;

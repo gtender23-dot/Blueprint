@@ -141,7 +141,74 @@ function splitTeamPlan(gameplan, opts = {}) {
     source: opts.source || "staff",
     plan: _extract(gp, DEF_FIELDS)
   };
+  // Stage 3 (update-prompt identity): a book loaded from the Workshop carries
+  // its creation's id + saved stamp so the Game Plan can offer "a newer
+  // version of this book exists". The stamps live on the GAMEPLAN as _fields
+  // (they survive the load handlers' non-underscore wipe AND every forced
+  // re-synthesis — this function rebuilds the book objects, so the gameplan
+  // is the durable home) and are copied onto the books here. Absent stamps =
+  // a staff/preset book = no prompt, exactly as before.
+  if (gp._bookSourceId) {
+    book.source = "creator:" + gp._bookSourceId;
+    book.sourceId = String(gp._bookSourceId);
+    book.sourceSaved = gp._bookSourceSaved || 0;
+  }
+  if (gp._defbookSourceId) {
+    defbook.source = "creator:" + gp._defbookSourceId;
+    defbook.sourceId = String(gp._defbookSourceId);
+    defbook.sourceSaved = gp._defbookSourceSaved || 0;
+  }
   return { book, defbook, overlay };
+}
+
+// ── Stage 3 (the controller save): "Save plan" saves OVERLAYS ───────────────
+// A coach's saved plan is his CONTROLLER — dials, concept weights, target
+// shares, situations, team knobs — NOT a frozen copy of whichever book he
+// happened to carry. These are the STRUCTURAL fields a controller save
+// excludes: the books' identity (looks/sheets; front/coverage/pressure/named
+// calls) plus roster-bound slot assignments and the opponent-specific weekly
+// plan, which never belonged in a portable library plan (fieldAssignments
+// carries player IDs from one career).
+const PLAN_BOOK_STRUCT_FIELDS = [
+  "offFormation", "offFormations", "formationPlaybooks",
+  "defFormation", "defBaseFront", "defFrontMix", "coverageScheme",
+  "pressureIdentity", "pressureSource", "greenDog", "spyQB",
+  "defCalls", "formChecks",
+  "fieldAssignments", "weeklyPlan"
+];
+// The controller view of a plan: every non-structural, non-internal field.
+function controllerOverlayOf(gameplan) {
+  const gp = gameplan || {};
+  const out = {};
+  for (const k of Object.keys(gp)) {
+    if (k.startsWith("_")) continue;
+    if (PLAN_BOOK_STRUCT_FIELDS.includes(k)) continue;
+    out[k] = _clone(gp[k]);
+  }
+  return out;
+}
+// Load a saved controller ONTO the current plan: the book (structural fields)
+// stays exactly as carried; every controller field resets to the provided
+// defaults, then the overlay's fields apply. Returns a NEW gameplan; inputs
+// are never mutated. `freshDefaults` is the caller's defaultGameplan() (kept
+// as a parameter so this module stays free of a world.js dependency).
+function applyControllerOverlay(gameplan, overlay, freshDefaults) {
+  const out = _clone(gameplan || {}) || {};
+  for (const k of Object.keys(out)) {
+    if (k.startsWith("_") || PLAN_BOOK_STRUCT_FIELDS.includes(k)) continue;
+    delete out[k];
+  }
+  const base = freshDefaults || {};
+  for (const k of Object.keys(base)) {
+    if (k.startsWith("_") || PLAN_BOOK_STRUCT_FIELDS.includes(k)) continue;
+    out[k] = _clone(base[k]);
+  }
+  const ov = overlay || {};
+  for (const k of Object.keys(ov)) {
+    if (k.startsWith("_") || PLAN_BOOK_STRUCT_FIELDS.includes(k)) continue;
+    out[k] = _clone(ov[k]);
+  }
+  return out;
 }
 
 // Reassemble { book, defbook, overlay } → the flat gameplan the sim reads.
@@ -277,5 +344,8 @@ export {
   assignBook,
   assignDefBook,
   setOverlay,
-  defBookCalls
+  defBookCalls,
+  PLAN_BOOK_STRUCT_FIELDS,
+  controllerOverlayOf,
+  applyControllerOverlay
 };

@@ -7,12 +7,12 @@ import { SITUATION_KEYS, SITUATION_LABELS } from '../../engine/situations.js';
 import { getPlayerSchool, navigate, notify, rerender, state } from '../../state.js';
 import { renderFormationDiagram } from './routeart.js';
 import { defaultGameplan } from '../../engine/world.js';
-import { listCreations, loadCreationData } from '../../engine/creator.js';
+import { getCreation, listCreations, loadCreationData } from '../../engine/creator.js';
 import { repairCreation } from '../../engine/creatorrepair.js';
 import { DEFAULT_OFF_BOOKS, DEFAULT_DEF_BOOKS, defaultOffBook, defaultDefBook } from '../../engine/defaultbooks.js';
 import { applyPlaybookToGameplan } from '../../engine/playbook.js';
 import { applyDefBookToGameplan } from '../../engine/defbook.js';
-import { synthesizeTeamPlan } from '../../engine/teamplan.js';
+import { applyControllerOverlay, controllerOverlayOf, synthesizeTeamPlan } from '../../engine/teamplan.js';
 import { tipTerm } from '../manual/tips.js';
 import { escapeHtml } from '../../utils.js';
 
@@ -2728,12 +2728,33 @@ function applyPlanToSchool(school, gp) {
   const fresh = Object.assign(defaultGameplan(), JSON.parse(JSON.stringify(gp)));
   for (const k of Object.keys(school.gameplan)) { if (!k.startsWith("_")) delete school.gameplan[k]; }
   Object.assign(school.gameplan, fresh);
+  // Stage 3: a full plan load replaces BOTH books, so any Workshop source
+  // identity (the update-prompt stamps) comes off with them.
+  delete school.gameplan._bookSourceId; delete school.gameplan._bookSourceSaved;
+  delete school.gameplan._defbookSourceId; delete school.gameplan._defbookSourceSaved;
   // [Playbook-Root Stage 3] The Game Plan is the controller: re-sync the named
   // book model to the plan just loaded, so school.book/defbook/planOverlay track
   // what the coach actually carries. Byte-neutral (the gameplan object is the
   // truth; this only re-derives the parts) — compileTeamPlan(school) still
   // deep-equals school.gameplan.
   try { synthesizeTeamPlan(school, { force: true }); } catch (e) {}
+}
+// Stage 3: the snapshot-vs-library UPDATE PROMPT. A book loaded from the
+// Workshop is a SNAPSHOT; when its source creation has a newer saved stamp,
+// offer a one-tap update. Overlays (dials/weights/situations/defense-when-
+// updating-offense) survive by construction — the one-side appliers carry
+// every field they don't govern.
+function bookUpdateBanner(school) {
+  if (!school) return "";
+  const rows = [];
+  for (const side of ["off", "def"]) {
+    const bk = side === "def" ? school.defbook : school.book;
+    if (!bk || !bk.sourceId) continue;
+    const entry = getCreation(side === "def" ? "defbooks" : "playbooks", bk.sourceId);
+    if (!entry || !((entry.saved || 0) > (bk.sourceSaved || 0))) continue;
+    rows.push(`<div class="gp-book-update"><span class="gp-book-update-msg">\u{1F4D6} A newer version of \u201C${escapeHtml(entry.name)}\u201D (${side === "def" ? "defense" : "offense"}) is in your Workshop.</span><button class="btn-ghost btn-sm" data-gp-bookupdate="${side}">Update the book \u2192 <span class="muted">(your dials & situations stay)</span></button></div>`);
+  }
+  return rows.join("");
 }
 function renderPlanSlots(school) {
   var _a, _b;
@@ -2761,7 +2782,7 @@ function renderPlanSlots(school) {
       <optgroup label="Starter books — offense">${DEFAULT_OFF_BOOKS.map((b) => `<option value="dpb:${escapeHtml(b.name)}">${escapeHtml(b.name)}</option>`).join("")}</optgroup>
       <optgroup label="Starter books — defense">${DEFAULT_DEF_BOOKS.map((b) => `<option value="ddb:${escapeHtml(b.name)}">${escapeHtml(b.name)}</option>`).join("")}</optgroup>
     </select>
-  </div>`;
+  </div>${bookUpdateBanner(school)}`;
 }
 function setupListeners() {
   var _a, _b, _c, _d;
@@ -2793,8 +2814,12 @@ function setupListeners() {
     const school2 = getPlayerSchool();
     const name = prompt("Name this game plan for your coach library:", "My System");
     if (!name || !school2) return;
-    const ok = saveGameplanToLibrary(state._coachId, name, school2.gameplan);
-    notify(ok ? `"${name}" saved to your coach library` : "Library is full (10 plans max)", ok ? "success" : "warning");
+    // Stage 3: "Save plan" saves the CONTROLLER — dials, concept weights,
+    // target shares, situations, team knobs — not a frozen copy of the book.
+    // A saved plan now loads onto ANY book (and no longer drags one career's
+    // roster-bound field assignments into the library).
+    const ok = saveGameplanToLibrary(state._coachId, name, controllerOverlayOf(school2.gameplan), { overlayOnly: true });
+    notify(ok ? `"${name}" saved — your dials, weights & situations (loads onto any book)` : "Library is full (10 plans max)", ok ? "success" : "warning");
     rerender();
   });
   (_c = document.getElementById("gp-lib-load")) == null ? void 0 : _c.addEventListener("change", (e) => {
@@ -2821,6 +2846,10 @@ function setupListeners() {
         const merged = kind === "dpb" ? applyPlaybookToGameplan(book, school2.gameplan) : applyDefBookToGameplan(book, school2.gameplan);
         for (const k of Object.keys(school2.gameplan)) { if (!k.startsWith("_")) delete school2.gameplan[k]; }
         Object.assign(school2.gameplan, merged);
+        // Stage 3: a starter book replaces this side — its Workshop identity
+        // (if any) comes off.
+        if (kind === "dpb") { delete school2.gameplan._bookSourceId; delete school2.gameplan._bookSourceSaved; }
+        else { delete school2.gameplan._defbookSourceId; delete school2.gameplan._defbookSourceSaved; }
         try { synthesizeTeamPlan(school2, { force: true }); } catch (e) {}
         notify(`"${book.name}" ${kind === "dpb" ? "offense" : "defense"} loaded`, "success");
       } catch (err) { notify("Could not load that book", "warning"); }
@@ -2844,6 +2873,20 @@ function setupListeners() {
         const merged = kind === "pb" ? applyPlaybookToGameplan(data, school2.gameplan) : applyDefBookToGameplan(data, school2.gameplan);
         for (const k of Object.keys(school2.gameplan)) { if (!k.startsWith("_")) delete school2.gameplan[k]; }
         Object.assign(school2.gameplan, merged);
+        // Stage 3: stamp the book's Workshop identity (creation id + saved
+        // time) so the Game Plan can offer "a newer version exists" later.
+        // The stamps are gameplan _fields — they survive wipes + re-synthesis
+        // (teamplan.js copies them onto the book objects).
+        {
+          const _entry = getCreation(shelf, planName);
+          if (kind === "pb") {
+            school2.gameplan._bookSourceId = planName;
+            school2.gameplan._bookSourceSaved = (_entry == null ? void 0 : _entry.saved) || Date.now();
+          } else {
+            school2.gameplan._defbookSourceId = planName;
+            school2.gameplan._defbookSourceSaved = (_entry == null ? void 0 : _entry.saved) || Date.now();
+          }
+        }
         try { synthesizeTeamPlan(school2, { force: true }); } catch (e) {}
         notify(`"${data.name || "Creation"}" ${kind === "pb" ? "offense" : "defense"} loaded`, "success");
         if (rep.changes.length) notify(`Updated for this build: ${rep.changes[0]}${rep.changes.length > 1 ? ` (+${rep.changes.length - 1} more)` : ""}`, "warning");
@@ -2853,10 +2896,44 @@ function setupListeners() {
     }
     const p = (((_b2 = (_a2 = getCoach(state._coachId)) == null ? void 0 : _a2.plans) == null ? void 0 : _b2.gameplans) || []).find((x) => x.name === planName);
     if (!p) return;
-    applyPlanToSchool(school2, p.gp);
-    notify(`"${p.name}" loaded from library`, "success");
+    if (p.overlayOnly) {
+      // Stage 3: a controller save loads ONTO the book you carry — the looks,
+      // sheets and defensive identity stay; dials/weights/situations apply.
+      const merged = applyControllerOverlay(school2.gameplan, p.gp, defaultGameplan());
+      for (const k of Object.keys(school2.gameplan)) { if (!k.startsWith("_")) delete school2.gameplan[k]; }
+      Object.assign(school2.gameplan, merged);
+      try { synthesizeTeamPlan(school2, { force: true }); } catch (e2) {}
+      notify(`"${p.name}" loaded onto your current book`, "success");
+    } else {
+      applyPlanToSchool(school2, p.gp);
+      notify(`"${p.name}" loaded from library`, "success");
+    }
     rerender();
   });
+  // Stage 3: one-tap book update from the Workshop source (see bookUpdateBanner).
+  document.querySelectorAll("[data-gp-bookupdate]").forEach((b) => b.addEventListener("click", () => {
+    const school2 = getPlayerSchool();
+    if (!school2) return;
+    const side = b.dataset.gpBookupdate;
+    const bk = side === "def" ? school2.defbook : school2.book;
+    if (!bk || !bk.sourceId) return;
+    const shelf = side === "def" ? "defbooks" : "playbooks";
+    const entry = getCreation(shelf, bk.sourceId);
+    if (!entry) return;
+    const rep = repairCreation(shelf, JSON.parse(JSON.stringify(entry.data)));
+    if (!rep.ok) { notify(`"${entry.name}" can't load in this build — open it in the Workshop to rebuild it`, "warning"); return; }
+    try {
+      const merged = side === "def" ? applyDefBookToGameplan(rep.data, school2.gameplan) : applyPlaybookToGameplan(rep.data, school2.gameplan);
+      for (const k of Object.keys(school2.gameplan)) { if (!k.startsWith("_")) delete school2.gameplan[k]; }
+      Object.assign(school2.gameplan, merged);
+      if (side === "def") school2.gameplan._defbookSourceSaved = entry.saved || Date.now();
+      else school2.gameplan._bookSourceSaved = entry.saved || Date.now();
+      try { synthesizeTeamPlan(school2, { force: true }); } catch (e2) {}
+      notify(`\u{1F4D6} "${entry.name}" updated — your dials and situations carried over`, "success");
+      if (rep.changes.length) notify(`Updated for this build: ${rep.changes[0]}${rep.changes.length > 1 ? ` (+${rep.changes.length - 1} more)` : ""}`, "warning");
+    } catch (err) { notify("Could not update the book", "warning"); }
+    rerender();
+  }));
   const school = getPlayerSchool();
   if (!school) return;
   const gp = school.gameplan;
