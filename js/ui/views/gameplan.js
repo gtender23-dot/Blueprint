@@ -1,10 +1,18 @@
 import { __spreadProps, __spreadValues } from '../../_spread.js';
 import { PASS_CONCEPTS, RUN_CONCEPTS } from '../../concepts.js';
-import { C, FORMATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, PASS_TENDENCY, aggrStopFromBlitzPct } from '../../constants.js';
+import { C, FORMATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, FORMATION_VARIATIONS, PASS_TENDENCY, aggrStopFromBlitzPct } from '../../constants.js';
 import { getCoach, saveGameplanToLibrary, saveTeamToLibrary } from '../../engine/coachprofile.js';
 import { FRONT_PRESSURE_SIGNATURE, FRONT_SIG_LABEL } from '../../engine/formations.js';
 import { SITUATION_KEYS, SITUATION_LABELS } from '../../engine/situations.js';
-import { getPlayerSchool, notify, rerender, state } from '../../state.js';
+import { getPlayerSchool, navigate, notify, rerender, state } from '../../state.js';
+import { renderFormationDiagram } from './routeart.js';
+import { defaultGameplan } from '../../engine/world.js';
+import { listCreations, loadCreationData } from '../../engine/creator.js';
+import { repairCreation } from '../../engine/creatorrepair.js';
+import { DEFAULT_OFF_BOOKS, DEFAULT_DEF_BOOKS, defaultOffBook, defaultDefBook } from '../../engine/defaultbooks.js';
+import { applyPlaybookToGameplan } from '../../engine/playbook.js';
+import { applyDefBookToGameplan } from '../../engine/defbook.js';
+import { synthesizeTeamPlan } from '../../engine/teamplan.js';
 import { tipTerm } from '../manual/tips.js';
 import { escapeHtml } from '../../utils.js';
 
@@ -169,46 +177,60 @@ function currentSimpleDial(gp, key) {
   }
   return "balanced";
 }
-function renderFormationPackageCard(gp) {
+// \u2500\u2500 The playbook owns the formations (owner call, 2026-08-15) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// The Game Plan no longer ADDS or REMOVES formations \u2014 that authoring lives in
+// exactly one place, the playbook (a Workshop book, a preset, or the plan your
+// staff opened the season with). This screen shows the book's looks and keeps
+// only the weekly dial a coach actually turns mid-season: how OFTEN each look
+// is used. Two editors writing gp.offFormations was the confusion this closes \u2014
+// the old picker toggled by formation id, so on a multi-look book it showed
+// duplicate rows and un-ticking a card silently deleted one look of several.
+function lookMeta(entry) {
+  const fid = entry.id;
+  const vset = FORMATION_VARIATIONS[fid] || {};
+  const vd = entry.variation && vset[entry.variation] || null;
+  const pkg = __spreadValues(__spreadValues({}, FORMATION_PACKAGES[fid] || {}), vd && vd.pkg || {});
+  return { label: vd ? `${fid} \xB7 ${vd.label}` : fid, pers: formatPersonnel(pkg), hasVar: !!vd };
+}
+function renderPlaybookLooks(gp) {
   const offFormations = normalizeFormations(gp.offFormations, gp.offFormation);
-  const selectedIds = new Set(offFormations.map((f) => f.id));
+  const uniq = new Set(offFormations.map((f) => f.id));
+  const bookName = gp._playbookName || null;
+  const cards = offFormations.map((entry, i) => {
+    const m = lookMeta(entry);
+    return `
+      <div class="formation-card selected pb-look-card">
+        <div class="pb-look-dia">${renderFormationDiagram(entry.id, { variation: entry.variation || void 0, w: 150, h: 96 })}</div>
+        <div class="fc-header"><span class="fc-name">${escapeHtml(m.label)}</span></div>
+        <div class="fc-personnel muted">${m.pers}</div>
+        <div class="fw-row">
+          <input class="gp-slider fw-slider" type="range" data-fw-index="${i}" min="5" max="95" value="${entry.weight}" aria-label="Usage for ${escapeHtml(m.label)}" />
+          <span class="fw-pct" id="fw-pct-${i}">${Math.round(entry.weight)}%</span>
+        </div>
+      </div>`;
+  }).join("");
+  return `
+      <div class="gp-row">
+        <label class="gp-label">${tipTerm("formation", "Formation")} Looks <span class="gp-hint">from ${bookName ? `\u201C${escapeHtml(bookName)}\u201D` : "your staff's opening plan"}</span></label>
+        <div class="formation-grid pb-look-grid">${cards}</div>
+        <div class="fw-bar">
+          ${offFormations.map((e) => `<div class="fw-seg" style="width:${e.weight}%;background:var(--green);opacity:${0.5 + offFormations.indexOf(e) * 0.25}"></div>`).join("")}
+        </div>
+        <div class="gp-tip tip-info">\u25B8 Your playbook decides WHICH formations you carry \u2014 the sliders decide how often you line up in each look this week. To change the formations themselves, load a different playbook from \u201CLoad a plan\u2026\u201D above, or build one in the Workshop.</div>
+        <button type="button" class="btn-ghost btn-sm" data-gp-workshop="1">\u{1F6E0}\uFE0F Open the Workshop \u2192</button>
+      </div>`;
+}
+function looksSubtitle(gp) {
+  const offFormations = normalizeFormations(gp.offFormations, gp.offFormation);
+  const uniq = new Set(offFormations.map((f) => f.id)).size;
+  return `${uniq} formation${uniq === 1 ? "" : "s"} \xB7 ${offFormations.length} look${offFormations.length === 1 ? "" : "s"}`;
+}
+function renderFormationPackageCard(gp) {
   return `
   <div class="card">
-    <div class="card-header"><span class="card-title">FORMATIONS</span><span class="card-subtitle muted">${selectedIds.size}/5 selected</span></div>
+    <div class="card-header"><span class="card-title">FORMATIONS</span><span class="card-subtitle muted">${looksSubtitle(gp)}</span></div>
     <div class="gameplan-group">
-      <div class="gp-tip tip-info">\u25B8 Pick 1\u20135 formations \u2014 they decide who's on the field and your play-action, screen, RPO and motion rates. One = a strong identity; more = harder to scout.</div>
-      <div class="gp-row">
-        <label class="gp-label">${tipTerm("formation", "Formation")} Package <span class="gp-hint">(pick 1\u20135)</span></label>
-        <div class="formation-grid">
-          ${ALL_FORMATIONS.map((fid) => {
-    const f = FORMATIONS[fid];
-    const pkg = FORMATION_PACKAGES[fid];
-    const selected = offFormations.some((x) => x.id === fid);
-    const personnelStr = pkg ? formatPersonnel(pkg) : "";
-    return `
-            <div class="formation-card${selected ? " selected" : ""}" data-formation-id="${fid}">
-              <div class="fc-header"><span class="fc-name">${escapeHtml(fid)}</span>${selected ? `<span class="fc-check">\u2713</span>` : ""}</div>
-              <div class="fc-personnel muted">${personnelStr}</div>
-              <div class="fc-desc muted">${escapeHtml(f.desc || "")}</div>
-            </div>`;
-  }).join("")}
-        </div>
-      </div>
-      ${selectedIds.size > 0 ? `
-      <div class="gp-row">
-        <label class="gp-label">Usage Weights</label>
-        <div class="formation-weights">
-          ${offFormations.map((entry, i) => `
-            <div class="fw-row">
-              <span class="fw-label">${escapeHtml(entry.id)}</span>
-              <input class="gp-slider fw-slider" type="range" data-fw-index="${i}" min="5" max="95" value="${entry.weight}" />
-              <span class="fw-pct" id="fw-pct-${i}">${Math.round(entry.weight)}%</span>
-            </div>`).join("")}
-          <div class="fw-bar">
-            ${offFormations.map((e) => `<div class="fw-seg" style="width:${e.weight}%;background:var(--green);opacity:${0.5 + offFormations.indexOf(e) * 0.25}"></div>`).join("")}
-          </div>
-        </div>
-      </div>` : ""}
+      ${renderPlaybookLooks(gp)}
     </div>
   </div>`;
 }
@@ -314,8 +336,11 @@ function applySimpleSit(gp, sitKey, lever, val) {
 }
 function applySimpleDial(gp, key, val) {
   if (key === "simpleOffId") {
+    // OFFENSE only. runCommit is the DEFENSIVE box (read as defEff.runCommit in
+    // sim.js) — it must NOT be written here, or picking "Run First" silently
+    // loads your own defense's box and stomps the defensive posture dial
+    // (last-button-wins). The offensive lean lives in tendency + passDepth.
     gp.tendency = val === "run" ? "Heavy Run" : val === "pass" ? "Heavy Pass" : "Balanced";
-    gp.runCommit = val === "run" ? 10 : val === "pass" ? -8 : 0;
     gp.passDepth = val === "pass" ? { short: 30, medium: 40, deep: 30 } : val === "run" ? { short: 50, medium: 38, deep: 12 } : { short: 40, medium: 40, deep: 20 };
   } else if (key === "simpleOffAggr") {
     gp.fourthDown = val === "aggr" ? "Aggressive" : val === "safe" ? "Conservative" : "Moderate";
@@ -506,16 +531,42 @@ function renderIdentityCard(gp) {
       <span>${dir.left || 0}% left \xB7 ${dir.middle || 0}% mid \xB7 ${dir.right || 0}% right${L > R + 8 && (dir.right || 0) > (dir.left || 0) ? " \u2014 <i>running away from your strength?</i>" : ""}</span></div>
   </div>`;
 }
+var DEFAULT_SHARE_SLOTS = [
+  ["WR1", "WR1"],
+  ["WR2", "WR2"],
+  ["WR3", "WR3"],
+  ["TE1", "Tight End"],
+  ["RB1", "Back"]
+];
+var DEFAULT_SHARE_FALLBACK = { WR1: 22, WR2: 20, WR3: 16, TE1: 20, RB1: 14 };
+function renderDefaultSharesRow(gp) {
+  if (!gp.targetShares) gp.targetShares = Object.assign({}, DEFAULT_SHARE_FALLBACK);
+  const ds = gp.targetShares;
+  return `
+  <div class="gp-row">
+    <label class="gp-label">Default ${tipTerm("target-share", "Target Shares")} <span class="gp-hint">(who the ball looks for)</span></label>
+    <div class="run-dir-row">
+      ${DEFAULT_SHARE_SLOTS.map(([key, lbl]) => {
+    const v = ds[key] != null ? ds[key] : DEFAULT_SHARE_FALLBACK[key];
+    return `
+        <div class="run-dir-cell">
+          <div class="run-dir-name">${lbl}</div>
+          <input type="range" min="0" max="40" step="2" value="${v}" data-defshare="${key}">
+          <div class="run-dir-val">${v}%</div>
+        </div>`;
+  }).join("")}
+    </div>
+    <div class="gp-tip tip-info">▸ Your standing pecking order by RECEIVER — your WR1 is your WR1 wherever he lines up, so his share follows the man, not the spot. The sim leans this way but always takes what the coverage gives. Want a different mix out of a specific FORMATION (by position — the X, the slot), tune it on the field view: <button type="button" class="btn-ghost btn-sm" data-nav="depthchart">Depth Chart →</button></div>
+  </div>`;
+}
 function renderOffenseDefaults(gp) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r;
-  const offFormations = normalizeFormations(gp.offFormations, gp.offFormation);
-  const selectedIds = new Set(offFormations.map((f) => f.id));
   if (gp.runDirection) normalizeDistTo100(gp.runDirection, ["left", "middle", "right"]);
   if (gp.passDepth) normalizeDistTo100(gp.passDepth, ["short", "medium", "deep"]);
   return `<div class="card">
         <div class="card-header">
           <span class="card-title">OFFENSIVE DEFAULTS</span>
-          <span class="card-subtitle muted">${selectedIds.size}/5 formations selected</span>
+          <span class="card-subtitle muted">${looksSubtitle(gp)}</span>
         </div>
         <div class="gameplan-group">
 
@@ -530,50 +581,8 @@ function renderOffenseDefaults(gp) {
           <details class="gp-section" open>
           <summary class="gp-section-hdr">THE BASICS <span class="gp-section-sub">formations &amp; run/pass balance</span></summary>
 
-          <div class="gp-row">
-            <label class="gp-label">${tipTerm("formation", "Formation")} Package <span class="gp-hint">(pick 1\u20135)</span></label>
-            <div class="formation-grid">
-              ${ALL_FORMATIONS.map((fid) => {
-    const f = FORMATIONS[fid];
-    const pkg = FORMATION_PACKAGES[fid];
-    const entry = offFormations.find((x) => x.id === fid);
-    const selected = !!entry;
-    const personnelStr = pkg ? formatPersonnel(pkg) : "";
-    return `
-                  <div class="formation-card${selected ? " selected" : ""}" data-formation-id="${fid}">
-                    <div class="fc-header">
-                      <span class="fc-name">${escapeHtml(fid)}</span>
-                      ${selected ? `<span class="fc-check">\u2713</span>` : ""}
-                    </div>
-                    <div class="fc-personnel muted">${personnelStr}</div>
-                    <div class="fc-desc muted">${escapeHtml(f.desc || "")}</div>
-                  </div>
-                `;
-  }).join("")}
-            </div>
-            <div class="gp-tip tip-info">\u25B8 Formations decide who's on the field AND your play-action, screen, RPO and motion rates \u2014 watch the identity card change as you pick. One formation = a strong identity. More formations = harder to scout, but a mushier identity.</div>
-          </div>
-
-          ${selectedIds.size > 0 ? `
-          <div class="gp-row">
-            <label class="gp-label">Usage Weights</label>
-            <div class="formation-weights">
-              ${offFormations.map((entry, i) => `
-                <div class="fw-row">
-                  <span class="fw-label">${escapeHtml(entry.id)}</span>
-                  <input class="gp-slider fw-slider" type="range"
-                         data-fw-index="${i}" min="5" max="95" value="${entry.weight}" />
-                  <span class="fw-pct" id="fw-pct-${i}">${Math.round(entry.weight)}%</span>
-                </div>
-              `).join("")}
-              <div class="fw-bar">
-                ${offFormations.map((e) => `
-                  <div class="fw-seg" style="width:${e.weight}%;background:var(--green);opacity:${0.5 + offFormations.indexOf(e) * 0.25}"></div>
-                `).join("")}
-              </div>
-            </div>
-          </div>
-          ` : ""}
+          ${renderPlaybookLooks(gp)}
+          <div class="gp-tip tip-info">\u25B8 Formations decide who's on the field AND your play-action, screen, RPO and motion rates \u2014 watch the identity card change as you re-weight. One formation = a strong identity. More formations = harder to scout, but a mushier identity.</div>
 
           <div class="gp-row">
             <label class="gp-label">Play ${tipTerm("tendency", "Tendency")}</label>
@@ -639,7 +648,7 @@ function renderOffenseDefaults(gp) {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">RPO Rate <span class="gp-hint">(Pistol/RPO runs carrying the option)</span></label>
+            <label class="gp-label">${tipTerm("rpo", "RPO")} Rate <span class="gp-hint">(run-pass option plays)</span></label>
             <div class="gp-slider-wrap">
               <span class="gp-slider-lo">0%</span>
               <input class="gp-slider" type="range" id="rpo-rate" min="0" max="60" value="${(_a = gp.rpoRate) != null ? _a : 40}" />
@@ -657,7 +666,7 @@ function renderOffenseDefaults(gp) {
               <span class="gp-slider-hi">12%</span>
               <span class="gp-slider-val" id="gadget-val">${(_b = gp.gadgetRate) != null ? _b : 4}%</span>
             </div>
-            <div class="gp-tip tip-info">\u25B8 PASS 5 trick tier \u2014 the dial is how often an outside run becomes a Reverse or a deep shot becomes a Flea Flicker / HB Pass on its own. Each is also callable from the sheet's Gadgets tab. They cash in against a run-committed, over-pursuing defense and get people hurt against a disciplined one \u2014 the reverse dies to a contain edge, the flea flicker eats sacks.</div>
+            <div class="gp-tip tip-info">\u25B8 Trick plays \u2014 the dial is how often an outside run becomes a Reverse or a deep shot becomes a Flea Flicker / HB Pass on its own. Each is also callable from the sheet's Gadgets tab. They cash in against a run-committed, over-pursuing defense and get people hurt against a disciplined one \u2014 the reverse dies to a contain edge, the flea flicker eats sacks.</div>
           </div>
 
           ${["Wildcat", "Flexbone", "Pistol/RPO", "Spread", "Trips/Bunch", "Air Raid", "Empty", "Single Back", "Power-I"].some((f) => selectedIds.has(f)) ? `
@@ -698,7 +707,7 @@ function renderOffenseDefaults(gp) {
           ${!hasTriple ? `<div class="gp-tip tip-info">\u25B8 From spread formations this is the SPEED option \u2014 no dive back, the QB attacks the edge and reads only the force defender: keep or pitch. It's a changeup (a small slice of your run calls, scaled by the rate dial), not an identity. The Dive lean below is ignored without a Wishbone/Flexbone package.</div>` : ""}
 
           <div class="gp-row">
-            <label class="gp-label">Option Rate <span class="gp-hint">(run calls that are true triple option \xB7 in spread sets it scales your speed-option changeup instead)</span></label>
+            <label class="gp-label">${tipTerm("option-game", "Option Rate")} <span class="gp-hint">(run calls that are true triple option \xB7 in spread sets it scales your speed-option changeup instead)</span></label>
             <div class="gp-slider-wrap">
               <span class="gp-slider-lo">0%</span>
               <input class="gp-slider" type="range" id="option-rate" min="0" max="100" value="${(_a2 = gp.optionRate) != null ? _a2 : 70}" />
@@ -709,7 +718,7 @@ function renderOffenseDefaults(gp) {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">Option Mix <span class="gp-hint">(a 100% split \u2014 where you lean when the read is a coin flip)</span></label>
+            <label class="gp-label">${tipTerm("option-mix", "Option Mix")} <span class="gp-hint">(a 100% split \u2014 where you lean when the read is a coin flip)</span></label>
             <div class="run-dir-row">
               ${(() => {
       if (!gp.optionMix) gp.optionMix = { dive: 40, keep: 30, pitch: 30 };
@@ -727,7 +736,7 @@ function renderOffenseDefaults(gp) {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">Pitch Aggressiveness</label>
+            <label class="gp-label">${tipTerm("pitch-aggressiveness", "Pitch Aggressiveness")}</label>
             <div class="gp-slider-wrap">
               <span class="gp-slider-lo">Safe</span>
               <input class="gp-slider" type="range" id="pitch-aggr" min="0" max="100" value="${(_c2 = gp.pitchAggr) != null ? _c2 : 50}" />
@@ -744,6 +753,8 @@ function renderOffenseDefaults(gp) {
           ${offSubTab !== "pass" ? "" : `
           <details class="gp-section" open>
           <summary class="gp-section-hdr">THE PASS GAME <span class="gp-section-sub">depth &amp; targets</span></summary>
+
+          ${renderDefaultSharesRow(gp)}
 
           <div class="gp-row">
             <label class="gp-label">Pass Depth Distribution</label>
@@ -796,7 +807,7 @@ function renderOffenseDefaults(gp) {
           </div>` : ""}
 
           <div class="gp-row">
-            <label class="gp-label">Chip Help <span class="gp-hint">(the back bumps the edge)</span></label>
+            <label class="gp-label">${tipTerm("chip-help", "Chip Help")} <span class="gp-hint">(the back bumps the edge)</span></label>
             <div class="gp-options">
               ${[["auto", "Auto"], ["chip", "Chip the edge"]].map(([val, lbl]) => `
                 <button class="gp-option gp-option-sm${(gp.chipHelp || "auto") === val ? " active" : ""}"
@@ -818,7 +829,7 @@ function renderOffenseDefaults(gp) {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">Protection Identity <span class="gp-hint">(how the pocket is built)</span></label>
+            <label class="gp-label">${tipTerm("protection-style", "Protection Style")} <span class="gp-hint">(how you keep the QB clean)</span></label>
             <div class="gp-options">
               ${C.PROT_IDENTITY.order.map((val) => `
                 <button class="gp-option gp-option-sm${(gp.protIdentity || "halfSlide") === val ? " active" : ""}"
@@ -834,7 +845,7 @@ function renderOffenseDefaults(gp) {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">QB Aggression <span class="gp-hint">(protect it vs push it)</span></label>
+            <label class="gp-label">${tipTerm("qb-aggression", "QB Aggression")} <span class="gp-hint">(protect it vs push it)</span></label>
             <div class="gp-slider-wrap">
               <span class="gp-slider-lo">Protect</span>
               <input class="gp-slider" type="range" id="qb-aggr" min="0" max="100" value="${(_o = gp.qbAggr) != null ? _o : 50}" />
@@ -845,7 +856,7 @@ function renderOffenseDefaults(gp) {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">LOS Freedom <span class="gp-hint">(audibles &amp; kill calls)</span></label>
+            <label class="gp-label">Line-of-Scrimmage Freedom <span class="gp-hint">(let the QB change the call)</span></label>
             <div class="gp-options">
               ${[["never", "Run the Call"], ["auto", "Auto"], ["free", "Full Freedom"]].map(([val, lbl]) => `
                 <button class="gp-option gp-option-sm${(gp.losFreedom || "auto") === val ? " active" : ""}"
@@ -858,18 +869,18 @@ function renderOffenseDefaults(gp) {
 
           ${offSubTab !== "playbook" ? "" : `
           <details class="gp-section" open>
-          <summary class="gp-section-hdr">THE PLAYBOOK <span class="gp-section-sub">concept weights \u2014 your call sheet</span></summary>
+          <summary class="gp-section-hdr">THE PLAYBOOK <span class="gp-section-sub">your play mix \u2014 the call sheet</span></summary>
           <div class="gp-tip tip-info">\u25B8 Every snap the sim now calls a real CONCEPT \u2014 this is where you weight them. 50 is a balanced call sheet; crank what your roster executes, bench what it can't (0 = never called, and your QB can't audible into it). Each concept beats some coverages and dies against others \u2014 the drive log shows you which you're meeting. Fair warning: the defense keeps film. Ride one concept hard enough and it starts getting jumped, so a lopsided sheet pays a tax. Weights ride with your saved plans, so different opponents can get different books.</div>
           ${(() => {
-    const carried = (gp.offFormations || []).filter((f) => f && f.id && (f.weight || 0) > 0).map((f) => f.id).filter((id) => FORMATION_PLAYBOOK[id]);
+    const carried = [...new Set((gp.offFormations || []).filter((f) => f && f.id && (f.weight || 0) > 0).map((f) => f.id).filter((id) => FORMATION_PLAYBOOK[id]))];
     if (pbFormTab && !carried.includes(pbFormTab)) pbFormTab = null;
     const authoredIn = (fid) => { var _b; return Object.keys(((_b = gp.formationPlaybooks) == null ? void 0 : _b[fid]) || {}).length; };
     const strip = carried.length ? `
           <div class="gp-row"><div class="gp-options">
-            <button class="gp-option gp-option-sm${!pbFormTab ? " active" : ""}" data-pbform="">GLOBAL SHEET</button>
+            <button class="gp-option gp-option-sm${!pbFormTab ? " active" : ""}" data-pbform="">BASE PLAYBOOK</button>
             ${carried.map((id) => `<button class="gp-option gp-option-sm${pbFormTab === id ? " active" : ""}" data-pbform="${escapeHtml(id)}">${escapeHtml(id)}${authoredIn(id) ? ` (${authoredIn(id)})` : ""}</button>`).join("")}
           </div></div>
-          <div class="gp-hint">Madden-style formation sheets: pick a formation to author ITS playbook. Overrides apply only to snaps from that formation; untouched plays inherit the global sheet.</div>` : "";
+          <div class="gp-hint">Per-formation playbooks: pick a formation to set its own play mix. Changes apply only to snaps from that formation; untouched plays use your base playbook.</div>` : "";
     return strip + (pbFormTab ? renderFormationPlaybook(gp, pbFormTab) : renderPlaybookGroups(gp));
   })()}
           </details>`}
@@ -1021,7 +1032,7 @@ function renderHalftimeAdjust(gp) {
         <input class="gp-slider" type="range" id="screen-rate" min="0" max="30" value="${(_f = gp.screenRate) != null ? _f : 14}" />
       </div>
       ${chipRow(
-    "LOS Freedom",
+    "Line-of-Scrimmage Freedom",
     gp.losFreedom || "auto",
     [["never", "Run the Call"], ["auto", "Auto"], ["free", "Full Freedom"]],
     "losFreedom"
@@ -1120,7 +1131,7 @@ function renderDefenseDefaults(gp) {
           <summary class="gp-section-hdr">THE FRONT <span class="gp-section-sub">bodies &amp; the box</span></summary>
 
           <div class="gp-row">
-            <label class="gp-label">Base Front</label>
+            <label class="gp-label">${tipTerm("base-front", "Base Front")}</label>
             <div class="gp-options">
               ${DEF_FRONTS2.map((front) => `
                 <button class="gp-option${defBaseFront === front ? " active" : ""}"
@@ -1162,7 +1173,7 @@ function renderDefenseDefaults(gp) {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">Box <span class="gp-hint">(run commit)</span></label>
+            <label class="gp-label">${tipTerm("the-box", "Box")} <span class="gp-hint">(run commit)</span></label>
             <div class="gp-slider-wrap">
               <span class="gp-slider-lo">Light</span>
               <input class="gp-slider" type="range" id="box-commit" min="-25" max="25" step="1" value="${(_a = gp.runCommit) != null ? _a : 0}" />
@@ -1173,7 +1184,7 @@ function renderDefenseDefaults(gp) {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">Option Assignment <span class="gp-hint">(vs triple-option offenses)</span></label>
+            <label class="gp-label">${tipTerm("option-assignment", "Option Assignment")} <span class="gp-hint">(vs triple-option offenses)</span></label>
             <div class="gp-options">
               ${[["balanced", "Balanced"], ["qb", "Contain QB"], ["pitch", "Take Pitch"]].map(([val, lbl]) => `
                 <button class="gp-option gp-option-sm${(gp.optionKey || "balanced") === val ? " active" : ""}"
@@ -1184,7 +1195,7 @@ function renderDefenseDefaults(gp) {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">Edge Discipline <span class="gp-hint">(contain vs crash)</span></label>
+            <label class="gp-label">${tipTerm("edge-discipline", "Edge Discipline")} <span class="gp-hint">(contain vs crash)</span></label>
             <div class="gp-options">
               ${[["contain", "Contain"], ["balanced", "Balanced"], ["crash", "Crash"]].map(([val, lbl]) => `
                 <button class="gp-option gp-option-sm${(gp.edgePlay || "balanced") === val ? " active" : ""}"
@@ -1195,7 +1206,7 @@ function renderDefenseDefaults(gp) {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">Sub Philosophy <span class="gp-hint">(answering their personnel)</span></label>
+            <label class="gp-label">Substitutions <span class="gp-hint">(answering their personnel)</span></label>
             <div class="gp-options">
               ${[["match", "Match"], ["auto", "Auto"], ["base", "Stay Base"]].map(([val, lbl]) => `
                 <button class="gp-option gp-option-sm${(gp.subPhilosophy || "auto") === val ? " active" : ""}"
@@ -1222,7 +1233,7 @@ function renderDefenseDefaults(gp) {
           <summary class="gp-section-hdr">COVERAGE <span class="gp-section-sub">shells &amp; eyes</span></summary>
 
           <div class="gp-row">
-            <label class="gp-label">Robber Call <span class="gp-hint">(the two-high safety's leash)</span></label>
+            <label class="gp-label">${tipTerm("robber", "Robber Call")} <span class="gp-hint">(the two-high safety's leash)</span></label>
             <div class="gp-options">
               ${[["auto", "Auto"], ["rob", "Rob the middle"], ["overtop", "Stay over top"]].map(([val, lbl]) => `
                 <button class="gp-option gp-option-sm${(gp.robberCall || "auto") === val ? " active" : ""}"
@@ -1233,7 +1244,7 @@ function renderDefenseDefaults(gp) {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">Zone Teaching <span class="gp-hint">(spot-drop vs match)</span></label>
+            <label class="gp-label">${tipTerm("zone-style", "Zone Style")} <span class="gp-hint">(sit in lanes vs carry routes)</span></label>
             <div class="gp-options">
               ${[["spot", "Spot-drop"], ["balanced", "Balanced"], ["match", "Match"]].map(([val, lbl]) => `
                 <button class="gp-option gp-option-sm${(gp.zoneStyle || "balanced") === val ? " active" : ""}"
@@ -1244,7 +1255,7 @@ function renderDefenseDefaults(gp) {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">Coverage Scheme</label>
+            <label class="gp-label">${tipTerm("coverage-scheme", "Coverage Scheme")}</label>
             <div class="gp-options">
               ${[["balanced", "Balanced"], ["lockTop", "Lock WR1"], ["bracketTop", "Bracket WR1"]].map(([val, lbl]) => `
                 <button class="gp-option gp-option-sm${covScheme === val ? " active" : ""}"
@@ -1255,7 +1266,7 @@ function renderDefenseDefaults(gp) {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">Safety Shell <span class="gp-hint">(the deep math)</span></label>
+            <label class="gp-label">${tipTerm("safety-shell", "Safety Shell")} <span class="gp-hint">(the deep math)</span></label>
             <div class="gp-options">
               ${[["single", "Single-High"], ["balanced", "Balanced"], ["two", "Two-High"]].map(([val, lbl]) => `
                 <button class="gp-option gp-option-sm${(gp.covShell || "balanced") === val ? " active" : ""}"
@@ -1277,7 +1288,7 @@ function renderDefenseDefaults(gp) {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">Cushion <span class="gp-hint">(press vs off \u2014 man calls only)</span></label>
+            <label class="gp-label">${tipTerm("cushion", "Cushion")} <span class="gp-hint">(press vs off \u2014 man calls only)</span></label>
             <div class="gp-options">
               ${[["press", "Press"], ["balanced", "Balanced"], ["off", "Off / Soft"]].map(([val, lbl]) => `
                 <button class="gp-option gp-option-sm${(gp.pressLevel || "balanced") === val ? " active" : ""}"
@@ -1288,7 +1299,7 @@ function renderDefenseDefaults(gp) {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">Bracket Target <span class="gp-hint">(who Lock/Bracket keys on)</span></label>
+            <label class="gp-label">${tipTerm("bracket-target", "Bracket Target")} <span class="gp-hint">(who Lock/Bracket keys on)</span></label>
             <div class="gp-options">
               ${[["auto", "Auto (top threat)"], ["te1", "Their TE"], ["slot", "Their Slot"], ["hot", "Hot Man"]].map(([val, lbl]) => `
                 <button class="gp-option gp-option-sm${(gp.bracketWho || "auto") === val ? " active" : ""}"
@@ -1308,7 +1319,7 @@ function renderDefenseDefaults(gp) {
           <summary class="gp-section-hdr">PRESSURE <span class="gp-section-sub">bringing the heat</span></summary>
 
           <div class="gp-row">
-            <label class="gp-label">Aggression <span class="gp-hint">(how much you risk)</span></label>
+            <label class="gp-label">${tipTerm("def-aggression", "Aggression")} <span class="gp-hint">(how much you risk)</span></label>
             <div class="gp-options">
               ${C.AGGRESSION.order.map((val) => `
                 <button class="gp-option gp-option-sm${aggrOf(gp) === val ? " active" : ""}"
@@ -1325,7 +1336,7 @@ function renderDefenseDefaults(gp) {
           </div>
 
           <div class="gp-row">
-            <label class="gp-label">Pressure Identity <span class="gp-hint">(what the heat looks like)</span></label>
+            <label class="gp-label">${tipTerm("pressure-style", "Pressure Style")} <span class="gp-hint">(what your blitz looks like)</span></label>
             <div class="gp-options">
               <button class="gp-option gp-option-sm${!gp.pressureIdentity ? " active" : ""}"
                       data-gp-pressid="auto">Auto \u2014 ${escapeHtml((_d = FRONT_PRESSURE_SIGNATURE[gp.defBaseFront || "4-3"] && ((_c = C.PRESS_IDENTITY[FRONT_PRESSURE_SIGNATURE[gp.defBaseFront || "4-3"]]) == null ? void 0 : _c.label)) != null ? _d : "front\u2019s signature")}</button>
@@ -1426,19 +1437,10 @@ function normalizeDistTo100(obj, keys) {
 function wireDefaultsListeners(gp, { root = document } = {}) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
   gp.offFormations = normalizeFormations(gp.offFormations, gp.offFormation);
-  root.querySelectorAll(".formation-card").forEach((card) => {
-    card.addEventListener("click", () => {
-      const fid = card.dataset.formationId;
-      const idx = gp.offFormations.findIndex((f) => f.id === fid);
-      if (idx >= 0) {
-        if (gp.offFormations.length > 1) gp.offFormations.splice(idx, 1);
-      } else {
-        if (gp.offFormations.length >= 5) gp.offFormations.pop();
-        gp.offFormations.push({ id: fid, weight: 33 });
-        rebalanceWeights(gp.offFormations);
-      }
-      rerender();
-    });
+  // The formation add/remove picker is gone (owner call, 2026-08-15): the
+  // playbook owns WHICH formations you carry; this screen only re-weights them.
+  root.querySelectorAll("[data-gp-workshop]").forEach((btn) => {
+    btn.addEventListener("click", () => { state.ui.creatorTab = null; navigate("creator"); });
   });
   root.querySelectorAll("[data-dfmix-front]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1837,6 +1839,16 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
       });
     });
   });
+  root.querySelectorAll("[data-defshare]").forEach((sl) => {
+    sl.addEventListener("input", (e) => {
+      var _a2;
+      if (!gp.targetShares) gp.targetShares = {};
+      const key = sl.dataset.defshare;
+      gp.targetShares[key] = parseInt(e.target.value) || 0;
+      const v = (_a2 = sl.parentElement) == null ? void 0 : _a2.querySelector(".run-dir-val");
+      if (v) v.textContent = `${gp.targetShares[key]}%`;
+    });
+  });
 }
 function cellIsCustom(sits, key) {
   const c = sits[key];
@@ -1962,7 +1974,7 @@ function renderDefCallsSection(gp) {
       return `
             <div class="chk-row">
               <span class="chk-lbl">${flbl}</span>
-              <button class="dc-plan${cur == null ? " active" : ""}" data-call-clear="${escapeHtml(nm)}" data-call-field="${field}">inherit</button>
+              <button class="dc-plan${cur == null ? " active" : ""}" data-call-clear="${escapeHtml(nm)}" data-call-field="${field}">use plan</button>
               ${opts.map(([v, ol]) => `<button class="dc-chip${cur === v ? " active" : ""}" data-call-name="${escapeHtml(nm)}" data-call-field="${field}" data-call-val="${v}">${ol}</button>`).join("")}
             </div>`;
     }).join("")}
@@ -2020,7 +2032,7 @@ function renderFormChecksSection(gp) {
   return `
           <details class="gp-section" open>
           <summary class="gp-section-hdr">CHECK-WITH-ME <span class="gp-section-sub">calls keyed on their personnel</span></summary>
-          <div class="gp-tip tip-info">▸ The situation cells key on down-and-distance; a real call sheet also keys on PERSONNEL — "vs Empty, bring the house." When the offense breaks the huddle in a class below, your check overlays the standing call for that snap. Anything left inherit rides the plan. Over-check at your peril: motion and the jet game punish a defense that declares off the first look.</div>
+          <div class="gp-tip tip-info">▸ The situation cells key on down-and-distance; a real call sheet also keys on PERSONNEL — "vs Empty, bring the house." When the offense breaks the huddle in a class below, your check overlays the standing call for that snap. Anything left on "use plan" rides the plan. Over-check at your peril: motion and the jet game punish a defense that declares off the first look.</div>
           ${CHK_CLASSES.map(([cls, label, desc]) => {
     const cell = checks[cls] || {};
     const has = Object.keys(cell).length > 0;
@@ -2032,7 +2044,7 @@ function renderFormChecksSection(gp) {
       return `
             <div class="chk-row">
               <span class="chk-lbl">${flbl}</span>
-              <button class="dc-plan${cur == null ? " active" : ""}" data-chk-clear="${cls}" data-chk-field="${field}">inherit</button>
+              <button class="dc-plan${cur == null ? " active" : ""}" data-chk-clear="${cls}" data-chk-field="${field}">use plan</button>
               ${opts.map(([v, ol]) => `<button class="dc-chip${cur === v ? " active" : ""}" data-chk-class="${cls}" data-chk-field="${field}" data-chk-val="${v}">${ol}</button>`).join("")}
             </div>`;
     }).join("")}
@@ -2220,7 +2232,7 @@ function renderSitPanel(gp, key) {
   )}
 
   ${group(
-    "Protection Identity",
+    "Protection Style",
     "protIdentity",
     cell.protIdentity != null,
     `AUTO \u2014 ${escapeHtml(C.PROT_IDENTITY.labels[gp.protIdentity || "halfSlide"])}`,
@@ -2229,7 +2241,7 @@ function renderSitPanel(gp, key) {
         <button class="gp-option gp-option-sm${cell.protIdentity === v ? " active" : ""}"
                 data-sitset-field="protIdentity" data-sitset-val="${v}">${C.PROT_IDENTITY.labels[v]}</button>`).join("")}
     </div>
-    <div class="gp-tip tip-info">\u25b8 How the pocket is built HERE: Quick Game beats the house on 3rd &amp; medium, Max Protect buys the 2nd-and-long shot play, BOB trusts your five on the money down.</div>`
+    <div class="gp-tip tip-info">\u25b8 How the pocket is built HERE: Quick Game beats the pressure on 3rd &amp; medium, Max Protect buys the 2nd-and-long shot play, Big-on-Big trusts your five on the money down.</div>`
   )}
 
   ${group(
@@ -2259,11 +2271,11 @@ function renderSitPanel(gp, key) {
   )}
 
   ${group(
-    "Playbook \u2014 Concept Weights",
+    "Playbook \u2014 Play Mix",
     "conceptWeights",
     !!cell.conceptWeights,
-    `AUTO \u2014 your base call sheet${gp.conceptWeights && Object.keys(gp.conceptWeights).length ? " (custom weights)" : " (balanced)"}`,
-    `<div class="gp-tip tip-info">\u25B8 The wizard grid: THIS situation's sheet. Weights overlay your base playbook per concept \u2014 bench the fades at the goal line, feature Power on 3rd &amp; short. The call sheet's \u2248% follow it live.</div>
+    `AUTO \u2014 your base call sheet${gp.conceptWeights && Object.keys(gp.conceptWeights).length ? " (custom mix)" : " (balanced)"}`,
+    `<div class="gp-tip tip-info">\u25B8 THIS situation's play mix. It overlays your base playbook \u2014 bench the fades at the goal line, feature Power on 3rd &amp; short. The call sheet's \u2248% follow it live.</div>
     ${renderPlaybookGroups(gp, { cw: __spreadValues(__spreadValues({}, gp.conceptWeights || {}), cell.conceptWeights), attr: "sitcw" })}`
   )}
   `}
@@ -2331,7 +2343,7 @@ function renderSitPanel(gp, key) {
     ["Cushion", "pressLevel", [["press", "Press"], ["balanced", "Balanced"], ["off", "Off"]], "balanced"],
     ["Edge Discipline", "edgePlay", [["contain", "Contain"], ["balanced", "Balanced"], ["crash", "Crash"]], "balanced"],
     ["Option Assignment", "optionKey", [["balanced", "Balanced"], ["qb", "Contain QB"], ["pitch", "Take Pitch"]], "balanced"],
-    ["Sub Philosophy", "subPhilosophy", [["match", "Match"], ["auto", "Auto"], ["base", "Stay Base"]], "auto"],
+    ["Substitutions", "subPhilosophy", [["match", "Match"], ["auto", "Auto"], ["base", "Stay Base"]], "auto"],
     ["Tackling", "tackleStyle", [["wrap", "Wrap"], ["balanced", "Balanced"], ["strip", "Strip"]], "balanced"]
   ].map(([lbl, field, opts, dflt]) => {
     var _a2;
@@ -2580,7 +2592,11 @@ function normalizeFormations(offFormations, offFormation) {
   };
   const fixId = (id) => {
     const m = legacyMap[id] || id;
-    return ALL_FORMATIONS.includes(m) ? m : "Single Back";
+    // Stage 7: FORMATION_PACKAGES is the LIVE registry (custom formations
+    // register into it after this module's ALL_FORMATIONS snapshot is taken)
+    // — without this check a custom formation in the plan would be silently
+    // rewritten to Single Back by the Game Plan screen.
+    return ALL_FORMATIONS.includes(m) || FORMATION_PACKAGES[m] ? m : "Single Back";
   };
   if (Array.isArray(offFormations) && offFormations.length > 0) return offFormations.map((f) => __spreadProps(__spreadValues({}, f), { id: fixId(f.id) }));
   const validId = fixId(offFormation);
@@ -2589,6 +2605,135 @@ function normalizeFormations(offFormations, offFormation) {
     { id: "Spread", weight: 30 },
     { id: "Power-I", weight: 20 }
   ].filter((f, i, arr) => arr.findIndex((x) => x.id === f.id) === i);
+}
+var BUILTIN_PLANS = [
+  {
+    name: "Air Raid",
+    blurb: "Empty sets, quick game, and a nickel defense that trusts its rush. Throw it to win it.",
+    gp: {
+      offFormations: [{ id: "Air Raid", weight: 45 }, { id: "Empty", weight: 30 }, { id: "Spread", weight: 25 }],
+      defBaseFront: "Nickel",
+      tendency: "Heavy Pass",
+      rushInPct: 45,
+      passDepth: { short: 40, medium: 38, deep: 22 },
+      blitzPct: 25,
+      pressureSource: { edge: 45, interior: 20, secondary: 35 },
+      coverageScheme: "aggressive",
+      greenDog: false,
+      spyQB: false,
+      targetShares: { WR1: 26, WR2: 22, WR3: 20, TE1: 14, RB1: 18 },
+      fourthDown: "Aggressive",
+      maxFGDist: 42,
+      situations: {},
+      baseTempo: "Hurry"
+    }
+  },
+  {
+    name: "Spread Option",
+    blurb: "Pistol RPOs and option football on the ground, tempo to wear them down, four-down mindset.",
+    gp: {
+      offFormations: [{ id: "Pistol/RPO", weight: 45 }, { id: "Spread", weight: 30 }, { id: "Flexbone", weight: 25 }],
+      defBaseFront: "4-3",
+      tendency: "Run",
+      rushInPct: 65,
+      passDepth: { short: 45, medium: 38, deep: 17 },
+      blitzPct: 20,
+      pressureSource: { edge: 50, interior: 25, secondary: 25 },
+      coverageScheme: "balanced",
+      greenDog: false,
+      spyQB: false,
+      targetShares: { WR1: 22, WR2: 20, WR3: 16, TE1: 20, RB1: 22 },
+      fourthDown: "Aggressive",
+      maxFGDist: 42,
+      situations: {},
+      baseTempo: "Hurry"
+    }
+  },
+  {
+    name: "Pro Balanced",
+    blurb: "A little of everything. Run to set up the pass, a sound 4-3, no wasted risk. The safe start.",
+    gp: {
+      offFormations: [{ id: "Single Back", weight: 40 }, { id: "Power-I", weight: 30 }, { id: "Spread", weight: 30 }],
+      defBaseFront: "4-3",
+      tendency: "Balanced",
+      rushInPct: 60,
+      passDepth: { short: 40, medium: 40, deep: 20 },
+      blitzPct: 20,
+      pressureSource: { edge: 50, interior: 20, secondary: 30 },
+      coverageScheme: "balanced",
+      greenDog: false,
+      spyQB: false,
+      targetShares: { WR1: 22, WR2: 20, WR3: 16, TE1: 20, RB1: 14 },
+      fourthDown: "Moderate",
+      maxFGDist: 44,
+      situations: {},
+      baseTempo: "Normal"
+    }
+  },
+  {
+    name: "Bend-Don't-Break",
+    blurb: "Grind the clock, lean on the run, keep everything in front on defense. Win the field-position game.",
+    gp: {
+      offFormations: [{ id: "Power-I", weight: 40 }, { id: "Single Back", weight: 35 }, { id: "Jumbo", weight: 25 }],
+      defBaseFront: "4-3",
+      tendency: "Heavy Run",
+      rushInPct: 72,
+      passDepth: { short: 52, medium: 33, deep: 15 },
+      blitzPct: 10,
+      pressureSource: { edge: 45, interior: 30, secondary: 25 },
+      coverageScheme: "conservative",
+      greenDog: false,
+      spyQB: true,
+      targetShares: { WR1: 20, WR2: 18, WR3: 12, TE1: 24, RB1: 26 },
+      fourthDown: "Conservative",
+      maxFGDist: 40,
+      situations: {},
+      baseTempo: "Chew"
+    }
+  },
+  {
+    name: "Blitz Everything",
+    blurb: "Bring the house from a 3-4, dare them to beat man coverage, and take the ball away. High risk, high reward.",
+    gp: {
+      offFormations: [{ id: "Spread", weight: 40 }, { id: "Single Back", weight: 35 }, { id: "Trips/Bunch", weight: 25 }],
+      defBaseFront: "3-4",
+      tendency: "Balanced",
+      rushInPct: 58,
+      passDepth: { short: 42, medium: 38, deep: 20 },
+      blitzPct: 45,
+      pressureSource: { edge: 45, interior: 35, secondary: 20 },
+      coverageScheme: "aggressive",
+      greenDog: true,
+      spyQB: false,
+      targetShares: { WR1: 22, WR2: 20, WR3: 16, TE1: 20, RB1: 14 },
+      fourthDown: "Aggressive",
+      maxFGDist: 44,
+      situations: {},
+      baseTempo: "Normal"
+    }
+  }
+];
+function builtinPlan(name) {
+  return BUILTIN_PLANS.find((p) => p.name === name) || null;
+}
+function applyPlanToSchool(school, gp) {
+  // Loading a plan REPLACES the plan — it must not inherit hidden settings from
+  // whatever was there before. A built-in preset is PARTIAL (it only names the
+  // fields it cares about), so a plain merge left leftovers behind — e.g. a +10
+  // defensive box from an earlier Simple-dial choice would survive loading Air
+  // Raid, which never mentions the box. Rebuild from a clean default base, then
+  // apply the plan over it, and wipe the old keys (keeping engine-internal
+  // _fields). A full library snapshot overrides every default, so this is
+  // identical to the old behavior for those.
+  const fresh = Object.assign(defaultGameplan(), JSON.parse(JSON.stringify(gp)));
+  for (const k of Object.keys(school.gameplan)) { if (!k.startsWith("_")) delete school.gameplan[k]; }
+  Object.assign(school.gameplan, fresh);
+  // [Playbook-Root Stage 3] The Game Plan is the controller: re-sync the named
+  // book model to the plan just loaded, so school.book/defbook/planOverlay track
+  // what the coach actually carries. Byte-neutral (the gameplan object is the
+  // truth; this only re-derives the parts) — compileTeamPlan(school) still
+  // deep-equals school.gameplan.
+  try { synthesizeTeamPlan(school, { force: true }); } catch (e) {}
 }
 function renderPlanSlots(school) {
   var _a, _b;
@@ -2602,11 +2747,20 @@ function renderPlanSlots(school) {
       <button class="plan-slot${q.active === s ? " active" : ""}" data-plan-slot="${s}">${s}</button>`).join("")}
     ${state._coachId ? `
       <button class="btn-ghost btn-sm" id="btn-gp-save-team" style="margin-left:auto">Save Team to Play Now</button>
-      <button class="btn-ghost btn-sm" id="btn-gp-to-library">Save Plan</button>
-      ${lib.length ? `<select class="form-select plan-lib-select" id="gp-lib-load">
-        <option value="">Load\u2026</option>
-        ${lib.map((p) => `<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join("")}
-      </select>` : ""}` : ""}
+      <button class="btn-ghost btn-sm" id="btn-gp-to-library">Save Plan</button>` : ""}
+    <select class="form-select plan-lib-select" id="gp-lib-load"${state._coachId ? "" : ` style="margin-left:auto"`}>
+      <option value="">Load a plan\u2026</option>
+      <optgroup label="Preset plans">
+        ${BUILTIN_PLANS.map((p) => `<option value="builtin:${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join("")}
+      </optgroup>
+      ${lib.length ? `<optgroup label="My plans">
+        ${lib.map((p) => `<option value="lib:${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join("")}
+      </optgroup>` : ""}
+      ${(() => { const pbs = listCreations("playbooks"); return pbs.length ? `<optgroup label="Workshop — offensive playbooks">${pbs.map((pb) => `<option value="pb:${escapeHtml(pb.id)}">${escapeHtml(pb.data.name || "Untitled")}</option>`).join("")}</optgroup>` : ""; })()}
+      ${(() => { const dbs = listCreations("defbooks"); return dbs.length ? `<optgroup label="Workshop — defenses">${dbs.map((db) => `<option value="dd:${escapeHtml(db.id)}">${escapeHtml(db.data.name || "Untitled")}</option>`).join("")}</optgroup>` : ""; })()}
+      <optgroup label="Starter books — offense">${DEFAULT_OFF_BOOKS.map((b) => `<option value="dpb:${escapeHtml(b.name)}">${escapeHtml(b.name)}</option>`).join("")}</optgroup>
+      <optgroup label="Starter books — defense">${DEFAULT_DEF_BOOKS.map((b) => `<option value="ddb:${escapeHtml(b.name)}">${escapeHtml(b.name)}</option>`).join("")}</optgroup>
+    </select>
   </div>`;
 }
 function setupListeners() {
@@ -2646,9 +2800,60 @@ function setupListeners() {
   (_c = document.getElementById("gp-lib-load")) == null ? void 0 : _c.addEventListener("change", (e) => {
     var _a2, _b2;
     const school2 = getPlayerSchool();
-    const p = (((_b2 = (_a2 = getCoach(state._coachId)) == null ? void 0 : _a2.plans) == null ? void 0 : _b2.gameplans) || []).find((x) => x.name === e.target.value);
-    if (!p || !school2) return;
-    Object.assign(school2.gameplan, JSON.parse(JSON.stringify(p.gp)));
+    const raw = e.target.value;
+    if (!raw || !school2) return;
+    const sep = raw.indexOf(":");
+    const kind = sep >= 0 ? raw.slice(0, sep) : "lib";
+    const planName = sep >= 0 ? raw.slice(sep + 1) : raw;
+    if (kind === "builtin") {
+      const bp = builtinPlan(planName);
+      if (!bp) return;
+      applyPlanToSchool(school2, bp.gp);
+      notify(`"${bp.name}" preset loaded`, "success");
+      rerender();
+      return;
+    }
+    // Starter books (defaultbooks.js): same one-side swap as Workshop loads.
+    if (kind === "dpb" || kind === "ddb") {
+      const book = kind === "dpb" ? defaultOffBook(planName) : defaultDefBook(planName);
+      if (!book) return;
+      try {
+        const merged = kind === "dpb" ? applyPlaybookToGameplan(book, school2.gameplan) : applyDefBookToGameplan(book, school2.gameplan);
+        for (const k of Object.keys(school2.gameplan)) { if (!k.startsWith("_")) delete school2.gameplan[k]; }
+        Object.assign(school2.gameplan, merged);
+        try { synthesizeTeamPlan(school2, { force: true }); } catch (e) {}
+        notify(`"${book.name}" ${kind === "dpb" ? "offense" : "defense"} loaded`, "success");
+      } catch (err) { notify("Could not load that book", "warning"); }
+      rerender();
+      return;
+    }
+    // Workshop creations: a playbook swaps only the OFFENSE, a defense swaps only
+    // the DEFENSE (the engine functions carry through the fields they don't
+    // govern), so you can mix a custom offense and a custom defense freely.
+    if (kind === "pb" || kind === "dd") {
+      const shelf = kind === "pb" ? "playbooks" : "defbooks";
+      const raw2 = loadCreationData(shelf, planName);
+      if (!raw2) return;
+      // Repair-on-load: a book authored against an older build may name a
+      // formation/front/concept that has since changed — clean it against
+      // CURRENT data and say what changed, instead of failing with a shrug.
+      const rep = repairCreation(shelf, raw2);
+      if (!rep.ok) { notify(`"${raw2.name || "Creation"}" can't load in this build — open it in the Workshop to rebuild it`, "warning"); return; }
+      const data = rep.data;
+      try {
+        const merged = kind === "pb" ? applyPlaybookToGameplan(data, school2.gameplan) : applyDefBookToGameplan(data, school2.gameplan);
+        for (const k of Object.keys(school2.gameplan)) { if (!k.startsWith("_")) delete school2.gameplan[k]; }
+        Object.assign(school2.gameplan, merged);
+        try { synthesizeTeamPlan(school2, { force: true }); } catch (e) {}
+        notify(`"${data.name || "Creation"}" ${kind === "pb" ? "offense" : "defense"} loaded`, "success");
+        if (rep.changes.length) notify(`Updated for this build: ${rep.changes[0]}${rep.changes.length > 1 ? ` (+${rep.changes.length - 1} more)` : ""}`, "warning");
+      } catch (err) { notify("Could not load that creation", "warning"); }
+      rerender();
+      return;
+    }
+    const p = (((_b2 = (_a2 = getCoach(state._coachId)) == null ? void 0 : _a2.plans) == null ? void 0 : _b2.gameplans) || []).find((x) => x.name === planName);
+    if (!p) return;
+    applyPlanToSchool(school2, p.gp);
     notify(`"${p.name}" loaded from library`, "success");
     rerender();
   });
@@ -2744,10 +2949,10 @@ function renderFormationPlaybook(gp, fid) {
   ].filter(([, list]) => list.length);
   return `
   <div class="cw-explain">This is <b>${escapeHtml(fid)}'s own call sheet</b> — ${carry.length} plays it actually runs.
-  Slide a play here and the override applies only to snaps out of ${escapeHtml(fid)}; anything you don't touch
-  <b>inherits the global sheet</b>. 0 is still a cut — benched here means never called from this formation.
-  ${nAuthored ? `<b>${nAuthored} play${nAuthored === 1 ? "" : "s"} authored.</b>` : "Nothing authored yet — this formation runs the global book."}</div>
-  ${nAuthored ? `<div class="gp-row"><button class="gp-option gp-option-sm" id="fpb-reset" data-fpbform="${escapeHtml(fid)}">Reset ${escapeHtml(fid)} to the global sheet</button></div>` : ""}
+  Slide a play here and the change applies only to snaps out of ${escapeHtml(fid)}; anything you don't touch
+  <b>uses your base playbook</b>. 0 is still a cut — benched here means never called from this formation.
+  ${nAuthored ? `<b>${nAuthored} play${nAuthored === 1 ? "" : "s"} set here.</b>` : "Nothing set yet — this formation runs your base playbook."}</div>
+  ${nAuthored ? `<div class="gp-row"><button class="gp-option gp-option-sm" id="fpb-reset" data-fpbform="${escapeHtml(fid)}">Reset ${escapeHtml(fid)} to your base playbook</button></div>` : ""}
   ${groups.map(([title, list], gi) => {
     const eff = (nm) => { var _b; return (_b = sheet[nm] != null ? sheet[nm] : global[nm]) != null ? _b : 50; };
     const gTot = list.reduce((t, [nm]) => t + eff(nm), 0) || 1;
@@ -2761,7 +2966,7 @@ function renderFormationPlaybook(gp, fid) {
         return `
         <div class="cw-row">
           <div class="cw-name">${escapeHtml(name)} <span class="cw-hint">${conceptHint(name, c)}</span>
-            ${authored ? `<button class="cw-offsheet" data-fpbclear="${escapeHtml(name)}" data-fpbform="${escapeHtml(fid)}" title="Authored for ${escapeHtml(fid)} — tap to go back to inheriting the global weight">set here · tap to inherit</button>` : ""}
+            ${authored ? `<button class="cw-offsheet" data-fpbclear="${escapeHtml(name)}" data-fpbform="${escapeHtml(fid)}" title="Set for ${escapeHtml(fid)} — tap to go back to your base playbook">set here · tap to reset</button>` : ""}
           </div>
           <div class="gp-slider-wrap">
             <span class="gp-slider-lo">bench</span>
@@ -2798,7 +3003,7 @@ function renderPlaybookGroups(gp, opts = null) {
   return `
   ${opts ? "" : `<div class="gp-row"><button class="gp-option gp-option-sm" id="cw-reset">Reset to an even call sheet</button></div>
   <div class="cw-explain">Weights set the mix inside each group — and <b>0 is a cut, not a low number</b>: a benched
-  play is out of the install and will never be called; the sheet renormalizes around what's left. A play also only
+  play is out of the game plan and will never be called; the sheet re-balances around what's left. A play also only
   lives in the formations that carry it — drop every formation that runs it from your package and it comes off the
   sheet no matter where the slider sits.</div>`}
   ${groups.map(([title, subT, list], gi) => {
@@ -2881,24 +3086,24 @@ COV_OPTIONS = [["balanced", "Balanced"], ["lockTop", "Lock WR1"], ["bracketTop",
 ALL_FORMATIONS = Object.keys(FORMATIONS);
 DEF_FRONTS2 = ["4-3", "3-4", "Tite", "Nickel", "Big Nickel", "3-3-5", "4-4"];
 DEF_FRONT_DESCS = {
-  "4-3": "4 DL \xB7 3 LB \xB7 4 DB \u2014 balanced base, auto-subs to Nickel/Dime/46/5-2",
-  "3-4": "3 DL \xB7 4 LB \xB7 4 DB \u2014 versatile, blitz-friendly, auto-subs by situation",
-  "Nickel": "4 DL \xB7 2 LB \xB7 5 DB \u2014 the 4-2-5: spread-first base with a true nickelback, auto-subs heavy vs power",
-  "3-3-5": "3 DL \xB7 3 LB \xB7 5 DB \u2014 the odd stack: five DBs and stacked backers, disguise-first",
-  "Tite": "3 DL \xB7 4 LB \xB7 4 DB \u2014 4i-0-4i odd front: B-gaps closed by alignment, backers run free",
-  "4-4": "4 DL \xB7 4 LB \xB7 3 DB \u2014 the eight-man front: SPUR/BANDIT outside, one deep safety",
-  "Big Nickel": "4 DL \xB7 2 LB \xB7 5 DB \u2014 nickel with a ROVER (3rd safety) instead of a slot corner",
-  "Penny": "5 on the LOS \xB7 1 LB \xB7 5 DB \u2014 the light-box spread-run answer"
+  "4-3": "4 DL \xB7 3 LB \xB7 4 DB \u2014 the balanced base; auto-subs to nickel/dime on passing downs and heavy fronts in short yardage",
+  "3-4": "3 DL \xB7 4 LB \xB7 4 DB \u2014 an extra linebacker for a lineman: versatile, easy to disguise the blitz, subs by situation",
+  "Nickel": "4 DL \xB7 2 LB \xB7 5 DB \u2014 a fifth defensive back in for a linebacker: the spread-first base, subs heavier against power",
+  "3-3-5": "3 DL \xB7 3 LB \xB7 5 DB \u2014 five defensive backs behind stacked linebackers: built to disguise where the pressure comes from",
+  "Tite": "3 DL \xB7 4 LB \xB7 4 DB \u2014 the three linemen clog the inside gaps by alignment so the linebackers can run free to the ball",
+  "4-4": "4 DL \xB7 4 LB \xB7 3 DB \u2014 eight in the box: a heavy run front with a single safety deep",
+  "Big Nickel": "4 DL \xB7 2 LB \xB7 5 DB \u2014 nickel with a third safety instead of a slot corner: bigger, better against tight ends",
+  "Penny": "5 on the line \xB7 1 LB \xB7 5 DB \u2014 a light, spread-out front built to match spread-run teams"
 };
 DEF_FRONT_NEEDS = {
-  "4-3": "Wants 3-tech DTs, pass-rush DEs, a thumper MLB and rangy cover LBs.",
-  "3-4": "Wants a two-gap nose tackle, edge-rush OLBs and downhill inside LBs.",
-  "Nickel": "Wants a true NICKEL corner (quick, tackles), rangy cover LBs and speed ends.",
-  "3-3-5": "Wants a two-gap nose, hybrid run-and-cover stack OLBs and a third safety who tackles like a backer.",
-  "Tite": "Wants two-gap 4i ends, a stout nose and rangy space-backers at JACK/JOKER.",
-  "4-4": "Wants downhill bodies at all four backer spots and one truly rangy free safety.",
-  "Big Nickel": "Wants a ROVER \u2014 a hybrid safety who covers TEs and tackles like a backer.",
-  "Penny": "Wants two stand-up EDGE rushers, a two-gap nose and a sideline-to-sideline MIKE."
+  "4-3": "Wants penetrating tackles, pass-rushing ends, a downhill middle linebacker and rangy cover linebackers.",
+  "3-4": "Wants a big two-way nose tackle, edge-rushing outside linebackers and downhill inside linebackers.",
+  "Nickel": "Wants a quick nickel corner who can tackle, rangy cover linebackers and speed off the edge.",
+  "3-3-5": "Wants a big nose tackle, hybrid run-and-cover linebackers and a third safety who tackles like a linebacker.",
+  "Tite": "Wants big two-way ends, a stout nose tackle and rangy stand-up linebackers on the edge.",
+  "4-4": "Wants downhill bodies at all four linebacker spots and one truly rangy deep safety.",
+  "Big Nickel": "Wants a hybrid safety who can cover tight ends and tackle like a linebacker.",
+  "Penny": "Wants two stand-up edge rushers, a stout nose tackle and a sideline-to-sideline middle linebacker."
 };
 SIMPLE_DIALS = [
   {
@@ -2941,4 +3146,4 @@ SIMPLE_SITS = [
   { key: "four_min_lead", label: "When Leading Late", cells: ["four_min_lead"] }
 ];
 
-export { gameplanIsSimple, renderGameplan, renderHalftimeAdjust, renderSituationsSection, setupListeners, wireDefaultsListeners, wireSituationListeners };
+export { BUILTIN_PLANS, applyPlanToSchool, builtinPlan, gameplanIsSimple, renderGameplan, renderHalftimeAdjust, renderSituationsSection, setupListeners, wireDefaultsListeners, wireSituationListeners };

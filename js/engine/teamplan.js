@@ -1,0 +1,281 @@
+// teamplan.js — Stage 1 of the Playbook-Root refactor.
+// (Ref/PLAYBOOK_ROOT_ARCHITECTURE.md, "The playbook as the root of the game".)
+//
+// The playbook is becoming the ROOT object of the game. Today every school's
+// play-calling lives in one flat bag — school.gameplan, ~40 sibling fields that
+// mix offense, defense and team-level knobs — authored by five different writers
+// (AI setAIGameplan, presets, the new-game wizard, pb:/dd: loads, the Game Plan
+// UI). This module introduces the named object model plus a SINGLE compile seam
+// without changing anything the sim reads:
+//
+//   school.book        — the OFFENSE snapshot: the looks, the call sheet and the
+//                        offensive dials, carrying a name + a source.
+//   school.defbook     — the DEFENSE snapshot: front / coverage / pressure
+//                        identity and the defensive dials, name + source.
+//   school.planOverlay — everything the two books don't own: the team-level
+//                        knobs (4th-down, FG range, tempo) and the situational
+//                        grid. This is the controller layer (formalized later).
+//
+// compileTeamPlan(school) reassembles those three parts into EXACTLY the flat
+// gameplan the sim consumes today. Stage 1's law is that the first compile is
+// byte-identical to the pre-refactor gameplan — proven in
+// tools/playbook_root_probe.mjs across real generated worlds, and guaranteed
+// here BY CONSTRUCTION: the partition only relocates fields (deep-cloned), never
+// transforms them, so no value can change — only move between the three bags and
+// back. Nothing in the sim, the UI, or the balance math changes at this stage;
+// later stages let the books actually govern (AI names its book, the Game Plan
+// becomes the controller, the play record and the animation learn the call).
+
+// ── The side manifest (Ref §4b: "one canonical SIDE MANIFEST") ───────────────
+// Every play field the sim / situations layer consumes, tagged with the side
+// that OWNS it: 'off' → the offensive book, 'def' → the defensive book, 'team' →
+// the overlay. This is the single source of truth the compiler and both books
+// read, replacing the four hand-maintained field lists that don't agree
+// (applyPlaybookToGameplan's, applyDefBookToGameplan's, app.js
+// PLAN_OFF_FIELDS/PLAN_DEF_FIELDS, the UI tab wiring). tools/plan_side_probe.mjs
+// walks it and fails if a field is double-sided or a known sim-consumed field is
+// missing. Byte safety does NOT depend on this list being exhaustive: any field
+// NOT listed here simply stays in the overlay, so the partition can never lose
+// an unanticipated field — the manifest only decides who OWNS a field, not
+// whether it survives.
+const PLAN_FIELD_SIDE = {
+  // ── OFFENSE — the book owns the looks, the sheet, and the offensive dials ──
+  offFormations: "off",
+  formationPlaybooks: "off",
+  tendency: "off",
+  passDepth: "off",
+  rushInPct: "off",
+  conceptWeights: "off",
+  rpoRate: "off",
+  gadgetRate: "off",
+  qbRunPct: "off",
+  optionRate: "off",
+  optionMix: "off",
+  pitchAggr: "off",
+  jetRate: "off",
+  drawRate: "off",
+  motionRate: "off",
+  qbAggr: "off",
+  protIdentity: "off",
+  protEmphasis: "off",
+  losFreedom: "off",
+  targetShares: "off",
+  // ── DEFENSE — the defbook owns front / coverage / pressure identity + dials ─
+  defBaseFront: "def",
+  defFrontMix: "def",
+  defAggression: "def",
+  blitzPct: "def",
+  pressureIdentity: "def",
+  pressureSource: "def",
+  coverageScheme: "def",
+  covShell: "def",
+  covStyle: "def",
+  greenDog: "def",
+  spyQB: "def",
+  runCommit: "def",
+  edgePlay: "def",
+  optionKey: "def",
+  robberCall: "def",
+  zoneStyle: "def",
+  pressLevel: "def",
+  tackleStyle: "def",
+  subPhilosophy: "def",
+  bracketWho: "def",
+  defCalls: "def",
+  formChecks: "def",
+  // ── TEAM — stays in the overlay (the game plan is its controller) ──────────
+  fourthDown: "team",
+  maxFGDist: "team",
+  baseTempo: "team",
+  situations: "team"
+};
+
+const TEAMPLAN_SCHEMA_VERSION = 1;
+
+function _sideFields(side) {
+  const out = [];
+  for (const k in PLAN_FIELD_SIDE) {
+    if (PLAN_FIELD_SIDE[k] === side) out.push(k);
+  }
+  return out;
+}
+const OFF_FIELDS = _sideFields("off");
+const DEF_FIELDS = _sideFields("def");
+
+function _clone(v) {
+  return v === void 0 ? void 0 : JSON.parse(JSON.stringify(v));
+}
+// Pull the own, present fields in `fields` out of a gameplan (deep-cloned). A
+// field the gameplan doesn't carry is simply absent from the bag — so an absent
+// field stays absent through the round-trip (byte-identical for sparse plans).
+function _extract(gameplan, fields) {
+  const bag = {};
+  for (const f of fields) {
+    if (Object.prototype.hasOwnProperty.call(gameplan, f)) bag[f] = _clone(gameplan[f]);
+  }
+  return bag;
+}
+
+// Split a flat gameplan into { book, defbook, overlay }. Lossless: the overlay
+// takes a deep copy of every field the manifest does NOT hand to a book; the
+// books take deep copies of the fields they own. Union of the three = the input.
+function splitTeamPlan(gameplan, opts = {}) {
+  const gp = gameplan || {};
+  const overlay = {};
+  for (const k in gp) {
+    if (!Object.prototype.hasOwnProperty.call(gp, k)) continue;
+    const side = PLAN_FIELD_SIDE[k];
+    if (side === "off" || side === "def") continue; // owned by a book
+    overlay[k] = _clone(gp[k]);
+  }
+  const schoolName = opts.schoolName ? String(opts.schoolName) : null;
+  const book = {
+    schemaVersion: TEAMPLAN_SCHEMA_VERSION,
+    name: opts.offName || gp._playbookName || (schoolName ? `${schoolName} Offense` : "Offense"),
+    source: opts.source || "staff",
+    plan: _extract(gp, OFF_FIELDS)
+  };
+  const defbook = {
+    schemaVersion: TEAMPLAN_SCHEMA_VERSION,
+    name: opts.defName || gp._defbookName || (schoolName ? `${schoolName} Defense` : "Defense"),
+    source: opts.source || "staff",
+    plan: _extract(gp, DEF_FIELDS)
+  };
+  return { book, defbook, overlay };
+}
+
+// Reassemble { book, defbook, overlay } → the flat gameplan the sim reads.
+// Overlay first (the team + unowned fields), then the offensive book's fields,
+// then the defensive book's — a book field always wins over a stale overlay copy
+// of the same field, which is what makes a book the authority for its side.
+function compilePlanParts(book, defbook, overlay) {
+  const gp = {};
+  const ov = overlay || {};
+  for (const k in ov) {
+    if (Object.prototype.hasOwnProperty.call(ov, k)) gp[k] = _clone(ov[k]);
+  }
+  const bplan = (book && book.plan) || {};
+  for (const k in bplan) {
+    if (Object.prototype.hasOwnProperty.call(bplan, k)) gp[k] = _clone(bplan[k]);
+  }
+  const dplan = (defbook && defbook.plan) || {};
+  for (const k in dplan) {
+    if (Object.prototype.hasOwnProperty.call(dplan, k)) gp[k] = _clone(dplan[k]);
+  }
+  // Stage 4 (minimal defCalls→defbook.calls seam): the target model gives the
+  // defensive book a first-class `calls` home (Ref §2). Today the calls still
+  // ride the manifest as plan.defCalls (so every Stage-1 byte-identity proof
+  // holds unchanged); a defbook that DOES carry a top-level `calls` — the
+  // Stage-3 migration, or a future authored book — compiles it into the flat
+  // gameplan.defCalls the sim reads. plan.defCalls wins when both exist (it is
+  // the snapshot the round-trip law covers). Byte-neutral for every book that
+  // exists today.
+  if (defbook && defbook.calls && !Object.prototype.hasOwnProperty.call(dplan, "defCalls")) {
+    gp.defCalls = _clone(defbook.calls);
+  }
+  return gp;
+}
+
+// The one compile seam. A school carrying the named parts compiles from them;
+// a school that has not been synthesized yet compiles to its current gameplan
+// (so a caller can always ask for "the plan the sim would read").
+function compileTeamPlan(school) {
+  if (!school) return {};
+  if (school.book || school.defbook || school.planOverlay) {
+    return compilePlanParts(school.book, school.defbook, school.planOverlay);
+  }
+  return _clone(school.gameplan || {}) || {};
+}
+
+// Attach the named object model to a school by splitting its current gameplan.
+// Stage-1 zero-risk law: the school's gameplan OBJECT is left in place (the sim
+// keeps reading exactly what it read before, key order and all); the books and
+// overlay are the equivalent named view, and compileTeamPlan(school) deep-equals
+// school.gameplan by construction. Later stages flip the source of truth to the
+// parts. Idempotent: a school that already carries a book is left untouched
+// unless `force` is set (a re-sync after a writer rewrote the gameplan).
+function synthesizeTeamPlan(school, opts = {}) {
+  if (!school) return school;
+  if (school.book && !opts.force) return school;
+  const gp = school.gameplan || {};
+  const parts = splitTeamPlan(gp, {
+    schoolName: opts.schoolName || school.name || null,
+    source: opts.source,
+    offName: opts.offName,
+    defName: opts.defName
+  });
+  school.book = parts.book;
+  school.defbook = parts.defbook;
+  school.planOverlay = parts.overlay;
+  return school;
+}
+
+// Synthesize every school in a world (new-game finalize + synthesis-on-load).
+function synthesizeLeaguePlans(world, opts = {}) {
+  const schools = world && world.schools;
+  if (!Array.isArray(schools)) return 0;
+  let n = 0;
+  for (const s of schools) {
+    try {
+      synthesizeTeamPlan(s, opts);
+      n++;
+    } catch (e) {
+    }
+  }
+  return n;
+}
+
+// ── The two verbs the five writers collapse to (Ref §3) ──────────────────────
+// assignBook / assignDefBook swap a book; setOverlay patches the controller.
+// Each recompiles school.gameplan from the parts. These are the Stage-3 surface
+// (the Game Plan controller); Stage 1 only proves the round-trip through them.
+function assignBook(school, book) {
+  if (!school) return {};
+  if (!school.book && !school.planOverlay) synthesizeTeamPlan(school, { force: true });
+  if (book) school.book = _clone(book);
+  school.gameplan = compileTeamPlan(school);
+  return school.gameplan;
+}
+function assignDefBook(school, defbook) {
+  if (!school) return {};
+  if (!school.book && !school.planOverlay) synthesizeTeamPlan(school, { force: true });
+  if (defbook) school.defbook = _clone(defbook);
+  school.gameplan = compileTeamPlan(school);
+  return school.gameplan;
+}
+function setOverlay(school, patch) {
+  if (!school) return {};
+  if (!school.book && !school.planOverlay) synthesizeTeamPlan(school, { force: true });
+  school.planOverlay = Object.assign({}, school.planOverlay || {}, _clone(patch) || {});
+  school.gameplan = compileTeamPlan(school);
+  return school.gameplan;
+}
+
+// Stage 4: THE one read for "the defensive book's named calls" (the live
+// defensive headset's chips). Prefers the book's first-class home (calls — the
+// Stage-3 migration target), then the manifest snapshot the book already owns
+// (plan.defCalls), then the flat gameplan — so the headset genuinely reads the
+// BOOK while every pre-book save keeps working unchanged.
+function defBookCalls(school) {
+  if (!school) return null;
+  const db = school.defbook;
+  if (db && db.calls && Object.keys(db.calls).length) return db.calls;
+  if (db && db.plan && db.plan.defCalls && Object.keys(db.plan.defCalls).length) return db.plan.defCalls;
+  return (school.gameplan && school.gameplan.defCalls) || null;
+}
+
+export {
+  PLAN_FIELD_SIDE,
+  TEAMPLAN_SCHEMA_VERSION,
+  OFF_FIELDS,
+  DEF_FIELDS,
+  splitTeamPlan,
+  compilePlanParts,
+  compileTeamPlan,
+  synthesizeTeamPlan,
+  synthesizeLeaguePlans,
+  assignBook,
+  assignDefBook,
+  setOverlay,
+  defBookCalls
+};

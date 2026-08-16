@@ -1,5 +1,55 @@
 import { __spreadProps, __spreadValues } from '../_spread.js';
 
+// Act B / B1: presentation-only analysis of facts already stamped by the sim.
+// Raw trace values never reach the UI; the broadcast explains football without
+// exposing coefficients or recomputing an outcome.
+function buildBroadcastCommentary(p, names = {}) {
+  if (!p || typeof p !== "object") return { kicker: "FILM NOTE", title: "Awaiting the snap", detail: "" };
+  const type = String(p.type || "");
+  const tr = p.trace && typeof p.trace === "object" ? p.trace : {};
+  const player = (id, fallback) => id && names[id] && names[id].name ? names[id].name : fallback;
+  const concept = p.concept || (type.startsWith("pass") ? "The pass concept" : type.startsWith("run") ? "The run concept" : "The call");
+  if (p.sack) return {
+    kicker: "PASS RUSH",
+    title: `${player(p.sackerId || p.sackerId2, "The rush")} wins the pocket`,
+    detail: p.blitzFired ? "Extra pressure gets home before the route can develop." : "The front wins without needing an extra rusher."
+  };
+  if (type.startsWith("pass")) {
+    if (p.turnover && p.turnoverType === "interception") return {
+      kicker: tr.rob ? "ROBBER" : tr.dbl ? "BRACKET" : "COVERAGE",
+      title: tr.rob ? "The underneath help jumps the throwing lane" : tr.dbl ? "Two defenders squeeze the target" : "The defense closes the window",
+      detail: p.fooled && p.shownCoverage ? `The shell showed ${p.shownCoverage}, then changed after the snap.` : `${player(p.intPickerId, "The defender")} finishes the takeaway.`
+    };
+    if (p.fooled && p.shownCoverage) return {
+      kicker: "DISGUISE",
+      title: `${p.shownCoverage} was only the pre-snap picture`,
+      detail: `${p.coverage || "The coverage"} rotated in after the snap and changed the quarterback's read.`
+    };
+    if (tr.bust || tr.vd) return { kicker: "COVERAGE VOID", title: `${concept} finds the open grass`, detail: "The recorded coverage assignment leaves a window, and the offense attacks it." };
+    if (tr.dbl) return { kicker: "BRACKET", title: "The target draws help over the top", detail: p.complete ? "The throw still beats the squeeze." : "The bracket takes away the clean window." };
+    if (tr.rob) return { kicker: "ROBBER", title: "A safety drives underneath the route", detail: p.complete ? "The ball arrives before the help can finish the break." : "The extra defender muddies the throwing lane." };
+    if (p.pressure || p.hurry) return { kicker: "PRESSURE", title: "The quarterback has to speed up the clock", detail: p.complete ? "The throw survives a compressed pocket." : "The rush keeps the concept from finishing cleanly." };
+    if (p.complete) return {
+      kicker: (p.yac || 0) > 5 ? "AFTER THE CATCH" : "THROWING WINDOW",
+      title: (p.yac || 0) > 5 ? `${player(p.receiverId, "The receiver")} turns the catch into more` : `${concept} creates a clean answer`,
+      detail: tr.sep != null && tr.sep < 0.28 ? "The catch is secured through tight coverage." : "The route and timing create separation at the catch point."
+    };
+    return {
+      kicker: p.contested ? "CONTESTED" : "COVERAGE",
+      title: p.contested ? "The defender stays attached through the catch point" : "The window closes before the ball arrives",
+      detail: p.pbuId ? `${player(p.pbuId, "The cover man")} gets a hand through at the catch point.` : `${concept} does not find a clean finish.`
+    };
+  }
+  if (type.startsWith("run") || p.isScramble) {
+    const gap = p.runGap ? ` through the ${p.runGap}` : "";
+    if (p.brokenByCarrier || p.btStyle) return { kicker: "FINISH", title: `${player(p.rusherId, "The runner")} defeats first contact`, detail: `The run${gap} stays alive after the recorded missed tackle.` };
+    if ((p.yards || 0) <= 0) return { kicker: "RUN FIT", title: `The defense closes${gap || " the point of attack"}`, detail: "The front and pursuit arrive before the runner can press the crease." };
+    return { kicker: p.isScramble ? "SCRAMBLE" : "RUN DESIGN", title: `${concept}${gap} gets downhill`, detail: (p.yards || 0) >= 10 ? "The runner clears the first wave and reaches open field." : "The blocking surface gives the runner a crease." };
+  }
+  if (["punt", "fg", "pat", "kickoff"].includes(type)) return { kicker: "SPECIAL TEAMS", title: p.blocked ? "The protection breaks down" : p.made === false ? "The kick misses" : "The operation is clean", detail: p.blocked ? "The recorded block is shown at the point of contact." : "The viewer follows the recorded kick and result." };
+  return { kicker: "FILM NOTE", title: concept, detail: "The presentation follows the recorded play result." };
+}
+
 var STEP = 0.05;
 var LOS = 31;
 var YPU = 0.85;
@@ -28,6 +78,193 @@ function seeded(p) {
   return () => {
     s = s * 1664525 + 1013904223 >>> 0;
     return s / 4294967296;
+  };
+}
+
+// Viewer Act 2 / A1: choose body language from facts the film already owns.
+// These selectors never move an actor and never feed back into the sim. Keeping
+// them pure also makes the truth rules directly probeable without a browser.
+function selectDuelMove({ outcomeStyle = null, speed = 0, agility = 55, frontness = 0, lateralness = 0, bodyKind = "balanced", roll = 0.5 } = {}) {
+  const heavy = bodyKind === "power" || bodyKind === "massive";
+  if (outcomeStyle === "truck") return lateralness >= (heavy ? 0.68 : bodyKind === "lean" ? 0.4 : 0.48) ? "stiff" : "truck";
+  if (outcomeStyle !== "evade") return null;
+  // A hurdle needs a fast, athletic carrier meeting a defender squarely. It is
+  // deliberately rare; the viewer must not make ordinary cuts look airborne.
+  if (!heavy && speed >= 6.05 && agility >= 62 && frontness >= 0.52 && roll < 0.22) return "hurdle";
+  // Side contact creates the two evasive answers: spin through the near hip or
+  // fend the tackler away. Better agility leans spin; modest agility leans stiff.
+  if (lateralness >= 0.56) {
+    const bodySpin = bodyKind === "lean" ? 0.08 : bodyKind === "power" ? -0.06 : bodyKind === "massive" ? -0.12 : 0;
+    const spinGate = clamp6(0.42 + (agility - 55) * 0.012 + bodySpin, 0.26, 0.82);
+    return roll < spinGate ? "spin" : "stiff";
+  }
+  return "juke";
+}
+
+function selectTackleStyle({ nearGoal = false, speed = 0, openField = false, lateral = false, fromBehind = false, bodyKind = "balanced" } = {}) {
+  if (nearGoal) return "goalline";
+  if (speed > 5.4 && openField && lateral) return bodyKind === "power" || bodyKind === "massive" ? "big-hit" : "shoestring";
+  if (speed > 5.4 && openField) return "big-hit";
+  if (fromBehind && speed > 4.6) return "drag-down";
+  return "wrap";
+}
+
+function selectLandmarkMove({ runLike = false, touchdown = false, boundary = false, finishSpeed = 0, madeMarker = false, nearGoal = false } = {}) {
+  if (!runLike) return null;
+  if (touchdown && boundary && finishSpeed >= 3.8) return "pylon-dive";
+  if (!touchdown && boundary && madeMarker && finishSpeed >= 4.4) return "marker-dive";
+  if (touchdown && nearGoal) return "dive";
+  return null;
+}
+
+// Viewer Act 2 / A2: the throw, catch and trench vocabulary is selected from
+// geometry the film already owns. These labels are presentation-only; tracks,
+// ball ownership and the recorded result remain the authority.
+function selectCatchStyle({ kind = "catch", boundaryDistance = 50, reachDistance = 0, highArrival = false, lowArrival = false, contested = false, bodyKind = "balanced", roll = 0.5 } = {}) {
+  if (kind === "int") return "pick";
+  if (kind === "inc") return "breakup";
+  if (boundaryDistance <= 11) return "toe-tap";
+  if (contested) return "battle";
+  if (highArrival) return "high-point";
+  const oneHandGate = bodyKind === "lean" ? 0.11 : bodyKind === "massive" ? 0.03 : 0.08;
+  if (!lowArrival && reachDistance >= 1.05 && reachDistance <= 2.8 && roll < oneHandGate) return "one-hand";
+  if (lowArrival || reachDistance > 2.15) return "layout";
+  return "secure";
+}
+
+function selectThrowStyle({ moving = false, rollout = false, hurried = false, reset = false, playAction = false, roll = 0.5 } = {}) {
+  if (moving && hurried) return "off-platform";
+  if (moving && (rollout || reset)) return roll < 0.62 ? "sidearm" : "on-run";
+  if (hurried || reset) return "off-platform";
+  if (playAction) return "pa-carry";
+  return "set";
+}
+
+function selectTrenchStyle({ pass = true, move = null, edge = false } = {}) {
+  if (!pass) return { family: "run", blocker: "drive", rusher: "fit" };
+  if (edge || move === "bend" || move === "rip") return { family: "edge", blocker: "kick-slide", rusher: "speed" };
+  if (move === "bull") return { family: "power", blocker: "anchor", rusher: "bull" };
+  return { family: "counter", blocker: "redirect", rusher: "counter" };
+}
+
+function selectSecondaryMotion({ speed = 0, accel = 0, lateralSpeed = 0, locomotion = "still", carrier = false, pursuitDx = 0, pursuitDistance = Infinity } = {}) {
+  const moving = locomotion !== "still" && speed >= 0.9;
+  const gather = moving && (locomotion === "plant" || locomotion === "brake" || accel <= -5.5);
+  const sprint = moving && speed >= 5.35;
+  const headSide = carrier && speed >= 3 && pursuitDistance >= 2.2 && pursuitDistance <= 14 && Math.abs(pursuitDx) >= 0.65 ? pursuitDx < 0 ? "left" : "right" : null;
+  return {
+    weighted: moving,
+    gather,
+    sprint,
+    headSide,
+    shadowScale: Math.round(clamp6(1 + speed * 0.035, 1, 1.28) * 100) / 100,
+    shadowOpacity: Math.round(clamp6(0.72 + speed * 0.025, 0.72, 0.92) * 100) / 100,
+    shadowSkew: Math.round(clamp6(lateralSpeed * 1.4, -9, 9) * 2) / 2
+  };
+}
+
+// Viewer Act 2 / A5: turn the roster's real frame into bounded puppet
+// proportions and motion cadence. Missing stamps stay exactly on the legacy
+// silhouette so old recordings degrade gracefully.
+function selectBodyExpression({ heightInches = null, weight = null, group = "" } = {}) {
+  const stamped = Number.isFinite(heightInches) || Number.isFinite(weight);
+  if (!stamped) return { kind: "legacy", scaleX: 1, scaleY: 1, stride: 0.85, leanScale: 1 };
+  const line = /^(OL|DL|DT|NT|C|G|T)$/.test(String(group).toUpperCase());
+  const h = clamp6(Number.isFinite(heightInches) ? heightInches : line ? 75 : 72, 65, 82);
+  const w = clamp6(Number.isFinite(weight) ? weight : line ? 300 : 210, 155, 390);
+  const density = w / (h * h) * 703;
+  const kind = density >= 37 ? "massive" : density >= 32 ? "power" : density < 27 ? "lean" : "balanced";
+  const widthBase = kind === "massive" ? 1.14 : kind === "power" ? 1.07 : kind === "lean" ? 0.94 : 1;
+  return {
+    kind,
+    scaleX: Math.round(clamp6(widthBase + (w - (line ? 290 : 215)) * 2e-4, 0.9, 1.18) * 100) / 100,
+    scaleY: Math.round(clamp6(1 + (h - 73) * 0.012, 0.92, 1.1) * 100) / 100,
+    stride: Math.round(clamp6(0.78 + (h - 68) * 0.025 + (w - 190) * 6e-4, 0.76, 1.08) * 100) / 100,
+    leanScale: kind === "massive" ? 0.72 : kind === "power" ? 0.86 : kind === "lean" ? 1.12 : 1
+  };
+}
+
+function buildArmSwitchPresentation(p, carryCue, dur) {
+  const stamp = p && p.armSwitch;
+  if (!stamp || !carryCue || stamp.slot !== carryCue.id || stamp.from === stamp.to) return null;
+  if (!["left", "right"].includes(stamp.from) || !["left", "right"].includes(stamp.to)) return null;
+  const f = clamp6(Number.isFinite(stamp.f) ? stamp.f : 0.44, 0.25, 0.72);
+  const liveEnd = Math.max(carryCue.from + 0.36, dur - LINGER * 0.55);
+  const at = carryCue.from + (liveEnd - carryCue.from) * f;
+  return { id: carryCue.id, from: stamp.from, to: stamp.to, t: at, end: Math.min(liveEnd, at + 0.28) };
+}
+
+function visualRoll(p, salt = 0) {
+  return seeded(__spreadProps(__spreadValues({}, p), { clock: (p.clock || 0) + salt * 977 }))();
+}
+
+function buildCatchPresentation(actors, fx, p, step, resolvedOwnerId = null) {
+  const cf = (fx || []).find((f) => f.kind === "catch" || f.kind === "inc" || f.kind === "int");
+  if (!cf) return null;
+  const fi = Math.max(0, Math.round(cf.t / step));
+  const wantDef = cf.kind === "int";
+  let best = null, bd = Infinity;
+  const stampedSlot = resolvedOwnerId || (wantDef ? p.ballSlots && p.ballSlots.pick : p.targetSlotId);
+  if (stampedSlot) {
+    const stamped = actors.find((a) => a.id === stampedSlot || a.slot && a.slot.id === stampedSlot) || null;
+    if (stamped && (wantDef ? stamped.team === "def" : stamped.team === "off")) best = stamped;
+  }
+  // Legacy recordings may not carry the target/pick stamp. Proximity remains
+  // their fallback, but a stamped owner always wins over a nearby route runner.
+  if (!best) for (const a of actors) {
+      const isDef = a.team === "def";
+      if (wantDef ? !isDef : isDef) continue;
+      if (!wantDef && a.slot && a.slot.pos === "OL") continue;
+      const tr = a.track[Math.min(fi, a.track.length - 1)];
+      if (!tr) continue;
+      const dd = (tr[0] - cf.x) ** 2 + (tr[1] - cf.y) ** 2;
+      if (dd < bd) { bd = dd; best = a; }
+  }
+  if (!best) return null;
+
+  const prev = best.track[Math.max(0, fi - 5)] || best.track[Math.max(0, fi - 1)];
+  const reachDistance = prev ? Math.hypot(prev[0] - cf.x, prev[1] - cf.y) : 0;
+  const boundaryDistance = Math.min(cf.x, 100 - cf.x);
+  let contest = null, contestD = Infinity;
+  for (const a of actors) {
+    if (a.team === best.team || a.slot && a.slot.pos === "OL") continue;
+    const tr = a.track[Math.min(fi, a.track.length - 1)];
+    if (!tr) continue;
+    const dd = (tr[0] - cf.x) ** 2 + (tr[1] - cf.y) ** 2;
+    if (dd < contestD) { contestD = dd; contest = a; }
+  }
+  const contested = !!contest && (p.contested === true || contestD < 30);
+  const highArrival = p.type === "pass_deep" || cf.kind === "int" || p.contested === true;
+  const lowArrival = p.type === "pass_short" || Math.max(0, (LOS - cf.y) / YPU) < 3;
+  const style = selectCatchStyle({
+    kind: cf.kind,
+    boundaryDistance,
+    reachDistance,
+    highArrival,
+    lowArrival,
+    contested,
+    bodyKind: best.body ? best.body.kind : "legacy",
+    roll: visualRoll(p, 2)
+  });
+  const classes = ["wp-catch-style-" + style];
+  if (style === "toe-tap") classes.push("wp-catch-toetap");
+  if (style === "layout") classes.push("wp-catch-low", "wp-catch-extend", "wp-catch-layout");
+  if (style === "high-point") classes.push("wp-catch-hi", "wp-catch-highpoint");
+  if (style === "one-hand") classes.push("wp-catch-extend", "wp-catch-onehand");
+  if (style === "battle") classes.push("wp-catch-contested", "wp-catch-battle");
+  if (style === "breakup") classes.push("wp-catch-breakup");
+  if (style === "pick") classes.push("wp-catch-hi", "wp-catch-pick");
+  if (contested && !classes.includes("wp-catch-contested")) classes.push("wp-catch-contested");
+  return {
+    id: best.id,
+    contestId: contested ? contest.id : null,
+    breakup: cf.kind === "inc",
+    style,
+    classes,
+    impact: cf.t,
+    start: cf.t - 0.24,
+    end: cf.t + (cf.kind === "inc" ? 0.22 : 0.36),
+    basis: { kind: cf.kind, boundaryDistance, reachDistance, highArrival, lowArrival, contested }
   };
 }
 function makeActor(id, team, label, x, y, speed, opts = {}) {
@@ -175,7 +412,8 @@ var SHAPES = {
   bubble: [{ d: -0.5, w: -3 }, { d: -1, w: -7 }],
   // slot arcs flat/back to the boundary
   tunnel: [{ d: 2, w: 0 }, { d: 1, w: 6 }, { d: 0.5, w: 12 }],
-  // jab up, then back INSIDE
+  // sell the jet/outside release, then disappear behind the line to the wall
+  slip: [{ d: 1.8, w: -1.5 }, { d: 0.4, w: 4.5 }, { d: -0.8, w: 11 }],
   // fade — a back-shoulder route. Short/med version (red-zone) and the deep
   // version (four verts outside) both use this shape scaled by depth.
   fade: [{ d: 4, w: 0 }, { d: 9, w: -3 }, { d: 14, w: -6 }],
@@ -226,6 +464,14 @@ var DBL_SHAPE = {
 function routeWaypoints(shape, x0, y0, mid) {
   return (SHAPES[shape] || SHAPES.hitch).map((wp) => [clamp6(x0 + wp.w * mid, 2, 98), clamp6(y0 - wp.d * YPU, 2.5, 59)]);
 }
+// Stage 6 (Playbook-Root): the composer's route-part vocabulary
+// (playcompose ROUTE_PARTS + the card's fill/screen ids) → the viewer's SHAPES,
+// so an authored part animates as its own recognizable route.
+var COMPOSED_SHAPE = {
+  go: "go", post: "post", corner: "corner", dig: "dig", out: "out",
+  curl: "curl", slant: "slant", drag: "cross", flat: "flat", wheel: "wheel",
+  screen: "slip", checkdown: "stick", bubble: "bubble", tunnel: "tunnel"
+};
 function waypointBehavior(wps, speed, startT = 0) {
   const turn = wps.map((w, i2) => {
     if (i2 === 0 || i2 === wps.length - 1) return 0;
@@ -314,10 +560,13 @@ function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
     const m = (_b = p.offSpd) == null ? void 0 : _b[s.id];
     A[s.id] = makeActor(s.id, "off", s.label, s.bx, s.by, base * spdFactor(m), { qb: s.id === "QB", accel: ACCEL * agiFactor(m), linAccel: LIN_ACCEL * agiFactor(m) });
     A[s.id].slot = s;
+    A[s.id].body = selectBodyExpression({ heightInches: m == null ? void 0 : m.h, weight: m == null ? void 0 : m.w, group: s.pos });
   }
   if (!A.QB) {
     A.QB = makeActor("QB", "off", qbSlot.label || "QB", qbSlot.bx, qbSlot.by, (_d = (_c = SPD.QB) != null ? _c : SPD.RB) != null ? _d : 5.5, { qb: true });
     A.QB.slot = qbSlot;
+    const qm = p.offSpd && p.offSpd.QB;
+    A.QB.body = selectBodyExpression({ heightInches: qm == null ? void 0 : qm.h, weight: qm == null ? void 0 : qm.w, group: "QB" });
   }
   const D = {};
   for (const s of def) {
@@ -326,6 +575,7 @@ function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
     D[s.id] = makeActor("D_" + s.id, "def", s.label, s.bx, s.by, SPD[grp] * spdFactor(m), { accel: ACCEL * agiFactor(m), linAccel: LIN_ACCEL * agiFactor(m) });
     D[s.id].slot = s;
     D[s.id].grp = grp;
+    D[s.id].body = selectBodyExpression({ heightInches: m == null ? void 0 : m.h, weight: m == null ? void 0 : m.w, group: s.pos });
   }
   const defs = Object.values(D), offs = Object.values(A);
   const fx = [];
@@ -339,13 +589,29 @@ function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
   let pressCue = null, pumpCue = null, celebrateCue = null, qbCue = null;
   let _penWhistle = null;
   const missCues = [];
-  const pickMove = () => {
-    if (p.btStyle === "truck") return "truck";
-    if (p.btStyle === "evade") {
-      const r = rnd();
-      return r < 0.36 ? "juke" : r < 0.64 ? "spin" : r < 0.85 ? "stiff" : "hurdle";
+  const pickMove = (carrier2, break2) => {
+    if (p.btStyle === "truck" || p.btStyle === "evade") {
+      const i = break2 ? Math.round(break2.t / STEP) : Math.max(2, Math.round(((endInfo == null ? void 0 : endInfo.at) || PRESNAP + 1) * 0.6 / STEP));
+      const tr = carrier2 == null ? void 0 : carrier2.track;
+      const c0 = tr == null ? void 0 : tr[Math.max(0, Math.min(i - 3, tr.length - 1))];
+      const c1 = tr == null ? void 0 : tr[Math.max(0, Math.min(i, tr.length - 1))];
+      const dA = break2 ? everyone.find((a2) => a2.id === break2.id) : null;
+      const d1 = dA == null ? void 0 : dA.track[Math.max(0, Math.min(i, dA.track.length - 1))];
+      const vx = c0 && c1 ? c1[0] - c0[0] : 0, vy = c0 && c1 ? c1[1] - c0[1] : -1;
+      const rx = c1 && d1 ? d1[0] - c1[0] : 0, ry = c1 && d1 ? d1[1] - c1[1] : -1;
+      const vm = Math.hypot(vx, vy) || 1, rm = Math.hypot(rx, ry) || 1;
+      const frontness = clamp6((vx * rx + vy * ry) / (vm * rm), -1, 1);
+      const lateralness = clamp6(Math.abs(vx * ry - vy * rx) / (vm * rm), 0, 1);
+      const speed = vm / (STEP * 3);
+      const agility = (((p.offSpd || {})[carrier2 == null ? void 0 : carrier2.id] || {}).a) || 55;
+      const roll = rnd();
+      const bodyKind = (carrier2 == null ? void 0 : carrier2.body) ? carrier2.body.kind : "legacy";
+      return {
+        style: selectDuelMove({ outcomeStyle: p.btStyle, speed, agility, frontness, lateralness, bodyKind, roll }),
+        basis: { speed, agility, frontness, lateralness, bodyKind }
+      };
     }
-    if (p.breakaway && (p.yards || 0) >= 18) return "recover";
+    if (p.breakaway && (p.yards || 0) >= 18) return { style: "recover", basis: null };
     return null;
   };
   const PRESNAP = p.optionPhase === "jet" ? 0.95 : 0.55;
@@ -417,6 +683,7 @@ function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
       d._mate = o;
       d._push = push;
       const cyAt = (t2) => cy + Math.min(2.4, Math.max(0, t2 - PRESNAP) * push);
+      const trench = selectTrenchStyle({ pass: true, move, edge: isEdge });
       if (win) {
         d.behave = (t2) => {
           if (t2 < PRESNAP) return null;
@@ -425,10 +692,10 @@ function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
             return [cx + edge2 * 2.8, LOS + 1.2, p.sack ? 8.8 : 7.2];
           return p.sack ? [A.QB.x, A.QB.y + 0.4, 8.8] : [A.QB.x + edge2 * 3.4, A.QB.y + 1.2, 6.8];
         };
-        rushCues.push({ id: d.id, move, t: shedT, blockerId: o ? o.id : null, win: true });
+        rushCues.push({ id: d.id, move, t: shedT, blockerId: o ? o.id : null, win: true, family: trench.family, blockerStyle: trench.blocker, rusherStyle: trench.rusher });
       } else {
         d.behave = (t2) => t2 < PRESNAP ? null : [move === "counter" && t2 < PRESNAP + 0.4 ? jabX : cx + jig, cyAt(t2), 3];
-        rushCues.push({ id: d.id, move, t: PRESNAP + 0.22, blockerId: o ? o.id : null, win: false });
+        rushCues.push({ id: d.id, move, t: PRESNAP + 0.22, blockerId: o ? o.id : null, win: false, family: trench.family, blockerStyle: trench.blocker, rusherStyle: trench.rusher });
       }
     });
     ols.forEach((o) => {
@@ -620,7 +887,7 @@ function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
     // target is a bubble/tunnel. (Old code compared slot ids to a roster player id
     // — always false — so organic RB screens all animated as WR bubbles.)
     const _traceIsBack = _traceTgt ? backs.includes(_traceTgt) : null;
-    const screenKind = !screen ? null : _traceTgt ? (_traceIsBack ? "rb" : /Tunnel/i.test(_cn) ? "tunnel" : "bubble") : /Bubble/i.test(_cn) ? "bubble" : /Tunnel/i.test(_cn) ? "tunnel" : /RB Screen/i.test(_cn) ? "rb" : backs.length && !catchers.length ? "rb" : backs.some((b) => String(b.id) === String(p.targetSlotId || "")) ? "rb" : "bubble";
+    const screenKind = !screen ? null : _traceTgt ? (_traceIsBack ? "rb" : /Tunnel/i.test(_cn) ? "tunnel" : /Slip/i.test(_cn) ? "slip" : "bubble") : /Bubble/i.test(_cn) ? "bubble" : /Tunnel/i.test(_cn) ? "tunnel" : /Slip/i.test(_cn) ? "slip" : /RB Screen/i.test(_cn) ? "rb" : backs.length && !catchers.length ? "rb" : backs.some((b) => String(b.id) === String(p.targetSlotId || "")) ? "rb" : "bubble";
     const _slotish = catchers.filter((s) => s.pos === "SLOT");
     const _outside = [...catchers].sort((a, b) => Math.abs(b.bx - 50) - Math.abs(a.bx - 50));
     const _fadeConcept = /Red-Zone Fade/i.test(_cn);
@@ -629,14 +896,24 @@ function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
     const air = screen ? -1.5 : p.complete && !p.turnover ? clamp6(((_h = p.yards) != null ? _h : 2) * 0.6, 2, typAir) : typAir;
     const _tbx = (_i = tgtSlot == null ? void 0 : tgtSlot.bx) != null ? _i : 50;
     const _toBoundary = _tbx <= 50 ? -1 : 1;
-    const catchPt = !screen ? [clamp6(((_j = tgtSlot == null ? void 0 : tgtSlot.bx) != null ? _j : side) + (rnd() - 0.5) * 3, 4, 96), clamp6(LOS - air * YPU, 3, 40)] : screenKind === "tunnel" ? [clamp6(_tbx - _toBoundary * 10, 12, 88), LOS - 0.3] : screenKind === "rb" ? [clamp6(_tbx + (_tbx <= 50 ? -9 : 9), 6, 94), LOS + 1.8] : [clamp6(_tbx + _toBoundary * 6, 4, 96), LOS + 1.2];
+    const catchPt = !screen ? [clamp6(((_j = tgtSlot == null ? void 0 : tgtSlot.bx) != null ? _j : side) + (rnd() - 0.5) * 3, 4, 96), clamp6(LOS - air * YPU, 3, 40)] : screenKind === "tunnel" ? [clamp6(_tbx - _toBoundary * 10, 12, 88), LOS - 0.3] : screenKind === "rb" ? [clamp6(_tbx + (_tbx <= 50 ? -9 : 9), 6, 94), LOS + 1.8] : screenKind === "slip" ? [clamp6(_tbx - _toBoundary * 8, 6, 94), LOS + 0.8] : [clamp6(_tbx + _toBoundary * 6, 4, 96), LOS + 1.2];
     if (_throwAway) {
       // A thrown-away ball sails out toward the boundary — not to a receiver, and
       // nobody catches it. (Fix B: a heads-up QB dumps a covered ball to save the sack.)
       catchPt[0] = rnd() < 0.5 ? 7 : 93;
       catchPt[1] = clamp6(LOS - 5 * YPU, 3, 40);
     }
-    const _screenDelay = screenKind === "bubble" ? 0.15 : screenKind === "tunnel" ? 0.55 : 0.62;
+    // playtest item 9b — the catch point's downfield floor was a fixed y=3, blind
+    // to where the play actually is. Near the goal line the back of the end zone
+    // sits well above 3, so a deep ball (a pick especially, whose depth is the
+    // fixed typical air distance) landed past the end line, in the stands, and the
+    // interceptor's return then started from outside the field. Pull the catch
+    // point up to the real back-of-end-zone board line for this field position.
+    if (p.fieldPos != null && !screen) {
+      const _backEZY = LOS - (100 - p.fieldPos) * YPU - 10 * YPU;
+      if (catchPt[1] < _backEZY) catchPt[1] = _backEZY;
+    }
+    const _screenDelay = screenKind === "bubble" ? 0.15 : screenKind === "tunnel" ? 0.55 : screenKind === "slip" ? 0.5 : 0.62;
     const _catchDepthYds = Math.max(0, (LOS - catchPt[1]) / YPU);
     const _routeBreak = SNAP_END + clamp6(0.45 + _catchDepthYds / (SPD.WR * 1.4), 0.5, 2.1) + (p.playAction ? 0.3 : 0);
     const _pocketBreakdown = SNAP_END + (p.hurried ? clamp6(1.15 - (((_k = p.pressureIds) == null ? void 0 : _k.length) || 1) * 0.12, 0.6, 1.15) : 2.4);
@@ -661,7 +938,11 @@ function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
     // codebase ever read it, so a QB driven off his spot rendered as a textbook
     // pocket dropback. Give him a lateral escape; the release point below accounts
     // for it, so the flight is solved from where he ACTUALLY lets it go.
-    const _flushX = p.isScrambleThrow && !screen ? (rnd() < 0.5 ? -1 : 1) * clamp6(3 + rnd() * 3, 3, 6) : 0;
+    // [Creativity Tools MECHANIC] a designed bootleg rolls the QB toward the flood
+    // side (a bigger, one-way move than a scramble flush); a scramble stays random.
+    const _isBoot = !screen && /Boot/i.test(_cn);
+    const _bootDir = _tbx >= 50 ? 1 : -1;
+    const _flushX = _isBoot ? _bootDir * clamp6(5 + rnd() * 2, 5, 7) : p.isScrambleThrow && !screen ? (rnd() < 0.5 ? -1 : 1) * clamp6(3 + rnd() * 3, 3, 6) : 0;
     // The launch point, PREDICTED. This used to be solved from qbSlot — the QB's
     // pre-snap alignment — while the ball actually left his hand from the top of
     // the drop, several units away. The flight time (and the M21 speed floor that
@@ -674,7 +955,15 @@ function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
     // smear the pre-snap frames backward.
     const flight = Math.max(clamp6(_flightDist / (28 * armF), 0.22, 1.05), _flightDist / 47);
     const tCatch = throwAt + flight;
-    throwCue = { start: Math.max(SNAP_END, throwAt - 0.34), release: throwAt, end: throwAt + 0.28, arm: (_l = p.qbArm) != null ? _l : null };
+    const _throwStyle = selectThrowStyle({
+      moving: Math.abs(_flushX) >= 2.5,
+      rollout: _isBoot,
+      hurried: !!p.hurried,
+      reset: !!p.isScrambleThrow && !_isBoot,
+      playAction: !!p.playAction,
+      roll: visualRoll(p, 3)
+    });
+    throwCue = { start: Math.max(SNAP_END, throwAt - 0.34), release: throwAt, end: throwAt + 0.28, arm: (_l = p.qbArm) != null ? _l : null, style: _throwStyle };
     if (p.hurried && !screen) pressCue = { start: Math.max(SNAP_END + 0.25, throwAt - 0.5), end: throwAt + 0.05 };
     if (!screen && t === "pass_deep" && throwAt - SNAP_END > 1.35 && rnd() < 0.4) {
       const pt2 = SNAP_END + (throwAt - SNAP_END) * 0.45;
@@ -698,24 +987,57 @@ function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
       releaseStart: throwCue.start,
       release: throwAt,
       releaseEnd: throwCue.end,
-      followEnd: Math.min(tCatch, throwAt + 0.48)
+      followEnd: Math.min(tCatch, throwAt + 0.48),
+      rollout: _isBoot,
+      rolloutDirection: _flushX < 0 ? "left" : _flushX > 0 ? "right" : null,
+      escape: !!p.isScrambleThrow && !_isBoot,
+      throwStyle: _throwStyle,
+      playActionCarry: !!p.playAction
     };
     A.QB.behave = (t2) => {
       if (t2 < PRESNAP) return null;
       if (t2 < SNAP_END) return [qbSlot.bx, qbSlot.by, 3];
       if (p.playAction && t2 < _dropStart) return [qbSlot.bx - 1.5, qbSlot.by + 1.2, 4];
+      if (_isBoot && t2 < throwAt) {
+        const u = clamp6((t2 - _dropStart) / Math.max(0.18, throwAt - _dropStart), 0, 1);
+        const ease = u * u * (3 - 2 * u);
+        return [
+          // Lead the desired launch point slightly so the arrival controller's
+          // natural braking lands ON the release spot instead of short of it.
+          qbSlot.bx + _flushX + Math.sign(_flushX) * 2.2,
+          qbSlot.by + (_setY - _hitchU - 0.7 - qbSlot.by) * ease,
+          clamp6(Math.abs(_flushX) / Math.max(0.35, throwAt - _dropStart) * 2, 7.5, 13)
+        ];
+      }
       if (t2 < _setT) return [qbSlot.bx, _setY, _bpSp];
       if (t2 < _plantT) return [qbSlot.bx, _setY - _hitchU, 2.4];
       if (t2 < throwAt) return [qbSlot.bx + _flushX, _setY - _hitchU - (p.hurried ? 1.8 : 0.7), _flushX ? 6.2 : p.hurried ? 4.6 : 3];
       return [qbSlot.bx + _flushX, _setY - _hitchU - 0.5, 1.8];
     };
     const shapes = CONCEPT_ROUTES[p.concept] || DEPTH_ROUTES[t] || DEPTH_ROUTES.pass_medium;
-    const screenShape = screenKind === "bubble" ? "bubble" : screenKind === "tunnel" ? "tunnel" : null;
+    const screenShape = screenKind === "bubble" ? "bubble" : screenKind === "tunnel" ? "tunnel" : screenKind === "slip" ? "slip" : null;
+    // Stage 6 (Playbook-Root): a composed play ANIMATES AS DRAWN. app.js
+    // resolves the recorded book play's authored routes onto the fielded slots
+    // (the card's own resolver) and stamps p._composedRoutes — a per-slot
+    // {part, flip} plan plus stay-in blockers. A slot with an authored route
+    // runs ITS route (flip mirrors the break); a blocked receiver stays in;
+    // everyone else keeps the concept/depth synthesis. Absent — every
+    // non-composed play, and a composed clip on a machine without the play in
+    // its library — nothing below changes.
+    const _cRoutes = p._composedRoutes && p._composedRoutes.bySlot ? p._composedRoutes : null;
+    const _cBlocks = _cRoutes && Array.isArray(_cRoutes.blocks) ? _cRoutes.blocks : [];
     const ordered = [...catchers].sort((a2, b2) => Math.abs(b2.bx - 50) - Math.abs(a2.bx - 50));
     ordered.forEach((s, i) => {
-      const mid = s.bx <= 50 ? 1 : -1;
+      if (_cRoutes && _cBlocks.includes(s.id) && s !== tgtSlot) {
+        // Drawn as a blocker: he stays in — no route, no cue.
+        A[s.id].behave = (t2) => t2 < PRESNAP ? null : [s.bx, LOS + 1, 3.2];
+        return;
+      }
+      const _cr = _cRoutes ? _cRoutes.bySlot[s.id] : null;
+      const _crShape = _cr ? COMPOSED_SHAPE[_cr.part] || null : null;
+      const mid = (s.bx <= 50 ? 1 : -1) * (_cr && _cr.flip ? -1 : 1);
       const isScreenTgt = screen && s === tgtSlot && screenShape;
-      const shape0 = isScreenTgt ? screenShape : shapes[i % shapes.length];
+      const shape0 = isScreenTgt ? screenShape : _crShape || shapes[i % shapes.length];
       // Capstone P1: if the sim recorded a double move on the chosen throw,
       // the target draws the double-move version of his route — the sluggo
       // that actually beat the man, not a clean stem.
@@ -757,6 +1079,21 @@ function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
       A[s.id].behave = s === tgtSlot && !_throwAway && (!screen || screenShape) ? (t2, w2, a2) => t2 < PRESNAP ? null : t2 >= tCatch && p.complete && !p.turnover ? [catchPt[0], endY, schedSp(a2, [catchPt[0], endY], t2, tEnd, a2.speed)] : t2 >= (isScreenTgt ? throwAt : throwAt * 0.9) ? [catchPt[0], catchPt[1], a2.speed] : base(t2, w2, a2) : base;
     });
     for (const b of backs) {
+      // Stage 6: a back given an authored downfield route (wheel, flat, …)
+      // runs IT instead of the generic swing — unless the sim made him the
+      // target (the recorded catch point always wins) or drew him a
+      // screen/checkdown (the existing back handling IS that animation).
+      const _crb = _cRoutes && b !== tgtSlot ? _cRoutes.bySlot[b.id] : null;
+      if (_crb && _crb.part !== "screen" && _crb.part !== "checkdown" && A[b.id] !== A.QB && !A[b.id].behave) {
+        const _shapeB = COMPOSED_SHAPE[_crb.part] || "flat";
+        const _midB = (b.bx <= 50 ? 1 : -1) * (_crb.flip ? -1 : 1);
+        A[b.id].behave = waypointBehavior(routeWaypoints(_shapeB, b.bx, b.by, _midB), A[b.id].speed, PRESNAP);
+        continue;
+      }
+      if (_cRoutes && _cBlocks.includes(b.id) && b !== tgtSlot && A[b.id] !== A.QB && !A[b.id].behave) {
+        A[b.id].behave = (t2) => t2 < PRESNAP ? null : [b.bx, LOS + 1.4, 3.2];
+        continue;
+      }
       if (screen && b === tgtSlot) {
         A[b.id].behave = (t2, w2, a2) => t2 < PRESNAP ? null : t2 >= tCatch && p.complete && !p.turnover ? [catchPt[0], endY, schedSp(a2, [catchPt[0], endY], t2, tEnd, a2.speed)] : [catchPt[0], catchPt[1], schedSp(a2, catchPt, t2, tCatch, 5.5)];
       } else if (b === tgtSlot && !_throwAway) {
@@ -963,7 +1300,12 @@ function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
         // 3s feasibility budget and the ride check dumped him to a
         // stand-in anyway. Break-at-read closes the gate/behavior mismatch.
         const tBreak = Math.max(PRESNAP + 0.35, throwAt - 0.9);
-        best.behave = (t2, w2, a2) => t2 < tBreak ? prev ? prev(t2, w2, a2) : null : t2 < tGrab ? [grabPt[0], grabPt[1], best.speed] : [grabPt[0] + (rnd() < 0.5 ? -6 : 6), grabPt[1] + 6, best.speed];
+        // playtest item 9b — the sim awards no return on an end-zone pick; it is
+        // a touchback. Don't fabricate a 6-unit return that starts from outside
+        // the end line — the picker secures it and kneels at the spot.
+        const _retFwd = p.intTouchback ? 0 : 6;
+        const _retLat = p.intTouchback ? 0 : rnd() < 0.5 ? -6 : 6;
+        best.behave = (t2, w2, a2) => t2 < tBreak ? prev ? prev(t2, w2, a2) : null : t2 < tGrab ? [grabPt[0], grabPt[1], best.speed] : [grabPt[0] + _retLat, grabPt[1] + _retFwd, p.intTouchback ? 0 : best.speed];
         for (const s of catchers) {
           const pr = A[s.id].behave;
           A[s.id].behave = (t2, w2, a2) => t2 < tGrab + 0.22 ? pr ? pr(t2, w2, a2) : null : pursuePt(best, a2, a2.speed * 0.95);
@@ -1448,15 +1790,18 @@ function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
       const nearGoal = p.fieldPos != null && p.fieldPos >= 96;
       const fromBehind = dyT > 0.8;
       const lateral = Math.abs(dxT) > Math.abs(dyT) + 0.3;
-      let style = nearGoal ? "goalline" : appSpd > 5.4 && openField && lateral ? "shoestring" : appSpd > 5.4 && openField ? "collision" : fromBehind && appSpd > 4.6 ? "drag" : assist ? "gang" : lateral ? "wrap" : "form";
+      const style = selectTackleStyle({ nearGoal, speed: appSpd, openField, lateral, fromBehind, bodyKind: tackler.body ? tackler.body.kind : "legacy" });
+      const joinCues = assist ? [{ id: assist.id, t: endInfo.at + 0.02 }] : [];
       tackleCue = {
         id: tackler.id,
         assistId: assist ? assist.id : null,
+        joinCues,
         carrierId: carrier.id,
         style,
         t: endInfo.at,
         x: ex,
-        y: ey
+        y: ey,
+        basis: { speed: appSpd, openField, lateral, fromBehind, nearGoal }
       };
       // M20 pile discipline: at most tackler + assist + ONE late arrival
       // inside the pile radius. Every other converging defender brakes to a
@@ -1474,6 +1819,9 @@ function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
           const ang = Math.atan2(tr[1] - ey, tr[0] - ex) || extras * 2.4;
           const rr = extras <= 1 ? 2.5 : ringR + (extras - 2) * 0.7;
           constrainTrack(d.track, iEnd, [clamp6(ex + Math.cos(ang) * rr, 1, 99), clamp6(ey + Math.sin(ang) * rr, -60, 61)]);
+          // One truthful late arriver may join the credited tackler + assist.
+          // Everybody else stays on the disciplined ring established above.
+          if (extras === 1) joinCues.push({ id: d.id, t: endInfo.at + 0.12 });
         }
       }
       const iFrom = Math.max(0, iEnd - 26);
@@ -1562,19 +1910,40 @@ function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
     }
   }
   if (carrier && endInfo && !(isPass && p.sack)) {
-    let mv = pickMove();
+    const pickedMove = pickMove(carrier, breakCue);
+    let mv = pickedMove == null ? void 0 : pickedMove.style;
     const runLike = String(p.type || "").startsWith("run") || p.isScramble;
-    if (!mv && runLike && p.td && (p.fieldPos == null || p.fieldPos >= 94)) mv = "dive";
+    const iEndM = Math.max(2, Math.round(endInfo.at / STEP));
+    const m0 = carrier.track[Math.max(0, iEndM - 3)], m1 = carrier.track[Math.min(iEndM, carrier.track.length - 1)];
+    const finishSpeed = m0 && m1 ? Math.hypot(m1[0] - m0[0], m1[1] - m0[1]) / (STEP * 3) : 0;
+    const boundaryFinish = endInfo.pt[0] <= 9 || endInfo.pt[0] >= 91;
+    const madeMarker = p.distance != null && (p.yards || 0) >= p.distance;
+    if (!mv) mv = selectLandmarkMove({
+      runLike,
+      touchdown: !!p.td,
+      boundary: boundaryFinish,
+      finishSpeed,
+      madeMarker,
+      nearGoal: p.fieldPos == null || p.fieldPos >= 94
+    });
     if (!mv && p.isScramble && !p.td && (p.yards || 0) > 0 && (p.qbSlid === true || p.qbSlid == null && rnd() < 0.55)) mv = "slide";
     if (mv) {
-      let mvT = mv === "dive" || mv === "slide" ? Math.max(PRESNAP + 0.1, endInfo.at - 0.3) : PRESNAP + (endInfo.at - PRESNAP) * 0.6;
-      // Pass plays: the carrier can't juke/dive before he has the ball — short-YAC
-      // screens used to fire the move cue mid-route, ahead of the catch.
-      if (typeof _catchT !== "undefined" && _catchT != null) mvT = Math.max(mvT, _catchT + 0.08);
+      const isDive = mv === "dive" || mv === "pylon-dive" || mv === "marker-dive";
+      let mvT = isDive || mv === "slide" ? Math.max(PRESNAP + 0.1, endInfo.at - 0.3) : PRESNAP + (endInfo.at - PRESNAP) * 0.6;
       // M20: when the sim credited a broken tackle, the move IS the break —
       // fire it at the staged collision, not at a scripted fraction.
-      if (breakCue && mv !== "dive" && mv !== "slide") mvT = breakCue.t;
-      moveCue = { id: carrier.id, style: mv, t: mvT };
+      if (breakCue && !isDive && mv !== "slide") mvT = breakCue.t;
+      // Pass plays: the carrier can't move before he has the ball. This clamp
+      // must be the final timing word — a malformed/legacy break stamp can sit
+      // before the catch, but the viewer may never animate that fiction.
+      if (typeof _catchT !== "undefined" && _catchT != null) mvT = Math.max(mvT, _catchT + 0.08);
+      moveCue = {
+        id: carrier.id,
+        style: mv,
+        t: mvT,
+        direction: boundaryFinish ? endInfo.pt[0] <= 9 ? "left" : "right" : null,
+        basis: pickedMove == null ? void 0 : pickedMove.basis
+      };
     }
   }
   // M24: celebration VARIANTS — picked from the situation + the play's
@@ -1843,6 +2212,9 @@ function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
     for (const a2 of everyone) for (const pt of a2.track) pt[1] = clamp6(pt[1], lo, hi);
     for (const pt of ball.track) pt[1] = clamp6(pt[1], lo, hi);
   }
+  const _resolvedCatchOwner = typeof _intPicker !== "undefined" && _intPicker ? _intPicker.id : typeof _tgtActor !== "undefined" && _tgtActor ? _tgtActor.id : null;
+  const catchCue = buildCatchPresentation(everyone, fx, p, STEP, _resolvedCatchOwner);
+  const armSwitchCue = buildArmSwitchPresentation(p, typeof carryCue !== "undefined" ? carryCue : null, dur);
   return {
     dur: dur + 1e-9,
     step: STEP,
@@ -1855,6 +2227,7 @@ function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
         label: a2.label,
         qb: a2.qb,
         grp: a2.team === "off" ? (_a2 = a2.slot) == null ? void 0 : _a2.pos : a2.grp,
+        body: a2.body || selectBodyExpression(),
         track: a2.track
       };
     }),
@@ -1869,9 +2242,11 @@ function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
     // deflection (deflectCue). Labels only; the ball track owns every spot.
     ballCue: typeof ballCue !== "undefined" ? ballCue : null,
     carryCue: typeof carryCue !== "undefined" ? carryCue : null,
+    armSwitchCue,
     deflectCue: typeof deflectCue !== "undefined" ? deflectCue : null,
     pickId: typeof _intPicker !== "undefined" && _intPicker ? _intPicker.id : null,
     throwCue,
+    catchCue,
     tackleCue,
     moveCue,
     breakCue,
@@ -2094,4 +2469,4 @@ function sampleTrack(track, step, t) {
   ];
 }
 
-export { buildPlayScript, sampleTrack, buildCameraPlan, buildOfficialsPlan };
+export { COMPOSED_SHAPE, buildPlayScript, sampleTrack, buildCameraPlan, buildOfficialsPlan, selectDuelMove, selectTackleStyle, selectLandmarkMove, selectCatchStyle, selectThrowStyle, selectTrenchStyle, selectSecondaryMotion, selectBodyExpression, buildArmSwitchPresentation, buildBroadcastCommentary };

@@ -395,4 +395,82 @@ DEF_DROP_ELIGIBLE = {
   "Penny": ["OLB_L", "OLB_R"]
 };
 
-export { DEF_BLITZ_ELIGIBLE, DEF_DROP_ELIGIBLE, DEF_FIELD_LAYOUTS, OFF_FIELD_LAYOUTS };
+// ── Stage 6 (Playbook-Root): AUTHORED variation alignments ──────────────────
+// The FORMATION_VARIATIONS `layout:` pointers (constants.js) resolve HERE — the
+// dangling pointers CREATOR_FIDELITY called "the smoking gun" now name real
+// rows. Each row is a SPARSE moveset over the base formation's slots: the SAME
+// slot IDs (the sim fields base personnel and stamps base slot ids on the
+// record — the pkg-consumption question is CREATOR_FIDELITY item 2, an owner
+// balance call, deliberately NOT taken here), moved to the look's pre-snap
+// placement. x is 0..1 across the width; y 0.50 IS the line of scrimmage
+// (on-line), 0.56 is the flanker/wing depth, deeper is backfield — same
+// conventions as OFF_FIELD_LAYOUTS above. One table; presentation readers
+// today: the live watch board (app.js) and the play/formation diagrams
+// (routeart.js). resolveOffField keeps reading the BASE table until the
+// engine-side personnel decision lands.
+var VARIATION_LAYOUTS = {
+  // Power-I — Big: the split man tightens onto the 3-TE surface (wing right).
+  power_big: { moves: { WR_X: { x: 0.86, y: 0.56 } } },
+  // Power-I — Twins: U flexes out; twins surface right (U slot, X split end).
+  power_twins: { moves: { TE_U: { x: 0.84, y: 0.56 }, WR_X: { x: 0.94, y: 0.5 } } },
+  // Spread — Trips: the slot crosses the formation; three-man surface right.
+  spread_trips: { moves: { WR_S: { x: 0.72, y: 0.56 } } },
+  // Spread — Ace: the slot tightens to a second inline tight surface left,
+  // the back squares up behind the QB.
+  spread_ace: { moves: { WR_S: { x: 0.26, y: 0.5 }, RB_H: { x: 0.5, y: 0.82 } } },
+  // Air Raid — Empty: the back splits out; five across.
+  air_empty: { moves: { RB_H: { x: 0.68, y: 0.58 } } },
+  // Air Raid — Tight: condensed splits, everyone inside the numbers.
+  air_tight: { moves: { WR_X: { x: 0.16, y: 0.5 }, WR_S: { x: 0.3, y: 0.56 }, WR_F: { x: 0.7, y: 0.56 }, WR_Z: { x: 0.84, y: 0.5 } } },
+  // Pistol — Diamond: the slot folds in as the left wing of a diamond backfield.
+  pistol_diamond: { moves: { WR_S: { x: 0.42, y: 0.76 }, RB_H: { x: 0.5, y: 0.84 } } },
+  // Pistol — Trips: the TE flexes; trips surface right.
+  pistol_trips: { moves: { WR_S: { x: 0.72, y: 0.56 }, TE_Y: { x: 0.83, y: 0.62 } } },
+  // Trips/Bunch — Closed: the bunch condenses onto the tackle.
+  trips_closed: { moves: { WR_S: { x: 0.85, y: 0.56 }, WR_Z: { x: 0.9, y: 0.62 } } },
+  // Trips/Bunch — Open: max splits, the bunch spreads.
+  trips_open: { moves: { WR_X: { x: 0.03, y: 0.5 }, WR_S: { x: 0.89, y: 0.56 }, WR_Z: { x: 0.97, y: 0.62 } } },
+  // Single Back — Twins: U flexes wide left, twins with X.
+  sb_twins: { moves: { TE_U: { x: 0.16, y: 0.56 } } },
+  // Single Back — Heavy: U tightens inline, Z tightens to the wing.
+  sb_heavy: { moves: { TE_U: { x: 0.24, y: 0.5 }, WR_Z: { x: 0.86, y: 0.56 } } },
+  // Empty — Trey: the third slot crosses; TE-anchored three-man surface right.
+  empty_trey: { moves: { WR_F: { x: 0.7, y: 0.56 } } },
+  // Empty — Wide: everyone stretched to the numbers.
+  empty_wide: { moves: { WR_X: { x: 0.03, y: 0.5 }, WR_S: { x: 0.13, y: 0.56 }, WR_F: { x: 0.3, y: 0.56 }, WR_Z: { x: 0.97, y: 0.56 } } },
+  // Wishbone — Heavy: the split end tightens to a wing (2-TE surface).
+  bone_heavy: { moves: { WR_X: { x: 0.14, y: 0.56 } } },
+  // Wishbone — Split: the TE splits out wide right; two true receivers.
+  bone_split: { moves: { TE_Y: { x: 0.92, y: 0.5 }, WR_X: { x: 0.06, y: 0.5 } } },
+  // Flexbone — Twirl: the A-backs cheat wide for the twirl motion look.
+  flex_twirl: { moves: { RB_H: { x: 0.18, y: 0.6 }, RB_2: { x: 0.82, y: 0.6 } } },
+  // Flexbone — Trips: the left A-back flexes to the slot; trips right.
+  flex_trips: { moves: { RB_H: { x: 0.7, y: 0.56 }, RB_2: { x: 0.84, y: 0.6 } } },
+  // Wildcat — Unbalanced: both tight ends onto the right side.
+  wc_unbal: { moves: { TE_U: { x: 0.86, y: 0.5 } } },
+  // Wildcat — Slash: a TE flexes away left; the slash threat spreads the field.
+  wc_slash: { moves: { TE_U: { x: 0.14, y: 0.56 } } },
+  // Jumbo — Goal Line: everything condenses onto the ball.
+  jumbo_gl: { moves: { TE_Y: { x: 0.26, y: 0.5 }, TE_U: { x: 0.74, y: 0.5 }, TE_W: { x: 0.82, y: 0.56 }, FB: { x: 0.5, y: 0.72 }, RB_H: { x: 0.5, y: 0.84 } } },
+  // Jumbo — Tackle Over: the strength (Y + wing) shifts over to the right.
+  jumbo_to: { moves: { TE_Y: { x: 0.92, y: 0.5 } } }
+};
+// Resolve a formation's slots for a LOOK: the base row with the variation's
+// authored moves applied (new objects — the base table is never mutated).
+// layoutKey comes from FORMATION_VARIATIONS[fid][varKey].layout; callers pass
+// it directly so this module stays independent of constants.js. Returns null
+// when nothing is authored — callers fall back to the base slots.
+function variationLayoutSlots(baseSlots, layoutKey) {
+  const row = layoutKey ? VARIATION_LAYOUTS[layoutKey] : null;
+  if (!row || !row.moves || !Array.isArray(baseSlots)) return null;
+  let moved = false;
+  const out = baseSlots.map((s) => {
+    const m = row.moves[s.id];
+    if (!m) return s;
+    moved = true;
+    return { ...s, x: m.x != null ? m.x : s.x, y: m.y != null ? m.y : s.y };
+  });
+  return moved ? out : null;
+}
+
+export { DEF_BLITZ_ELIGIBLE, DEF_DROP_ELIGIBLE, DEF_FIELD_LAYOUTS, OFF_FIELD_LAYOUTS, OL_SLOTS, VARIATION_LAYOUTS, variationLayoutSlots };

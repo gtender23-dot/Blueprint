@@ -8,11 +8,12 @@ import { ensureHCMastery } from './engine/staff.js';
 import { foundTree, ensureTree, activateSlot as treeActivateSlot, syncTreeRecord } from './engine/tree.js';
 import { computeAutoRedshirtCandidates } from './engine/development.js';
 import { ensureFieldAssignments } from './engine/fieldassign.js';
+import { synthesizeLeaguePlans } from './engine/teamplan.js';
 import { archiveInstantClassic, classicMetadata } from './engine/instantclassics.js';
 import { commitSeasonGoals, initPreseason } from './engine/offseason.js';
-import { listSaves, loadGame, saveGame } from './engine/persistence.js';
+import { listSaves, loadGame, saveGame, deleteSlotData } from './engine/persistence.js';
 import { initBudget } from './engine/recruiting.js';
-import { advanceDay, getPhase, playerGameOpponentForDay, resumeFromFourthDown, resumeFromHalftime, resumeFromPlayCall, weekLabel, weekShort } from './engine/season.js';
+import { activateCoachedChair, advanceDay, beginCoachedGame, coachedGamesForDay, coachedSchoolIds, getPhase, playerGameOpponentForDay, restoreCoachWeekChair, resumeFromFourthDown, resumeFromHalftime, resumeFromPlayCall, simCurrentCoachedGame, weekLabel, weekShort } from './engine/season.js';
 import { finishInteractiveGame, resumeFromCall, resumeFromDecision, setAutoCounter, simulateFirstHalf, stepSecondHalf } from './engine/sim.js';
 import { applyStart } from './engine/starts.js';
 import { generateRecruitPool, generateSchedule, generateWorld, hashStr, repairRecruitLocations } from './engine/world.js';
@@ -95,6 +96,10 @@ function navigate(view, params = {}) {
   if (map) setGroupTab(view, map[1]);
   if (NO_HISTORY_VIEWS.has(view)) state.ui.navHistory = [];
   if (view === "manual") state.ui.manualChapter = params.chapter || null;
+  // "Opened from the main menu" flag lives only across the menu→manual hop; any
+  // other navigation clears it so the IN-GAME manual (dynasty shell) still shows
+  // when a game is loaded. See the manual gate in app.js.
+  if (view !== "manual") state.ui.manualFromMenu = false;
   state.ui.view = view;
   state.ui.params = params;
   state.ui.sidebarOpen = false;
@@ -149,6 +154,50 @@ function startNewGamePrepared({ first, last }, world, school, custom = null) {
     }
   }
   return finishNewGame(world, school, first || "Coach", last || "Player", custom);
+}
+function startSeasonRun(world, school) {
+  // Season Mode reuses the full dynasty setup (a real coach shell, schedule,
+  // AI gameplans) so every in-season screen and the coach-your-game flow work
+  // unchanged — but it flags itself so recruiting and the offseason never
+  // engage (engine guards on state.seasonMode) and the run stops at the
+  // champion. No coach profile or tree is founded.
+  state._treeId = null;
+  state._coachId = null;
+  // Flag the run BEFORE setup so any save triggered during finishNewGame lands
+  // in the dedicated "season" slot, never "auto" (which would show up as a
+  // dynasty Continue). finishNewGame's Object.assign doesn't touch these fields.
+  state.seasonMode = true;
+  state.seasonOver = false;
+  state._saveSlot = "season";
+  finishNewGame(world, school, "Head", "Coach", null);
+  state.seasonMode = true;
+  state.ui.seasonComplete = null;
+  // Replace the dynasty welcome mail (scholarships / non-conference / recruiting)
+  // with a Season Mode note — no recruiting, no offseason, one title to chase.
+  state.inbox = [{ id: uuid(), day: 1, subject: "Season Kickoff", body: `Welcome, Coach. One season with ${school.name}. Win your games, take the conference, and chase the ${school.division || "D1"} title — no recruiting, no offseason, just ball. Good luck.`, read: false }];
+  // Skip the four preseason camp weeks — Season Mode is games only. Day 4 means
+  // the first CONTINUE advances into Week 1 (day 5, the first game day).
+  state.day = 4;
+  // Write the dedicated season save immediately so the run is resumable from the
+  // very start (autosave otherwise waits for the first completed week).
+  saveGame(state, "season").catch(() => {});
+  navigate("dashboard");
+}
+function exitSeasonRun() {
+  // Leave the run and wipe the backing dynasty state so a later dynasty never
+  // inherits the seasonMode flag or this world. The dedicated "season" save is
+  // LEFT INTACT here (that's what Resume Season loads) unless the season is over
+  // — a finished run has already deleted its save (see the season-complete
+  // handler), so there's nothing to resume.
+  state.seasonMode = false;
+  state.seasonOver = false;
+  state.initialized = false;
+  state._saveSlot = null;
+  state.ui.seasonComplete = null;
+  state.world = null;
+  state.playerCoach = null;
+  state.playerSchoolId = null;
+  navigate("mainmenu");
 }
 function finishNewGame(world, school, first, last, custom) {
   var _a;
@@ -238,6 +287,15 @@ function finishNewGame(world, school, first, last, custom) {
       const slots = Math.max(0, C.ROSTER_SIZE - s.roster.length) + seniors;
       initBudget(s.coach, slots, 0, s);
     }
+  }
+  // [Playbook-Root Stage 1] Every school now carries the named object model —
+  // book / defbook / planOverlay — synthesized from its finalized gameplan. This
+  // is byte-neutral: the gameplan object each writer produced is untouched, and
+  // compileTeamPlan(school) deep-equals it by construction. Run last, after every
+  // gameplan writer (AI, wizard, applyStart) has settled.
+  try {
+    synthesizeLeaguePlans(world);
+  } catch (e) {
   }
   const schedule = generateSchedule(world, 1, []);
   state._exhibition = false;
@@ -332,6 +390,13 @@ async function switchTreeSlot(division) {
 async function autosave() {
   var _a, _b, _c;
   if (state._exhibition) return true;
+  if (state.seasonMode) {
+    // Season Mode has its OWN dedicated slot, separate from every dynasty save,
+    // and stops saving once the season is over (a finished run isn't resumable).
+    // Skips the tree/coach meta blocks below — a season has neither.
+    if (!state.seasonOver) await saveGame(state, "season");
+    return true;
+  }
   const slot = state._saveSlot || "auto";
   const ok = await saveGame(state, slot);
   // [W9 §12] A tree's world save is the TRUTH; the localStorage tree record is
@@ -455,6 +520,16 @@ function getPhaseLabel() {
 }
 async function advanceDay2() {
   var _a, _b;
+  if (state.seasonMode && state.seasonOver) {
+    // The season is decided — never advance past it (that would roll toward a
+    // second season). Re-show the champion takeover instead.
+    if (!state.ui.seasonComplete) {
+      const me = getPlayerSchool();
+      state.ui.seasonComplete = { division: (me == null ? void 0 : me.division) || "D1", champion: (state.playoffs == null ? void 0 : state.playoffs.champion) || null };
+    }
+    rerender();
+    return;
+  }
   if (((_a = state.playerCoach) == null ? void 0 : _a.status) === "unemployed") {
     notify("You must accept a new job before continuing.", "warning");
     navigate("coachoffice");
@@ -476,7 +551,12 @@ async function advanceDay2() {
     rerender();
     return;
   }
-  if (state._callModeToday == null) {
+  // Multi-coach week: skip the single-game kickoff prompt. Each of the player's
+  // programs is handed to him one at a time by the engine's coached-week gate and
+  // played through the halftime-adjust flow, so there is no one "your game" to
+  // pre-set a kickoff/call mode for.
+  const multiCoach = coachedSchoolIds(state).length > 1;
+  if (!multiCoach && state._callModeToday == null) {
     const opponent = playerGameOpponentForDay(state, state.day + 1);
     if (opponent) {
       ensurePregamePlan(state);
@@ -566,10 +646,56 @@ function tokenFeedItems(token) {
 async function chooseKickoffMode(mode) {
   state.settings.lastCallMode = mode;
   state._callModeToday = mode;
+  const cwGameId = state.ui.pendingKickoff && state.ui.pendingKickoff.coachWeekGameId;
   state.ui.pendingKickoff = null;
   state.ui.callSheetFormation = null;
   state.ui.autoRun = false;
+  if (cwGameId) {
+    // Multi-coach: this pregame belongs to one of the player's programs. Start
+    // THAT game (to halftime) rather than advancing the league day.
+    const res = beginCoachedGame(state, cwGameId);
+    if (res && res.pending && state.pendingHalftime) {
+      const tok = state.pendingHalftime.token;
+      const ev = (tok == null ? void 0 : tok.pending) ? { type: tok.pending.kind === "fourth" ? "fourthdown" : "playcall", game: state.pendingHalftime.game, token: tok } : { type: "halftime", game: state.pendingHalftime.game, token: tok };
+      if (handleGamePendingEvents([ev])) return;
+    } else if (res && res.simmed) {
+      processEvents([{ type: "game", result: res.result }]);
+    }
+    await autosave();
+    rerender();
+    return;
+  }
   await advanceDay2();
+}
+// Weekly agenda "Kickoff" — step 1: make this program's chair active and open the
+// pregame (adjustments + kickoff/call-mode). The game starts on chooseKickoffMode.
+async function kickoffCoachedGame(gameId) {
+  const info = activateCoachedChair(state, gameId);
+  if (!info) { rerender(); return; }
+  state._pregamePlan = null;
+  ensurePregamePlan(state);
+  state._callModeToday = null;
+  state.ui.pendingKickoff = { opponent: (info.opp && info.opp.name) || null, coachWeekGameId: gameId };
+  await autosave();
+  rerender();
+}
+// Agenda "Sim" — book a program's game without coaching it.
+async function simCoachedGameFromAgenda(gameId) {
+  const res = beginCoachedGame(state, gameId, true);
+  if (res && res.result) processEvents([{ type: "game", result: res.result }]);
+  await autosave();
+  rerender();
+}
+// Box-score close in a multi-coach week: return to the weekly agenda. The games
+// do NOT chain — the player chooses when to take over the next coach and play
+// that game (owner: "once the coach closes the box score they can choose when to
+// take over the next coach"). Advance-week stays locked until all are resolved.
+async function afterCoachedGameResultClose() {
+  state.ui.showGameResult = false;
+  state.ui.lastGameResult = null;
+  if (state.coachWeek && state.ui.view !== "dashboard") navigate("dashboard");
+  await autosave();
+  rerender();
 }
 async function answerPlayCall(call) {
   var _a, _b;
@@ -579,6 +705,7 @@ async function answerPlayCall(call) {
   const token = (_b = state.pendingHalftime) == null ? void 0 : _b.token;
   const events = resumeFromPlayCall(state, call);
   state.ui.callFormation = null;
+  state.ui.callVariation = null;
   state.ui.callPA = false;
   state.ui.callRPO = false;
   state.ui.callQBRun = false;
@@ -708,6 +835,7 @@ async function exhibitionResume(fn) {
   if (!token) return;
   fn(token);
   state.ui.callFormation = null;
+  state.ui.callVariation = null;
   state.ui.callPA = false;
   state.ui.callRPO = false;
   state.ui.callQBRun = false;
@@ -788,6 +916,16 @@ async function resumeHalftime(homeGPEdits = null, awayGPEdits = null) {
   }
   const events = resumeFromHalftime(state, homeGPEdits, awayGPEdits);
   if (handleGamePendingEvents(events)) return;
+  state.ui.showHalftime = false;
+  processEvents(events);
+  await autosave();
+  rerender();
+}
+// Multi-coach week: "let the sim handle this one" from the halftime screen —
+// full-sim the paused game (its box score then shows; closing it launches the
+// next program or unlocks the advance button). rest=true sims all remaining.
+async function simCoached(rest = false) {
+  const events = simCurrentCoachedGame(state, rest);
   state.ui.showHalftime = false;
   processEvents(events);
   await autosave();
@@ -882,6 +1020,14 @@ function processEvents(events, { suppressModal = false } = {}) {
     } else if (event.type === "warning") {
       addInboxMessage("News", event.text);
       notify(event.text, "warning");
+    } else if (event.type === "season-complete") {
+      // Season Mode reached the title. Stash the result; app.js renders the
+      // champion takeover from this flag. Mark the run over (gates off the season
+      // autosave + blocks further advancing) and delete the dedicated save so a
+      // finished season is never offered for resume.
+      state.seasonOver = true;
+      state.ui.seasonComplete = { division: event.division, champion: event.champion };
+      deleteSlotData("season").catch(() => {});
     }
   }
 }
@@ -1009,6 +1155,7 @@ async function loadFromSlot(slot) {
   state.ui.liveWatch = null;
   state.ui.autoRun = false;
   state.ui.callFormation = null;
+  state.ui.callVariation = null;
   state.ui.callPA = false;
   state.ui.callRPO = false;
   state.ui.callQBRun = false;
@@ -1097,6 +1244,13 @@ var state, _renderFn, _notifyFn, NO_HISTORY_VIEWS, teamGroupTab, programGroupTab
 
 state = {
   initialized: false,
+  // Season Mode: a one-off single-season run that reuses the entire dynasty
+  // engine + screens, minus recruiting and the coach's office, and stops at the
+  // playoff champion instead of rolling to an offseason. Set by startSeasonRun.
+  seasonMode: false,
+  // Set true once the season's title is decided — gates off the season autosave
+  // (a finished season isn't resumable) and blocks any further advance.
+  seasonOver: false,
   season: 1,
   day: 1,
   playerSchoolId: null,
@@ -1204,4 +1358,4 @@ LEGACY_VIEW_MAP = {
   history: ["statsgroup", "history"]
 };
 
-export { advanceDay2, answerFourthDown, answerPlayCall, chooseKickoffMode, closeInstantClassicReplay, continueExhibitionSpectator, devAddBudget, devForceSign, devSimToPlayoffs, devSkipToNextGame, endExhibition, getAllBoardEntries, getBoardEntry, getConferenceStandings, getPhaseLabel, getPlayerSchool, getRecruit, getSchool, getScoutSchool, getUpcomingGame, getWeekLabel, getWeekShort, liveWatchOn, loadFromSlot, navigate, navigateBack, notify, notifyJobMoveCosts, openSchool, processEvents, programGroupTab, pushNav, refreshSaves, rerender, resumeHalftime, saveNow, saveToSlot, seasonGroupTab, setCallModeMidGame, setGroupTab, setNotifyFn, setRenderFn, simToBreak, simToQuarterEnd, skipToOffseason, startExhibition, startInstantClassicReplay, startNewGame, startNewGamePrepared, state, statsGroupTab, summarizeCommitmentNotifications, switchTreeSlot, teamGroupTab, tokenAllPlays, unwatchedPlayCount, advanceDay2 as advanceDay };
+export { startSeasonRun, exitSeasonRun, advanceDay2, answerFourthDown, answerPlayCall, chooseKickoffMode, closeInstantClassicReplay, continueExhibitionSpectator, devAddBudget, devForceSign, devSimToPlayoffs, devSkipToNextGame, endExhibition, getAllBoardEntries, getBoardEntry, getConferenceStandings, getPhaseLabel, getPlayerSchool, getRecruit, getSchool, getScoutSchool, getUpcomingGame, getWeekLabel, getWeekShort, liveWatchOn, loadFromSlot, navigate, navigateBack, notify, notifyJobMoveCosts, openSchool, processEvents, programGroupTab, pushNav, refreshSaves, rerender, resumeHalftime, saveNow, saveToSlot, seasonGroupTab, setCallModeMidGame, setGroupTab, setNotifyFn, setRenderFn, afterCoachedGameResultClose, kickoffCoachedGame, simCoached, simCoachedGameFromAgenda, simToBreak, simToQuarterEnd, skipToOffseason, startExhibition, startInstantClassicReplay, startNewGame, startNewGamePrepared, state, statsGroupTab, summarizeCommitmentNotifications, switchTreeSlot, teamGroupTab, tokenAllPlays, unwatchedPlayCount, advanceDay2 as advanceDay };

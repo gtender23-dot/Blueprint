@@ -1,8 +1,289 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-15 (Playbook-Root Stages 1–2 + Stage 3 partial; viewer
-roadmap remainder + Act F status folded in; mobile pass)**.
+Last updated: **2026-08-16 (Playbook-Root STAGES 4–7 built + node-gated —
+Stage 7 = the Formation Designer; Stages 1–2 + Stage 3 partial; viewer roadmap
+remainder + Act F status folded in; mobile pass)**.
+
+## 2026-08-16 — PLAYBOOK-ROOT REFACTOR: STAGE 7 (the designers — Formation Designer)
+## BUILT + NODE-GATED — ⚠ BROWSER PLAYTEST OWED (the moat feature)
+
+Stage 7 of `Ref/PLAYBOOK_ROOT_ARCHITECTURE.md` — "the designers". The
+DEFENSIVE play composer half already shipped as Defensive Playbook v2's call
+cards (cards → `defCalls`); this stage builds the other half, CREATOR_FIDELITY
+item 5: **the Formation Designer** — one registry, an alignment-legality
+validator, balance derived by a FIXED rulebook. Edited `js/` + `style.css` +
+probes; unattended cloud session; not committed, not built, not
+browser-verified.
+
+**What shipped:**
+- **`js/engine/formcompose.js`** (new) — the engine. A customFormation is
+  five skill placements (WR/SLOT/TE/RB/FB on a fixed anchor vocabulary) over
+  the standard OL five + a QB depth (under/pistol/gun). The
+  **legality validator** speaks rulebook football: exactly five skill, no
+  shared spots, backs in the backfield, **7 men on the line** (5 OL + ≥2
+  on-line skill), covered-end warnings ("legal but ineligible"), built-in
+  names refused. **`compileFormation` is the fixed rulebook**: the package is
+  counted from the placements; the nearest built-in ARCHETYPE (backs-weighted
+  personnel distance) supplies the identity/lean row VERBATIM; the legal call
+  list is the archetype's book **filtered down** (minWR, backfield structure,
+  no Wildcat Power/Jet Sweep, options need two backs) — always a strict
+  SUBSET of a shipped book; **matchup edges and situational mods are NONE**
+  (neutral 1.0 — no row in the tables, every reader defaults). A designed
+  look can never out-tune a shipped one, BY CONSTRUCTION. The layout derives
+  canonical slot ids/labels/roles (X/SL/F/Z receivers outside-in, TE_Y/U/W,
+  RB_H/FB), so target shares, depth-chart pickers, viewer jerseys and
+  route-art fills treat it like a built-in.
+- **The REGISTRY seam** — `syncCustomFormations()` installs a compiled
+  formation's four rows into the LIVE tables (FORMATIONS /
+  FORMATION_PACKAGES / FORMATION_PLAYBOOK / OFF_FIELD_LAYOUTS) and removes
+  rows for deleted creations. Idempotent, storage-blind (callers pass
+  entries), never shadows a built-in, never throws. After registration,
+  EVERY existing surface — Playbook Builder cards, Game Plan looks +
+  field-assignment tab (`ensureFieldAssignments` walks the live table), the
+  call sheet's pins, `resolveOffField`, the sim, the watch board — picks the
+  formation up with zero further wiring. Every other per-id table (PA_RATE,
+  MOTION_RATE, JET_*, coordinator schemeIQ…) defaults safely by design.
+- **The Workshop "Formation Designer"** (`js/ui/views/creatorform.js`, new;
+  hub card in creator.js) — name, QB depth, five position+alignment rows,
+  live diagram (`renderFormationDiagram` grew an `o.slots` override — the
+  art comes free), validator errors/warnings in plain football, and the
+  derived summary ("plays from the Spread family, N calls, no matchup
+  edges"). Saves to the new **`formations` creator shelf** (cap 16,
+  `CREATOR_KINDS` now SIX — creator_store_probe updated); save/delete
+  re-syncs the registry live.
+- **Boot registration** (app.js top-level, guarded): the library's
+  formations register at startup, so a dynasty book carrying one plays
+  immediately. One latent trap fixed en route: **normalizeFormations' fixId
+  snapshot** (gameplan.js) took `Object.keys(FORMATIONS)` at module load —
+  before registration — so the Game Plan screen would have silently
+  rewritten a custom formation to Single Back; it now also accepts anything
+  in the live FORMATION_PACKAGES registry.
+- **AI-blind + portable like every creation**: setAIGameplan never authors a
+  custom id (probe-proven across 340 schools); a save whose plan carries a
+  formation missing from this machine's library normalizes safely.
+
+**Gate (this sandbox, node):** new **`formation_compose_probe`** (39/0 ×3,
+added to the CORE manifest): the full legality battery; the rulebook laws
+(subset call lists, verbatim archetype leans, lawful 11, option/empty
+structure filters); registry install/idempotence/unregister/no-shadow with
+NEUTRAL matchup+situational proofs; **a full sim game from the custom
+formation** (82 snaps, sane score, 0 off-book concept breaches, viewer
+scripts its snaps, a forced headset call from it runs as called); AI-blind
+sweep. `creator_store_probe` 50/0 (six kinds) + `creator_resilience_probe`
+20/0. Re-proof all green: playbook_root 24/0 · plan_side 21/0 · ai_book_name
+11/0 · record_call 12/0 · live_book_call 13/0 · draw_up 21/0 ·
+playbook_shape 24/0 · defbook 26/0 · play_compose 17/0 · custom_play 221/0 ·
+integration_creator 19/0 · save_migration ALL PASS · worldgen PASS ·
+watchphys FULLY GREEN (default harvest). Clean esbuild bundle + CSS parse.
+
+**⚠ OWED (browser, owner's machine):** build; Workshop → Formation Designer
+(build a trips look, watch the live diagram + validator, save); Playbook
+Builder should list the new formation with its diagram — carry it in a book,
+load the book in a dynasty, see it in the Game Plan looks + call-sheet pins,
+and watch a game field it. Then `_boot_check` + `node tools/_gate.mjs` (four
+new probes now in core). Design remainder for a later pass, intentionally
+not taken here: authoring variations for custom formations, custom-formation
+sheets in the per-formation playbook editor UI beyond the derived defaults,
+and the variation-pkg/Empty personnel owner calls (CREATOR_FIDELITY items
+1–2 engine side).
+
+## 2026-08-16 — PLAYBOOK-ROOT REFACTOR: STAGE 6 (the animation honors the draw-up)
+## BUILT + NODE-GATED — ⚠ BROWSER PLAYTEST OWED (joins the Stage 4/5 playtest)
+
+Stage 6 of `Ref/PLAYBOOK_ROOT_ARCHITECTURE.md` — the pillar-4 payoff, scoped
+to its own law: **presentation-only, no outcome change.** Edited `js/` only
+(no engine outcome files, no style.css); unattended cloud session; not
+committed, not built, not browser-verified.
+
+**What shipped:**
+- **The dangling `layout:` pointers RESOLVE** (`js/constants_field.js`): new
+  authored **`VARIATION_LAYOUTS`** — all 22 rows the FORMATION_VARIATIONS
+  pointers name (power_big … jumbo_to), each a SPARSE per-slot moveset over
+  the base formation (trips surfaces, condensed splits, empty backs split
+  out, diamond backfields, unbalanced lines, goal-line condensing…). Same
+  slot IDs by design — the sim fields base personnel and stamps base slot
+  ids, so every recorded carrier/target/coverage slot still resolves. Rule
+  kept: y ≥ 0.5, nobody offsides. `variationLayoutSlots()` is the one
+  resolver; the base table is never mutated.
+- **The live board FIELDS the look** (app.js `watchOffSlots`): the watch
+  viewer resolves the record's `variation` (Stage-5 stamp) through the
+  authored table — the pre-snap alignment you watch IS the look the book
+  called. Pre-variation records get base slots byte-identically. (The 2-pt
+  try mini-board reads the same helper.)
+- **The diagrams draw the SAME rows** (routeart.js): `_variationLayout` now
+  resolves the authored table first (the pkg-derived heuristic survives only
+  as fallback), so Builder cards / Game Plan looks / call-sheet pins /
+  called-play cards and the live field can no longer disagree.
+  CREATOR_FIDELITY's "invented — the biggest drift" verdict is closed at the
+  presentation layer. `renderPlayCard` accepts a `variation` (the call
+  sheet's pinned-look thumbs, MY PLAYS tiles and the THE CALL card all pass
+  it).
+- **Composed plays ANIMATE AS DRAWN** (routeart + app.js + watchphys): the
+  card's receiver-resolution was extracted to one shared
+  **`resolveComposedReceivers`** (explicit picks deduped, screens/checkdowns
+  to the backs, rest outside-in — byte-same logic renderPlayCard used);
+  `watchComposedRoutes` (app.js) resolves the recorded `customPlayId`'s
+  authored routes onto the fielded slots and stamps `p._composedRoutes`;
+  `buildPlayScript` (watchphys) gives each authored slot its OWN route shape
+  (new `COMPOSED_SHAPE` part→shape map), honors `flip` (mirrored break),
+  keeps a drawn blocker in to block, and lets an authored back run his wheel
+  — while the sim's recorded target/catch point ALWAYS wins. A composed clip
+  on a machine without the play in its library falls back to the old
+  synthesis (honest, no crash).
+- **NOT touched (the stage's own law):** `resolveOffField`/personnel — the
+  variation-pkg consumption question is CREATOR_FIDELITY item 2, an OWNER
+  balance call, explicitly not taken; concept outcome math, sepgeo/routeDuel,
+  coverage tables all untouched; `sim.js` untouched this stage.
+
+**Gate (this sandbox, node):** new **`draw_up_probe`** (21/0 ×3, added to the
+CORE manifest): all 22 pointers resolve lawfully (bounds, no offsides,
+identity preserved, base unmutated), all 22 diagrams differ from base with no
+NaNs, the shared resolver is lawful, and — on a REAL recorded snap — seeded
+routes draw their own shapes, flip mirrors the break, the blocker stays in,
+and a null seed builds a **byte-identical script** (non-composed plays
+untouched). **`watchphys_probe` (the viewer truth gate) fully green** — ball
+spot, track sanity, determinism, special-teams null-script law all hold.
+Re-proof: `formation_variation_probe` PASS, `play_compose_probe` 17/0,
+`playbook_root_probe` 24/0, `plan_side_probe` 21/0, `ai_book_name_probe`
+11/0, `record_call_probe` 12/0, `live_book_call_probe` 13/0. Clean esbuild
+bundle + syntax parse. **Note:** `align_probe` (an old Fix-C sack-rate A/B,
+NOT in any gate tier) flips run-to-run at its ~0.4pp margins — observed both
+PASS and FAIL on the identical tree; pre-existing statistical flake, engine
+untouched this stage (Stage 5's pinned-PRNG byte-identity is the proof).
+
+**⚠ OWED (browser, owner's machine — one playtest covers Stages 4+5+6):**
+build; watch a game with a multi-look book — the pre-snap alignment should
+CHANGE with the look (trips bunch, empty spread, goal-line condense) and
+match the FIELD NOTES card; pin a look on the headset and confirm the sheet's
+cards + the fielded alignment agree; call a composed play and watch YOUR
+routes run (flip included, blocker staying in); replay + Film Room clip show
+the same. Then `_boot_check` + `node tools/_gate.mjs`.
+
+## 2026-08-16 — PLAYBOOK-ROOT REFACTOR: STAGE 5 (the record knows the call)
+## BUILT + NODE-GATED — ⚠ BROWSER PLAYTEST OWED (shares Stage 4's playtest)
+
+Stage 5 of `Ref/PLAYBOOK_ROOT_ARCHITECTURE.md`: the play record gains the call's
+provenance and the broadcast/replay show the DRAW-UP next to what happened —
+the first visible thread from draw-up to whistle. **Presentation-only, proven
+0-RNG.** Edited `js/` + `style.css` (+ gate manifest + one new probe).
+Unattended cloud session; not committed, not built, not browser-verified.
+
+**What shipped:**
+- **The record knows the call** (sim.js, the one `plays.push` stamp site):
+  every real scrimmage record now carries `bookName` (the offense's
+  `school.book.name`, `gameplan._playbookName` fallback, null-safe),
+  `variation` (the fielded LOOK — `offVar`, which already drove the snap), and
+  `customPlayId` (composed calls only). Recording only — the stamps are pure
+  reads placed after every roll; pre-snap-penalty rows and ST records are
+  untouched. `offFormation`/`concept` were already recorded.
+- **The broadcast shows it** (app.js + style.css, watch viewer):
+  - New `watchLookLabel(p)` — "Spread · Trips" from the record's stamps; the
+    play-by-play ticker's `[formation v front]` tag now names the LOOK.
+  - The desktop FIELD NOTES rail shows the look, a "📖 <book>" line under
+    PLAY ("· your play" for composed calls), and **the called play's CARD**
+    (`watchCalledCardHtml` — composed plays draw their own routes via the
+    recorded `customPlayId` from the Workshop library, named concepts draw
+    the Builder's identity art from the recorded formation).
+  - **Replay overlay**: a "THE CALL" card (`#watch-call-card`) appears on
+    instant replays — the draw-up next to what happened. Desktop widths only
+    (≥900px), honoring the mobile-landscape cleanup that retired
+    `#watch-analysis`; phones still get the look label in the ticker.
+  - Film Room clips inherit all of it free — clips store the whole play
+    record (`replays.js` never inspects `data`), and clip playback runs the
+    same board path.
+- **NOT done here (correctly)**: nothing consumes the stamps in outcomes;
+  animation honoring the draw-up is Stage 6; no schema/save migration needed
+  (absent stamps read null).
+
+**Gate (this sandbox, node):** new **`record_call_probe`** (12/0 ×3, added to
+CORE manifest): stamps on every real snap, source priority
+(book → _playbookName → null), forced look records its variation, composed
+call records its id, and the **pinned-PRNG recording-only proof** — with
+Math.random pinned to the same stream, a drive with/without a book name is
+byte-identical except the stamp itself. Re-proof all green:
+`playbook_root_probe` 24/0, `plan_side_probe` 21/0, `ai_book_name_probe`
+11/0, `live_book_call_probe` 13/0, `play_fidelity_probe` ALL GREEN (18),
+`defcall_probe` 32/0, `compile_league_probe` 26/0,
+`integration_creator_probe` 19/0, `save_migration_check` ALL PASS (39.9 MB —
+inside the measured 38.8–40.6 band, stamps didn't move save weight). Clean
+esbuild bundle + syntax parse; CSS parses.
+
+**⚠ OWED (browser, owner's machine — fold into Stage 4's playtest):** build;
+watch a game on desktop width — ticker shows "[Spread · Trips v 4-3]" on
+multi-look snaps, FIELD NOTES shows the book line + the called card, an
+instant replay shows the THE CALL card, a saved Film Room clip replays with
+it; call a composed play and confirm its own routes draw on the card.
+
+## 2026-08-16 — PLAYBOOK-ROOT REFACTOR: STAGE 4 (live coaching reads the book)
+## BUILT + NODE-GATED — ⚠ BROWSER PLAYTEST OWED before calling it done
+
+Stage 4 of `Ref/PLAYBOOK_ROOT_ARCHITECTURE.md`: both call modes KEPT (owner
+call) — the book becomes what the headset reads. Edited `js/` + `style.css`
+only (plus the gate manifest + a new probe in `tools/`). Unattended cloud
+session; **not committed** (git here is owner-run), **not built**, **not
+browser-verified**.
+
+**What shipped (`js/` source + `style.css`):**
+- **The formation pin lists YOUR BOOK'S LOOKS** (app.js callSheetPanelHtml).
+  The strip reads `school.book.plan.offFormations` (compiled-gameplan fallback
+  — identical by the Stage-1 law), one pin per (formation, variation) LOOK,
+  each drawn with `renderFormationDiagram` (the Builder's art) + the look label
+  ("Spread · Trips"), with the book's name on the strip. Pinning a look sends
+  `formationId` + `variation` on the call (new `state.ui.callVariation`,
+  cleared everywhere `callFormation` is; the sim's P1b `forcedCall.variation`
+  path was already live).
+- **Play tiles are CARDS — the Builder's own art.** The drill-down, the pinned
+  formation page, the off-the-sheet rows and the INFO preview all render
+  `renderConceptThumb` (routeart.js) aligned to the formation being called
+  from, replacing the old 3-line `conceptPlayGraphic` sketches. Same art as
+  the Workshop.
+- **Composed plays are CALLABLE (their first path into a live game).** A
+  "📖 MY PLAYS" card section on the sheet (category view + pinned page;
+  pass-only composer v1, so the run-only RPO/QB-Run tags hide it). Reads
+  `school.book.plays` snapshots when a later stage populates them, else the
+  Workshop `plays` shelf, repair-on-render; a pinned formation filters plays
+  that name formations. Calling sends `{customPlay: id, customPlayData:
+  <composed source>}`; **sim.js** compiles it through the PROVEN band-clamped
+  `compilePlay` rulebook at the snap — recorded concept = the play's name,
+  `coachCall` set, audible/gadget/category paths all excluded, an invalid
+  payload falls through to the normal sheet call. **AI-blind by construction**
+  (composed plays never enter PASS_CONCEPTS, the only pool `pickPassConcept`
+  iterates; only the human sheet authors `forcedCall.customPlay`).
+- **Defensive headset chips read the BOOK.** New `defBookCalls(school)`
+  (teamplan.js): `defbook.calls` (the Stage-3 target home) → the book's
+  `plan.defCalls` snapshot (today) → flat `gameplan.defCalls` (pre-book
+  saves). Both the chip row and the click-to-load handler go through it; the
+  row shows the defbook's name.
+- **Minimal defCalls→defbook.calls seam (the Stage-3 dependency, done here as
+  directed):** `compilePlanParts` now emits `gameplan.defCalls` from a
+  defbook's first-class `calls` when the plan snapshot is absent. The FULL
+  relocation (moving defCalls out of `plan`) was deliberately NOT done — it
+  would break the Stage-1 partition law `plan_side_probe` /
+  `playbook_root_probe` enforce, and it belongs with the browser-in-the-loop
+  Stage-3 batch (overlay-save + update prompt). Byte-neutral for every
+  existing book, probe-proven.
+- **Sheet/category quick calls: UNCHANGED.** Both call modes intact.
+
+**Gate (this sandbox, all node):** clean esbuild bundle + syntax parse; CSS
+parses. New **`live_book_call_probe`** (13/0, added to the CORE gate
+manifest): the composed call runs as itself (8/8 snaps, one snap per call),
+grades band-clamped, PASS_CONCEPTS unpolluted, broken payload falls through,
+sheet drives never leak composed names, the defBookCalls resolution chain +
+compile-seam byte-neutrality. Sim-neutral re-proof: `playbook_root_probe`
+24/0, `plan_side_probe` 21/0, `ai_book_name_probe` 11/0,
+`play_fidelity_probe` ALL GREEN (18), `defcall_probe` 32/0,
+`play_compose_probe` 17/0, `custom_play_probe` 221/0, `defbook_probe` 26/0,
+`playbook_shape_probe` 24/0, `compile_league_probe` 26/0,
+`integration_creator_probe` 19/0, `save_migration_check` ALL PASS,
+`worldgen_check` PASS, `tendency_probe` monotonic ✅.
+
+**⚠ OWED (browser, owner's machine):** `node tools/build.mjs`; the live
+playtest — pin a look (diagram strip renders, the variation rides the call),
+open a drill-down (cards render), call a composed play from MY PLAYS (its
+name shows in the play-by-play), defensive headset chips still load calls
+(now from the book) — plus `_boot_check` and the core gate's Playwright tier.
+Stage 4 is NOT "done" until that playtest passes.
 
 ## 2026-08-15 — MOBILE PASS: landscape viewer + Play Composer + rotation
 

@@ -1,14 +1,15 @@
 import { __spreadProps, __spreadValues } from '../_spread.js';
 import { PASS_CONCEPTS, RUN_CONCEPTS } from '../concepts.js';
 import { C, DEF_WEIGHTS, FORMATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, FRONT_ROLES, MEASURED_ATTRS, OFF_WEIGHTS, OUT_OF_POS, PASS_TENDENCY, PENALTY_CATALOG, STARTER_COUNTS, SUB_ADJACENT, aggrStopFromBlitzPct, aliasFormation } from '../constants.js';
-import { DEF_DROP_ELIGIBLE } from '../constants_field.js';
+import { DEF_DROP_ELIGIBLE, DEF_FIELD_LAYOUTS, OFF_FIELD_LAYOUTS } from '../constants_field.js';
 import { contestGap } from './contests.js';
 import { resolveDefField, resolveOffField } from './fieldassign.js';
-import { FRONT_PRESSURE_SIGNATURE, defUnitStrengthSchemeFit, getDefWeights, getMatchupEdge, getOffWeights, getSituationalMod, offPersonnelClass, offUnitStrengthRoles, resolveDefPersonnel, resolvePersonnel, rollFormation, selectDefFront } from './formations.js';
+import { FRONT_PRESSURE_SIGNATURE, defUnitStrengthSchemeFit, getDefWeights, getMatchupEdge, getOffWeights, getSituationalMod, offPersonnelClass, offUnitStrengthRoles, resolveDefPersonnel, resolvePersonnel, rollFormation, rollFormationEntry, selectDefFront, variationPassLeanDelta } from './formations.js';
 import { derivedArchetype, makeInjury, roleRating } from './player.js';
 import { runFit } from './run2geo.js';
 import { resolvePocket } from './rushgeo.js';
 import { routeDuel } from './sepgeo.js';
+import { compilePlay } from './playcompose.js';
 import { getEffectivePlan, resolveSituation } from './situations.js';
 import { coordPackageIQ, formationIqMod } from './staff.js';
 import { bridgeWaivesBucket, flawLv, flawMult, traitLv, traitMult } from './traits.js';
@@ -1862,7 +1863,7 @@ function resolvePassPlay(playType, offPersonnel, defPersonnel, offRoster, defRos
     const sniffChance = clamp2((jackpot ? 0.03 : 0.09) + (dlAWR - 50) * 22e-4 + scrEdgeAdj + 0.012 * _snLv, 0.02, 0.27);
     const rbId = (offPersonnel.RB || [])[0];
     const wrId = (offPersonnel.WR || [])[0];
-    const scrTarget = forcedScreen === "rb" ? offRoster.find((p) => p.id === rbId) || offRoster.find((p) => p.id === wrId) : forcedScreen === "bubble" || forcedScreen === "tunnel" ? offRoster.find((p) => p.id === wrId) || offRoster.find((p) => p.id === rbId) : rbId && Math.random() < 0.72 ? offRoster.find((p) => p.id === rbId) : offRoster.find((p) => p.id === wrId);
+    const scrTarget = forcedScreen === "rb" ? offRoster.find((p) => p.id === rbId) || offRoster.find((p) => p.id === wrId) : forcedScreen === "bubble" || forcedScreen === "tunnel" || forcedScreen === "slip" ? offRoster.find((p) => p.id === wrId) || offRoster.find((p) => p.id === rbId) : rbId && Math.random() < 0.72 ? offRoster.find((p) => p.id === rbId) : offRoster.find((p) => p.id === wrId);
     if (!scrTarget) {
       result.complete = false;
       return result;
@@ -3417,14 +3418,83 @@ function slotSpeedMap(bySlot, roster) {
   const out = {};
   for (const sid in bySlot) {
     const pl = byId.get(bySlot[sid]);
-    if (pl) out[sid] = { s: (_b = (_a = pl.attributes) == null ? void 0 : _a.SPD) != null ? _b : 55, a: (_d = (_c = pl.attributes) == null ? void 0 : _c.AGI) != null ? _d : 55 };
+    if (pl) out[sid] = {
+      s: (_b = (_a = pl.attributes) == null ? void 0 : _a.SPD) != null ? _b : 55,
+      a: (_d = (_c = pl.attributes) == null ? void 0 : _c.AGI) != null ? _d : 55,
+      // Viewer Act 2 / A5: compact roster identity, recording only. These
+      // values share the speed map already stored on every play so body
+      // expression does not add a second 22-player payload.
+      h: Number.isFinite(pl.heightInches) ? pl.heightInches : null,
+      w: Number.isFinite(pl.weight) ? pl.weight : null
+    };
   }
   return out;
 }
-function pickPlayType(formationId, gameplan, sitTendency, down, distance, fieldPos, score, clock) {
+function defViewerSlotMap(frontId, defPersonnel) {
+  const layout = DEF_FIELD_LAYOUTS[frontId];
+  if (!layout || !defPersonnel) return null;
+  const pools = {
+    DE: defPersonnel.DE || [], DT: defPersonnel.DT || [], OLB: defPersonnel.OLB || [],
+    LB: defPersonnel.ILB || defPersonnel.LB || [], CB: defPersonnel.CB || [], S: defPersonnel.S || []
+  };
+  const used = /* @__PURE__ */ new Set(), cursor = {}, out = {};
+  const all = [...new Set(Object.values(pools).flat())];
+  for (const slot of layout.slots) {
+    const pool = pools[slot.pos] || [];
+    let i = cursor[slot.pos] || 0, id = null;
+    while (i < pool.length && used.has(pool[i])) i++;
+    if (i < pool.length) { id = pool[i]; cursor[slot.pos] = i + 1; }
+    if (!id) id = all.find((pid) => !used.has(pid)) || null;
+    if (id) { out[slot.id] = id; used.add(id); }
+  }
+  return Object.keys(out).length ? out : null;
+}
+function slotBodyFallbackMap(bySlot, roster) {
+  const out = slotSpeedMap(bySlot, roster);
+  // A scheme-fit sub-front historically carried no slot speed map. Keep its
+  // exact legacy track factors (55 = 1.0) while still recording the real
+  // bodies assigned to that front for A5.
+  if (out) for (const v of Object.values(out)) { v.s = 55; v.a = 55; }
+  return out;
+}
+function armSwitchStamp(playResult, carrierSlotId, targetSlotId, offSlots, fieldRemaining = 100) {
+  // Viewer Act 2 / A4: the play is already over when this runs. The stamp
+  // records the ball-security decision for film; no outcome path reads it and
+  // no random number is consumed. The kill switch makes that bit-exact law
+  // measurable in the matched A/B.
+  if (globalThis.__noArmSwitch || !playResult || playResult.turnover || playResult.pitchMuffed) return null;
+  const runCarrier = !!playResult.rusherId;
+  const catchCarrier = !!playResult.complete && !!playResult.receiverId;
+  const rawOpenYards = runCarrier ? Math.max(0, playResult.yards || 0) : catchCarrier ? Math.max(0, playResult.yacYds || 0) : 0;
+  const visibleRunway = catchCarrier
+    ? Math.max(0, fieldRemaining - Math.max(0, playResult.airYds || 0))
+    : Math.max(0, fieldRemaining);
+  const openYards = Math.min(rawOpenYards, visibleRunway);
+  if (openYards < 6) return null;
+  let side = playResult.runDir === "left" || playResult.runDir === "right" ? playResult.runDir : null;
+  const slotId = runCarrier ? carrierSlotId : targetSlotId;
+  if (!side && slotId && offSlots) {
+    const slot = offSlots.find((s) => s.id === slotId) || null;
+    if (slot && Number.isFinite(slot.x)) {
+      if (slot.x <= 0.43) side = "left";
+      else if (slot.x >= 0.57) side = "right";
+    }
+  }
+  if (!side || !slotId) return null;
+  const to = side;
+  return {
+    slot: slotId,
+    from: to === "left" ? "right" : "left",
+    to,
+    // Fraction of the post-possession run. Longer runs give the exchange a
+    // beat later; the viewer translates this normalized stamp to its clock.
+    f: Math.round(clamp2(0.38 + (openYards - 6) * 8e-3, 0.38, 0.58) * 100) / 100
+  };
+}
+function pickPlayType(formationId, gameplan, sitTendency, down, distance, fieldPos, score, clock, varKey = null) {
   var _a, _b, _c, _d, _e, _f;
   const formInfo = FORMATIONS[aliasFormation(formationId)] || Object.values(FORMATIONS)[0];
-  const formLean = formInfo.passLean * 0.5;
+  const formLean = (formInfo.passLean + variationPassLeanDelta(formationId, varKey)) * 0.5;
   let passRate;
   if (sitTendency != null) {
     passRate = ((_a = PASS_TENDENCY[sitTendency]) != null ? _a : 0.5) + formLean;
@@ -4554,7 +4624,23 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     }
     const _namedPlay = forcedCall && forcedCall.concept && forcedCall.concept !== "sheet" && FORMATION_PLAYBOOK && Object.values(FORMATION_PLAYBOOK).some((l) => l.includes(forcedCall.concept)) ? forcedCall.concept : null;
     const _formEligible = _namedPlay ? ((id) => (FORMATION_PLAYBOOK[id] || []).includes(_namedPlay)) : null;
-    const offFormationId = (forcedCall == null ? void 0 : forcedCall.formationId) && FORMATION_PACKAGES[forcedCall.formationId] ? forcedCall.formationId : aliasFormation(rollFormation(offEff.offFormations, _formEligible) || offPlan.offFormation || "Single Back");
+    const _forcedFormation = (forcedCall == null ? void 0 : forcedCall.formationId) && FORMATION_PACKAGES[forcedCall.formationId] ? forcedCall.formationId : null;
+    // Multi-look fix (2026-08-15): roll the ENTRY, not just the id. A playbook
+    // can carry the same formation as several weighted looks (Base + Trips + …);
+    // rolling only the id and then asking pickedVariation() meant the FIRST
+    // variation entry always won — the Base look never played and the look
+    // weights were ignored. The winning entry now carries its own variation.
+    const _rolledEntry = _forcedFormation ? null : rollFormationEntry(offEff.offFormations, _formEligible);
+    const offFormationId = _forcedFormation ? _forcedFormation : aliasFormation((_rolledEntry && _rolledEntry.id) || offPlan.offFormation || "Single Back");
+    // P1b: the selected formation may carry a VARIATION (a sparse delta over the
+    // base look). A live human call can name it (forcedCall.variation); otherwise
+    // the gameplan formation entry that won the roll carries it. Null = base look.
+    // A forced call that names a formation but not a look rolls among that
+    // formation's own entries by weight (multi-look aware).
+    const offVar = (forcedCall == null ? void 0 : forcedCall.variation) || (_rolledEntry ? _rolledEntry.variation || null : (() => {
+      const e = rollFormationEntry(offEff.offFormations, (fid) => fid === offFormationId);
+      return e && aliasFormation(e.id) === offFormationId ? e.variation || null : null;
+    })());
     // F2 (check-with-me, Aug 2026): the call sheet can key on the offense's
     // PERSONNEL, not just down-and-distance — "vs Empty, bring the house."
     // The check overlays the effective plan once the formation shows itself;
@@ -4612,9 +4698,30 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
       distance,
       fieldPos,
       gameState.score,
-      gameState.clock
+      gameState.clock,
+      offVar
     );
     let forcedConceptName = null, forcedGadget = null;
+    // Stage 4 (Playbook-Root): a COMPOSED play called from the headset.
+    // forcedCall.customPlay names the book play; customPlayData carries its
+    // composed source. compilePlay() is the proven fixed rulebook — every
+    // derived grade is clamped to the catalog band, so a composed call can
+    // never outgrade the strongest shipped concept. An invalid payload falls
+    // through to the normal sheet call (never bricks a snap). Human-call-only
+    // stays BY CONSTRUCTION: composed plays are never written into
+    // PASS_CONCEPTS, the only pool the AI's pickPassConcept iterates, and only
+    // the human call sheet authors forcedCall.customPlay.
+    let composedCall = null, composedCallId = null;
+    if (forcedCall && forcedCall.customPlay && forcedCall.customPlayData) {
+      try {
+        composedCall = compilePlay(forcedCall.customPlayData);
+        composedCallId = String(forcedCall.customPlay);
+      } catch (e) {
+        composedCall = null;
+        composedCallId = null;
+      }
+    }
+    if (composedCall) playType = "pass_" + composedCall.depth;
     if (forcedCall && forcedCall.concept && forcedCall.concept !== "sheet") {
       const nm = forcedCall.concept;
       if (nm === "Draw") {
@@ -4649,7 +4756,7 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
         forcedConceptName = nm;
       }
     }
-    const categoryCalled = !forcedConceptName && !forcedGadget && !!(forcedCall == null ? void 0 : forcedCall.category) && CALL_CATEGORIES.has(forcedCall.category);
+    const categoryCalled = !forcedConceptName && !forcedGadget && !composedCall && !!(forcedCall == null ? void 0 : forcedCall.category) && CALL_CATEGORIES.has(forcedCall.category);
     if (categoryCalled) playType = forcedCall.category;
     const _fcPass = forcedConceptName ? PASS_CONCEPTS[forcedConceptName] : null;
     const _fcRun = forcedConceptName ? RUN_CONCEPTS[forcedConceptName] : null;
@@ -4657,8 +4764,8 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     const calledFade = !!(_fcPass && _fcPass.fade);
     const calledSneak = !!(_fcRun && _fcRun.qbSneak);
     const paValid = !!(forcedCall == null ? void 0 : forcedCall.playAction) && !forcedGadget && !calledScreen && !calledFade && playType.startsWith("pass");
-    const rpoValid = !!(forcedCall == null ? void 0 : forcedCall.rpo) && !forcedGadget && !calledScreen && !calledFade;
-    const qbRunValid = !!(forcedCall == null ? void 0 : forcedCall.qbRun) && !forcedGadget && playType.startsWith("run");
+    const rpoValid = !!(forcedCall == null ? void 0 : forcedCall.rpo) && !forcedGadget && !composedCall && !calledScreen && !calledFade;
+    const qbRunValid = !!(forcedCall == null ? void 0 : forcedCall.qbRun) && !forcedGadget && !composedCall && playType.startsWith("run");
     if (paValid && playType === "pass_short" && !calledScreen) playType = "pass_medium";
     if (rpoValid && !playType.startsWith("run")) playType = "run_inside";
     offPlanEff._forcePA = paValid;
@@ -4676,7 +4783,7 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
       const motionAllowed = (offPlan.motionRate != null ? offPlan.motionRate : 100) > 0;
       offPlanEff._forceMotion = conceptWantsMotion && motionAllowed;
     }
-    const coachCalled = !!(forcedConceptName || forcedGadget);
+    const coachCalled = !!(forcedConceptName || forcedGadget || composedCall);
     const familyPinned = coachCalled || categoryCalled;
     const activeOffDepth = filterActiveDepth(offDepth, offCtx, "off");
     const activeDefDepth = filterActiveDepth(defDepth, defCtx, "def");
@@ -4718,7 +4825,7 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     // rush resolver on the effective plan. null = neutral (every AI plan and
     // every untouched save). `__noBlitzPie`.
     defPlanEff._pieHeat = !globalThis.__noBlitzPie && defFA && defFA.heat != null ? defFA.heat : null;
-    const offPersonnel = offField ? offField.personnel : resolvePersonnel(offFormationId, activeOffDepth);
+    const offPersonnel = offField ? offField.personnel : resolvePersonnel(offFormationId, activeOffDepth, offVar);
     const defPersonnel = defBaseField ? defBaseField.personnel : resolveDefPersonnel(defFrontId, activeDefDepth, defRoster);
     const qb0 = (() => {
       const id = ((offPersonnel == null ? void 0 : offPersonnel.QB) || [])[0];
@@ -4811,7 +4918,15 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     // those — player-authored sheets are untouched — for a clean in-game A/B.
     const _fpbSheet = offPlan.formationPlaybooks && !(globalThis.__noAIFormSheets && offPlan._aiAuthoredSheets) ? offPlan.formationPlaybooks[offFormationId] : null;
     const _cwEff = _fpbSheet && Object.keys(_fpbSheet).length ? { ...offPlanEff.conceptWeights || {}, ..._fpbSheet } : offPlanEff.conceptWeights || null;
-    if (playType.startsWith("pass")) concept = pickPassConcept(playType, offPersonnel, offRoster, covFam, _cwEff, forcedConceptName, _pbGate);
+    if (composedCall) {
+      // The composed call IS the play — same shape the forced-name branch of
+      // pickPassConcept produces, but the grades come from the band-clamped
+      // compile above. The carry gate is bypassed exactly as it is for a
+      // forced named concept (owner mandate: the call is the play).
+      const skillC = execSkill(composedCall.exec || {}, offRoster, offPersonnel);
+      const vsC = (composedCall.vs || {})[covFam];
+      concept = { name: composedCall.name, mod: (vsC != null ? vsC : 0) * clamp2(1 + (skillC - 50) / 100, 0.6, 1.4) };
+    } else if (playType.startsWith("pass")) concept = pickPassConcept(playType, offPersonnel, offRoster, covFam, _cwEff, forcedConceptName, _pbGate);
     else if (playType === "run_inside" || playType === "run_outside") concept = pickRunConcept(playType, offPersonnel, offRoster, defEff, _cwEff, forcedConceptName, _pbGate);
     let audible = false;
     // [OWNER MANDATE Aug 2026 — the call is the play] The QB's LOS freedom
@@ -4819,7 +4934,7 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     // a gadget), it fires — no check-out, whatever the look. This was the
     // ~2% silent-substitution the play_fidelity_probe caught: smart QBs were
     // audibling out of explicit headset calls.
-    if (concept.name && !forcedConceptName && !forcedGadget && playType.startsWith("pass") && qb0 && losFree !== "never" && audiblesUsed < (losFree === "free" ? 2 : 1)) {
+    if (concept.name && !forcedConceptName && !forcedGadget && !composedCall && playType.startsWith("pass") && qb0 && losFree !== "never" && audiblesUsed < (losFree === "free" ? 2 : 1)) {
       const calledVs = (_U = (_T = (_S = PASS_CONCEPTS[concept.name]) == null ? void 0 : _S.vs) == null ? void 0 : _T[believedFam]) != null ? _U : 0;
       const pAud = clamp2((((_V = qb0.attributes.AWR) != null ? _V : 50) - 55) * 0.012 + 8e-3 * traitLv(qb0, "fieldGeneral"), 0, 0.35) * (losFree === "free" ? 1.4 : 1);
       if (calledVs <= -0.02 && Math.random() < pAud) {
@@ -4852,7 +4967,11 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     if (fooled) offPlanEff._fooled = true;
     _conceptCtx = {
       name: concept.name,
-      def: concept.name ? (_aa = (_$ = PASS_CONCEPTS[concept.name]) != null ? _$ : RUN_CONCEPTS[concept.name]) != null ? _aa : null : null,
+      // Stage 4: a composed call's compiled (band-clamped) concept object is the
+      // snap's def context — same fields the resolution reads (depth/vs/exec),
+      // absent flags (screen/fade/pulls/…) read falsy exactly like a catalog
+      // concept that doesn't carry them.
+      def: concept.name ? (_aa = (_$ = PASS_CONCEPTS[concept.name]) != null ? _$ : RUN_CONCEPTS[concept.name]) != null ? _aa : composedCall && composedCall.name === concept.name ? composedCall : null : null,
       fam: covFam,
       // PASS 3 (Aug 2026): the RESOLVED family's shell, stamped for assignCoverage.
       // Fix E (shell-wide press/off) and the leverage help-rule both read
@@ -4865,7 +4984,7 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
       edgePlay: defEff.edgePlay || "balanced"
     };
     offPlanEff._forcePANative = !!(concept.name && PASS_CONCEPTS[concept.name] && PASS_CONCEPTS[concept.name].paNative);
-    const offUnit = baseOffUnit * (1 + concept.mod) * (fakeSurprise ? 1.1 : 1) * h2Counter * formationIqMod(offSchool, "off", offFormationId) * (2 - formationIqMod(defSchool, "def", defFrontId)) * getMatchupEdge(offFormationId, defFrontId) * getSituationalMod(offFormationId, down, distance, gameState.clock, fieldPos) * shortYardagePower(playType, distance, offPersonnel, offRoster) * (1 + (((_ba = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : _ba.groundPound) || 0) * 8e-3) * (down === 4 ? 1 + (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.riverboat) || 0) * 0.01 : 1) * (offense.isHome ? C.HOME_EDGE : 1 - (1 - (2 - C.HOME_EDGE)) * (1 - (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.roadWarrior) || 0) * 0.08)) * ((_ca = offense.form) != null ? _ca : 1) * (2 - ((_da = defense.form) != null ? _da : 1)) * ((_ea = offense.execMult) != null ? _ea : 1) * (2 - ((_fa = defense.execMult) != null ? _fa : 1)) + ((offPlan == null ? void 0 : offPlan._h2OffLean) ? offPlan._h2OffLean.eff * C.K_CONTEXT : 0);
+    const offUnit = baseOffUnit * (1 + concept.mod) * (fakeSurprise ? 1.1 : 1) * h2Counter * formationIqMod(offSchool, "off", offFormationId) * (2 - formationIqMod(defSchool, "def", defFrontId)) * getMatchupEdge(offFormationId, defFrontId, offVar) * getSituationalMod(offFormationId, down, distance, gameState.clock, fieldPos, offVar) * shortYardagePower(playType, distance, offPersonnel, offRoster) * (1 + (((_ba = offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : _ba.groundPound) || 0) * 8e-3) * (down === 4 ? 1 + (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.riverboat) || 0) * 0.01 : 1) * (offense.isHome ? C.HOME_EDGE : 1 - (1 - (2 - C.HOME_EDGE)) * (1 - (((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.roadWarrior) || 0) * 0.08)) * ((_ca = offense.form) != null ? _ca : 1) * (2 - ((_da = defense.form) != null ? _da : 1)) * ((_ea = offense.execMult) != null ? _ea : 1) * (2 - ((_fa = defense.execMult) != null ? _fa : 1)) + ((offPlan == null ? void 0 : offPlan._h2OffLean) ? offPlan._h2OffLean.eff * C.K_CONTEXT : 0);
     const rcDef = defEff.runCommit || 0;
     // PASS 3 (rotations, run side): the force rules are RUN-SUPPORT rules —
     // sky drops a safety onto the edge (the classic 8th-man force), cloud
@@ -5267,6 +5386,8 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     // front is auto-subbed per down and the viewer resolves the body by
     // pos + proximity, which degrades gracefully across fronts.
     const _targetSlotId = playResult.targetId && (offField == null ? void 0 : offField.bySlot) ? Object.keys(offField.bySlot).find((sid) => offField.bySlot[sid] === playResult.targetId) || null : null;
+    const _armSwitch = armSwitchStamp(playResult, _carrierSlotId, _targetSlotId, OFF_FIELD_LAYOUTS[offFormationId]?.slots, 100 - fieldPos);
+    const _defViewerSlots = (defBaseField == null ? void 0 : defBaseField.bySlot) || defViewerSlotMap(defFrontId, defPersonnel);
     if (playResult.trace) {
       const _covId = playResult.targetId && playResult.covAssign ? ((playResult.covAssign.find((c) => c.r === playResult.targetId) || {}).d || null) : null;
       const _covP = _covId ? defRoster.find((pp) => pp.id === _covId) : null;
@@ -5278,8 +5399,17 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
       fieldPos,
       offFormation: offFormationId,
       defFront: defFrontId,
+      // Stage 5 (Playbook-Root): the record knows the CALL — which BOOK the
+      // snap came from, which LOOK (variation) was fielded, and, for a
+      // composed play, which book play produced it. Recording only: consumes
+      // no RNG and feeds no outcome; the broadcast/replay draw the card from
+      // these stamps. (offFormation + concept were already recorded above.)
+      bookName: offSchool && offSchool.book && offSchool.book.name || offPlan._playbookName || null,
+      variation: offVar || null,
+      customPlayId: composedCall ? composedCallId : null,
       carrierSlotId: _carrierSlotId,
       targetSlotId: _targetSlotId,
+      armSwitch: _armSwitch,
       // Arm talent stamp (recording only): the viewer reads this for
       // ball-flight zip/arc. Never feeds back into any outcome.
       qbArm: (() => {
@@ -5341,7 +5471,7 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
         return out.pbu || out.pick ? out : null;
       })(),
       offSpd: slotSpeedMap(offField == null ? void 0 : offField.bySlot, offRoster),
-      defSpd: slotSpeedMap(defBaseField == null ? void 0 : defBaseField.bySlot, defRoster),
+      defSpd: (defBaseField == null ? void 0 : defBaseField.bySlot) ? slotSpeedMap(defBaseField.bySlot, defRoster) : slotBodyFallbackMap(_defViewerSlots, defRoster),
       offSit,
       tempo: offPlan._liveTempo || offEff.tempo,
       blitzFired: (_za = playResult.blitzFired) != null ? _za : false,
@@ -5471,8 +5601,27 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     }
     if (playResult.turnover) {
       const typeStr = playResult.turnoverType === "interception" ? "INTERCEPTION" : "FUMBLE";
+      let takeover = 100 - fieldPos;
+      // playtest item 9b \u2014 an interception in the end zone is a touchback:
+      // the defense takes over at its own 20, not a mirror of the LOS. The
+      // takeover spot is the flat 100 - fieldPos everywhere else, which for a
+      // pick deep in the opponent's red zone handed the defense the ball on
+      // its own 1-5. Approximate the defender's catch line from the throw's
+      // depth band (he undercuts the target, so these run short on purpose)
+      // and only convert when the ball reached the end zone \u2014 which, with
+      // these depths, is exactly the range where the mirror is worse than a
+      // touchback, so this can only improve the defense's field position,
+      // never regress it.
+      if (playResult.turnoverType === "interception" && !globalThis.__noIntTouchback) {
+        const intAirByBand = { short: 4, medium: 11, deep: 20 };
+        const airDepth = intAirByBand[playResult.passDepth] != null ? intAirByBand[playResult.passDepth] : 8;
+        if (fieldPos + airDepth >= 100) {
+          takeover = 20;
+          if (plays.length) plays[plays.length - 1].intTouchback = true;
+        }
+      }
       log.push(`${typeStr} \u2014 ${defSchool.name} takes over`);
-      return { plays, result: "turnover", points: 0, finalFieldPos: 100 - fieldPos, pen };
+      return { plays, result: "turnover", points: 0, finalFieldPos: takeover, pen };
     }
     if (playResult.sack) {
       const rawPos = fieldPos - Math.abs(playResult.yards);

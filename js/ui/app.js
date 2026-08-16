@@ -1,7 +1,7 @@
 import { __spreadProps, __spreadValues } from '../_spread.js';
 import { PASS_CONCEPTS, RUN_CONCEPTS } from '../concepts.js';
-import { DEF_FIELD_LAYOUTS, OFF_FIELD_LAYOUTS } from '../constants_field.js';
-import { ATTRIBUTES, C, FORMATION_PACKAGES, PASS_TENDENCY, aliasFormation, attrLabel } from '../constants.js';
+import { DEF_FIELD_LAYOUTS, OFF_FIELD_LAYOUTS, variationLayoutSlots } from '../constants_field.js';
+import { ATTRIBUTES, C, FORMATION_PACKAGES, FORMATION_VARIATIONS, PASS_TENDENCY, aliasFormation, attrLabel } from '../constants.js';
 import { gameHighlights, linescore } from '../engine/highlights.js';
 import { flushSaveSync, gamePauseIsLive, saveGame } from '../engine/persistence.js';
 import { saveReplay } from '../engine/replays.js';
@@ -9,6 +9,10 @@ import { derivedArchetype } from '../engine/player.js';
 import { BRIDGE_CATALOG, FLAW_CATALOG, PLAY_CATALOG } from '../engine/traits.js';
 import { coachedGamesForDay, weekShort } from '../engine/season.js';
 import { callContext, decisionContext, midGameReport, setPenaltyScale } from '../engine/sim.js';
+import { defBookCalls } from '../engine/teamplan.js';
+import { listCreations, loadCreationData } from '../engine/creator.js';
+import { repairComposedPlay } from '../engine/playcompose.js';
+import { renderConceptThumb, renderFormationDiagram, renderPlayCard, resolveComposedReceivers } from './views/routeart.js';
 import { SITUATION_KEYS, SITUATION_LABELS } from '../engine/situations.js';
 import { isTreeGame, lockstepBlock, treeSnapshot } from '../engine/tree.js';
 import { afterCoachedGameResultClose, answerFourthDown, answerPlayCall, chooseKickoffMode, closeInstantClassicReplay, continueExhibitionSpectator, exitSeasonRun, getPhaseLabel, getPlayerSchool, getUpcomingGame, getWeekLabel, getWeekShort, navigate, navigateBack, notify, openSchool, programGroupTab, refreshSaves, rerender, resumeHalftime, saveToSlot, seasonGroupTab, setCallModeMidGame, setGroupTab, setNotifyFn, setRenderFn, simCoached, simToBreak, simToQuarterEnd, state, statsGroupTab, switchTreeSlot, teamGroupTab } from '../state.js';
@@ -40,6 +44,17 @@ import { normalizeWatchCamera, nextWatchCamera, watchCameraLabel, projectWatchPo
 import { spriteMarkup, ballMarkup, spriteMotionTick, wspPlace } from './sprite.js';
 import { stadiumPause, stadiumReact, stadiumStart } from './sound.js';
 import { archetypeLabel, escapeHtml, fullName, ratingColor, renderCrest, renderPlayerPortrait } from '../utils.js';
+import { syncCustomFormations } from '../engine/formcompose.js';
+
+// Stage 7 (Playbook-Root): register the library's custom formations into the
+// live tables at boot — after this, every surface that lists or fields a
+// formation (Builder, Game Plan, call sheet, depth chart, the sim, the board)
+// sees them like built-ins. The Designer re-syncs after every save/delete.
+// Guarded: a machine with no library (or a broken one) boots exactly as before.
+try {
+  syncCustomFormations(listCreations("formations").map((e) => ({ name: e.name, data: e.data })));
+} catch (e) {
+}
 
 function hexToHsl(hex) {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -2293,6 +2308,8 @@ function setupGlobalListeners() {
   }
   document.querySelectorAll("[data-cs-form]").forEach((b) => b.addEventListener("click", () => {
     state.ui.callFormation = b.dataset.csForm === "__auto" ? null : b.dataset.csForm;
+    // Stage 4: a pin is a LOOK from your book — id + variation (Base = none).
+    state.ui.callVariation = state.ui.callFormation ? b.dataset.csVar || null : null;
     rerender();
   }));
   const _PASS_DRILLS = ["quick", "dropback", "shots"];
@@ -2398,7 +2415,12 @@ function setupGlobalListeners() {
     answerPlayCall({ specialTeams: b.dataset.csSt });
   }));
   const _decorateCall = (call) => {
-    if (state.ui.callFormation) call.formationId = state.ui.callFormation;
+    if (state.ui.callFormation) {
+      call.formationId = state.ui.callFormation;
+      // Stage 4: the pinned LOOK's variation rides the call (sim already
+      // honors forcedCall.variation — P1b).
+      if (state.ui.callVariation) call.variation = state.ui.callVariation;
+    }
     if (state.ui.callPA) call.playAction = true;
     if (state.ui.callRPO) call.rpo = true;
     if (state.ui.callQBRun) call.qbRun = true;
@@ -2444,6 +2466,17 @@ function setupGlobalListeners() {
     state.ui.callConceptPreview = null;
     answerPlayCall(_decorateCall({ concept: nm }));
   }));
+  // Stage 4 (Playbook-Root): call a COMPOSED play from the book. The call
+  // carries the play's composed source; the sim compiles it through the proven
+  // band-clamped rulebook (compilePlay) — human-call-only by construction.
+  document.querySelectorAll("[data-cs-callcustom]").forEach((b) => b.addEventListener("click", () => {
+    if (!callTapOk()) return;
+    const data = _composedCallData(b.dataset.csCallcustom);
+    if (!data) return;
+    state.ui.callDrill = null;
+    state.ui.callConceptPreview = null;
+    answerPlayCall(_decorateCall({ customPlay: b.dataset.csCallcustom, customPlayData: data }));
+  }));
   // PASS 2: named-call chips on the headset — one tap pre-fills every dial
   // the call names (BOX translated to the panel's relative shove); the coach
   // can still adjust any dial on top before sending.
@@ -2455,7 +2488,10 @@ function setupGlobalListeners() {
       rerender();
       return;
     }
-    const call = (_c2 = (_b2 = (_a2 = getPlayerSchool()) == null ? void 0 : _a2.gameplan) == null ? void 0 : _b2.defCalls) == null ? void 0 : _c2[nm];
+    // Stage 4: the chips read the defensive BOOK's named calls (defBookCalls —
+    // defbook.calls when Stage 3 lands it, the book's plan.defCalls snapshot
+    // today, the flat gameplan for pre-book saves).
+    const call = (_a2 = defBookCalls(getPlayerSchool())) == null ? void 0 : _a2[nm];
     if (!call) return;
     const sel = {};
     for (const f of ["front", "aggression", "covShell", "covStyle", "edgePlay", "robberCall", "zoneStyle", "pressureIdentity"]) {
@@ -3019,12 +3055,14 @@ function conceptTeaching(name) {
   });
   return { attacks, risk, best: pieces.length ? pieces.join(" plus ") : "Players whose strengths match the assignment." };
 }
-function conceptPreviewHtml(name) {
+function conceptPreviewHtml(name, formation) {
   const note = conceptTeaching(name);
+  // Stage 4: the preview draws the play with the Builder's card art, aligned to
+  // the formation the coach is calling from \u2014 same picture as the Workshop.
   return `<div class="cs-concept-preview">
   <button class="cs-drill-back" data-cs-previewback="1">\u2190 Back to plays</button>
   <div class="cs-preview-main">
-    ${conceptPlayGraphic(name, true)}
+    <span class="cs-preview-art">${renderConceptThumb(name, { w: 260, h: 170, formation: formation || void 0 })}</span>
     <div class="cs-preview-copy">
       <h3>${escapeHtml(name)}</h3>
       <div class="cs-teach-row"><b>ATTACKS</b><span>${escapeHtml(note.attacks)}</span></div>
@@ -3034,6 +3072,56 @@ function conceptPreviewHtml(name) {
   </div>
   <button class="btn primary cs-call-play" data-cs-callconcept="${escapeHtml(name)}">CALL THIS PLAY \u2192</button>
 </div>`;
+}
+// Stage 4 (Playbook-Root): the book's COMPOSED plays, resolved for the call
+// sheet. school.book.plays (play snapshots — the target-model home, populated
+// by later stages) wins when present; today the coach's Workshop library (the
+// "plays" shelf) is the source, repaired against current game data. Returns
+// [{id, name, cp}] — cp is the composed source the sim compiles through the
+// band-clamped rulebook (compilePlay). AI teams never reach this: only the
+// human call sheet renders it.
+function composedPlaysForCall(school, pinnedForm) {
+  let entries;
+  const bp = school && school.book && Array.isArray(school.book.plays) ? school.book.plays : null;
+  if (bp && bp.length) entries = bp.map((p) => p && { id: p.id, name: p.name || (p.data && p.data.name) || "Play", data: p.data || p }).filter(Boolean);
+  else {
+    try {
+      entries = listCreations("plays").map((e) => ({ id: e.id, name: e.name, data: e.data }));
+    } catch (e) {
+      entries = [];
+    }
+  }
+  const out = [];
+  for (const e of entries) {
+    if (!e || !e.data) continue;
+    const r = repairComposedPlay(e.data);
+    if (!r.ok) continue;
+    const cp = r.cp;
+    if (pinnedForm && Array.isArray(cp.formations) && cp.formations.length && !cp.formations.some((f) => aliasFormation(f) === pinnedForm)) continue;
+    out.push({ id: e.id, name: cp.name || e.name || "Play", cp });
+  }
+  return out;
+}
+// Resolve one composed play for the actual CALL (book snapshot first, then the
+// Workshop library), repaired — null if it can't be built (the tile wouldn't
+// have rendered either).
+function _composedCallData(id) {
+  var _a, _b;
+  const t = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
+  const side = ((_b = t == null ? void 0 : t.pending) == null ? void 0 : _b.possession) || (t == null ? void 0 : t.playerSide) || "home";
+  const school = side === "home" ? t == null ? void 0 : t.homeSchool : t == null ? void 0 : t.awaySchool;
+  const bp = school && school.book && Array.isArray(school.book.plays) ? school.book.plays.find((p) => p && p.id === id) : null;
+  let data = bp ? bp.data || bp : null;
+  if (!data) {
+    try {
+      data = loadCreationData("plays", id);
+    } catch (e) {
+      data = null;
+    }
+  }
+  if (!data) return null;
+  const r = repairComposedPlay(data);
+  return r.ok ? r.cp : null;
 }
 // F1 (Aug 2026): the defensive headset. Same pending machinery as the offensive
 // call sheet — the panel just speaks defense: pin the front, lean the shell,
@@ -3094,8 +3182,12 @@ function defCallPanelHtml() {
     ${(() => {
     // PASS 2 (Aug 2026): the headset speaks your call sheet. One tap loads a
     // named call's whole package into the dials below; adjust on top or send.
-    var _s;
-    const lib = ((_s = getPlayerSchool()) == null ? void 0 : _s.gameplan) ? getPlayerSchool().gameplan.defCalls : null;
+    var _s, _s2;
+    // Stage 4: the chip row reads the defensive BOOK (defBookCalls), and says
+    // whose calls these are.
+    const _dcSchool = getPlayerSchool();
+    const lib = defBookCalls(_dcSchool);
+    const _dbName = ((_s2 = _dcSchool == null ? void 0 : _dcSchool.defbook) == null ? void 0 : _s2.name) || null;
     const names = lib ? Object.keys(lib) : [];
     if (!names.length) return "";
     const cur = state.ui.defCallName || null;
@@ -3116,7 +3208,7 @@ function defCallPanelHtml() {
     ].filter(Boolean);
     return `
     <div class="dc-row">
-      <span class="dc-row-label">CALL</span>
+      <span class="dc-row-label"${_dbName ? ` title="Named calls from your defensive book — “${escapeHtml(_dbName)}”"` : ""}>CALL${_dbName ? `<span class="dc-book-name">${escapeHtml(_dbName)}</span>` : ""}</span>
       <span class="dc-plan${cur ? "" : " active"}" data-dc-callname="__clear" title="Drop the named call, keep your pins">ad-lib</span>
       ${names.map((nm) => `<button class="dc-chip${cur === nm ? " active" : ""}" data-dc-callname="${escapeHtml(nm)}">${escapeHtml(nm)}</button>`).join("")}
     </div>${cur && ing.length ? `
@@ -3190,6 +3282,10 @@ function callSheetPanelHtml() {
     return (p.WR || 0) + (p.SLOT || 0);
   };
   const _wrCount = state.ui.callFormation ? (_pkg.WR || 0) + (_pkg.SLOT || 0) : _carriedIds.length ? Math.max(..._carriedIds.map(_wrOf)) : _wrOf(_selFormId);
+  // Stage 4: every play tile is a CARD — the Builder's own art (renderConceptThumb),
+  // drawn from the formation the coach is calling out of.
+  const _thumbForm = state.ui.callFormation || _pbForms[0] || _selFormId;
+  const _thumbOpts = { w: 120, h: 72, scale: 0.72, formation: _thumbForm, variation: state.ui.callFormation && state.ui.callVariation || void 0 };
   const conceptsFor = (grp) => {
     var _a2;
     const names = ((_a2 = ctx2.conceptsByGroup) == null ? void 0 : _a2[grp]) || [];
@@ -3242,7 +3338,7 @@ function callSheetPanelHtml() {
     const meta = CATS.find(([, , g]) => g === _drillCat.grp);
     const list = conceptsFor(_drillCat.grp);
     const previewName = list.includes(state.ui.callConceptPreview) ? state.ui.callConceptPreview : null;
-    drillBlock = previewName ? conceptPreviewHtml(previewName) : `
+    drillBlock = previewName ? conceptPreviewHtml(previewName, _thumbForm) : `
       <div class="cs-drill">
         <div class="cs-drill-head">
           <button class="cs-drill-back" data-cs-drillback="1">\u2190 Plays</button>
@@ -3251,26 +3347,50 @@ function callSheetPanelHtml() {
         <p class="cs-diagram-hint">Tap the play to call it now. INFO opens the optional coaching notes.</p>
         <div class="cs-concepts">
           <button class="cs-concept cs-surprise" data-cs-concept="__surprise" data-cs-cat="${_drillCat.cat}"><span class="cs-surprise-die">\u{1F3B2}</span><span>Surprise me</span></button>
-          ${list.map((nm) => `<div class="cs-concept-tile"><button class="cs-concept cs-concept-card" data-cs-callconcept="${escapeHtml(nm)}" aria-label="Call ${escapeHtml(nm)}">${conceptPlayGraphic(nm)}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-learn">Call play \u2192</span></button><button class="cs-info-btn" data-cs-preview="${escapeHtml(nm)}" aria-label="Learn about ${escapeHtml(nm)}">INFO</button></div>`).join("") || `<div class="muted" style="padding:6px">No plays fit ${state.ui.callFormation ? "this formation" : "your carried formations"} \u2014 try Surprise me.</div>`}
+          ${list.map((nm) => `<div class="cs-concept-tile"><button class="cs-concept cs-concept-card" data-cs-callconcept="${escapeHtml(nm)}" aria-label="Call ${escapeHtml(nm)}">${renderConceptThumb(nm, _thumbOpts)}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-learn">Call play \u2192</span></button><button class="cs-info-btn" data-cs-preview="${escapeHtml(nm)}" aria-label="Learn about ${escapeHtml(nm)}">INFO</button></div>`).join("") || `<div class="muted" style="padding:6px">No plays fit ${state.ui.callFormation ? "this formation" : "your carried formations"} \u2014 try Surprise me.</div>`}
         </div>
         ${(() => {
       const outs = conceptsOffSheet(_drillCat.grp);
       if (!outs.length) return "";
       return `<div class="cs-offsheet-hdr">OFF THE SHEET</div>
-        <div class="cs-concepts cs-concepts-out">${outs.map(({ nm, why }) => `<div class="cs-concept-tile cs-concept-out"><div class="cs-concept cs-concept-card cs-concept-dead" aria-label="${escapeHtml(nm)} unavailable: ${escapeHtml(why)}">${conceptPlayGraphic(nm)}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-dead-why">${escapeHtml(why)}</span></div></div>`).join("")}</div>`;
+        <div class="cs-concepts cs-concepts-out">${outs.map(({ nm, why }) => `<div class="cs-concept-tile cs-concept-out"><div class="cs-concept cs-concept-card cs-concept-dead" aria-label="${escapeHtml(nm)} unavailable: ${escapeHtml(why)}">${renderConceptThumb(nm, _thumbOpts)}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-dead-why">${escapeHtml(why)}</span></div></div>`).join("")}</div>`;
     })()}
       </div>`;
   }
-  const _carried = (gp == null ? void 0 : gp.offFormations) || [];
-  const _formList = (_carried.length ? _carried : [{ id: gp == null ? void 0 : gp.offFormation }]).map((f) => f && f.id).filter((id) => id && FORMATION_PACKAGES[id]);
+  // Stage 4 (Playbook-Root): the formation pin lists YOUR BOOK'S LOOKS — each
+  // weighted (formation, variation) entry the book carries, drawn with its real
+  // pre-snap diagram (renderFormationDiagram — the Builder's art). The book is
+  // read via school.book; the compiled gameplan is the identical fallback
+  // (compileTeamPlan ≡ gameplan, Stage-1 law), so pre-book plans pin exactly
+  // as before.
+  const _bookSrc = school && school.book && school.book.plan && Array.isArray(school.book.plan.offFormations) ? school.book.plan.offFormations : null;
+  const _carried = _bookSrc && _bookSrc.length ? _bookSrc : (gp == null ? void 0 : gp.offFormations) || [];
+  const _bookName = school && school.book && school.book.name || (gp == null ? void 0 : gp._playbookName) || null;
+  const _bookLooks = (() => {
+    const src = (_carried.length ? _carried : [{ id: gp == null ? void 0 : gp.offFormation }]).filter((f) => f && f.id && FORMATION_PACKAGES[aliasFormation(f.id)]);
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const f of src) {
+      const id = aliasFormation(f.id);
+      const vkey = f.variation || null;
+      const key = `${id}|${vkey || ""}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const vd = vkey ? (FORMATION_VARIATIONS[id] || {})[vkey] : null;
+      out.push({ id, vkey: vd ? vkey : null, label: vd ? `${id} \xB7 ${vd.label}` : id });
+    }
+    return out;
+  })();
+  const _formList = _bookLooks.map((l) => l.id);
   const _selForm = state.ui.callFormation || "__auto";
+  const _selVar = state.ui.callVariation || null;
   // Madden pass 2 (Aug 2026): pin a formation and the sheet becomes THAT
   // formation's playbook — every play it runs, grouped and weight-ordered,
   // one tap to call. Auto keeps the six category tiles.
   let formationPage = "";
   if (_selForm !== "__auto") {
     const _fpPreview = state.ui.callConceptPreview && conceptsFor("quick").concat(conceptsFor("dropback"), conceptsFor("shots"), conceptsFor("inside"), conceptsFor("perimeter"), conceptsFor("gadgets")).includes(state.ui.callConceptPreview) ? state.ui.callConceptPreview : null;
-    if (_fpPreview) formationPage = conceptPreviewHtml(_fpPreview);
+    if (_fpPreview) formationPage = conceptPreviewHtml(_fpPreview, _thumbForm);
     else {
       const _wOf = (nm) => { var _z; return weights ? Math.max(0, (_z = weights[nm]) != null ? _z : 50) : 50; };
       const GRP_META = [
@@ -3291,16 +3411,16 @@ function callSheetPanelHtml() {
         <div class="cs-drill-head"><span class="cs-drill-title">${label}</span></div>
         <div class="cs-concepts">
           <button class="cs-concept cs-surprise" data-cs-concept="__surprise" data-cs-cat="${cat}"><span class="cs-surprise-die">\u{1F3B2}</span><span>Surprise me</span></button>
-          ${list.map((nm) => `<div class="cs-concept-tile"><button class="cs-concept cs-concept-card" data-cs-callconcept="${escapeHtml(nm)}" aria-label="Call ${escapeHtml(nm)}">${conceptPlayGraphic(nm)}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-learn">Call play \u2192</span></button><button class="cs-info-btn" data-cs-preview="${escapeHtml(nm)}" aria-label="Learn about ${escapeHtml(nm)}">INFO</button></div>`).join("")}
+          ${list.map((nm) => `<div class="cs-concept-tile"><button class="cs-concept cs-concept-card" data-cs-callconcept="${escapeHtml(nm)}" aria-label="Call ${escapeHtml(nm)}">${renderConceptThumb(nm, _thumbOpts)}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-learn">Call play \u2192</span></button><button class="cs-info-btn" data-cs-preview="${escapeHtml(nm)}" aria-label="Learn about ${escapeHtml(nm)}">INFO</button></div>`).join("")}
         </div>`;
       }).join("");
       const outs = ["inside", "perimeter", "quick", "dropback", "shots", "gadgets"].flatMap((grp) => conceptsOffSheet(grp));
       const outBlock = outs.length ? `<div class="cs-offsheet-hdr">OFF THE SHEET</div>
-        <div class="cs-concepts cs-concepts-out">${outs.map(({ nm, why }) => `<div class="cs-concept-tile cs-concept-out"><div class="cs-concept cs-concept-card cs-concept-dead" aria-label="${escapeHtml(nm)} unavailable: ${escapeHtml(why)}">${conceptPlayGraphic(nm)}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-dead-why">${escapeHtml(why)}</span></div></div>`).join("")}</div>` : "";
+        <div class="cs-concepts cs-concepts-out">${outs.map(({ nm, why }) => `<div class="cs-concept-tile cs-concept-out"><div class="cs-concept cs-concept-card cs-concept-dead" aria-label="${escapeHtml(nm)} unavailable: ${escapeHtml(why)}">${renderConceptThumb(nm, _thumbOpts)}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-dead-why">${escapeHtml(why)}</span></div></div>`).join("")}</div>` : "";
       formationPage = `
       <div class="cs-drill">
         <div class="cs-drill-head">
-          <span class="cs-drill-title">${escapeHtml(_selForm).toUpperCase()}'S PLAYBOOK${_nAuth ? ` \xB7 <span class="muted">${_nAuth} play${_nAuth === 1 ? "" : "s"} authored for this formation</span>` : ""}</span>
+          <span class="cs-drill-title">${escapeHtml(_selForm).toUpperCase()}${_selVar ? ` \xB7 ${escapeHtml(String((FORMATION_VARIATIONS[_selForm] || {})[_selVar]?.label || _selVar).toUpperCase())}` : ""}'S PLAYBOOK${_nAuth ? ` \xB7 <span class="muted">${_nAuth} play${_nAuth === 1 ? "" : "s"} authored for this formation</span>` : ""}</span>
         </div>
         <p class="cs-diagram-hint">Every play ${escapeHtml(_selForm)} runs, best-weighted first. Tap to call it now \u2014 or Auto up top for the category tiles.</p>
         ${sections}
@@ -3308,14 +3428,28 @@ function callSheetPanelHtml() {
       </div>`;
     }
   }
+  // Stage 4: the book's composed plays, callable as cards. Pass plays only
+  // (composer v1), so RPO/QB-Run (run-only tags) lock them like any pass tile.
+  const _myPlaysBlock = (() => {
+    if (_rpoOn || _qbRunOn) return "";
+    const plays = composedPlaysForCall(school, _selForm !== "__auto" ? _selForm : null);
+    if (!plays.length) return "";
+    const fromBook = !!(school && school.book && Array.isArray(school.book.plays) && school.book.plays.length);
+    const srcLbl = fromBook && _bookName ? `from “${escapeHtml(_bookName)}”` : "your Workshop plays";
+    return `
+        <div class="cs-drill-head cs-myplays-head"><span class="cs-drill-title">\u{1F4D6} MY PLAYS \xB7 <span class="muted">${srcLbl}</span></span></div>
+        <div class="cs-concepts cs-myplays">
+          ${plays.map((p) => `<div class="cs-concept-tile"><button class="cs-concept cs-concept-card" data-cs-callcustom="${escapeHtml(p.id)}" aria-label="Call ${escapeHtml(p.name)}">${renderPlayCard(p.cp.parts, { w: 120, h: 72, scale: 0.72, formation: _selForm !== "__auto" ? _selForm : p.cp.formations && p.cp.formations[0] || _thumbForm, variation: _selForm !== "__auto" ? _selVar || void 0 : void 0, assigns: p.cp.assigns, blocks: p.cp.blocks })}<span class="cs-c-name">${escapeHtml(p.name)}</span><span class="cs-c-learn">Call play →</span></button></div>`).join("")}
+        </div>`;
+  })();
   const _drillGrp = _drillCat ? _drillCat.grp : null;
   const _paDisabled = !!(_drillGrp && (_RUN_GRPS.includes(_drillGrp) || _drillGrp === "gadgets"));
   const _runLevDisabled = !!(_drillGrp && (_PASS_GRPS.includes(_drillGrp) || _drillGrp === "gadgets"));
-  const formStrip = _formList.length ? `
-      <div class="cs-form-strip">
-        <span class="cs-form-tag">FORMATION</span>
+  const formStrip = _bookLooks.length ? `
+      <div class="cs-form-strip cs-look-strip">
+        <span class="cs-form-tag"${_bookName ? ` title="Your book's looks — from “${escapeHtml(_bookName)}”"` : ""}>FORMATION${_bookName ? `<span class="cs-book-name">\u{1F4D6} ${escapeHtml(_bookName)}</span>` : ""}</span>
         <button class="cs-form-btn${_selForm === "__auto" ? " active" : ""}" data-cs-form="__auto">Auto</button>
-        ${_formList.map((id) => `<button class="cs-form-btn${_selForm === id ? " active" : ""}" data-cs-form="${escapeHtml(id)}">${escapeHtml(id)}</button>`).join("")}
+        ${_bookLooks.map((l) => `<button class="cs-form-btn cs-form-look${_selForm === l.id && _selVar === l.vkey ? " active" : ""}" data-cs-form="${escapeHtml(l.id)}"${l.vkey ? ` data-cs-var="${escapeHtml(l.vkey)}"` : ""} title="Pin ${escapeHtml(l.label)} for this call"><span class="cs-look-dia" aria-hidden="true">${renderFormationDiagram(l.id, { variation: l.vkey || void 0, w: 96, h: 58 })}</span><span class="cs-look-lbl">${escapeHtml(l.label)}</span></button>`).join("")}
       </div>
       <div class="cs-tag-strip">
         <button class="cs-tag-btn${_paOn ? " active" : ""}" data-cs-pa="1" ${_paDisabled ? "disabled" : ""} title="${_paDisabled ? "Play action only applies to pass plays" : "Play action \u2014 fake the run to freeze the linebackers (opens up the medium/deep pass)"}">\u{1F3AD} Play Action</button>
@@ -3389,7 +3523,7 @@ function callSheetPanelHtml() {
       ${timeControlBar()}
       ${formStrip}
       ${suggestRow}${recentRow}
-      ${_drillCat ? drillBlock : _selForm !== "__auto" ? formationPage : `<div class="cs-cats">${tiles}</div>`}
+      ${_drillCat ? drillBlock : _selForm !== "__auto" ? formationPage + _myPlaysBlock : `<div class="cs-cats">${tiles}</div>` + _myPlaysBlock}
       ${(() => {
     const _dfg = 100 - ctx2.fieldPos;
     const _fgYds = _dfg + 17;
@@ -3704,6 +3838,7 @@ function initWatchMode(r, isHome, opts = {}) {
     <div class="watch-banner" id="watch-banner"></div>
     <div class="watch-lower" id="watch-lower"></div>
     <div class="watch-analysis" id="watch-analysis" aria-live="polite"></div>
+    <div class="watch-call-card" id="watch-call-card" aria-label="The called play"></div>
     <div class="watch-player-pop" id="watch-player-pop"></div>
     <div class="watch-replay-tools" id="watch-replay-tools" aria-label="Replay controls">
       <button class="bc-btn bc-icon" id="replay-play" title="Play or pause">⏸</button>
@@ -3837,6 +3972,81 @@ function watchDriveChart() {
     }
   }));
 }
+// Stage 5 (Playbook-Root): the broadcast reads the record's CALL stamps.
+// watchLookLabel — the fielded LOOK ("Spread · Trips"), from the record's
+// offFormation + variation. watchCalledCardHtml — the called play's CARD (the
+// Builder's art) next to what happened: a composed play draws its own routes
+// (library lookup by the recorded customPlayId), a named concept draws its
+// identity art from the recorded formation. Pure presentation — reads stamps,
+// never the sim.
+function watchLookLabel(p) {
+  if (!p || !p.offFormation) return null;
+  const vd = p.variation ? (FORMATION_VARIATIONS[p.offFormation] || {})[p.variation] : null;
+  return vd ? `${p.offFormation} \xB7 ${vd.label}` : p.offFormation;
+}
+// Stage 6: the board fields the LOOK the record says was fielded — the base
+// slots with the variation's AUTHORED moves applied (VARIATION_LAYOUTS, the
+// same table the diagrams draw). Same slot ids, so every recorded slot stamp
+// (carrier/target/coverage) still resolves; records with no variation — every
+// pre-Stage-5 record — get the base slots byte-identically.
+function watchOffSlots(p) {
+  var _a;
+  const base = ((_a = OFF_FIELD_LAYOUTS[p == null ? void 0 : p.offFormation]) == null ? void 0 : _a.slots) || null;
+  if (!base) return null;
+  const vd = (p == null ? void 0 : p.variation) ? (FORMATION_VARIATIONS[p.offFormation] || {})[p.variation] : null;
+  return (vd && variationLayoutSlots(base, vd.layout)) || base;
+}
+// Stage 6: a composed play ANIMATES AS DRAWN — resolve the recorded book
+// play's authored routes onto the fielded slots with THE SAME resolver the
+// card uses (resolveComposedReceivers), and hand watchphys the per-slot route
+// plan. Cached on the record (presentation stamp); null when the play isn't
+// in this machine's library — the viewer falls back to concept/depth shapes.
+function watchComposedRoutes(p, offSlots) {
+  if (!p || !p.customPlayId || !offSlots) return null;
+  if (p._composedRoutes !== void 0) return p._composedRoutes;
+  p._composedRoutes = (() => {
+    let data = null;
+    try {
+      data = loadCreationData("plays", p.customPlayId);
+    } catch (e) {
+      data = null;
+    }
+    if (!data) return null;
+    const r = repairComposedPlay(data);
+    if (!r.ok) return null;
+    const { resolved } = resolveComposedReceivers(r.cp.parts, r.cp.assigns, offSlots);
+    const bySlot = {};
+    for (const rr of resolved) if (rr.slot) bySlot[rr.slot.id] = { part: rr.id, flip: !!rr.flip };
+    const blocks = (r.cp.blocks || []).filter((b) => typeof b === "string" && !bySlot[b]);
+    return { bySlot, blocks };
+  })();
+  return p._composedRoutes;
+}
+function watchCalledCardHtml(p, opts) {
+  if (!p || p.type === "penalty") return "";
+  const o = opts || {};
+  const W = o.w || 150, H = o.h || 92;
+  let art = "", nm = p.concept || "";
+  if (p.customPlayId) {
+    let data = null;
+    try {
+      data = loadCreationData("plays", p.customPlayId);
+    } catch (e) {
+      data = null;
+    }
+    if (data) {
+      const r = repairComposedPlay(data);
+      if (r.ok) {
+        art = renderPlayCard(r.cp.parts, { w: W, h: H, scale: 0.8, formation: p.offFormation, variation: p.variation || void 0, assigns: r.cp.assigns, blocks: r.cp.blocks });
+        nm = r.cp.name || nm;
+      }
+    }
+  }
+  if (!art && p.concept) art = renderConceptThumb(p.concept, { w: W, h: H, scale: 0.8, formation: p.offFormation, variation: p.variation || void 0 });
+  if (!art) return "";
+  const look = watchLookLabel(p);
+  return `<div class="wcc-kicker">THE CALL</div>${art}<div class="wcc-name">${escapeHtml(nm)}</div><div class="wcc-meta">${look ? escapeHtml(look) : ""}${p.bookName ? `${look ? " \xB7 " : ""}\u{1F4D6} ${escapeHtml(p.bookName)}` : ""}</div>`;
+}
 function watchBug(p, d) {
   var _a, _b;
   const w = _watch;
@@ -3879,13 +4089,16 @@ function watchBug(p, d) {
     const possSchool = p ? (d == null ? void 0 : d.possession) === "away" ? r.awaySchool : r.homeSchool : null;
     const type = String((p == null ? void 0 : p.type) || "");
     const play = (p == null ? void 0 : p.concept) || ((p == null ? void 0 : p.sack) ? "Pass rush wins" : type.startsWith("pass") ? "Dropback pass" : type.startsWith("run") ? "Designed run" : type === "punt" ? "Punt" : type === "fg" ? "Field goal" : "Awaiting snap");
+    // Stage 5: the rail speaks the BOOK \u2014 the fielded look, the call's source
+    // book, and the called play's card (the Builder's art) next to the result.
+    const _card = watchCalledCardHtml(p, { w: 150, h: 92 });
     insight.innerHTML = `<div class="wdi-kicker">FIELD NOTES</div>
     <div class="wdi-grid">
       <div class="wdi-cell"><span>POSSESSION</span><b>${escapeHtml((possSchool == null ? void 0 : possSchool.name) || "Between drives")}</b></div>
-      <div class="wdi-cell"><span>FORMATION</span><b>${escapeHtml((p == null ? void 0 : p.offFormation) || "\u2014")}</b></div>
-      <div class="wdi-cell"><span>PLAY</span><b>${escapeHtml(play)}</b></div>
+      <div class="wdi-cell"><span>FORMATION</span><b>${escapeHtml(watchLookLabel(p) || "\u2014")}</b></div>
+      <div class="wdi-cell"><span>PLAY</span><b>${escapeHtml(play)}</b>${(p == null ? void 0 : p.bookName) ? `<small class="wdi-book">\u{1F4D6} ${escapeHtml(p.bookName)}${p.customPlayId ? " \xB7 your play" : ""}</small>` : ""}</div>
       <div class="wdi-cell"><span>FIELD</span><b>${escapeHtml(dd ? `${dd}${spot ? ` \xB7 ${spot}` : ""}` : "\u2014")}</b></div>
-    </div>`;
+    </div>${_card ? `<div class="wdi-callcard">${_card}</div>` : ""}`;
   }
 }
 function watchBugPossession(side) {
@@ -4265,19 +4478,32 @@ function watchBoard(p, durMs, board = null, opts = {}) {
   const replayBug = document.getElementById("watch-replay-bug");
   if (cameraBug) cameraBug.textContent = opts.replay ? "REPLAY" : "LIVE";
   if (replayBug) replayBug.classList.toggle("on", !!opts.replay);
+  // Stage 5: on a REPLAY, show the DRAW-UP next to what happened — the called
+  // play's card from the record's stamps (concept/customPlayId + look + book).
+  {
+    const callCard = document.getElementById("watch-call-card");
+    if (callCard) {
+      const html = opts.replay ? watchCalledCardHtml(p, { w: 150, h: 92 }) : "";
+      callCard.classList.toggle("on", !!html);
+      callCard.innerHTML = html;
+    }
+  }
   svg.setAttribute("viewBox", `${watchSideCameraX(p).toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
   watchSetSpritePalette(svg, board);
   if (p && (p.type === "fg" || p.type === "punt" || p.type === "pat")) return watchBoardKick(svg, p, board, opts);
   if (p && p.type === "kickoff") return watchBoardKickoff(svg, p, board, opts);
   if (p && p.type === "pat2") return watchBoardTry(svg, p, board);
   if (p && (p.type === "kneel" || p.type === "spike")) return watchBoardSituational(svg, p, board);
-  const offL = (_a = OFF_FIELD_LAYOUTS[p == null ? void 0 : p.offFormation]) == null ? void 0 : _a.slots;
+  // Stage 6: field the recorded LOOK (authored variation alignment) and seed
+  // the composed play's drawn routes before the script builds.
+  const offL = watchOffSlots(p);
   const defL = (_b = DEF_FIELD_LAYOUTS[p == null ? void 0 : p.defFront] || DEF_FIELD_LAYOUTS["4-3"]) == null ? void 0 : _b.slots;
   if (!p || !offL) {
     if ((p == null ? void 0 : p.type) === "penalty") return watchBoardFlag(svg, p, board);
     svg.innerHTML = watchFieldBase(p, board);
     return null;
   }
+  watchComposedRoutes(p, offL);
   const script = buildPlayScript(p, offL, defL);
   if (!script) {
     if (p.type === "penalty") return watchBoardFlag(svg, p, board);
@@ -5880,7 +6106,7 @@ function watchBoardTry(svg, p, board) {
   const sprites = ((_a = state.settings) == null ? void 0 : _a.spriteWatch) !== false;
   if (sprites) svg.classList.add("watch-sprites");
   else svg.classList.remove("watch-sprites");
-  const offL = ((_b = OFF_FIELD_LAYOUTS[p.offFormation]) == null ? void 0 : _b.slots) || OFF_FIELD_LAYOUTS["Spread"].slots;
+  const offL = watchOffSlots(p) || OFF_FIELD_LAYOUTS["Spread"].slots;
   const defL = DEF_FIELD_LAYOUTS["4-3"].slots;
   const LOSW = 31, YPU2 = WATCH_SIDE.ypu;
   const defMaxY = Math.max(...defL.map((sl) => sl.y));
@@ -6745,7 +6971,9 @@ function watchTickBody(w, immediate = false) {
     else if (yds <= 3) tempo = 0.7;
     holdMs = baseMs * tempo;
     if (scriptDur) holdMs = Math.max(holdMs, scriptDur * 1e3 / (w.speed * (w.clip && w.clip.reel ? 0.68 : 1)) + 1200);
-    const formTag = p.offFormation && p.type !== "penalty" ? `<span class="pbp-form">[${escapeHtml(p.offFormation)}${p.defFront ? " v " + escapeHtml(p.defFront) : ""}]</span> ` : "";
+    // Stage 5: the ticker names the LOOK the book fielded, not just the base
+    // formation ("[Spread · Trips v 4-3]").
+    const formTag = p.offFormation && p.type !== "penalty" ? `<span class="pbp-form">[${escapeHtml(watchLookLabel(p) || p.offFormation)}${p.defFront ? " v " + escapeHtml(p.defFront) : ""}]</span> ` : "";
     const fakeTag = p.stFake ? `<span class="wa-td">FAKE! </span>` : "";
     const patchScore = () => {
       var _a2;
