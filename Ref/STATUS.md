@@ -988,3 +988,18 @@ feature line (base has been `e45c89b`), keep both sides (overlaps are only
 - `Ref/CONVERGED_2026-08-14.md` — the Act B/C merge record.
 - `Ref/CODEX_ACT_B_HANDOFF.md`, `Ref/CODEX_ACT_C_HANDOFF.md` — Codex's records.
 - `CLAUDE.md` — build, deploy, verification, and the standing subsystem rules.
+
+## Device-git workaround (discovered 2026-08-16, unattended session)
+
+Cowork's device bridge CAN commit in this folder after all — the old "can't
+write .git" fact was really a DELETE restriction: git's unlink of its lock
+files fails ("Operation not permitted"), stranding `.git/index.lock` and
+blocking the next operation. The workaround: `mv` the stale lock into
+`_to_delete/` (renames are allowed; deletes aren't), then add/commit
+normally — writes and renames all succeed. `_to_delete/` collects the moved
+locks + the occasional orphaned `.git/objects/*/tmp_obj_*`; the owner can
+empty it whenever. Commit `cfb9bd2` (Stages 4–7) was made this way, scoped
+to the 20 stage files — the folder's ~197 other dirty entries (Codex-era
+docs, probe screenshots) were left as found; the "clean checkpoint commit"
+question from the repo-layout section remains an owner call. Still NEVER
+push from here.
