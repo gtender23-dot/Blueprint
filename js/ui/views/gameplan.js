@@ -563,6 +563,11 @@ function renderOffenseDefaults(gp) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r;
   if (gp.runDirection) normalizeDistTo100(gp.runDirection, ["left", "middle", "right"]);
   if (gp.passDepth) normalizeDistTo100(gp.passDepth, ["short", "medium", "deep"]);
+  // The set of formations the loaded playbook carries — the Run/Pass Game sections
+  // gate option/jet/wildcat controls on it. (Regressed in the Playbook-Root refactor
+  // cfb9bd2, which dropped this declaration but left its uses in those two tabs,
+  // throwing a ReferenceError that blanked Run Game and Pass Game.)
+  const selectedIds = new Set(normalizeFormations(gp.offFormations, gp.offFormation).map((f) => f.id));
   return `<div class="card">
         <div class="card-header">
           <span class="card-title">OFFENSIVE DEFAULTS</span>
