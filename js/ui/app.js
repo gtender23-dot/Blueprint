@@ -4,13 +4,14 @@ import { DEF_FIELD_LAYOUTS, OFF_FIELD_LAYOUTS } from '../constants_field.js';
 import { ATTRIBUTES, C, FORMATION_PACKAGES, PASS_TENDENCY, aliasFormation, attrLabel } from '../constants.js';
 import { gameHighlights, linescore } from '../engine/highlights.js';
 import { flushSaveSync, gamePauseIsLive, saveGame } from '../engine/persistence.js';
+import { saveReplay } from '../engine/replays.js';
 import { derivedArchetype } from '../engine/player.js';
 import { BRIDGE_CATALOG, FLAW_CATALOG, PLAY_CATALOG } from '../engine/traits.js';
-import { weekShort } from '../engine/season.js';
+import { coachedGamesForDay, weekShort } from '../engine/season.js';
 import { callContext, decisionContext, midGameReport, setPenaltyScale } from '../engine/sim.js';
 import { SITUATION_KEYS, SITUATION_LABELS } from '../engine/situations.js';
 import { isTreeGame, lockstepBlock, treeSnapshot } from '../engine/tree.js';
-import { answerFourthDown, answerPlayCall, chooseKickoffMode, closeInstantClassicReplay, continueExhibitionSpectator, getPhaseLabel, getPlayerSchool, getUpcomingGame, getWeekLabel, getWeekShort, navigate, navigateBack, notify, openSchool, programGroupTab, refreshSaves, rerender, resumeHalftime, saveToSlot, seasonGroupTab, setCallModeMidGame, setGroupTab, setNotifyFn, setRenderFn, simToBreak, simToQuarterEnd, state, statsGroupTab, switchTreeSlot, teamGroupTab } from '../state.js';
+import { afterCoachedGameResultClose, answerFourthDown, answerPlayCall, chooseKickoffMode, closeInstantClassicReplay, continueExhibitionSpectator, exitSeasonRun, getPhaseLabel, getPlayerSchool, getUpcomingGame, getWeekLabel, getWeekShort, navigate, navigateBack, notify, openSchool, programGroupTab, refreshSaves, rerender, resumeHalftime, saveToSlot, seasonGroupTab, setCallModeMidGame, setGroupTab, setNotifyFn, setRenderFn, simCoached, simToBreak, simToQuarterEnd, state, statsGroupTab, switchTreeSlot, teamGroupTab } from '../state.js';
 import { chapterById } from './manual/index.js';
 import { tipById, tipTerm } from './manual/tips.js';
 import { renderAwards, setupListeners4 } from './views/awards.js';
@@ -23,6 +24,8 @@ import { renderMainMenu } from './views/mainmenu.js';
 import { renderManual, setupListeners12 } from './views/manual.js';
 import { renderNewGame, setupListeners3 } from './views/newgame.js';
 import { playnowListeners, renderPlayNow } from './views/playnow.js';
+import { creatorListeners, renderCreator } from './views/creator.js';
+import { renderSeasonMode, seasonModeListeners } from './views/seasonmodeview.js';
 import { renderPractice, setupListeners17 } from './views/practice.js';
 import { recruitingCanBack, recruitingGoBack, renderRecruiting, setupListeners10 } from './views/recruiting.js';
 import { renderRoster, setupListeners7 } from './views/roster.js';
@@ -32,7 +35,8 @@ import { renderScout, setupListeners8 } from './views/scout.js';
 import { renderSettings, setupListeners15 } from './views/settings.js';
 import { renderStandings, setupListeners13 } from './views/standings.js';
 import { renderStats, setupListeners14 } from './views/stats.js';
-import { buildPlayScript, sampleTrack, buildCameraPlan, buildOfficialsPlan } from './watchphys.js';
+import { buildPlayScript, sampleTrack, buildCameraPlan, buildOfficialsPlan, selectSecondaryMotion, buildBroadcastCommentary } from './watchphys.js';
+import { normalizeWatchCamera, nextWatchCamera, watchCameraLabel, projectWatchPoint, watchProjectionScale, watchProjectionDepth, buildReplayDirectorPlan, buildSpecialTeamsDirectorPlan, selectWatchLabels } from './watchcamera.js';
 import { spriteMarkup, ballMarkup, spriteMotionTick, wspPlace } from './sprite.js';
 import { stadiumPause, stadiumReact, stadiumStart } from './sound.js';
 import { archetypeLabel, escapeHtml, fullName, ratingColor, renderCrest, renderPlayerPortrait } from '../utils.js';
@@ -130,14 +134,17 @@ function renderTeamGroup() {
   const tabs = [
     { id: "roster", label: "Roster" },
     { id: "depthchart", label: "Depth Chart" },
-    { id: "practice", label: "Practice" }
+    // Practice is weekly player-development toward next season — dropped in a
+    // single-season run.
+    ...(state.seasonMode ? [] : [{ id: "practice", label: "Practice" }])
   ];
+  const tab = state.seasonMode && teamGroupTab === "practice" ? "roster" : teamGroupTab;
   let body = "";
-  if (teamGroupTab === "depthchart") body = renderDepthChart(true);
-  else if (teamGroupTab === "practice") body = renderPractice(true);
+  if (tab === "depthchart") body = renderDepthChart(true);
+  else if (tab === "practice") body = renderPractice(true);
   else body = renderRoster(true);
   return `<div class="view-group view-team">
-    ${groupHeader("Team", "", tabs, teamGroupTab, "data-team-tab")}
+    ${groupHeader("Team", "", tabs, tab, "data-team-tab")}
     <div class="group-body">${body}</div>
   </div>`;
 }
@@ -167,14 +174,17 @@ function renderStatsGroup() {
   const tabs = [
     { id: "stats", label: "Statistics" },
     { id: "awards", label: "Awards" },
-    { id: "history", label: "History" }
+    // History is cross-season (past champions, program history) — nothing to
+    // show in a one-off run.
+    ...(state.seasonMode ? [] : [{ id: "history", label: "History" }])
   ];
+  const tab = state.seasonMode && statsGroupTab === "history" ? "stats" : statsGroupTab;
   let body = "";
-  if (statsGroupTab === "awards") body = renderAwards(true);
-  else if (statsGroupTab === "history") body = renderHistory(true);
+  if (tab === "awards") body = renderAwards(true);
+  else if (tab === "history") body = renderHistory(true);
   else body = renderStats(true);
   return `<div class="view-group view-statsgroup">
-    ${groupHeader("Statistics", "", tabs, statsGroupTab, "data-statsgroup-tab")}
+    ${groupHeader("Statistics", "", tabs, tab, "data-statsgroup-tab")}
     <div class="group-body">${body}</div>
   </div>`;
 }
@@ -220,6 +230,36 @@ var TABBAR_ITEMS = [
   { id: "gameplan", icon: "\u25C8", label: "Plan" },
   { id: "recruiting", icon: "\u25CE", label: "Recruits" }
 ];
+// Season Mode hides the dynasty-progression sections (recruiting + the coach's
+// office). The Season nav opens straight to Standings there, since Schedule is
+// already the Agenda's focus. Everything else is identical to a dynasty.
+var SEASON_HIDE_NAV = /* @__PURE__ */ new Set(["recruiting", "program"]);
+function navItemsFor() {
+  return state.seasonMode ? NAV_ITEMS.filter((i) => !SEASON_HIDE_NAV.has(i.id)) : NAV_ITEMS;
+}
+function renderSeasonCompleteOverlay() {
+  var _a, _b;
+  const sc = state.ui.seasonComplete;
+  if (!sc || !state.seasonMode) return "";
+  const champ = (_b = (_a = state.world) == null ? void 0 : _a.schools) == null ? void 0 : _b.find((s) => s.id === sc.champion);
+  const me = getPlayerSchool();
+  const won = sc.champion && me && sc.champion === me.id;
+  return `<div class="modal-overlay season-complete-overlay" id="season-complete-overlay">
+    <div class="modal season-complete-card">
+      <div class="sc-trophy">\u{1F3C6}</div>
+      <div class="sc-kicker">${escapeHtml(sc.division || "D1")} National Champion</div>
+      <div class="sc-champ">${champ ? renderCrest(champ, 44) : ""}<span class="sc-champ-name">${champ ? escapeHtml(champ.name) : "—"}</span></div>
+      ${won ? '<div class="sc-you sc-you-won">That’s you — congratulations, Coach.</div>' : me ? `<div class="sc-you muted">Your ${escapeHtml(me.name)} finished ${me.record.wins}-${me.record.losses}.</div>` : ""}
+      <div class="sc-actions">
+        <button class="btn-mm btn-mm-new" id="btn-sc-standings">Final Standings</button>
+        <button class="btn-mm btn-mm-secondary" id="btn-sc-exit">Exit to Menu</button>
+      </div>
+    </div>
+  </div>`;
+}
+function tabbarItemsFor() {
+  return state.seasonMode ? TABBAR_ITEMS.filter((i) => i.id !== "recruiting").concat([{ id: "season", icon: "\u25F7", label: "Standings", navTo: "standings" }]) : TABBAR_ITEMS;
+}
 var HELP_CHAPTER_FLAT = {
   dashboard: "the-year",
   // the agenda IS the calendar/season loop
@@ -499,6 +539,129 @@ function syncOverlayInert() {
     }
   }
 }
+
+// Act B replay payloads deliberately save the recorded play—not animation
+// frames. Rebuilding the deterministic viewer keeps clips compact enough for
+// the dedicated Film Room store and makes camera/scrub changes non-destructive.
+function watchClone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+function watchSchoolSnapshot(school, fallback) {
+  if (!school) return { id: fallback, name: fallback, abbr: fallback, colors: ["#243b66", "#f2c94c"] };
+  return watchClone({
+    id: school.id,
+    name: school.name,
+    nick: school.nick,
+    abbr: school.abbr,
+    division: school.division,
+    colors: school.colors,
+    logo: school.logo,
+    customLogo: school.customLogo
+  });
+}
+function buildReplayClipData(r, d, p, extra = {}) {
+  const play = watchClone(p);
+  const drive = watchClone(__spreadProps(__spreadValues({}, d || {}), { plays: [play] }));
+  const game = {
+    drives: [drive],
+    homeSchool: watchSchoolSnapshot(r == null ? void 0 : r.homeSchool, "HOME"),
+    awaySchool: watchSchoolSnapshot(r == null ? void 0 : r.awaySchool, "AWAY"),
+    homeScore: Number.isFinite(r == null ? void 0 : r.homeScore) ? r.homeScore : (d == null ? void 0 : d.possession) === "away" ? p.scoreDef || 0 : p.scoreOff || 0,
+    awayScore: Number.isFinite(r == null ? void 0 : r.awayScore) ? r.awayScore : (d == null ? void 0 : d.possession) === "away" ? p.scoreOff || 0 : p.scoreDef || 0,
+    playerNames: watchClone((r == null ? void 0 : r.playerNames) || {}),
+    viewerBoard: extra.board ? watchClone(extra.board) : (r == null ? void 0 : r.viewerBoard) ? watchClone(r.viewerBoard) : null
+  };
+  return {
+    kind: "blueprint-viewer-replay",
+    version: 2,
+    game,
+    driveIndex: Number.isFinite(extra.driveIndex) ? extra.driveIndex : 0,
+    playIndex: Number.isFinite(extra.playIndex) ? extra.playIndex : 0,
+    camera: normalizeWatchCamera(extra.camera),
+    annotations: Array.isArray(extra.annotations) ? watchClone(extra.annotations) : [],
+    capturedAt: Date.now()
+  };
+}
+function buildHighlightReelData(r) {
+  let rows = [];
+  try { rows = gameHighlights(r, r.homeSchool, r.awaySchool, 3); } catch (e) { rows = []; }
+  if (!rows.length) return null;
+  const drives = [];
+  for (const h of rows) {
+    const d = r.drives && r.drives[h.driveIndex];
+    const p = d && d.plays && d.plays[h.playIndex];
+    if (d && p) drives.push(watchClone(__spreadProps(__spreadValues({}, d), { plays: [p] })));
+  }
+  if (!drives.length) return null;
+  return {
+    kind: "blueprint-viewer-replay",
+    version: 2,
+    reel: true,
+    game: {
+      drives,
+      homeSchool: watchSchoolSnapshot(r.homeSchool, "HOME"),
+      awaySchool: watchSchoolSnapshot(r.awaySchool, "AWAY"),
+      homeScore: r.homeScore || 0,
+      awayScore: r.awayScore || 0,
+      playerNames: watchClone(r.playerNames || {})
+    },
+    camera: "broadcast",
+    annotations: [],
+    capturedAt: Date.now()
+  };
+}
+function replayClipParts(data) {
+  if (!data || data.kind !== "blueprint-viewer-replay" || !data.game || !Array.isArray(data.game.drives)) return null;
+  const d = data.game.drives[0];
+  const p = d && Array.isArray(d.plays) ? d.plays[0] : null;
+  return d && p ? { r: data.game, d, p } : null;
+}
+function openReplayClip(data) {
+  if (!replayClipParts(data)) {
+    notify("That replay clip is not compatible with this viewer", "warning");
+    return false;
+  }
+  state.ui.replayClip = watchClone(data);
+  state.ui.replayReturn = state.ui.view === "creator" ? "filmroom" : "back";
+  navigate("replayclip");
+  return true;
+}
+function openResultHighlight(r, di, pi) {
+  const d = r && r.drives && r.drives[di];
+  const p = d && d.plays && d.plays[pi];
+  if (!p) return false;
+  return openReplayClip(buildReplayClipData(r, d, p, { driveIndex: di, playIndex: pi }));
+}
+function openResultHighlightReel(r) {
+  const data = buildHighlightReelData(r);
+  if (!data) {
+    notify("No replay-worthy moments were recorded", "info");
+    return false;
+  }
+  return openReplayClip(data);
+}
+function renderReplayClipScreen() {
+  const parts = replayClipParts(state.ui.replayClip);
+  if (!parts) return `<div class="replay-screen"><button class="btn-ghost" id="replay-screen-back">← Back</button><div class="empty-state">This clip could not be loaded.</div></div>`;
+  const c = buildBroadcastCommentary(parts.p, parts.r.playerNames || {});
+  return `<div class="replay-screen">
+    <div class="replay-screen-head">
+      <button class="btn-ghost" id="replay-screen-back">← ${state.ui.replayReturn === "filmroom" ? "Film Room" : "Back"}</button>
+      <div><div class="replay-screen-kicker">ACT B REPLAY LAB</div><h1>${escapeHtml(c.title)}</h1></div>
+    </div>
+    <div id="watch-root" class="watch-root replay-watch-root"></div>
+  </div>`;
+}
+function setupReplayClipScreen() {
+  const back = document.getElementById("replay-screen-back");
+  if (back) back.addEventListener("click", () => {
+    if (state.ui.replayReturn === "filmroom") state.ui.creatorTab = "replays";
+    navigateBack();
+  });
+  const parts = replayClipParts(state.ui.replayClip);
+  if (!parts) return;
+  initWatchMode(parts.r, parts.d.possession === "home", { key: state.ui.replayClip, clip: state.ui.replayClip });
+}
 function renderApp() {
   var _a, _b, _c, _d, _e, _f, _g, _h;
   const _scroll = captureScroll();
@@ -521,7 +684,7 @@ function renderApp() {
     syncOverlayInert(); lastRenderedView = view;
     return;
   }
-  if (view === "manual" && !state.initialized) {
+  if (view === "manual" && (!state.initialized || state.ui.manualFromMenu)) {
     root.innerHTML = `<div class="newgame-wrapper">
       <div class="manual-pregame-bar"><button class="btn-ghost btn-sm" id="btn-manual-to-menu">\u2190 Main Menu</button></div>
       ${renderManual()}
@@ -538,10 +701,30 @@ function renderApp() {
     syncOverlayInert(); lastRenderedView = view;
     return;
   }
+  if (view === "creator") {
+    root.innerHTML = `<div class="newgame-wrapper creator-screen">${renderCreator()}</div>` + renderNotification();
+    creatorListeners();
+    setupGlobalListeners();
+    syncOverlayInert(); lastRenderedView = view;
+    return;
+  }
+  if (view === "seasonmode") {
+    root.innerHTML = `<div class="newgame-wrapper creator-screen">${renderSeasonMode()}</div>` + renderNotification();
+    seasonModeListeners();
+    setupGlobalListeners();
+    syncOverlayInert(); lastRenderedView = view;
+    return;
+  }
   if (view === "classicreplay") {
     const classic = state._instantClassicReplay;
     root.innerHTML = '<div class="instant-classic-replay-shell"><div class="instant-classic-replay-mark">\u2605 INSTANT CLASSIC ' + ((classic == null ? void 0 : classic.score) || "") + "</div></div>" + renderGameResultModal();
     setupGlobalListeners();
+    syncOverlayInert(); lastRenderedView = view;
+    return;
+  }
+  if (view === "replayclip") {
+    root.innerHTML = renderReplayClipScreen() + renderNotification();
+    setupReplayClipScreen();
     syncOverlayInert(); lastRenderedView = view;
     return;
   }
@@ -590,7 +773,7 @@ function renderApp() {
         <span class="phase-label">${escapeHtml(phase)}</span>
       </div>
       <ul class="nav-list">
-        ${NAV_ITEMS.map((item) => `
+        ${navItemsFor().map((item) => `
           <li class="nav-item${view === item.id ? " active" : ""}" data-nav="${item.navTo || item.id}" role="button" tabindex="0" aria-label="${escapeHtml(item.label)}"${view === item.id ? ' aria-current="page"' : ""}>
             <span class="nav-icon">${item.icon}</span>
             <span class="nav-label">${item.label}</span>
@@ -615,7 +798,7 @@ function renderApp() {
             ${renderPrestige((_g = (_f = school == null ? void 0 : school.prestige) != null ? _f : coach == null ? void 0 : coach.prestige) != null ? _g : 3, ((_h = C.PRESTIGE_MAX) == null ? void 0 : _h[school == null ? void 0 : school.division]) || 5)}
           </div>
         </div>
-        <div class="budget-info">
+        ${state.seasonMode ? "" : `<div class="budget-info">
           <div class="budget-row">
             <span class="budget-label">Budget</span>
             <span class="budget-value">$${(((coach == null ? void 0 : coach.budget) || 0) / 1e3).toFixed(1)}k</span>
@@ -624,13 +807,13 @@ function renderApp() {
             <span class="budget-label">${tipTerm("scholarship", "Scholarships")}</span>
             <span class="budget-value">${(coach == null ? void 0 : coach.scholarshipsAvailable) || 0}</span>
           </div>
-        </div>
+        </div>`}
         <div class="sidebar-actions">
           <button class="btn-icon" id="btn-inbox" title="Inbox" aria-label="Inbox${unread > 0 ? `, ${unread} unread` : ""}">
             \u2709${unread > 0 ? `<span class="inbox-dot">${unread}</span>` : ""}
           </button>
-          <button class="btn-icon" id="btn-save" title="Save Game" aria-label="Save Game">\u{1F4BE}</button>
-          <button class="btn-icon" id="btn-main-menu" title="Main Menu" aria-label="Main Menu">\u2302</button>
+          ${state.seasonMode ? "" : '<button class="btn-icon" id="btn-save" title="Save Game" aria-label="Save Game">\u{1F4BE}</button>'}
+          <button class="btn-icon" id="btn-main-menu" title="${state.seasonMode ? "Exit Season" : "Main Menu"}" aria-label="${state.seasonMode ? "Exit Season" : "Main Menu"}">\u2302</button>
         </div>
       </div>
     </nav>
@@ -641,7 +824,7 @@ function renderApp() {
       </div>
     </main>
     <nav class="tabbar">
-      ${TABBAR_ITEMS.map((t) => `
+      ${tabbarItemsFor().map((t) => `
         <button class="tabbar-item${view === t.id ? " active" : ""}" data-nav="${t.navTo || t.id}">
           <span class="tabbar-icon">${t.icon}</span>
           <span class="tabbar-label">${t.label}</span>
@@ -653,6 +836,7 @@ function renderApp() {
     </nav>
   </div>
   ${renderNotification()}
+  ${renderSeasonCompleteOverlay()}
   ${renderInboxModal()}
   ${renderLiveWatchOverlay()}
   ${renderGameResultModal()}
@@ -822,7 +1006,7 @@ function renderGameResultModal() {
 `;
 }
 function renderHalftimeTakeover() {
-  var _a, _b, _c, _d, _e, _f, _g, _h;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
   if (!state.ui.showHalftime || !state.pendingHalftime) return "";
   const { token, home, away } = state.pendingHalftime;
   const school = getPlayerSchool();
@@ -896,7 +1080,13 @@ function renderHalftimeTakeover() {
           <span class="dash-crest">${renderCrest(school, 34)}</span>
           ${escapeHtml((school == null ? void 0 : school.name) || "")} <span class="title-nick" style="color:${accent}">${escapeHtml((school == null ? void 0 : school.nick) || "")}</span>
         </h1>
-        <div class="view-subtitle">Season ${state.season} &middot; ${escapeHtml(getWeekLabel())} &middot; Halftime</div>
+        <div class="view-subtitle">Season ${state.season} &middot; ${escapeHtml(getWeekLabel())} &middot; Halftime${(() => {
+    const cw = state.coachWeek;
+    if (!cw || !((_i = state.pendingHalftime) == null ? void 0 : _i.coachWeek)) return "";
+    const all = coachedGamesForDay(state, cw.day).length + (cw.results ? cw.results.length : 0);
+    const done = (cw.results ? cw.results.length : 0);
+    return all > 1 ? ` &middot; <span style="color:var(--gold)">Your programs \u2014 game ${done + 1} of ${all}</span>` : "";
+  })()}</div>
       </div>
       <div class="ht-resume-controls">
         <button class="cm-switch cm-switch-sm${((_e = state.settings) == null ? void 0 : _e.liveWatch) !== false ? " on" : ""}" id="ht-coachmode" role="switch" aria-checked="${((_f = state.settings) == null ? void 0 : _f.liveWatch) !== false}">
@@ -904,6 +1094,7 @@ function renderHalftimeTakeover() {
           <span class="cm-text"><span class="cm-name">\u25B6 Coach Mode</span><span class="cm-sub">${((_g = state.settings) == null ? void 0 : _g.liveWatch) !== false ? "Coach the 2nd half" : "Sim the 2nd half"}</span></span>
         </button>
         <button class="btn-advance" id="btn-resume-halftime">${((_h = state.settings) == null ? void 0 : _h.liveWatch) !== false ? "START 2ND HALF \u2192" : "\u23E9 SIM TO FINAL \u2192"}</button>
+        ${state.coachWeek && ((_j = state.pendingHalftime) == null ? void 0 : _j.coachWeek) ? `<button class="btn-ghost btn-sm" id="btn-sim-coached" title="Let the sim finish this game and move to your next program">Let the sim handle this one \u2192</button>` : ""}
       </div>
     </div>
 
@@ -980,13 +1171,14 @@ function renderBoxScoreTab(r, school, isHome) {
   </div>` : ""}
   ${reel.length ? `
   <div class="box-reel">
-    <div class="box-reel-label">HIGHLIGHTS</div>
+    <div class="box-reel-label">HIGHLIGHTS <button class="box-reel-play" data-watch-reel="1" title="Play the highlight reel">▶ Play Reel</button></div>
     ${reel.map((h) => `
-      <div class="result-moment${h.side === "home" === isHome ? " ours" : " theirs"}">
+      <button class="result-moment result-moment-replay${h.side === "home" === isHome ? " ours" : " theirs"}" data-watch-highlight="${h.driveIndex}:${h.playIndex}" title="Play this highlight">
         <span class="moment-when">${h.q === 5 ? "OT" : `Q${h.q}`} ${h.clock}</span>
         <span class="moment-text">${escapeHtml(h.text)}</span>
         <span class="moment-score">${escapeHtml(h.score)}</span>
-      </div>`).join("")}
+        <span class="moment-play" aria-hidden="true">▶</span>
+      </button>`).join("")}
   </div>` : ""}
   <div class="box-score">
     <div class="box-row header">
@@ -1581,15 +1773,52 @@ function renderTraitChips(p) {
   for (const t of tl.play || []) {
     const cat = PLAY_CATALOG[t.k];
     if (!cat) continue;
-    chips.push(`<span class="trait-chip" title="${escapeHtml(cat.hook || "")}">${escapeHtml(cat.name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
+    chips.push(`<span class="trait-chip" title="${escapeHtml(cat.desc || cat.name)}">${escapeHtml(cat.name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
   }
   for (const t of tl.flaws || []) {
     const cat = FLAW_CATALOG[t.k];
     if (!cat) continue;
-    chips.push(`<span class="trait-chip trait-flaw" title="${escapeHtml(cat.hook || "")}">${escapeHtml(cat.name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
+    chips.push(`<span class="trait-chip trait-flaw" title="${escapeHtml(cat.desc || cat.name)}">${escapeHtml(cat.name)} <span class="trait-pips">${pips(t.lv)}</span></span>`);
   }
   if (!chips.length) return "";
   return `<span class="trait-chip-row">${chips.join("")}</span>`;
+}
+// Item 10 — the full TRAITS block for the player card: every trait spelled out in
+// plain language, with its level and (for play traits) how it grows. This is the
+// touch-friendly home for trait info — no hover required, so phones see it too.
+var TRAIT_LEVEL_LABEL = ["", "I", "II", "III"];
+function renderTraitDetail(p) {
+  var _a;
+  const tl = p == null ? void 0 : p.traits;
+  if (!tl) return "";
+  const lvl = (n) => TRAIT_LEVEL_LABEL[n] || "I";
+  const rows = [];
+  if (tl.bridge && BRIDGE_CATALOG[tl.bridge]) {
+    const b = BRIDGE_CATALOG[tl.bridge];
+    rows.push(`<div class="trait-detail-row trait-detail-bridge">
+      <div class="trait-detail-head"><span class="trait-detail-name">✦ ${escapeHtml(b.name)}</span><span class="trait-detail-tag">Bridge</span></div>
+      <div class="trait-detail-desc">${escapeHtml(b.desc || "")}</div></div>`);
+  }
+  for (const t of tl.play || []) {
+    const cat = PLAY_CATALOG[t.k];
+    if (!cat) continue;
+    rows.push(`<div class="trait-detail-row">
+      <div class="trait-detail-head"><span class="trait-detail-name">${escapeHtml(cat.name)}</span><span class="trait-detail-lv">${lvl(t.lv)}</span></div>
+      <div class="trait-detail-desc">${escapeHtml(cat.desc || "")}</div>
+      ${cat.grow ? `<div class="trait-detail-grow">Improves with: ${escapeHtml(cat.grow)}</div>` : ""}</div>`);
+  }
+  for (const t of tl.flaws || []) {
+    const cat = FLAW_CATALOG[t.k];
+    if (!cat) continue;
+    rows.push(`<div class="trait-detail-row trait-detail-flaw">
+      <div class="trait-detail-head"><span class="trait-detail-name">${escapeHtml(cat.name)}</span><span class="trait-detail-tag">Flaw</span></div>
+      <div class="trait-detail-desc">${escapeHtml(cat.desc || "")}</div></div>`);
+  }
+  if (!rows.length) return "";
+  return `<div class="card trait-detail-card">
+    <div class="card-header"><span class="card-title">TRAITS</span><span class="card-sub">how he plays</span></div>
+    <div class="trait-detail-list">${rows.join("")}</div>
+  </div>`;
 }
 function renderPlayerCardModal() {
   var _a, _b, _c;
@@ -1693,6 +1922,8 @@ function renderPlayerCardModal() {
             </div>`).join("")}
         </div>
       </div>
+
+      ${renderTraitDetail(p)}
     </div>
   </div>
 `;
@@ -1869,6 +2100,12 @@ function setupGlobalListeners() {
       await resumeHalftime();
       renderApp();
     });
+    document.getElementById("btn-sim-coached")?.addEventListener("click", async () => {
+      const btn = document.getElementById("btn-sim-coached");
+      if (btn) { btn.disabled = true; btn.textContent = "Simulating…"; }
+      await simCoached();
+      renderApp();
+    });
   }
   document.querySelectorAll("[data-scout-team]").forEach((el) => {
     el.addEventListener("click", (e) => {
@@ -1975,8 +2212,15 @@ function setupGlobalListeners() {
     });
   });
   (_t = document.getElementById("btn-main-menu")) == null ? void 0 : _t.addEventListener("click", async () => {
+    if (state.seasonMode) { exitSeasonRun(); return; }
     await refreshSaves();
     navigate("mainmenu");
+  });
+  document.getElementById("btn-sc-exit")?.addEventListener("click", () => exitSeasonRun());
+  document.getElementById("btn-sc-standings")?.addEventListener("click", () => {
+    state.ui.seasonComplete = null;
+    setGroupTab("season", "standings");
+    navigate("season");
   });
   document.querySelectorAll("[data-result-tab]").forEach((el) => {
     el.addEventListener("click", () => {
@@ -1984,11 +2228,21 @@ function setupGlobalListeners() {
       renderApp();
     });
   });
+  document.querySelectorAll("[data-watch-highlight]").forEach((el) => {
+    el.addEventListener("click", () => {
+      const pair = String(el.dataset.watchHighlight || "").split(":").map((v) => parseInt(v, 10));
+      if (Number.isFinite(pair[0]) && Number.isFinite(pair[1]) && state.ui.lastGameResult) openResultHighlight(state.ui.lastGameResult, pair[0], pair[1]);
+    });
+  });
+  document.querySelectorAll("[data-watch-reel]").forEach((el) => {
+    el.addEventListener("click", () => { if (state.ui.lastGameResult) openResultHighlightReel(state.ui.lastGameResult); });
+  });
   (_u = document.getElementById("close-game-result")) == null ? void 0 : _u.addEventListener("click", () => {
     if (state._instantClassicReplay) {
       closeInstantClassicReplay();
       return;
     }
+    if (state.coachWeek) { afterCoachedGameResultClose(); return; }
     state.ui.showGameResult = false;
     renderApp();
   });
@@ -1997,6 +2251,7 @@ function setupGlobalListeners() {
       closeInstantClassicReplay();
       return;
     }
+    if (state.coachWeek) { afterCoachedGameResultClose(); return; }
     state.ui.showGameResult = false;
     state.ui.lastGameResult = null;
     renderApp();
@@ -2007,6 +2262,7 @@ function setupGlobalListeners() {
       closeInstantClassicReplay();
       return;
     }
+    if (state.coachWeek) { afterCoachedGameResultClose(); return; }
     state.ui.showGameResult = false;
     renderApp();
   });
@@ -2425,6 +2681,7 @@ async function init() {
   var _a;
   setRenderFn(renderApp);
   setNotifyFn(patchToast);
+  window.__playReplayClip = openReplayClip;
   await refreshSaves();
   state.ui.view = "mainmenu";
   renderApp();
@@ -2441,9 +2698,11 @@ async function init() {
 function installSaveGuards() {
   const flushNow = () => {
     try {
-      if (state && state.world && state.playerSchoolId && !state._exhibition) {
-        flushSaveSync(state, state._saveSlot || "auto");
-      }
+      if (!(state && state.world && state.playerSchoolId && !state._exhibition)) return;
+      // Season Mode flushes to its OWN dedicated slot and never to "auto" (which
+      // would collide with a dynasty), and stops once the season is over.
+      if (state.seasonMode) { if (!state.seasonOver) flushSaveSync(state, "season"); return; }
+      flushSaveSync(state, state._saveSlot || "auto");
     } catch (e) {
     }
   };
@@ -2453,10 +2712,9 @@ function installSaveGuards() {
     if (document.visibilityState === "hidden") flushNow();
   });
   setInterval(() => {
-    if (state && state.world && state.playerSchoolId && state._saveSlot && !state._exhibition) {
-      saveGame(state, state._saveSlot).catch(() => {
-      });
-    }
+    if (!(state && state.world && state.playerSchoolId && !state._exhibition)) return;
+    if (state.seasonMode) { if (!state.seasonOver) saveGame(state, "season").catch(() => {}); return; }
+    if (state._saveSlot) saveGame(state, state._saveSlot).catch(() => {});
   }, 3e4);
 }
 function renderKickoffModal() {
@@ -3394,25 +3652,30 @@ function initWatchMode(r, isHome, opts = {}) {
   const root = document.getElementById("watch-root");
   if (!root) return;
   const key = (_a = opts.key) != null ? _a : r;
+  const clipMode = !!opts.clip;
   const _resumeActive = !!(_watch && _watch.key === key && !_watch.paused && _watch.idx > 0);
   if (!_watch || _watch.key !== key) {
     watchStop();
     _watch = {
       r,
       key,
-      seq: buildWatchSeq(r),
+      seq: clipMode ? r.drives.flatMap((d, di) => (d.plays || []).map((p) => ({ kind: "play", p, d, di }))).concat(opts.clip.reel ? [{ kind: "final" }] : []) : buildWatchSeq(r),
       idx: 0,
       speed: 1,
-      paused: false,
+      paused: clipMode && !opts.clip.reel,
       timer: null,
       replayTimer: null,
       art: false,
-      onFinish: opts.onFinish || null
+      onFinish: opts.onFinish || null,
+      clip: opts.clip || null,
+      activePlay: null,
+      activeDrive: null
     };
   } else {
     watchStop();
     _watch.r = r;
     _watch.onFinish = opts.onFinish || _watch.onFinish;
+    _watch.clip = opts.clip || _watch.clip;
   }
   const w = _watch;
   const isLive = !!w.onFinish;
@@ -3433,18 +3696,35 @@ function initWatchMode(r, isHome, opts = {}) {
     </div>
   </aside>
   <div class="watch-board-wrap"><svg id="watch-board" viewBox="-19 0 100 56" preserveAspectRatio="xMidYMid meet"></svg>
+    <svg id="watch-ink" class="watch-ink" viewBox="-19 0 100 56" preserveAspectRatio="xMidYMid meet" aria-label="Replay telestrator"></svg>
     <div class="watch-camera-bug" id="watch-camera-bug">LIVE</div>
     <div class="watch-replay-bug" id="watch-replay-bug">INSTANT REPLAY</div>
     <div class="watch-flash" id="watch-flash"></div>
     <div class="watch-wipe" id="watch-wipe"></div>
     <div class="watch-banner" id="watch-banner"></div>
-    <div class="watch-lower" id="watch-lower"></div></div>
-  <div class="watch-controls broadcast-bar">
+    <div class="watch-lower" id="watch-lower"></div>
+    <div class="watch-analysis" id="watch-analysis" aria-live="polite"></div>
+    <div class="watch-player-pop" id="watch-player-pop"></div>
+    <div class="watch-replay-tools" id="watch-replay-tools" aria-label="Replay controls">
+      <button class="bc-btn bc-icon" id="replay-play" title="Play or pause">⏸</button>
+      <input id="replay-scrub" class="replay-scrub" type="range" min="0" max="1000" value="0" aria-label="Replay position">
+      <button class="bc-btn bc-speed" id="replay-rate" title="Slow motion">1×</button>
+      <button class="bc-btn bc-text" id="replay-director" title="Automatically cut cameras by play phase">Director</button>
+      <button class="bc-btn bc-text" id="replay-camera" title="Change camera">Broadcast</button>
+      <button class="bc-btn bc-text" id="replay-ink" title="Draw while paused">Draw</button>
+      <button class="bc-btn bc-icon" id="replay-undo" title="Undo drawing">↶</button>
+      <button class="bc-btn bc-text" id="replay-still" title="Save annotated still">Still</button>
+      <button class="bc-btn bc-text" id="replay-video" title="Export short video">Video</button>
+      <button class="bc-btn bc-text" id="replay-save" title="Save to Film Room">Film Room</button>
+    </div></div>
+  <div class="watch-controls broadcast-bar${clipMode ? " replay-clip-summary" : ""}">
     ${isLive ? "" : `<button class="bc-btn bc-icon" id="watch-stepback" title="Step back">\u23EE</button>`}
     <button class="bc-btn bc-icon bc-play" id="watch-pause" title="Play / pause">\u23F8</button>
     ${isLive ? "" : `<button class="bc-btn bc-icon" id="watch-stepfwd" title="Step forward">\u23ED</button>`}
     <button class="bc-btn bc-speed" id="watch-speed" title="Playback speed">1\xD7</button>
+    <button class="bc-btn bc-text" id="watch-landscape" title="Rotate to landscape">⤢ Landscape</button>
     <button class="bc-btn bc-text watch-desktop-only" id="watch-art" title="Show or hide the developing play trail">Play Art: On</button>
+    ${clipMode ? "" : `<button class="bc-btn bc-text" id="watch-save-clip" title="Save this play to Film Room">Save Clip</button>`}
     ${isLive ? "" : `<button class="bc-btn bc-text" id="watch-nextdrive" title="Next drive">Next Drive \u23ED</button>`}
     ${liveCall ? timeControlBar() : `<button class="bc-btn bc-text bc-final" id="watch-final" title="${finalTitle}">${finalLabel}</button>`}
     <span class="watch-progress" id="watch-progress"></span>
@@ -3488,6 +3768,26 @@ function initWatchMode(r, isHome, opts = {}) {
     w.speed = w.speed === 1 ? 2 : w.speed === 2 ? 0.5 : 1;
     document.getElementById("watch-speed").textContent = w.speed === 0.5 ? "\xBD\xD7" : `${w.speed}\xD7`;
   });
+  // Force landscape on tap — the reliable path when the installed PWA won't honor
+  // the manifest's "any" orientation. In a browser tab orientation.lock needs
+  // fullscreen (requested first); in a standalone PWA the lock works directly.
+  // Toggles: tap again (or when already landscape) to release back to portrait.
+  // Fully feature-detected + try/caught, so it's a safe no-op on iOS.
+  const lsBtn = document.getElementById("watch-landscape");
+  if (lsBtn) lsBtn.addEventListener("click", async () => {
+    try {
+      const o = screen.orientation;
+      const isLandscape = o && typeof o.type === "string" && o.type.indexOf("landscape") === 0;
+      if (isLandscape) {
+        if (o && o.unlock) { try { o.unlock(); } catch (e) {} }
+        if (document.fullscreenElement && document.exitFullscreen) { try { await document.exitFullscreen(); } catch (e) {} }
+      } else {
+        const el = document.documentElement;
+        if (!document.fullscreenElement && el.requestFullscreen) { try { await el.requestFullscreen(); } catch (e) {} }
+        if (o && o.lock) { try { await o.lock("landscape"); } catch (e) {} }
+      }
+    } catch (e) {}
+  });
   const artBtn = document.getElementById("watch-art");
   const syncArt = () => {
     root.classList.toggle("watch-art-off", w.art === false);
@@ -3498,6 +3798,8 @@ function initWatchMode(r, isHome, opts = {}) {
     syncArt();
   });
   syncArt();
+  const saveClipBtn = document.getElementById("watch-save-clip");
+  if (saveClipBtn) saveClipBtn.addEventListener("click", () => watchSaveActiveClip(w));
   (_c = document.getElementById("watch-final")) == null ? void 0 : _c.addEventListener("click", () => {
     w.idx = w.seq.length - 1;
     watchStop();
@@ -3609,6 +3911,7 @@ function watchBoardColors(w, d) {
   var _a, _b, _c, _d;
   const r = w == null ? void 0 : w.r;
   if (!r) return null;
+  if (r.viewerBoard) return __spreadProps(__spreadValues({}, watchClone(r.viewerBoard)), { possession: (d == null ? void 0 : d.possession) === "away" ? "away" : "home" });
   const pick2 = (school, i, fb) => {
     var _a2, _b2;
     const c = ((_a2 = school == null ? void 0 : school.colors) == null ? void 0 : _a2[i]) || ((_b2 = school == null ? void 0 : school.colors) == null ? void 0 : _b2[0]);
@@ -3671,6 +3974,10 @@ function watchSideFacing(team) {
   const off = _watchSideDir > 0 ? "e" : "w";
   return team === "off" ? off : off === "e" ? "w" : "e";
 }
+function watchCameraFacing(mode, team) {
+  if (["coach", "endzone"].includes(normalizeWatchCamera(mode))) return team === "off" ? "n" : "s";
+  return watchSideFacing(team);
+}
 function watchSideX(worldY) {
   return 31 + _watchSideDir * (31 - worldY) * WATCH_SIDE.longitudinal;
 }
@@ -3679,6 +3986,26 @@ function watchSideY(worldX) {
 }
 function watchSidePoint(worldX, worldY) {
   return [watchSideX(worldY), watchSideY(worldX)];
+}
+function watchCameraPoint(mode, worldX, worldY, z = 0) {
+  return projectWatchPoint(mode, worldX, worldY, {
+    direction: _watchSideDir,
+    fieldTop: WATCH_SIDE.fieldTop,
+    fieldHeight: WATCH_SIDE.fieldHeight,
+    longitudinal: WATCH_SIDE.longitudinal,
+    z
+  });
+}
+function watchCameraScale(mode, worldX, worldY) {
+  return watchProjectionScale(mode, worldX, worldY, { direction: _watchSideDir });
+}
+function watchCameraDepth(mode, worldX, worldY) {
+  return watchProjectionDepth(mode, worldX, worldY, {
+    direction: _watchSideDir,
+    fieldTop: WATCH_SIDE.fieldTop,
+    fieldHeight: WATCH_SIDE.fieldHeight,
+    longitudinal: WATCH_SIDE.longitudinal
+  });
 }
 function watchSideFieldX(absYard, fieldPos) {
   return 31 + _watchSideDir * (absYard - fieldPos) * WATCH_SIDE.ypu * WATCH_SIDE.longitudinal;
@@ -3704,14 +4031,216 @@ function watchSetSpritePalette(svg, board) {
   svg.style.setProperty("--wsp-def", dF || "#c23a35");
   svg.style.setProperty("--wsp-def-hl", dH || dF || "#f4f0d8");
 }
+function watchReplayPlayer(p, actor, script, names) {
+  let id = null;
+  if (actor.id === "QB") id = p.throwerId || p.rusherId;
+  else if (actor.id === p.targetSlotId) id = p.receiverId || p.targetId;
+  else if (actor.id === p.carrierSlotId) id = p.rusherId || p.returnerId;
+  else if (actor.id === script.pickId) id = p.intPickerId;
+  else if (actor.id === script.covId) id = p.pbuId || p.beatenDefId;
+  else if (script.tackleCue && actor.id === script.tackleCue.id) id = p.tacklerId;
+  else if (script.tackleCue && actor.id === script.tackleCue.assistId) id = p.tacklerId2;
+  const entry = id && names[id] || null;
+  return {
+    id,
+    name: entry && entry.name || actor.label || actor.id,
+    pos: entry && entry.pos || actor.grp || actor.label || "Player",
+    team: actor.team,
+    role: actor.qb ? "Quarterback" : actor.id === p.targetSlotId ? "Target" : actor.id === p.carrierSlotId ? "Ball carrier" : actor.id === script.pickId ? "Interceptor" : actor.id === script.covId ? "Coverage" : actor.team === "off" ? "Offense" : "Defense"
+  };
+}
+function watchReplaySetCamera(playback, svg, script, nodes, next, isDirectorCut = false) {
+  const camera = normalizeWatchCamera(next);
+  if (camera === playback.cameraMode) return false;
+  playback.cameraMode = camera;
+  playback.projectionDirty = true;
+  for (const actor of script.actors || []) {
+    const node = nodes[actor.id];
+    if (!node) continue;
+    node._wsm = null;
+    node.classList.remove("wsp-face-e", "wsp-face-w", "wsp-face-n", "wsp-face-s");
+    node.classList.add("wsp-face-" + watchCameraFacing(camera, actor.team));
+  }
+  const camBtn = document.getElementById("replay-camera");
+  if (camBtn) camBtn.textContent = watchCameraLabel(camera);
+  if (isDirectorCut) {
+    svg.classList.remove("watch-director-cut");
+    void svg.getBoundingClientRect();
+    svg.classList.add("watch-director-cut");
+  }
+  return true;
+}
+function watchApplyLabelPlan(cameraMode, actors, actorPts, nodes, featuredIds = []) {
+  const featured = new Set(featuredIds.filter(Boolean));
+  const entries = actors.map((actor) => {
+    const pt = actorPts[actor.id] || [0, 0];
+    const room = String(actor.grp || actor.label || "").toUpperCase();
+    const priority = featured.has(actor.id) ? 3 : /^(QB|RB|WR|TE|FB|CB|FS|SS|S|K|P|PR|KR)$/.test(room) ? 1 : 0;
+    return { id: actor.id, x: pt[0], y: pt[1], priority };
+  });
+  const visible = new Set(selectWatchLabels(entries, { camera: cameraMode }));
+  for (const actor of actors) {
+    const node = nodes[actor.id];
+    if (!node) continue;
+    node.classList.toggle("wp-label-muted", !visible.has(actor.id));
+    node.classList.toggle("wp-label-featured", featured.has(actor.id));
+  }
+}
+function watchWireInteractiveReplay(playback, svg, script, p, board, nodes) {
+  const tools = document.getElementById("watch-replay-tools");
+  const ink = document.getElementById("watch-ink");
+  if (!tools || !ink) return;
+  tools.classList.add("on");
+  const playBtn = document.getElementById("replay-play");
+  const scrub = document.getElementById("replay-scrub");
+  const rateBtn = document.getElementById("replay-rate");
+  const directorBtn = document.getElementById("replay-director");
+  const camBtn = document.getElementById("replay-camera");
+  const inkBtn = document.getElementById("replay-ink");
+  const undoBtn = document.getElementById("replay-undo");
+  const stillBtn = document.getElementById("replay-still");
+  const videoBtn = document.getElementById("replay-video");
+  const saveBtn = document.getElementById("replay-save");
+  const syncPlay = () => {
+    if (playBtn) playBtn.textContent = playback.paused ? "▶" : "⏸";
+    if (inkBtn) inkBtn.classList.toggle("active", playback.ink);
+    if (directorBtn) {
+      directorBtn.classList.toggle("active", !!playback.director);
+      directorBtn.textContent = playback.director ? "Auto" : "Director";
+      directorBtn.title = playback.director ? `Director on${playback.directorReason ? `: ${playback.directorReason}` : ""}` : "Automatically cut cameras by play phase";
+    }
+    ink.classList.toggle("drawing", playback.ink && playback.paused);
+  };
+  playback.renderInk = () => {
+    ink.innerHTML = playback.annotations.filter((stroke) => !stroke.camera || stroke.camera === playback.cameraMode).map((stroke) => `<polyline points="${(stroke.points || []).map((pt) => `${pt.x.toFixed(2)},${pt.y.toFixed(2)}`).join(" ")}" fill="none" stroke="${stroke.color || "#ffd54a"}" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>`).join("");
+  };
+  playback.renderInk();
+  if (playBtn) playBtn.addEventListener("click", () => {
+    if (playback.t >= playback.duration - 0.01) playback.seek(0);
+    playback.paused = !playback.paused;
+    playback.ink = playback.ink && playback.paused;
+    syncPlay();
+    if (!playback.paused) playback.seek(playback.t);
+  });
+  if (scrub) {
+    scrub.addEventListener("input", () => {
+      playback.paused = true;
+      playback.ink = false;
+      playback.seek(parseInt(scrub.value, 10) / 1000 * playback.duration);
+      syncPlay();
+    });
+  }
+  if (rateBtn) rateBtn.addEventListener("click", () => {
+    playback.rate = playback.rate === 1 ? 0.5 : playback.rate === 0.5 ? 0.25 : 1;
+    rateBtn.textContent = playback.rate === 0.5 ? "½×" : playback.rate === 0.25 ? "¼×" : "1×";
+  });
+  if (directorBtn) directorBtn.addEventListener("click", () => {
+    playback.director = !playback.director;
+    if (playback.director && playback.directorPlan) {
+      const cut = playback.directorPlan.at(playback.t);
+      playback.directorReason = cut.reason;
+      watchReplaySetCamera(playback, svg, script, nodes, cut.camera, true);
+      playback.renderInk();
+      playback.seek(playback.t);
+    }
+    syncPlay();
+  });
+  if (camBtn) {
+    camBtn.textContent = watchCameraLabel(playback.cameraMode);
+    camBtn.addEventListener("click", () => {
+      playback.director = false;
+      watchReplaySetCamera(playback, svg, script, nodes, nextWatchCamera(playback.cameraMode));
+      playback.renderInk();
+      playback.seek(playback.t);
+      syncPlay();
+    });
+  }
+  if (inkBtn) inkBtn.addEventListener("click", () => {
+    if (!playback.paused) {
+      playback.paused = true;
+      if (_watchAnim && _watchAnim.raf) cancelAnimationFrame(_watchAnim.raf);
+    }
+    playback.ink = !playback.ink;
+    syncPlay();
+  });
+  if (undoBtn) undoBtn.addEventListener("click", () => {
+    playback.annotations.pop();
+    playback.renderInk();
+  });
+  let activeStroke = null;
+  const pointOf = (e) => {
+    const pt = ink.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const out = pt.matrixTransform(ink.getScreenCTM().inverse());
+    return { x: out.x, y: out.y };
+  };
+  ink.addEventListener("pointerdown", (e) => {
+    if (!playback.ink || !playback.paused) return;
+    e.preventDefault();
+    ink.setPointerCapture(e.pointerId);
+    activeStroke = { camera: playback.cameraMode, color: "#ffd54a", points: [pointOf(e)] };
+    playback.annotations.push(activeStroke);
+    playback.renderInk();
+  });
+  ink.addEventListener("pointermove", (e) => {
+    if (!activeStroke || !ink.hasPointerCapture(e.pointerId)) return;
+    activeStroke.points.push(pointOf(e));
+    playback.renderInk();
+  });
+  const stopStroke = () => { activeStroke = null; };
+  ink.addEventListener("pointerup", stopStroke);
+  ink.addEventListener("pointercancel", stopStroke);
+  const names = _watch && _watch.r && _watch.r.playerNames || {};
+  for (const actor of script.actors) {
+    const node = nodes[actor.id];
+    if (!node) continue;
+    node.setAttribute("tabindex", "0");
+    node.setAttribute("role", "button");
+    const openCard = () => {
+      if (playback.ink) return;
+      const card = watchReplayPlayer(p, actor, script, names);
+      const jersey = node.querySelector("[data-jersey]") && node.querySelector("[data-jersey]").getAttribute("data-jersey");
+      const pop = document.getElementById("watch-player-pop");
+      if (!pop) return;
+      pop.innerHTML = `<button aria-label="Close player card">×</button><span>${escapeHtml(card.role)}</span><b>${jersey ? `#${escapeHtml(jersey)} ` : ""}${escapeHtml(card.name)}</b><small>${escapeHtml(card.pos)} · ${card.team === "off" ? "Offense" : "Defense"}</small>`;
+      pop.classList.add("on");
+      const close = pop.querySelector("button");
+      if (close) close.addEventListener("click", () => pop.classList.remove("on"));
+    };
+    node.addEventListener("click", openCard);
+    node.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") openCard(); });
+  }
+  if (stillBtn) stillBtn.addEventListener("click", () => {
+    const visibleInk = playback.annotations.filter((stroke) => !stroke.camera || stroke.camera === playback.cameraMode);
+    const xml = watchSerializedStill(svg, visibleInk);
+    watchDownloadBlob(new Blob([xml], { type: "image/svg+xml;charset=utf-8" }), `blueprint-still-${Date.now()}.svg`);
+    notify("Annotated still saved", "success");
+  });
+  if (videoBtn) videoBtn.addEventListener("click", async () => {
+    videoBtn.disabled = true;
+    videoBtn.textContent = "Rendering…";
+    try { await watchExportVideo(playback, svg); }
+    finally { videoBtn.disabled = false; videoBtn.textContent = "Video"; }
+  });
+  if (saveBtn) saveBtn.addEventListener("click", () => watchSaveActiveClip(_watch));
+  syncPlay();
+}
 function watchBoard(p, durMs, board = null, opts = {}) {
   var _a, _b, _c, _d, _e;
   const svg = document.getElementById("watch-board");
   if (!svg) return null;
   watchStopAnim();
   _watchSideDir = watchSideDirection(board);
+  const projectionEligible = !!p && !["pat2", "kneel", "spike", "penalty"].includes(p.type);
+  const initialCamera = projectionEligible ? normalizeWatchCamera(opts.clip && opts.clip.camera) : "broadcast";
+  const initialPoint = (worldX, worldY, z = 0) => watchCameraPoint(initialCamera, worldX, worldY, z);
   svg.dataset.fieldDirection = _watchSideDir > 0 ? "right" : "left";
   svg.dataset.fieldPossession = (board == null ? void 0 : board.possession) || "";
+  svg.dataset.camera = initialCamera;
+  svg.classList.toggle("watch-camera-coach", initialCamera === "coach");
+  svg.classList.toggle("watch-camera-endzone", initialCamera === "endzone");
+  svg.classList.toggle("watch-camera-reverse", initialCamera === "reverse");
   // M25: the sky rides the board dataset so CSS (turf pellets, sheen) can
   // key off it without per-frame work.
   svg.dataset.weather = board && board.weather ? board.weather.kind : "clear";
@@ -3738,8 +4267,8 @@ function watchBoard(p, durMs, board = null, opts = {}) {
   if (replayBug) replayBug.classList.toggle("on", !!opts.replay);
   svg.setAttribute("viewBox", `${watchSideCameraX(p).toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
   watchSetSpritePalette(svg, board);
-  if (p && (p.type === "fg" || p.type === "punt" || p.type === "pat")) return watchBoardKick(svg, p, board);
-  if (p && p.type === "kickoff") return watchBoardKickoff(svg, p, board);
+  if (p && (p.type === "fg" || p.type === "punt" || p.type === "pat")) return watchBoardKick(svg, p, board, opts);
+  if (p && p.type === "kickoff") return watchBoardKickoff(svg, p, board, opts);
   if (p && p.type === "pat2") return watchBoardTry(svg, p, board);
   if (p && (p.type === "kneel" || p.type === "spike")) return watchBoardSituational(svg, p, board);
   const offL = (_a = OFF_FIELD_LAYOUTS[p == null ? void 0 : p.offFormation]) == null ? void 0 : _a.slots;
@@ -3764,15 +4293,15 @@ function watchBoard(p, durMs, board = null, opts = {}) {
   const offPlan = buildOfficialsPlan(script, p);
   const _off0 = offPlan.at(0);
   const officialsMarkup = `<g id="wp-officials">` + offPlan.crew.map((id, i) => {
-    const [sx, sy] = watchSidePoint(_off0[i][0], _off0[i][1]);
+    const [sx, sy] = initialPoint(_off0[i][0], _off0[i][1]);
     return watchOfficialMarkup(id, sx, sy);
   }).join("") + `</g>`;
-  svg.innerHTML = watchFieldBase(p, board) + `<polyline id="wp-trail" class="wp-trail" points=""/><g id="wp-spot" class="wp-spot" transform="translate(0,0)"><ellipse class="wp-spot-ring" rx="2.6" ry="1.15"/><path class="wp-spot-chevron" d="M-1.15 1.8L0 3.05l1.15-1.25z"/></g><g id="wp-engagements">${(script.blocks || []).map((b, i) => `<g class="wp-engage" data-wengage="${i}"><ellipse class="wp-engage-shadow" rx="1.45" ry=".48"/><path class="wp-engage-pads" d="M-1.8-.8L-.35 0-1.8.8M1.8-.8L.35 0 1.8.8"/><circle class="wp-engage-core" r=".32"/></g>`).join("")}</g><g id="wp-blocks">${(script.blocks || []).map((b, i) => `<line class="wp-block-link" data-wblock="${i}"/>`).join("")}</g>` + officialsMarkup + script.actors.map((a) => {
-    const [sx, sy] = watchSidePoint(a.track[0][0], a.track[0][1]);
-    const face = watchSideFacing(a.team);
+  svg.innerHTML = watchFieldBase(p, board) + `<polyline id="wp-trail" class="wp-trail" points=""/><g id="wp-spot" class="wp-spot" transform="translate(0,0)"><ellipse class="wp-spot-ring" rx="2.6" ry="1.15"/><path class="wp-spot-chevron" d="M-1.15 1.8L0 3.05l1.15-1.25z"/></g><g id="wp-engagements">${(script.blocks || []).map((b, i) => `<g class="wp-engage" data-wengage="${i}"><ellipse class="wp-engage-shadow" rx="1.45" ry=".48"/><path class="wp-engage-pads" d="M-1.8-.8L-.35 0-1.8.8M1.8-.8L.35 0 1.8.8"/><circle class="wp-engage-core" r=".32"/></g>`).join("")}</g><g id="wp-blocks">${(script.blocks || []).map((b, i) => `<line class="wp-block-link" data-wblock="${i}"/>`).join("")}</g>` + officialsMarkup + `<g id="wp-actors">` + script.actors.map((a) => {
+    const [sx, sy] = initialPoint(a.track[0][0], a.track[0][1]);
+    const face = watchCameraFacing(initialCamera, a.team);
     return `<g class="wp-actor wp-team-${a.team}${a.qb ? " wp-qb" : ""}${sprites ? ` wsp-still wsp-face-${face}` : ""}" data-wpa="${a.id}" data-wpg="${a.grp || ""}" transform="translate(${sx.toFixed(2)},${sy.toFixed(2)})">` + (sprites ? spriteMarkup(a, face) : glyph(a)) + `</g>`;
-  }).join("") + `<g id="wp-fx"></g>` + (() => {
-    const [sx, sy] = watchSidePoint(script.ball.track[0][0], script.ball.track[0][1]);
+  }).join("") + `</g><g id="wp-fx"></g><ellipse id="wp-ball-ground-shadow" class="wp-ball-ground-shadow" rx="1.05" ry=".36"/>` + (() => {
+    const [sx, sy] = initialPoint(script.ball.track[0][0], script.ball.track[0][1]);
     return ballMarkup(sx, sy);
   })();
   svg.classList.add("watch-presnap");
@@ -3786,18 +4315,30 @@ function watchBoard(p, durMs, board = null, opts = {}) {
   // generic LOS constant left a sub-unit pull that had the camera creeping
   // through the cadence (latent since M20; the live probe caught it).
   let camX = watchSideCameraX(p, watchSidePoint(script.ball.track[0][0], script.ball.track[0][1])[0], camW);
+  if (initialCamera === "all22" || initialCamera === "coach") {
+    camX = initialCamera === "coach" ? 0 : watchSideCameraX(p, 31, WATCH_SIDE.viewW);
+    camY = 0;
+    camW = WATCH_SIDE.viewW;
+    camH = WATCH_SIDE.viewH;
+  }
   // M20 camera slice (pulled forward from M22, scoped tight): slew-limited
   // pan/zoom — the camera accelerates and brakes instead of exponentially
   // whipping at its target, and holds framing rock-steady through the snap.
   let camVX = 0, camVH = 0;
   const CAM_PAN_ACCEL = 0.055, CAM_PAN_VMAX = 1.9, CAM_ZOOM_ACCEL = 0.03, CAM_ZOOM_VMAX = 0.85, CAM_DEAD = 0.35;
-  const setCam = () => svg.setAttribute("viewBox", `${camX.toFixed(2)} ${camY.toFixed(2)} ${camW.toFixed(2)} ${camH.toFixed(2)}`);
+  const setCam = () => {
+    const vb = `${camX.toFixed(2)} ${camY.toFixed(2)} ${camW.toFixed(2)} ${camH.toFixed(2)}`;
+    svg.setAttribute("viewBox", vb);
+    const ink = document.getElementById("watch-ink");
+    if (ink) ink.setAttribute("viewBox", vb);
+  };
   setCam();
   const nodes = {};
   svg.querySelectorAll("[data-wpa]").forEach((n) => {
     nodes[n.dataset.wpa] = n;
   });
-  const ballN = svg.querySelector("#wp-ball"), trailN = svg.querySelector("#wp-trail"), fxN = svg.querySelector("#wp-fx");
+  const actorLayer = svg.querySelector("#wp-actors");
+  const ballN = svg.querySelector("#wp-ball"), ballGroundN = svg.querySelector("#wp-ball-ground-shadow"), trailN = svg.querySelector("#wp-trail"), fxN = svg.querySelector("#wp-fx");
   const spotN = svg.querySelector("#wp-spot");
   const blockNodes = [...svg.querySelectorAll("[data-wblock]")];
   const engageNodes = [...svg.querySelectorAll("[data-wengage]")];
@@ -3805,66 +4346,16 @@ function watchBoard(p, durMs, board = null, opts = {}) {
   const officialNodes = [...svg.querySelectorAll("[data-wpo]")];
   const parN = svg.querySelector(".wf-stadium-par");
   const camX0Par = camX;
-  let catchCue = null;
-  {
-    const cf = (script.fx || []).find((f) => f.kind === "catch" || f.kind === "inc" || f.kind === "int");
-    if (cf) {
-      const fi = Math.max(0, Math.round(cf.t / script.step));
-      const wantDef = cf.kind === "int";
-      let best = null, bd = Infinity;
-      for (const a of script.actors) {
-        const isDef = a.team === "def";
-        if (wantDef ? !isDef : isDef) continue;
-        if (!wantDef && a.grp === "OL") continue;
-        const tr = a.track[Math.min(fi, a.track.length - 1)];
-        if (!tr) continue;
-        const dd = (tr[0] - cf.x) ** 2 + (tr[1] - cf.y) ** 2;
-        if (dd < bd) {
-          bd = dd;
-          best = a;
-        }
-      }
-      if (best) {
-        const classes = [];
-        if (p.type === "pass_deep" || cf.kind === "int" || p.contested === true) classes.push("wp-catch-hi");
-        else if (p.type === "pass_short" || (31 - cf.y) / 0.85 < 3) classes.push("wp-catch-low");
-        const prev = best.track[Math.max(0, fi - 5)] || best.track[Math.max(0, fi - 1)];
-        const reachD = prev ? Math.hypot(prev[0] - cf.x, prev[1] - cf.y) : 0;
-        if (cf.kind === "catch" && p.type !== "pass_short" && reachD > 2.15) classes.push("wp-catch-extend");
-        if (cf.x < 13 || cf.x > 87) classes.push("wp-catch-toetap");
-        let contest = null, contestD = Infinity;
-        for (const a of script.actors) {
-          if (a.team === best.team || a.grp === "OL") continue;
-          const tr = a.track[Math.min(fi, a.track.length - 1)];
-          if (!tr) continue;
-          const dd = (tr[0] - cf.x) ** 2 + (tr[1] - cf.y) ** 2;
-          if (dd < contestD) {
-            contestD = dd;
-            contest = a;
-          }
-        }
-        const contestId = contest && (p.contested === true || contestD < 30) ? contest.id : null;
-        if (contestId) classes.push("wp-catch-contested");
-        if (cf.kind === "inc") classes.push("wp-catch-breakup");
-        if (cf.kind === "int") classes.push("wp-catch-pick");
-        catchCue = {
-          id: best.id,
-          contestId,
-          breakup: cf.kind === "inc",
-          classes,
-          impact: cf.t,
-          start: cf.t - 0.24,
-          end: cf.t + (cf.kind === "inc" ? 0.22 : 0.36)
-        };
-      }
-    }
-  }
+  // Viewer Act 2 / A2: watchphys owns the deterministic geometry-to-style
+  // decision. The browser only applies its pose classes.
+  const catchCue = script.catchCue || null;
   let tackleCue = null;
   if (script.tackleCue) {
     const tc = script.tackleCue;
     tackleCue = {
       id: tc.id,
       assistId: tc.assistId,
+      joinCues: tc.joinCues || (tc.assistId ? [{ id: tc.assistId, t: tc.t + 0.02 }] : []),
       carrierId: tc.carrierId,
       cls: "wp-tk-" + tc.style,
       style: tc.style,
@@ -3887,10 +4378,11 @@ function watchBoard(p, durMs, board = null, opts = {}) {
       id: mc.id,
       cls: "wp-mv-" + mc.style,
       style: mc.style,
+      direction: mc.direction || null,
       plantStart: mc.t - 0.27,
       plantEnd: mc.t + 0.08,
       start: mc.t - 0.16,
-      end: mc.t + (mc.style === "dive" || mc.style === "slide" ? 0.58 : 0.4)
+      end: mc.t + (mc.style.includes("dive") || mc.style === "slide" ? 0.58 : 0.4)
     };
   }
   const rushCues = script.rushCues || [];
@@ -3900,6 +4392,14 @@ function watchBoard(p, durMs, board = null, opts = {}) {
   const pressCue = script.pressCue || null;
   const pumpCue = script.pumpCue || null;
   const qbCue = script.qbCue || null;
+  const armSwitchCue = script.armSwitchCue || null;
+  const carryArmState = (cc, time) => {
+    const fallback = cc && (cc.arm === "l" || cc.arm === "left") ? "left" : "right";
+    if (!armSwitchCue || !cc || armSwitchCue.id !== cc.id) return { arm: fallback, from: fallback, to: fallback, u: 1, switching: false };
+    const span = Math.max(0.001, armSwitchCue.end - armSwitchCue.t);
+    const u = Math.max(0, Math.min(1, (time - armSwitchCue.t) / span));
+    return { arm: u < 0.5 ? armSwitchCue.from : armSwitchCue.to, from: armSwitchCue.from, to: armSwitchCue.to, u, switching: time >= armSwitchCue.t && time <= armSwitchCue.end };
+  };
   const celebrateCue = script.celebrateCue ? { id: script.celebrateCue.id, start: script.celebrateCue.t, end: script.dur, style: script.celebrateCue.style || "bounce", mobIds: script.celebrateCue.mobIds || [] } : null;
   let beatenCue = null;
   {
@@ -3920,7 +4420,9 @@ function watchBoard(p, durMs, board = null, opts = {}) {
   const passSetCls = [
     "wp-pass-set", "wp-pass-anchor", "wp-pass-lost", "wp-pass-engaged",
     "wp-pass-won", "wp-pass-edge", "wp-pass-power", "wp-pass-counter",
-    "wp-pocket-qb"
+    "wp-pocket-qb", "wp-trench-kick-slide", "wp-trench-anchor",
+    "wp-trench-redirect", "wp-trench-rusher-speed", "wp-trench-rusher-bull",
+    "wp-trench-rusher-counter"
   ];
   const downfieldCls = [
     "wp-route-active", "wp-route-target", "wp-route-release", "wp-route-stem",
@@ -3930,18 +4432,29 @@ function watchBoard(p, durMs, board = null, opts = {}) {
     "wp-cov-zone", "wp-cov-press", "wp-cov-pedal", "wp-cov-turn",
     "wp-cov-trail", "wp-cov-left", "wp-cov-right", "wp-catchpoint",
     "wp-catchpoint-receiver", "wp-catchpoint-defender", "wp-catchpoint-secure",
-    "wp-catchpoint-breakup"
+    "wp-catchpoint-breakup", "wp-catch-style-secure", "wp-catch-style-toe-tap",
+    "wp-catch-style-layout", "wp-catch-style-high-point", "wp-catch-style-one-hand",
+    "wp-catch-style-battle", "wp-catch-style-breakup", "wp-catch-style-pick"
   ];
   const qbMechanicCls = [
     "wp-qb-mechanics", "wp-qb-quick", "wp-qb-three", "wp-qb-five",
     "wp-qb-playaction", "wp-qb-snap", "wp-qb-mesh", "wp-qb-drop",
-    "wp-qb-hitch", "wp-qb-reset", "wp-qb-load", "wp-qb-follow"
+    "wp-qb-hitch", "wp-qb-reset", "wp-qb-load", "wp-qb-follow",
+    "wp-qb-rollout", "wp-qb-rollout-left", "wp-qb-rollout-right",
+    "wp-qb-escape", "wp-qb-pa-carry", "wp-qb-throw-set",
+    "wp-qb-throw-sidearm", "wp-qb-throw-on-run", "wp-qb-throw-off-platform",
+    "wp-qb-throw-pa-carry"
   ];
   const tackleSetupCls = [
     "wp-tk-pursuit", "wp-tk-breakdown", "wp-tk-leverage-left",
     "wp-tk-leverage-right", "wp-tk-assist-lane", "wp-carrier-brace",
     "wp-carrier-secure", "wp-carrier-brace-left", "wp-carrier-brace-right"
   ];
+  const secondaryCls = [
+    "wp-a3-weight", "wp-a3-gather", "wp-a3-sprint",
+    "wp-a3-head-left", "wp-a3-head-right"
+  ];
+  const carryArmCls = ["wp-carry-arm-left", "wp-carry-arm-right", "wp-arm-switching"];
   const liftN = ballN == null ? void 0 : ballN.querySelector(".wab-lift");
   const aimN = ballN == null ? void 0 : ballN.querySelector(".wab-aim");
   // M21 ball-render state: last rendered (lift-inclusive) point + held flight
@@ -3963,6 +4476,24 @@ function watchBoard(p, durMs, board = null, opts = {}) {
   const camPlan = buildCameraPlan(script, p, { wideH: WIDE_H, closeH: CLOSE_H, longitudinal: WATCH_SIDE.longitudinal });
   const t0 = performance.now();
   let _tWarp = 0, _lastWall = t0;
+  const playback = {
+    interactive: !!opts.interactive,
+    paused: false,
+    rate: 1,
+    t: 0,
+    duration: script.dur,
+    cameraMode: initialCamera,
+    director: false,
+    directorPlan: buildReplayDirectorPlan(script, p),
+    directorReason: "",
+    projectionDirty: false,
+    annotations: opts.clip && Array.isArray(opts.clip.annotations) ? watchClone(opts.clip.annotations) : [],
+    ink: false,
+    exporting: false,
+    lastRenderedT: 0,
+    seek: null,
+    renderInk: null
+  };
   // M24 perf state: frame-time EMA for the auto lite mode.
   let _frameEma = null, _lastFrameWall = t0;
   const shown = /* @__PURE__ */ new Set();
@@ -3977,22 +4508,72 @@ function watchBoard(p, durMs, board = null, opts = {}) {
       watchStopAnim();
       return;
     }
+    if (playback.interactive && playback.director && playback.directorPlan) {
+      const cut = playback.directorPlan.at(playback.t);
+      playback.directorReason = cut.reason;
+      svg.dataset.directorReason = cut.reason;
+      watchReplaySetCamera(playback, svg, script, nodes, cut.camera, true);
+      const directorBtn = document.getElementById("replay-director");
+      if (directorBtn) directorBtn.title = `Director on: ${cut.reason}`;
+    } else delete svg.dataset.directorReason;
+    const cameraMode = playback.interactive ? normalizeWatchCamera(playback.cameraMode) : "broadcast";
+    const projectPoint = (worldX, worldY, z = 0) => watchCameraPoint(cameraMode, worldX, worldY, z);
+    svg.dataset.camera = cameraMode;
+    svg.classList.toggle("watch-camera-coach", cameraMode === "coach");
+    svg.classList.toggle("watch-camera-endzone", cameraMode === "endzone");
+    svg.classList.toggle("watch-camera-reverse", cameraMode === "reverse");
+    if (playback.projectionDirty) {
+      shown.clear();
+      trail.length = 0;
+      lastTrail = null;
+      if (trailN) trailN.setAttribute("points", "");
+      if (fxN) fxN.innerHTML = "";
+      impactShown = false;
+      prevBallR = null;
+      playback.projectionDirty = false;
+    }
     // M22 replay time-warp: in replay mode play-time accumulates through the
     // plan's warp (slow at the contact moments, compensated elsewhere — the
     // total replay duration is unchanged). Live playback is the plain clock.
     const _wallNow = performance.now();
     let t;
-    if (opts.replay) {
+    if (playback.interactive) {
+      if (!playback.paused) playback.t = Math.min(script.dur, playback.t + Math.max(0, _wallNow - _lastWall) / 1e3 * playback.rate);
+      t = playback.t;
+      const scrub = document.getElementById("replay-scrub");
+      if (scrub && document.activeElement !== scrub) scrub.value = String(Math.round(t / Math.max(0.001, script.dur) * 1000));
+    } else if (opts.replay) {
       _tWarp += Math.max(0, _wallNow - _lastWall) / 1e3 * speed * camPlan.warpAt(_tWarp);
       t = Math.min(script.dur, _tWarp);
     } else t = Math.min(script.dur, (_wallNow - t0) / 1e3 * speed);
     _lastWall = _wallNow;
+    if (playback.interactive && t + 0.01 < playback.lastRenderedT) {
+      shown.clear();
+      trail.length = 0;
+      lastTrail = null;
+      if (trailN) trailN.setAttribute("points", "");
+      if (fxN) fxN.innerHTML = "";
+      impactShown = false;
+      prevBallR = null;
+    }
+    playback.lastRenderedT = t;
     if (!opts.replay && !snapHeard && t >= script.presnap) {
       snapHeard = true;
       stadiumReact("snap");
     }
     const [bwx, bwy] = sampleTrack(script.ball.track, script.step, t);
-    const [bx, by] = watchSidePoint(bwx, bwy);
+    let ballZ = 0;
+    if (flightArc && t >= flightArc.rel && t < flightArc.end) {
+      ballZ = Math.sin((t - flightArc.rel) / (flightArc.end - flightArc.rel) * Math.PI) * flightArc.loft;
+    }
+    const [bx, by] = projectPoint(bwx, bwy, ["coach", "endzone"].includes(cameraMode) ? ballZ : 0);
+    if (ballGroundN) {
+      const [groundX, groundY] = projectPoint(bwx, bwy, 0);
+      const projectionFlight = ["coach", "endzone"].includes(cameraMode) && ballZ > 0.08;
+      ballGroundN.setAttribute("transform", `translate(${groundX.toFixed(2)},${groundY.toFixed(2)}) scale(${Math.max(0.52, 1 - ballZ * 0.045).toFixed(3)})`);
+      ballGroundN.style.opacity = projectionFlight ? String(Math.max(0.14, 0.46 - ballZ * 0.035)) : "0";
+      ballGroundN.classList.toggle("on", projectionFlight);
+    }
     // M21: the ball's rendered position is finalized AFTER the actor pass —
     // possession phases attach it to the owner's hands (see the ball block
     // below). The track still owns every outcome-bearing location.
@@ -4008,16 +4589,19 @@ function watchBoard(p, durMs, board = null, opts = {}) {
     svg.classList.toggle("watch-route-live", routeCues.length > 0 && playOn && (catchT == null || t <= catchT + 0.08));
     svg.classList.toggle("watch-qb-mechanics", !!qbCue && t >= qbCue.start && t <= qbCue.followEnd);
     const actorPts = {};
+    const actorDepth = [];
     // M20 engagement facing: contact sections below register face locks here;
     // anything not re-registered this frame is released after the sections run.
     const faceLocks = /* @__PURE__ */ new Set();
     for (const a of script.actors) {
       const [wx, wy] = sampleTrack(a.track, script.step, t);
-      const [x, y] = watchSidePoint(wx, wy);
+      const [x, y] = projectPoint(wx, wy);
       actorPts[a.id] = [x, y];
       const node = nodes[a.id];
       if (node) {
-        node.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)})`);
+        const scale = watchCameraScale(cameraMode, wx, wy);
+        node.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)}) scale(${scale.toFixed(3)})`);
+        actorDepth.push({ node, depth: watchCameraDepth(cameraMode, wx, wy) });
         if (sprites) spriteMotionTick(node, x, y);
       }
       if (a.team === possessionTeam) {
@@ -4030,7 +4614,55 @@ function watchBoard(p, durMs, board = null, opts = {}) {
         }
       }
     }
-    Object.values(nodes).forEach((node) => node.classList.remove("wp-near-ball", "wp-ball-watch", "wp-blocking", "wp-blocked", ...repCls, ...contactCls, ...passSetCls, ...downfieldCls, ...qbMechanicCls, ...tackleSetupCls));
+    if (actorLayer && actorDepth.length) {
+      actorDepth.sort((a, b) => a.depth - b.depth || String(a.node.dataset.wpa).localeCompare(String(b.node.dataset.wpa)));
+      for (const row of actorDepth) actorLayer.appendChild(row.node);
+    }
+    watchApplyLabelPlan(cameraMode, script.actors, actorPts, nodes, [
+      "QB", p.targetSlotId, p.carrierSlotId, script.pickId, script.covId,
+      tackleCue && tackleCue.id, tackleCue && tackleCue.assistId
+    ]);
+    Object.values(nodes).forEach((node) => node.classList.remove("wp-near-ball", "wp-ball-watch", "wp-blocking", "wp-blocked", ...repCls, ...contactCls, ...passSetCls, ...downfieldCls, ...qbMechanicCls, ...tackleSetupCls, ...secondaryCls, ...carryArmCls));
+    // Viewer Act 2 / A3: reuse the locomotion controller's already-computed
+    // speed/acceleration instead of resampling 22 tracks. The only extra
+    // geometry is one nearest-pursuer lookup for the active carrier.
+    const a3CarrierId = script.carryCue && t >= script.carryCue.from ? script.carryCue.id : null;
+    let a3Pursuit = null;
+    if (a3CarrierId && actorPts[a3CarrierId]) {
+      const cp = actorPts[a3CarrierId];
+      for (const a of script.actors) {
+        if (a.team !== "def" || !actorPts[a.id]) continue;
+        const pt = actorPts[a.id], distance = Math.hypot(pt[0] - cp[0], pt[1] - cp[1]);
+        if (!a3Pursuit || distance < a3Pursuit.distance) a3Pursuit = { dx: pt[0] - cp[0], distance };
+      }
+    }
+    for (const a of script.actors) {
+      const node = nodes[a.id], motion = node && node._wsm;
+      if (!node || !motion || !playOn) continue;
+      const a3 = selectSecondaryMotion({
+        speed: Math.hypot(motion.vx, motion.vy),
+        accel: motion.accel,
+        lateralSpeed: motion.vx,
+        locomotion: motion.loco,
+        carrier: a.id === a3CarrierId,
+        pursuitDx: a.id === a3CarrierId && a3Pursuit ? a3Pursuit.dx : 0,
+        pursuitDistance: a.id === a3CarrierId && a3Pursuit ? a3Pursuit.distance : Infinity
+      });
+      node.classList.toggle("wp-a3-weight", a3.weighted);
+      node.classList.toggle("wp-a3-gather", a3.gather);
+      node.classList.toggle("wp-a3-sprint", a3.sprint);
+      node.classList.toggle("wp-a3-head-left", a3.headSide === "left");
+      node.classList.toggle("wp-a3-head-right", a3.headSide === "right");
+      node.style.setProperty("--a3-shadow-scale", a3.shadowScale);
+      node.style.setProperty("--a3-shadow-opacity", a3.shadowOpacity);
+      node.style.setProperty("--a3-shadow-skew", a3.shadowSkew + "deg");
+    }
+    const carryCueNow = script.carryCue || null;
+    if (carryCueNow && t >= carryCueNow.from && nodes[carryCueNow.id]) {
+      const armState = carryArmState(carryCueNow, t);
+      nodes[carryCueNow.id].classList.add("wp-carry-arm-" + armState.arm);
+      if (armState.switching) nodes[carryCueNow.id].classList.add("wp-arm-switching");
+    }
     if (pocketOn) (_a2 = nodes.QB) == null ? void 0 : _a2.classList.add("wp-pocket-qb");
     if (t > script.presnap && cd < 4.4 && carrierId) (_a2 = nodes[carrierId]) == null ? void 0 : _a2.classList.add("wp-near-ball");
     const throwCue = script.throwCue;
@@ -4042,6 +4674,10 @@ function watchBoard(p, durMs, board = null, opts = {}) {
       const qbNode = nodes.QB;
       if (qbNode) {
         qbNode.classList.add("wp-qb-mechanics", "wp-qb-" + qbCue.family);
+        if (qbCue.rollout) qbNode.classList.add("wp-qb-rollout", "wp-qb-rollout-" + qbCue.rolloutDirection);
+        if (qbCue.escape) qbNode.classList.add("wp-qb-escape");
+        if (qbCue.playActionCarry) qbNode.classList.add("wp-qb-pa-carry");
+        if (qbCue.throwStyle) qbNode.classList.add("wp-qb-throw-" + qbCue.throwStyle);
         if (t <= qbCue.secureEnd) qbNode.classList.add("wp-qb-snap");
         else if (qbCue.family === "playaction" && t < qbCue.meshEnd) qbNode.classList.add("wp-qb-mesh");
         else if (t < qbCue.setStart) qbNode.classList.add("wp-qb-drop");
@@ -4053,7 +4689,9 @@ function watchBoard(p, durMs, board = null, opts = {}) {
     ballN == null ? void 0 : ballN.classList.toggle("wp-ball-air", !!throwCue && catchT != null && t >= throwCue.release && t < catchT);
     ballN == null ? void 0 : ballN.classList.toggle("wp-ball-loose", !!looseFx && t >= looseFx.t && t <= looseFx.t + 0.38);
     if (liftN) {
-      if (flightArc && t >= flightArc.rel && t < flightArc.end) {
+      if (["coach", "endzone"].includes(cameraMode)) {
+        if (liftN.style.transform) liftN.style.transform = "";
+      } else if (flightArc && t >= flightArc.rel && t < flightArc.end) {
         const u2 = (t - flightArc.rel) / (flightArc.end - flightArc.rel);
         liftN.style.transform = `translateY(${(-Math.sin(u2 * Math.PI) * flightArc.loft).toFixed(2)}px)`;
       } else if (liftN.style.transform) liftN.style.transform = "";
@@ -4113,6 +4751,8 @@ function watchBoard(p, durMs, board = null, opts = {}) {
       if (mnode) {
         mnode.classList.toggle("wp-moving", on);
         mnode.classList.toggle(moveCue.cls, on);
+        mnode.classList.toggle("wp-mv-boundary-left", on && moveCue.direction === "left");
+        mnode.classList.toggle("wp-mv-boundary-right", on && moveCue.direction === "right");
         mnode.classList.toggle("wp-mv-plant", (moveCue.style === "juke" || moveCue.style === "spin") && t >= moveCue.plantStart && t <= moveCue.plantEnd);
         mnode.classList.toggle("wp-mv-power", (moveCue.style === "truck" || moveCue.style === "stiff" || moveCue.style === "hurdle") && on);
       }
@@ -4134,7 +4774,8 @@ function watchBoard(p, durMs, board = null, opts = {}) {
       const downEnd = Math.min(tackleCue.finish, tackleCue.impact + 1.05);
       const carrierDown = met && t >= tackleCue.impact + 0.18 && t <= downEnd;
       const getUp = t > downEnd && t <= downEnd + 0.4 && downEnd < tackleCue.finish - 0.05;
-      const tacklerGrounded = met && !tackleCue.sack && (tackleCue.style === "wrap" || tackleCue.style === "collision" || tackleCue.style === "drag" || tackleCue.style === "gang" || tackleCue.style === "shoestring") && t >= tackleCue.impact + 0.22 && t <= downEnd;
+      const groundFinish = ["wrap", "collision", "big-hit", "drag", "drag-down", "gang", "shoestring"].includes(tackleCue.style);
+      const tacklerGrounded = met && !tackleCue.sack && groundFinish && t >= tackleCue.impact + 0.22 && t <= downEnd;
       const pursuit = t >= tackleCue.approachStart && t < tackleCue.breakdownStart;
       const breakdown = t >= tackleCue.breakdownStart && t < tackleCue.start;
       const brace = t >= tackleCue.braceStart && t < tackleCue.impact;
@@ -4146,31 +4787,36 @@ function watchBoard(p, durMs, board = null, opts = {}) {
         tnode.classList.toggle("wp-tk-leverage-right", (pursuit || breakdown) && !fromLeft);
         tnode.classList.toggle("wp-tackling", on);
         tnode.classList.toggle(tackleCue.cls, on || finish);
-        tnode.classList.toggle("wp-tk-assisted", !!tackleCue.assistId && (on || finish));
+        tnode.classList.toggle("wp-tk-assisted", tackleCue.joinCues.length > 0 && (on || finish));
         tnode.classList.toggle("wp-tackle-finish", finish);
         tnode.classList.toggle("wp-contact-arrival", arrival);
         tnode.classList.toggle("wp-contact-hitter", arrival);
         tnode.classList.toggle("wp-contact-from-left", arrival && fromLeft);
         tnode.classList.toggle("wp-contact-from-right", arrival && !fromLeft);
         tnode.classList.toggle("wp-grounded", tacklerGrounded);
-        tnode.classList.toggle("wp-getup", getUp && (tackleCue.style === "wrap" || tackleCue.style === "collision" || tackleCue.style === "drag" || tackleCue.style === "gang" || tackleCue.style === "shoestring"));
+        tnode.classList.toggle("wp-getup", getUp && groundFinish);
         if (on && carrierPt && tacklerPt) {
           tnode._faceLock = carrierPt[0] >= tacklerPt[0] ? "e" : "w";
           faceLocks.add(tackleCue.id);
         }
       }
-      if (tackleCue.assistId) {
-        const anode = nodes[tackleCue.assistId];
+      for (let joinIndex = 0; joinIndex < tackleCue.joinCues.length; joinIndex++) {
+        const joinCue = tackleCue.joinCues[joinIndex];
+        const anode = nodes[joinCue.id];
         if (anode) {
-          anode.classList.toggle("wp-tk-assist-lane", t >= tackleCue.assistStart && t < tackleCue.start);
-          anode.classList.toggle("wp-tk-leverage-left", t >= tackleCue.assistStart && t < tackleCue.start && fromLeft);
-          anode.classList.toggle("wp-tk-leverage-right", t >= tackleCue.assistStart && t < tackleCue.start && !fromLeft);
-          anode.classList.toggle("wp-tackling", on);
-          anode.classList.toggle("wp-tk-gang", on || finish);
-          anode.classList.toggle("wp-tk-assist", on || finish);
-          anode.classList.toggle("wp-tackle-finish", finish);
-          anode.classList.toggle("wp-contact-arrival", arrival);
-          anode.classList.toggle("wp-contact-hitter", arrival);
+          const joinApproach = t >= tackleCue.assistStart + joinIndex * 0.1 && t < joinCue.t;
+          const joinOn = t >= joinCue.t - 0.12 && t <= tackleCue.end + 0.2;
+          const joinFinish = t > tackleCue.end + 0.2 && t <= tackleCue.finish;
+          const joinArrival = t >= joinCue.t - 0.06 && t <= joinCue.t + 0.14;
+          anode.classList.toggle("wp-tk-assist-lane", joinApproach);
+          anode.classList.toggle("wp-tk-leverage-left", joinApproach && fromLeft);
+          anode.classList.toggle("wp-tk-leverage-right", joinApproach && !fromLeft);
+          anode.classList.toggle("wp-tackling", joinOn);
+          anode.classList.toggle("wp-tk-gang", joinOn || joinFinish);
+          anode.classList.toggle("wp-tk-assist", joinOn || joinFinish);
+          anode.classList.toggle("wp-tackle-finish", joinFinish);
+          anode.classList.toggle("wp-contact-arrival", joinArrival);
+          anode.classList.toggle("wp-contact-hitter", joinArrival);
         }
       }
       const vnode = nodes[tackleCue.carrierId];
@@ -4205,7 +4851,7 @@ function watchBoard(p, durMs, board = null, opts = {}) {
     for (const rc of rushCues) {
       const on = t >= rc.t && t <= rc.t + 0.6;
       const rn = nodes[rc.id];
-      const family = rc.move === "bend" || rc.move === "rip" ? "edge" : rc.move === "bull" ? "power" : "counter";
+      const family = rc.family || (rc.move === "bend" || rc.move === "rip" ? "edge" : rc.move === "bull" ? "power" : "counter");
       const protectionOn = t >= script.presnap + 0.04 && t <= pocketEnd;
       const lost = protectionOn && !!rc.win && t >= rc.t;
       if (rn) {
@@ -4213,12 +4859,14 @@ function watchBoard(p, durMs, board = null, opts = {}) {
         rn.classList.toggle("wp-rush-" + rc.move, on);
         rn.classList.toggle("wp-rush-win", !!rc.win && on);
         if (protectionOn) rn.classList.add("wp-pass-engaged", "wp-pass-" + family);
+        if (protectionOn && rc.rusherStyle) rn.classList.add("wp-trench-rusher-" + rc.rusherStyle);
         if (lost) rn.classList.add("wp-pass-won");
       }
       if (rc.blockerId && protectionOn) {
         const blocker = nodes[rc.blockerId];
         if (blocker) {
           blocker.classList.add("wp-pass-set", "wp-pass-" + family);
+          if (rc.blockerStyle) blocker.classList.add("wp-trench-" + rc.blockerStyle);
           blocker.classList.add(lost ? "wp-pass-lost" : "wp-pass-anchor");
         }
       }
@@ -4373,7 +5021,11 @@ function watchBoard(p, durMs, board = null, opts = {}) {
           const cnode = nodes[cc.id];
           const face = cnode._wsm ? cnode._wsm.face : "e";
           const isDown = cnode.classList.contains("wp-down") || tackleCue && !tackleCue.sack && cc.id === tackleCue.carrierId && t > tackleCue.impact + 0.18;
-          let ox = face === "e" ? 0.5 : face === "w" ? -0.5 : cc.arm === "r" ? 0.5 : -0.5;
+          const armState = carryArmState(cc, t);
+          const armOx = (arm) => face === "e" ? arm === "right" ? 0.54 : -0.14 : face === "w" ? arm === "right" ? -0.54 : 0.14 : arm === "right" ? 0.5 : -0.5;
+          const fromX = armOx(armState.from), toX = armOx(armState.to);
+          const blend = armState.switching ? armState.u * armState.u * (3 - 2 * armState.u) : armState.u >= 1 ? 1 : 0;
+          let ox = fromX + (toX - fromX) * blend;
           let oy = -2.15;
           if (isDown) {
             ox *= 1.5;
@@ -4393,7 +5045,8 @@ function watchBoard(p, durMs, board = null, opts = {}) {
       if (attach) {
         const ap = actorPts[attach[0]];
         if (ap) {
-          const tx = ap[0] + attach[1], ty = ap[1] + attach[2];
+          const handScale = watchCameraScale(cameraMode, 50, 31);
+          const tx = ap[0] + attach[1] * handScale, ty = ap[1] + attach[2] * handScale;
           // Proximity guard: attachment snaps feet→hands, it never yanks the
           // ball across the screen — weird phases stay track-driven.
           if (Math.hypot(tx - bx, ty - by) < 3.4) {
@@ -4410,20 +5063,22 @@ function watchBoard(p, durMs, board = null, opts = {}) {
           const w = 1 - u2 / 0.14;
           const qm = nodes.QB._wsm;
           const fs = qm && qm.face === "w" ? -1 : 1;
-          rbx += (actorPts.QB[0] + fs * 0.6 - rbx) * w;
-          rby += (actorPts.QB[1] - 3.05 - rby) * w;
+          const handScale = watchCameraScale(cameraMode, 50, 31);
+          rbx += (actorPts.QB[0] + fs * 0.6 * handScale - rbx) * w;
+          rby += (actorPts.QB[1] - 3.05 * handScale - rby) * w;
         } else if (u2 > 0.85 && catchCue && actorPts[catchCue.id] && nodes[catchCue.id]) {
           const w = (u2 - 0.85) / 0.15;
           const cm = nodes[catchCue.id]._wsm;
           const fs = cm && cm.face === "w" ? -1 : 1;
-          rbx += (actorPts[catchCue.id][0] + fs * 0.45 - rbx) * w;
-          rby += (actorPts[catchCue.id][1] - 2.35 - rby) * w;
+          const handScale = watchCameraScale(cameraMode, 50, 31);
+          rbx += (actorPts[catchCue.id][0] + fs * 0.45 * handScale - rbx) * w;
+          rby += (actorPts[catchCue.id][1] - 2.35 * handScale - rby) * w;
         }
       }
       // Orientation: nose along the rendered motion (lift included) while in
       // the air — nose-up on the climb, nose-over on the descent.
       let liftY = 0;
-      if (flightArc && t >= flightArc.rel && t < flightArc.end) {
+      if (!["coach", "endzone"].includes(cameraMode) && flightArc && t >= flightArc.rel && t < flightArc.end) {
         const u3 = (t - flightArc.rel) / (flightArc.end - flightArc.rel);
         liftY = -Math.sin(u3 * Math.PI) * flightArc.loft;
       }
@@ -4441,7 +5096,12 @@ function watchBoard(p, durMs, board = null, opts = {}) {
       ballN == null ? void 0 : ballN.classList.toggle("wp-ball-carried", carriedOn);
       ballN == null ? void 0 : ballN.classList.toggle("wp-ball-tipped", deflectOn && t <= dc.t + 0.62);
       ballN == null ? void 0 : ballN.setAttribute("transform", `translate(${rbx.toFixed(2)},${rby.toFixed(2)})`);
-      if (ballN) ballN.dataset.possess = carriedOn ? cc.id : attach ? attach[0] : "";
+      if (ballN) {
+        ballN.dataset.worldZ = ballZ.toFixed(3);
+        ballN.style.setProperty("--watch-ball-z", Math.min(1, ballZ / 5.2).toFixed(3));
+        ballN.dataset.possess = carriedOn ? cc.id : attach ? attach[0] : "";
+        ballN.dataset.arm = carriedOn && cc ? carryArmState(cc, t).arm : "";
+      }
       // M24: heads to the ball — defenders near the catch point take an
       // eyes-up lean while the pass is in the air (cleared by the sweep).
       if (inAir && catchCue && actorPts[catchCue.id]) {
@@ -4458,7 +5118,7 @@ function watchBoard(p, durMs, board = null, opts = {}) {
       const pos = offPlan.at(t);
       officialNodes.forEach((n2, i) => {
         if (!pos[i]) return;
-        const [sx2, sy2] = watchSidePoint(pos[i][0], pos[i][1]);
+        const [sx2, sy2] = projectPoint(pos[i][0], pos[i][1]);
         n2.setAttribute("transform", `translate(${sx2.toFixed(2)},${sy2.toFixed(2)})`);
       });
       for (const sg of offPlan.signals) {
@@ -4480,14 +5140,35 @@ function watchBoard(p, durMs, board = null, opts = {}) {
     // The anchor is pinned pre-snap — the motionless-snap law holds by
     // construction.
     const [awx, awy] = camPlan.anchorAt(t);
-    let focusX = watchSidePoint(awx, awy)[0];
+    let focusX = projectPoint(awx, awy)[0];
     let hTarget = camPlan.hAt(t, !!opts.replay);
+    // Act B replay camera law: once a frame has been rendered, the replay
+    // camera reads the ball's rendered transform. It never jumps ahead by
+    // peeking back into script.ball.track while the user scrubs.
+    if (playback.interactive && ballN) {
+      const m = String(ballN.getAttribute("transform") || "").match(/translate\(([-\d.]+)[ ,]([-\d.]+)\)/);
+      if (m) focusX = Number(m[1]);
+    }
     // M20 slew-limited camera: velocity eases toward the pull with a hard
     // acceleration cap, and a deadzone keeps micro-jitter out of the framing.
     // Pre-snap the targets are static, so the camera is motionless at the snap.
     // M22: pan velocity is halved inside the turnover settle window — the
     // possession flip becomes a controlled cut, not a whip.
-    {
+    if (playback.interactive && ["coach", "endzone"].includes(cameraMode)) {
+      camH = WATCH_SIDE.viewH;
+      camW = WATCH_SIDE.viewW;
+      camY = 0;
+      camX = 0;
+      camVX = 0;
+      camVH = 0;
+    } else if (playback.interactive && cameraMode === "all22") {
+      camH = WATCH_SIDE.viewH;
+      camW = WATCH_SIDE.viewW;
+      camY = 0;
+      camX = watchSideCameraX(p, 31, camW);
+      camVX = 0;
+      camVH = 0;
+    } else {
       const _settleOn = camPlan.settle && t >= camPlan.settle.start && t <= camPlan.settle.end;
       const _vmax = _settleOn ? CAM_PAN_VMAX * 0.5 : CAM_PAN_VMAX;
       const hPull = hTarget - camH;
@@ -4526,7 +5207,7 @@ function watchBoard(p, durMs, board = null, opts = {}) {
       if (t >= f.t && !shown.has(f)) {
         shown.add(f);
         if (f.kind === "beaten") (_j = (_i = nodes[f.actorId]) == null ? void 0 : _i.querySelector(".wd-x")) == null ? void 0 : _j.classList.add("wd-beaten");
-        else fxN == null ? void 0 : fxN.insertAdjacentHTML("beforeend", watchFxMarkup(f, { x: camX, y: camY, w: camW, h: camH }));
+        else fxN == null ? void 0 : fxN.insertAdjacentHTML("beforeend", watchFxMarkup(f, { x: camX, y: camY, w: camW, h: camH }, projectPoint));
         if (f.kind === "inc" && catchCue) (_k = nodes[catchCue.id]) == null ? void 0 : _k.classList.add("wp-dejected");
         if (!opts.replay) {
           if (f.kind === "contact" || f.kind === "block" || f.kind === "tackle") stadiumReact("contact");
@@ -4560,12 +5241,27 @@ function watchBoard(p, durMs, board = null, opts = {}) {
       whistleHeard = true;
       stadiumReact("whistle");
     }
-    if (t < script.dur && _watchAnim) _watchAnim.raf = requestAnimationFrame(tick);
+    if (playback.interactive) {
+      if (t >= script.dur) {
+        playback.paused = true;
+        const playBtn = document.getElementById("replay-play");
+        if (playBtn) playBtn.textContent = "▶";
+      }
+      if (!playback.paused && _watchAnim) _watchAnim.raf = requestAnimationFrame(tick);
+    } else if (t < script.dur && _watchAnim) _watchAnim.raf = requestAnimationFrame(tick);
   };
-  _watchAnim = { raf: requestAnimationFrame(tick) };
+  playback.seek = (next) => {
+    playback.t = Math.max(0, Math.min(script.dur, Number(next) || 0));
+    _lastWall = performance.now();
+    if (_watchAnim && _watchAnim.raf) cancelAnimationFrame(_watchAnim.raf);
+    if (_watchAnim) _watchAnim.raf = requestAnimationFrame(tick);
+  };
+  _watchAnim = playback;
+  _watchAnim.raf = requestAnimationFrame(tick);
+  if (playback.interactive) watchWireInteractiveReplay(playback, svg, script, p, board, nodes);
   return script.dur;
 }
-function watchBoardKick(svg, p, board) {
+function watchBoardKick(svg, p, board, opts = {}) {
   var _a;
   const [startX, startY] = watchSidePoint(50, 31);
   svg.setAttribute("viewBox", `${watchSideCameraX(p, startX).toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
@@ -4582,11 +5278,12 @@ function watchBoardKick(svg, p, board) {
   const retDur = retYds > 0 ? Math.max(0.45, Math.min(3.2, retYds / 8)) : 0;
   const [retEndX, retEndY] = watchSidePoint(worldEndX, Math.min(58, worldEndY + retYds * WATCH_SIDE.ypu));
   const sprites = ((_a = state.settings) == null ? void 0 : _a.spriteWatch) !== false;
+  const initialCamera = opts.interactive ? normalizeWatchCamera(opts.clip && opts.clip.camera) : "broadcast";
   svg.classList.add("watch-special-teams", isFG ? "watch-kick-place" : "watch-kick-punt");
   if (sprites) svg.classList.add("watch-sprites");
   else svg.classList.remove("watch-sprites");
   const cast = (a) => {
-    const face = watchSideFacing(a.team);
+    const face = watchCameraFacing(initialCamera, a.team);
     return sprites ? `<g class="wp-actor wp-team-${a.team} wsp-still wsp-face-${face}" data-wpk="${a.id}" transform="translate(${a.x.toFixed(2)},${a.y.toFixed(2)})">${spriteMarkup(a, face)}</g>` : "";
   };
   const point = (wx, wy) => {
@@ -4613,8 +5310,8 @@ function watchBoardKick(svg, p, board) {
     cast({ id: "K", team: "off", label: isFG ? "K" : "P", x: isFG ? kickX0 : holdX, y: isFG ? kickY0 : holdY }) +
     rushUnit.map(cast).join("") + jammerUnit.map(cast).join("") +
     (!isFG ? cast({ id: "PR", team: "def", label: "PR", x: retX, y: retY }) : "") +
-    ballMarkup(startX, startY) + `<g id="wp-st-engagements"></g><g id="wp-fx"></g>`;
-  const ballN = svg.querySelector("#wp-ball"), ballLiftN = ballN == null ? void 0 : ballN.querySelector(".wab-lift"), fxN = svg.querySelector("#wp-fx");
+    `<ellipse id="wp-ball-ground-shadow" class="wp-ball-ground-shadow" rx="1.05" ry=".36"/>` + ballMarkup(startX, startY) + `<g id="wp-st-engagements"></g><g id="wp-fx"></g>`;
+  const ballN = svg.querySelector("#wp-ball"), ballGroundN = svg.querySelector("#wp-ball-ground-shadow"), ballLiftN = ballN == null ? void 0 : ballN.querySelector(".wab-lift"), fxN = svg.querySelector("#wp-fx");
   const kN = svg.querySelector('[data-wpk="K"]'), hN = svg.querySelector('[data-wpk="H"]'), prN = svg.querySelector('[data-wpk="PR"]'), lsN = svg.querySelector('[data-wpk="LS"]');
   const protectNodes = protectUnit.map(a => svg.querySelector(`[data-wpk="${a.id}"]`));
   const rushNodes = rushUnit.map(a => svg.querySelector(`[data-wpk="${a.id}"]`));
@@ -4628,11 +5325,45 @@ function watchBoardKick(svg, p, board) {
   const flight = p.blocked ? 0.5 : 1.5;
   const landT = swingT + flight;
   const dur = landT + retDur + (retYds > 0 || p.returnTD ? 0.35 : 0);
-  const t0 = performance.now();
+  const actors = [
+    ...protectUnit, ...gunnerUnit,
+    __spreadValues({ id: "LS", team: "off", label: "LS" }, point(50, 31)),
+    ...(isFG ? [__spreadValues({ id: "H", team: "off", label: "H" }, point(holdW[0], holdW[1]))] : []),
+    __spreadValues({ id: "K", team: "off", label: isFG ? "K" : "P" }, point(isFG ? holdW[0] + 2.3 : holdW[0], isFG ? holdW[1] + 2.1 : holdW[1])),
+    ...rushUnit, ...jammerUnit,
+    ...(!isFG ? [__spreadValues({ id: "PR", team: "def", label: "PR" }, point(worldEndX, Math.max(3.2, worldEndY - 4)))] : [])
+  ];
+  const nodes = {};
+  for (const actor of actors) {
+    const node = svg.querySelector(`[data-wpk="${actor.id}"]`);
+    if (!node) continue;
+    nodes[actor.id] = node;
+    watchSpecialPlace(node, actor.x, actor.y);
+  }
+  let lastWall = performance.now();
+  const playback = {
+    raf: 0,
+    interactive: !!opts.interactive,
+    paused: false,
+    rate: 1,
+    t: 0,
+    duration: dur,
+    cameraMode: initialCamera,
+    director: false,
+    directorPlan: buildSpecialTeamsDirectorPlan(p, { contact: swingT, landing: landT, duration: dur, returnDuration: retDur }),
+    directorReason: "",
+    projectionDirty: false,
+    annotations: opts.clip && Array.isArray(opts.clip.annotations) ? watchClone(opts.clip.annotations) : [],
+    ink: false,
+    exporting: false,
+    lastRenderedT: 0,
+    seek: null,
+    renderInk: null
+  };
   const lerp = (a, b, u) => a + (b - a) * u;
-  let camX = watchSideCameraX(p, startX);
+  const camX = watchSideCameraX(p, startX);
   // M22: ST boards get the M20 slew-limited pan + a gentle return tighten.
-  let camVX = 0, camH = WATCH_SIDE.viewH;
+  const camState = { x: camX, y: 0, w: WATCH_SIDE.viewW, h: WATCH_SIDE.viewH, vx: 0 };
   // M23: parallax handle + the made kick's net reaction target.
   const parN = svg.querySelector(".wf-stadium-par"), camX0Par = camX;
   const _postTarget = isFG ? [...svg.querySelectorAll("[data-wf-post]")].sort((a, b) => {
@@ -4646,17 +5377,38 @@ function watchBoardKick(svg, p, board) {
       watchStopAnim();
       return;
     }
-    const t = Math.min(dur, (performance.now() - t0) / 1e3 * speed);
-    if (!kickHeard && t >= swingT) {
+    const wallNow = performance.now();
+    if (playback.interactive && !playback.paused) playback.t = Math.min(dur, playback.t + Math.max(0, wallNow - lastWall) / 1e3 * playback.rate);
+    const t = playback.interactive ? playback.t : Math.min(dur, playback.t + Math.max(0, wallNow - lastWall) / 1e3 * speed);
+    if (!playback.interactive) playback.t = t;
+    lastWall = wallNow;
+    const scrub = document.getElementById("replay-scrub");
+    if (playback.interactive && scrub && document.activeElement !== scrub) scrub.value = String(Math.round(t / Math.max(0.001, dur) * 1000));
+    if (playback.interactive && t + 0.01 < playback.lastRenderedT) {
+      if (fxN) fxN.innerHTML = "";
+      if (_postTarget) _postTarget.classList.remove("wf-post-shake");
+      _netShaken = false;
+    }
+    playback.lastRenderedT = t;
+    if (playback.interactive && playback.director && playback.directorPlan) {
+      const cut = playback.directorPlan.at(playback.t);
+      playback.directorReason = cut.reason;
+      svg.dataset.directorReason = cut.reason;
+      watchReplaySetCamera(playback, svg, { actors }, nodes, cut.camera, true);
+      const directorBtn = document.getElementById("replay-director");
+      if (directorBtn) directorBtn.title = `Director on: ${cut.reason}`;
+    } else delete svg.dataset.directorReason;
+    const cameraMode = playback.interactive ? normalizeWatchCamera(playback.cameraMode) : "broadcast";
+    if (!opts.replay && !kickHeard && t >= swingT) {
       kickHeard = true;
       stadiumReact("kick");
     }
-    if (!kickWhistle && t >= dur - 0.08) {
+    if (!opts.replay && !kickWhistle && t >= dur - 0.08) {
       kickWhistle = true;
       stadiumReact("whistle");
     }
     svg.classList.toggle("watch-in-play", t > 0.05);
-    let bx, by;
+    let bx, by, ballZ = 0;
     if (t < snapT) {
       const u = t / snapT;
       bx = lerp(startX, holdX, u);
@@ -4667,13 +5419,13 @@ function watchBoardKick(svg, p, board) {
     } else if (t < landT) {
       const u = (t - swingT) / flight;
       bx = lerp(holdX, endX, u);
-      by = lerp(holdY, endY, u) - Math.sin(u * Math.PI) * (p.blocked ? 0 : 6);
+      by = lerp(holdY, endY, u);
+      ballZ = Math.sin(u * Math.PI) * (p.blocked ? 0 : 6);
     } else {
       const u = retDur ? Math.min(1, (t - landT) / retDur) : 1;
       bx = lerp(endX, retEndX, u);
       by = lerp(endY, retEndY, u);
     }
-    ballN == null ? void 0 : ballN.setAttribute("transform", `translate(${bx.toFixed(2)},${by.toFixed(2)})`);
     ballN == null ? void 0 : ballN.classList.toggle("wp-ball-kick", t >= swingT && t < landT);
     ballN == null ? void 0 : ballN.classList.toggle("wp-ball-place", isFG && t >= swingT && t < landT);
     ballN == null ? void 0 : ballN.classList.toggle("wp-ball-punt", !isFG && t >= swingT && t < landT);
@@ -4685,7 +5437,7 @@ function watchBoardKick(svg, p, board) {
     landingN == null ? void 0 : landingN.classList.toggle("wp-kick-landing-live", t >= swingT && t < landT + 0.18);
     if (kN && isFG) {
       const u = Math.max(0, Math.min(1, (t - placeT) / Math.max(0.01, swingT - placeT)));
-      wspPlace(kN, lerp(kickX0, holdX + 1.2, u), lerp(kickY0, holdY + 0.4, u));
+      watchSpecialPlace(kN, lerp(kickX0, holdX + 1.2, u), lerp(kickY0, holdY + 0.4, u));
     }
     const approachStart = isFG ? Math.max(0, placeT - 0.12) : snapT;
     const plantStart = swingT - (isFG ? 0.14 : 0.16);
@@ -4701,8 +5453,8 @@ function watchBoardKick(svg, p, board) {
     if (prN && t >= swingT) {
       if (t < landT) {
         const u = Math.min(1, (t - swingT) / flight);
-        wspPlace(prN, lerp(retX, endX, u * 0.9), lerp(retY, endY - 1.5, u * 0.9));
-      } else wspPlace(prN, bx, by);
+        watchSpecialPlace(prN, lerp(retX, endX, u * 0.9), lerp(retY, endY - 1.5, u * 0.9));
+      } else watchSpecialPlace(prN, bx, by);
     }
     prN == null ? void 0 : prN.classList.toggle("wp-return-track", t >= swingT && t < landT - 0.1);
     prN == null ? void 0 : prN.classList.toggle("wp-return-secure", t >= landT - 0.1 && t < landT + 0.28);
@@ -4717,7 +5469,7 @@ function watchBoardKick(svg, p, board) {
       const mate = rushUnit[Math.round(i * (rushUnit.length - 1) / Math.max(1, protectUnit.length - 1))];
       const tx = mate ? (a.x + mate.x) / 2 + _watchSideDir * 0.35 : a.x;
       const ty = mate ? (a.y + mate.y) / 2 : a.y;
-      wspPlace(node, lerp(a.x, tx, engageU), lerp(a.y, ty, engageU));
+      watchSpecialPlace(node, lerp(a.x, tx, engageU), lerp(a.y, ty, engageU));
       node.classList.toggle("wp-st-anchor", t >= 0.05 && t < swingT + 0.42);
       node.classList.toggle("wp-st-lost", !!p.blocked && (i === 0 || i === protectNodes.length - 1) && t >= placeT);
     });
@@ -4731,9 +5483,9 @@ function watchBoardKick(svg, p, board) {
         const winU = Math.max(engageU, Math.min(1, t / Math.max(0.01, swingT + 0.06)));
         tx = holdX - _watchSideDir * 1.1;
         ty = holdY - 0.35;
-        wspPlace(node, lerp(a.x, tx, winU), lerp(a.y, ty, winU));
+        watchSpecialPlace(node, lerp(a.x, tx, winU), lerp(a.y, ty, winU));
       } else {
-        wspPlace(node, lerp(a.x, tx, engageU), lerp(a.y, ty, engageU));
+        watchSpecialPlace(node, lerp(a.x, tx, engageU), lerp(a.y, ty, engageU));
       }
       node.classList.toggle("wp-st-rush", t >= 0.04 && t < swingT + 0.24);
       node.classList.toggle("wp-st-leap", node === rsN && t >= swingT - 0.16 && t < swingT + 0.22);
@@ -4745,7 +5497,7 @@ function watchBoardKick(svg, p, board) {
         if (!node) return;
         const a = gunnerUnit[i];
         const targetY = by + (i ? 2.8 : -2.8);
-        wspPlace(node, lerp(a.x, bx - kickSign * 2.8, chaseU), lerp(a.y, targetY, chaseU));
+        watchSpecialPlace(node, lerp(a.x, bx - kickSign * 2.8, chaseU), lerp(a.y, targetY, chaseU));
         node.classList.toggle("wp-st-release", t >= snapT && t < dur);
         node.classList.toggle("wp-st-breakdown", t >= landT + Math.max(0, retDur - 0.24));
       });
@@ -4757,7 +5509,7 @@ function watchBoardKick(svg, p, board) {
         const releaseU = Math.max(0, Math.min(1, (t - swingT) / Math.max(0.45, flight + retDur)));
         const jamX = gun ? (a.x + gun.x) / 2 : a.x;
         const jamY = gun ? (a.y + gun.y) / 2 : a.y;
-        wspPlace(node, lerp(lerp(a.x, jamX, jamU), bx - kickSign * 5.3, releaseU), lerp(lerp(a.y, jamY, jamU), by + (i ? 4 : -4), releaseU));
+        watchSpecialPlace(node, lerp(lerp(a.x, jamX, jamU), bx - kickSign * 5.3, releaseU), lerp(lerp(a.y, jamY, jamU), by + (i ? 4 : -4), releaseU));
         node.classList.toggle("wp-st-jam", t >= 0.04 && t < swingT + 0.14);
         node.classList.toggle("wp-st-wedge", t >= swingT + 0.14 && t < dur);
       });
@@ -4768,16 +5520,37 @@ function watchBoardKick(svg, p, board) {
     // tighten while a return is actually being run back.
     {
       const retOn = !isFG && !p.blocked && retDur > 0 && t >= landT;
-      camH += ((retOn ? 47 : WATCH_SIDE.viewH) - camH) * 0.055;
-      const camW2 = camH * (WATCH_SIDE.viewW / WATCH_SIDE.viewH);
-      const camY2 = (WATCH_SIDE.viewH - camH) / 2;
-      const xPull = watchSideCameraX(p, bx, camW2) - camX;
-      camVX += Math.max(-0.075, Math.min(0.075, xPull * 0.11 - camVX));
-      camVX = Math.max(-2.1, Math.min(2.1, camVX));
-      if (Math.abs(xPull) < 0.35 && Math.abs(camVX) < 0.08) camVX = 0;
-      camX += camVX;
-      svg.setAttribute("viewBox", `${camX.toFixed(2)} ${camY2.toFixed(2)} ${camW2.toFixed(2)} ${camH.toFixed(2)}`);
-      if (parN) parN.setAttribute("transform", `translate(${((camX - camX0Par) * 0.12).toFixed(2)},0)`);
+      camState.h += ((retOn ? 47 : WATCH_SIDE.viewH) - camState.h) * 0.055;
+      camState.w = camState.h * (WATCH_SIDE.viewW / WATCH_SIDE.viewH);
+      camState.y = (WATCH_SIDE.viewH - camState.h) / 2;
+      watchSpecialCameraFrame(svg, p, cameraMode, bx, camState);
+      if (parN) parN.setAttribute("transform", ["coach", "endzone"].includes(cameraMode) ? "translate(0,0)" : `translate(${((camState.x - camX0Par) * 0.12).toFixed(2)},0)`);
+    }
+    const actorPts = {};
+    for (const actor of actors) {
+      const pt = watchSpecialProjectNode(nodes[actor.id], cameraMode);
+      if (pt) actorPts[actor.id] = pt;
+    }
+    watchApplyLabelPlan(cameraMode, actors, actorPts, nodes, ["K", "PR", "H", "LS", "RS"]);
+    const [ballWX, ballWY] = watchSideWorldPoint(bx, by);
+    const [renderBX, renderBY] = watchCameraPoint(cameraMode, ballWX, ballWY, ballZ);
+    if (ballGroundN) {
+      const [groundBX, groundBY] = watchCameraPoint(cameraMode, ballWX, ballWY, 0);
+      const projectionFlight = ["coach", "endzone"].includes(cameraMode) && ballZ > 0.08;
+      ballGroundN.setAttribute("transform", `translate(${groundBX.toFixed(2)},${groundBY.toFixed(2)}) scale(${Math.max(0.52, 1 - ballZ * 0.045).toFixed(3)})`);
+      ballGroundN.style.opacity = projectionFlight ? String(Math.max(0.14, 0.46 - ballZ * 0.035)) : "0";
+      ballGroundN.classList.toggle("on", projectionFlight);
+    }
+    if (ballN) {
+      ballN.dataset.worldX = ballWX.toFixed(3);
+      ballN.dataset.worldY = ballWY.toFixed(3);
+      ballN.dataset.worldZ = ballZ.toFixed(3);
+      ballN.setAttribute("transform", `translate(${renderBX.toFixed(2)},${renderBY.toFixed(2)})`);
+    }
+    if (landingN) {
+      const [landingWX, landingWY] = watchSideWorldPoint(endX, endY);
+      const [landingX, landingY] = watchCameraPoint(cameraMode, landingWX, landingWY);
+      landingN.setAttribute("transform", `translate(${landingX.toFixed(2)},${landingY.toFixed(2)})`);
     }
     // M23: net reaction — the target fork shakes when a made kick arrives.
     if (isFG && p.made && !_netShaken && t >= landT && _postTarget) {
@@ -4789,21 +5562,37 @@ function watchBoardKick(svg, p, board) {
       const cls = isFG && p.made ? "wa-pick" : isFG || p.blocked || p.returnTD ? "wa-x" : "wp-kick-lbl";
       fxN.insertAdjacentHTML(
         "beforeend",
-        `<text x="${bx.toFixed(1)}" y="${Math.max(5, by - 3.2).toFixed(1)}" class="${cls}">${label}</text>`
+        `<text x="${renderBX.toFixed(1)}" y="${Math.max(5, renderBY - 3.2).toFixed(1)}" class="${cls}">${label}</text>`
       );
     }
-    if (t < dur && _watchAnim) _watchAnim.raf = requestAnimationFrame(tick);
+    if (playback.interactive) {
+      if (t >= dur) {
+        playback.paused = true;
+        const playBtn = document.getElementById("replay-play");
+        if (playBtn) playBtn.textContent = "â–¶";
+      }
+      if (!playback.paused && _watchAnim) _watchAnim.raf = requestAnimationFrame(tick);
+    } else if (t < dur && _watchAnim) _watchAnim.raf = requestAnimationFrame(tick);
   };
-  _watchAnim = { raf: requestAnimationFrame(tick) };
+  playback.seek = (next) => {
+    playback.t = Math.max(0, Math.min(dur, Number(next) || 0));
+    lastWall = performance.now();
+    if (_watchAnim && _watchAnim.raf) cancelAnimationFrame(_watchAnim.raf);
+    if (_watchAnim) _watchAnim.raf = requestAnimationFrame(tick);
+  };
+  _watchAnim = playback;
+  _watchAnim.raf = requestAnimationFrame(tick);
+  if (playback.interactive) watchWireInteractiveReplay(playback, svg, { actors }, p, board, nodes);
   return dur;
 }
-function watchBoardKickoff(svg, p, board) {
+function watchBoardKickoff(svg, p, board, opts = {}) {
   var _a;
   const sprites = ((_a = state.settings) == null ? void 0 : _a.spriteWatch) !== false;
   if (sprites) svg.classList.add("watch-sprites");
   else svg.classList.remove("watch-sprites");
   svg.classList.add("watch-special-teams", "watch-kickoff");
   svg.classList.toggle("watch-kick-onside", !!p.onside);
+  const initialCamera = opts.interactive ? normalizeWatchCamera(opts.clip && opts.clip.camera) : "broadcast";
   const [teeX, teeY] = watchSidePoint(50, 31);
   const kickYds = p.onside ? 12 : 58;
   // Kickoffs are stored on the receiving drive. Start from the opponent's
@@ -4820,7 +5609,7 @@ function watchBoardKickoff(svg, p, board) {
   const retYds = !p.onside && !p.touchback ? Math.max(0, p.retYds || 0) : 0;
   const [retEndX, retEndY] = watchSidePoint(50, kickEndWorldY - retYds * WATCH_SIDE.ypu);
   const cast = (a) => {
-    const face = watchSideFacing(a.team);
+    const face = watchCameraFacing(initialCamera, a.team);
     return sprites ? `<g class="wp-actor wp-team-${a.team} wsp-still wsp-face-${face}" data-wpk="${a.id}" transform="translate(${a.x.toFixed(2)},${a.y.toFixed(2)})">${spriteMarkup(a, face)}</g>` : "";
   };
   const landingMarkup = `<g id="wp-kick-landing" class="wp-kick-landing" transform="translate(${endX.toFixed(2)},${endY.toFixed(2)})"><ellipse rx="2.7" ry="1.05"/><ellipse rx="1.55" ry=".6"/><path d="M0-1.65v3.3M-1.1-.85L0-1.65l1.1.8"/></g>`;
@@ -4848,8 +5637,8 @@ function watchBoardKickoff(svg, p, board) {
   svg.innerHTML = watchFieldBase(p, board) + landingMarkup +
     cast({ id: "K", team: kickTeam, label: "K", x: kickStartX, y: teeY }) +
     kickUnit.map(cast).join("") + returnWall.map(cast).join("") + returners.map(cast).join("") +
-    ballMarkup(teeX, teeY) + `<g id="wp-st-engagements"></g><g id="wp-fx"></g>`;
-  const ballN = svg.querySelector("#wp-ball"), ballLiftN = ballN == null ? void 0 : ballN.querySelector(".wab-lift"), fxN = svg.querySelector("#wp-fx");
+    `<ellipse id="wp-ball-ground-shadow" class="wp-ball-ground-shadow" rx="1.05" ry=".36"/>` + ballMarkup(teeX, teeY) + `<g id="wp-st-engagements"></g><g id="wp-fx"></g>`;
+  const ballN = svg.querySelector("#wp-ball"), ballGroundN = svg.querySelector("#wp-ball-ground-shadow"), ballLiftN = ballN == null ? void 0 : ballN.querySelector(".wab-lift"), fxN = svg.querySelector("#wp-fx");
   const kN = svg.querySelector('[data-wpk="K"]'), prN = svg.querySelector('[data-wpk="PR"]');
   const kr2N = svg.querySelector('[data-wpk="KR2"]');
   const coverNodes = kickUnit.map(a => svg.querySelector(`[data-wpk="${a.id}"]`));
@@ -4860,11 +5649,41 @@ function watchBoardKickoff(svg, p, board) {
   const boomT = runT + flight;
   const retDur = retYds > 0 ? Math.max(0.5, Math.min(3.4, retYds / 8)) : p.onside ? 0.8 : 0.3;
   const dur = boomT + retDur + 0.35;
-  const t0 = performance.now();
+  const actors = [
+    { id: "K", team: kickTeam, label: "K", x: kickStartX, y: teeY },
+    ...kickUnit, ...returnWall, ...returners
+  ];
+  const nodes = {};
+  for (const actor of actors) {
+    const node = svg.querySelector(`[data-wpk="${actor.id}"]`);
+    if (!node) continue;
+    nodes[actor.id] = node;
+    watchSpecialPlace(node, actor.x, actor.y);
+  }
+  let lastWall = performance.now();
+  const playback = {
+    raf: 0,
+    interactive: !!opts.interactive,
+    paused: false,
+    rate: 1,
+    t: 0,
+    duration: dur,
+    cameraMode: initialCamera,
+    director: false,
+    directorPlan: buildSpecialTeamsDirectorPlan(p, { contact: runT, landing: boomT, duration: dur, returnDuration: retYds > 0 ? retDur : 0 }),
+    directorReason: "",
+    projectionDirty: false,
+    annotations: opts.clip && Array.isArray(opts.clip.annotations) ? watchClone(opts.clip.annotations) : [],
+    ink: false,
+    exporting: false,
+    lastRenderedT: 0,
+    seek: null,
+    renderInk: null
+  };
   const lerp = (a, b, u) => a + (b - a) * u;
-  let camX = watchSideCameraX(p, teeX);
+  const camX = watchSideCameraX(p, teeX);
   // M22: ST boards get the M20 slew-limited pan + a gentle return tighten.
-  let camVX = 0, camH = WATCH_SIDE.viewH;
+  const camState = { x: camX, y: 0, w: WATCH_SIDE.viewW, h: WATCH_SIDE.viewH, vx: 0 };
   // M23: parallax handle.
   const parN = svg.querySelector(".wf-stadium-par"), camX0Par = camX;
   let kickHeard = false, kickWhistle = false;
@@ -4873,24 +5692,42 @@ function watchBoardKickoff(svg, p, board) {
       watchStopAnim();
       return;
     }
-    const t = Math.min(dur, (performance.now() - t0) / 1e3 * speed);
-    if (!kickHeard && t >= runT) {
+    const wallNow = performance.now();
+    if (playback.interactive && !playback.paused) playback.t = Math.min(dur, playback.t + Math.max(0, wallNow - lastWall) / 1e3 * playback.rate);
+    const t = playback.interactive ? playback.t : Math.min(dur, playback.t + Math.max(0, wallNow - lastWall) / 1e3 * speed);
+    if (!playback.interactive) playback.t = t;
+    lastWall = wallNow;
+    const scrub = document.getElementById("replay-scrub");
+    if (playback.interactive && scrub && document.activeElement !== scrub) scrub.value = String(Math.round(t / Math.max(0.001, dur) * 1000));
+    if (playback.interactive && t + 0.01 < playback.lastRenderedT && fxN) fxN.innerHTML = "";
+    playback.lastRenderedT = t;
+    if (playback.interactive && playback.director && playback.directorPlan) {
+      const cut = playback.directorPlan.at(playback.t);
+      playback.directorReason = cut.reason;
+      svg.dataset.directorReason = cut.reason;
+      watchReplaySetCamera(playback, svg, { actors }, nodes, cut.camera, true);
+      const directorBtn = document.getElementById("replay-director");
+      if (directorBtn) directorBtn.title = `Director on: ${cut.reason}`;
+    } else delete svg.dataset.directorReason;
+    const cameraMode = playback.interactive ? normalizeWatchCamera(playback.cameraMode) : "broadcast";
+    if (!opts.replay && !kickHeard && t >= runT) {
       kickHeard = true;
       stadiumReact("kick");
     }
-    if (!kickWhistle && t >= dur - 0.08) {
+    if (!opts.replay && !kickWhistle && t >= dur - 0.08) {
       kickWhistle = true;
       stadiumReact("whistle");
     }
     svg.classList.toggle("watch-in-play", t > 0.05);
-    let bx, by;
+    let bx, by, ballZ = 0;
     if (t < runT) {
       bx = teeX;
       by = teeY;
     } else if (t < boomT) {
       const u = (t - runT) / flight;
       bx = lerp(teeX, endX, u);
-      by = lerp(teeY, endY, u) - Math.sin(u * Math.PI) * (p.onside ? 1.5 : 7);
+      by = lerp(teeY, endY, u);
+      ballZ = Math.sin(u * Math.PI) * (p.onside ? 1.5 : 7);
     } else if (retYds > 0) {
       const u = Math.min(1, (t - boomT) / retDur);
       bx = lerp(endX, retEndX, u);
@@ -4899,7 +5736,6 @@ function watchBoardKickoff(svg, p, board) {
       bx = endX;
       by = endY;
     }
-    ballN == null ? void 0 : ballN.setAttribute("transform", `translate(${bx.toFixed(2)},${by.toFixed(2)})`);
     ballN == null ? void 0 : ballN.classList.toggle("wp-ball-kick", t >= runT && t < boomT);
     ballN == null ? void 0 : ballN.classList.toggle(p.onside ? "wp-ball-onside" : "wp-ball-kickoff", t >= runT && t < boomT);
     if (ballLiftN && t >= runT && t < boomT) {
@@ -4910,7 +5746,7 @@ function watchBoardKickoff(svg, p, board) {
     landingN == null ? void 0 : landingN.classList.toggle("wp-kick-landing-live", t >= runT && t < boomT + 0.18);
     if (kN) {
       const u = Math.min(1, t / runT);
-      wspPlace(kN, lerp(kickStartX, teeX + _watchSideDir * 1.4, u), teeY);
+      watchSpecialPlace(kN, lerp(kickStartX, teeX + _watchSideDir * 1.4, u), teeY);
     }
     kN == null ? void 0 : kN.classList.toggle("wp-kick-approach", t >= 0.08 && t < runT - 0.16);
     kN == null ? void 0 : kN.classList.toggle("wp-kick-plant", t >= runT - 0.16 && t < runT + 0.02);
@@ -4924,7 +5760,7 @@ function watchBoardKickoff(svg, p, board) {
         if (!node) return;
         const a = kickUnit[i];
         const spread = (i - 4.5) * 0.34 * (1 - crashU);
-        wspPlace(node, lerp(a.x, bx - kickSign * (0.7 + i % 3 * 0.22), crashU), lerp(a.y, by + spread, crashU));
+        watchSpecialPlace(node, lerp(a.x, bx - kickSign * (0.7 + i % 3 * 0.22), crashU), lerp(a.y, by + spread, crashU));
         node.classList.toggle("wp-cover-lane", t >= 0.08 && t < boomT);
         node.classList.toggle("wp-st-onside-dive", t >= boomT - 0.12 && t < boomT + 0.42);
         node.classList.toggle("wp-st-pile", t >= boomT + 0.18);
@@ -4933,13 +5769,13 @@ function watchBoardKickoff(svg, p, board) {
         if (!node) return;
         const a = returnWall[i];
         const spread = (i - 4) * 0.38 * (1 - crashU);
-        wspPlace(node, lerp(a.x, bx + kickSign * (0.65 + i % 2 * 0.25), crashU), lerp(a.y, by + spread, crashU));
+        watchSpecialPlace(node, lerp(a.x, bx + kickSign * (0.65 + i % 2 * 0.25), crashU), lerp(a.y, by + spread, crashU));
         node.classList.toggle("wp-st-hands", t < boomT + 0.1);
         node.classList.toggle("wp-st-onside-dive", t >= boomT - 0.1 && t < boomT + 0.44);
         node.classList.toggle("wp-st-pile", t >= boomT + 0.18);
       });
-      if (prN) wspPlace(prN, lerp(endX, bx + kickSign * 0.4, crashU), lerp(endY - 2, by - 0.55, crashU));
-      if (kr2N) wspPlace(kr2N, lerp(kr2X, bx + kickSign * 1.1, crashU), lerp(kr2Y, by + 0.65, crashU));
+      if (prN) watchSpecialPlace(prN, lerp(endX, bx + kickSign * 0.4, crashU), lerp(endY - 2, by - 0.55, crashU));
+      if (kr2N) watchSpecialPlace(kr2N, lerp(kr2X, bx + kickSign * 1.1, crashU), lerp(kr2Y, by + 0.65, crashU));
       prN == null ? void 0 : prN.classList.toggle("wp-st-pile", t >= boomT + 0.18);
       kr2N == null ? void 0 : kr2N.classList.toggle("wp-st-pile", t >= boomT + 0.18);
     } else {
@@ -4950,7 +5786,7 @@ function watchBoardKickoff(svg, p, board) {
         const laneY = watchSideY(a.lane);
         const wave = (i % 3) * 0.55;
         const targetX = bx - kickSign * (3.2 + wave);
-        wspPlace(node, lerp(a.x, targetX, covU), lerp(a.y, laneY + (by - laneY) * covU * 0.72, covU));
+        watchSpecialPlace(node, lerp(a.x, targetX, covU), lerp(a.y, laneY + (by - laneY) * covU * 0.72, covU));
         node.classList.toggle("wp-cover-lane", t >= runT && t < dur);
         node.classList.toggle("wp-st-breakdown", t >= boomT + Math.max(0, retDur - 0.3));
       });
@@ -4962,14 +5798,14 @@ function watchBoardKickoff(svg, p, board) {
         const side = Math.floor(i / 3) - 1;
         const wedgeX = bx - kickSign * (4.5 + rank * 2.1);
         const wedgeY = by + side * (2.2 + rank * 0.65);
-        wspPlace(node, lerp(a.x, wedgeX, wallU), lerp(a.y, wedgeY, wallU));
+        watchSpecialPlace(node, lerp(a.x, wedgeX, wallU), lerp(a.y, wedgeY, wallU));
         node.classList.toggle("wp-st-wedge", t >= runT + 0.18 && t < boomT + retDur);
         node.classList.toggle("wp-st-engage", t >= boomT + 0.18 && t < dur - 0.08);
       });
-      if (prN && t >= boomT - 0.2) wspPlace(prN, bx, by);
+      if (prN && t >= boomT - 0.2) watchSpecialPlace(prN, bx, by);
       if (kr2N) {
         const leadU = Math.max(0, Math.min(1, (t - boomT + 0.12) / Math.max(0.3, retDur)));
-        wspPlace(kr2N, lerp(kr2X, bx - kickSign * 3.4, leadU), lerp(kr2Y, by + 2.5, leadU));
+        watchSpecialPlace(kr2N, lerp(kr2X, bx - kickSign * 3.4, leadU), lerp(kr2Y, by + 2.5, leadU));
         kr2N.classList.toggle("wp-st-lead", retYds > 0 && t >= boomT);
       }
     }
@@ -4982,25 +5818,61 @@ function watchBoardKickoff(svg, p, board) {
     // tighten while a return is actually being run back.
     {
       const retOn = !p.onside && !p.touchback && retYds > 0 && t >= boomT;
-      camH += ((retOn ? 47 : WATCH_SIDE.viewH) - camH) * 0.055;
-      const camW2 = camH * (WATCH_SIDE.viewW / WATCH_SIDE.viewH);
-      const camY2 = (WATCH_SIDE.viewH - camH) / 2;
-      const xPull = watchSideCameraX(p, bx, camW2) - camX;
-      camVX += Math.max(-0.075, Math.min(0.075, xPull * 0.11 - camVX));
-      camVX = Math.max(-2.1, Math.min(2.1, camVX));
-      if (Math.abs(xPull) < 0.35 && Math.abs(camVX) < 0.08) camVX = 0;
-      camX += camVX;
-      svg.setAttribute("viewBox", `${camX.toFixed(2)} ${camY2.toFixed(2)} ${camW2.toFixed(2)} ${camH.toFixed(2)}`);
-      if (parN) parN.setAttribute("transform", `translate(${((camX - camX0Par) * 0.12).toFixed(2)},0)`);
+      camState.h += ((retOn ? 47 : WATCH_SIDE.viewH) - camState.h) * 0.055;
+      camState.w = camState.h * (WATCH_SIDE.viewW / WATCH_SIDE.viewH);
+      camState.y = (WATCH_SIDE.viewH - camState.h) / 2;
+      watchSpecialCameraFrame(svg, p, cameraMode, bx, camState);
+      if (parN) parN.setAttribute("transform", ["coach", "endzone"].includes(cameraMode) ? "translate(0,0)" : `translate(${((camState.x - camX0Par) * 0.12).toFixed(2)},0)`);
+    }
+    const actorPts = {};
+    for (const actor of actors) {
+      const pt = watchSpecialProjectNode(nodes[actor.id], cameraMode);
+      if (pt) actorPts[actor.id] = pt;
+    }
+    watchApplyLabelPlan(cameraMode, actors, actorPts, nodes, ["K", "PR", "KR2"]);
+    const [ballWX, ballWY] = watchSideWorldPoint(bx, by);
+    const [renderBX, renderBY] = watchCameraPoint(cameraMode, ballWX, ballWY, ballZ);
+    if (ballGroundN) {
+      const [groundBX, groundBY] = watchCameraPoint(cameraMode, ballWX, ballWY, 0);
+      const projectionFlight = ["coach", "endzone"].includes(cameraMode) && ballZ > 0.08;
+      ballGroundN.setAttribute("transform", `translate(${groundBX.toFixed(2)},${groundBY.toFixed(2)}) scale(${Math.max(0.52, 1 - ballZ * 0.045).toFixed(3)})`);
+      ballGroundN.style.opacity = projectionFlight ? String(Math.max(0.14, 0.46 - ballZ * 0.035)) : "0";
+      ballGroundN.classList.toggle("on", projectionFlight);
+    }
+    if (ballN) {
+      ballN.dataset.worldX = ballWX.toFixed(3);
+      ballN.dataset.worldY = ballWY.toFixed(3);
+      ballN.dataset.worldZ = ballZ.toFixed(3);
+      ballN.setAttribute("transform", `translate(${renderBX.toFixed(2)},${renderBY.toFixed(2)})`);
+    }
+    if (landingN) {
+      const [landingWX, landingWY] = watchSideWorldPoint(endX, endY);
+      const [landingX, landingY] = watchCameraPoint(cameraMode, landingWX, landingWY);
+      landingN.setAttribute("transform", `translate(${landingX.toFixed(2)},${landingY.toFixed(2)})`);
     }
     if (t >= dur && fxN && !fxN.childElementCount) {
       const label = p.onside ? p.recovered ? "ONSIDE \u2014 RECOVERED!" : "ONSIDE FAILS" : p.returnTD ? "RETURN TD!" : p.touchback ? "TOUCHBACK" : `RET ${retYds} YDS`;
       const cls = p.returnTD || p.recovered ? "wa-pick" : p.onside ? "wa-x" : "wp-kick-lbl";
-      fxN.insertAdjacentHTML("beforeend", `<text x="${bx.toFixed(1)}" y="${Math.max(5, by - 3.2).toFixed(1)}" class="${cls}">${label}</text>`);
+      fxN.insertAdjacentHTML("beforeend", `<text x="${renderBX.toFixed(1)}" y="${Math.max(5, renderBY - 3.2).toFixed(1)}" class="${cls}">${label}</text>`);
     }
-    if (t < dur && _watchAnim) _watchAnim.raf = requestAnimationFrame(tick);
+    if (playback.interactive) {
+      if (t >= dur) {
+        playback.paused = true;
+        const playBtn = document.getElementById("replay-play");
+        if (playBtn) playBtn.textContent = "â–¶";
+      }
+      if (!playback.paused && _watchAnim) _watchAnim.raf = requestAnimationFrame(tick);
+    } else if (t < dur && _watchAnim) _watchAnim.raf = requestAnimationFrame(tick);
   };
-  _watchAnim = { raf: requestAnimationFrame(tick) };
+  playback.seek = (next) => {
+    playback.t = Math.max(0, Math.min(dur, Number(next) || 0));
+    lastWall = performance.now();
+    if (_watchAnim && _watchAnim.raf) cancelAnimationFrame(_watchAnim.raf);
+    if (_watchAnim) _watchAnim.raf = requestAnimationFrame(tick);
+  };
+  _watchAnim = playback;
+  _watchAnim.raf = requestAnimationFrame(tick);
+  if (playback.interactive) watchWireInteractiveReplay(playback, svg, { actors }, p, board, nodes);
   return dur;
 }
 function watchBoardTry(svg, p, board) {
@@ -5135,8 +6007,8 @@ function watchBoardFlag(svg, p, board) {
   svg.innerHTML = watchFieldBase(p, board) + `<g transform="translate(${lx.toFixed(1)},${ly.toFixed(1)})"><g class="wp-flag"><rect x="-1.15" y="-1.15" width="2.3" height="2.3" class="wp-flag-cloth"/><rect x="-0.4" y="-0.4" width="0.8" height="0.8" class="wp-flag-knot"/></g></g><text x="${cx.toFixed(1)}" y="${(fy0 - 9).toFixed(1)}" class="wa-flag-call">FLAG</text><g class="wp-card wp-flag-detail"><rect x="${(cx - 26).toFixed(1)}" y="${(fy0 + 3).toFixed(1)}" width="52" height="11" class="wp-card-bg"/><text x="${cx.toFixed(1)}" y="${(fy0 + 7.6).toFixed(1)}" class="wp-card-txt"${line1.length > 24 ? ` textLength="48" lengthAdjust="spacingAndGlyphs"` : ""}>${line1}</text><text x="${cx.toFixed(1)}" y="${(fy0 + 11.6).toFixed(1)}" class="wp-card-txt wp-card-sub">${verdict}</text></g>`;
   return 2.6;
 }
-function watchFxMarkup(f, cam = null) {
-  let [x, y] = watchSidePoint(f.x, f.y);
+function watchFxMarkup(f, cam = null, projectPoint = watchSidePoint) {
+  let [x, y] = projectPoint(f.x, f.y);
   // M22: overlays stay inside the playable frame — cards and result texts
   // clamp into the CURRENT camera view at spawn, so no banner is ever
   // bisected by the frame edge or parked over the chrome.
@@ -5301,6 +6173,135 @@ function watchGameLine(w, uptoIdx, id) {
   if (!bits.length && tkl) bits.push(`${tkl} TKL`);
   return bits.join(" \xB7 ");
 }
+function watchCoachFieldBase(p, board = null) {
+  const fp = Number.isFinite(p == null ? void 0 : p.fieldPos) ? p.fieldPos : 50;
+  const x0 = 8, x1 = 92, width = x1 - x0;
+  const yOf = (absYard) => 31 - (absYard - fp) * 0.72;
+  const homeOnOffense = (board == null ? void 0 : board.possession) !== "away";
+  const offFill = homeOnOffense ? board == null ? void 0 : board.homeFill : board == null ? void 0 : board.awayFill;
+  const defFill = homeOnOffense ? board == null ? void 0 : board.awayFill : board == null ? void 0 : board.homeFill;
+  const offName = homeOnOffense ? board == null ? void 0 : board.homeName : board == null ? void 0 : board.awayName;
+  const defName = homeOnOffense ? board == null ? void 0 : board.awayName : board == null ? void 0 : board.homeName;
+  const top = yOf(110), bottom = yOf(-10);
+  let out = `<g class="wf-coach-camera" data-watch-camera-layer="coach">`;
+  out += `<rect x="0" y="0" width="100" height="56" class="wf-coach-stadium"/>`;
+  out += `<rect x="${x0}" y="${top.toFixed(2)}" width="${width}" height="${(bottom - top).toFixed(2)}" class="wf-turf"/>`;
+  for (let abs = -10; abs < 110; abs += 10) {
+    const ya = yOf(abs), yb = yOf(abs + 5);
+    out += `<rect x="${x0}" y="${Math.min(ya, yb).toFixed(2)}" width="${width}" height="${Math.abs(yb - ya).toFixed(2)}" class="wf-mow"/>`;
+  }
+  const topEzY = yOf(110), topGoalY = yOf(100), bottomGoalY = yOf(0), bottomEzY = yOf(-10);
+  out += `<rect x="${x0}" y="${topEzY.toFixed(2)}" width="${width}" height="${(topGoalY - topEzY).toFixed(2)}" class="wf-endzone" fill="${defFill || "#8b3440"}"/>`;
+  out += `<rect x="${x0}" y="${bottomGoalY.toFixed(2)}" width="${width}" height="${(bottomEzY - bottomGoalY).toFixed(2)}" class="wf-endzone" fill="${offFill || "#37506f"}"/>`;
+  if (defName) out += `<text x="50" y="${(topGoalY - 2.1).toFixed(2)}" class="wf-coach-endzone-label">${escapeHtml(String(defName).toUpperCase())}</text>`;
+  if (offName) out += `<text x="50" y="${(bottomGoalY + 5.2).toFixed(2)}" class="wf-coach-endzone-label">${escapeHtml(String(offName).toUpperCase())}</text>`;
+  out += `<rect x="${x0}" y="${top.toFixed(2)}" width="${width}" height="${(bottom - top).toFixed(2)}" fill="url(#wf-grain)"/>`;
+  const hashLeft = 8 + 31.4 * 0.84, hashRight = 8 + 66.6 * 0.84;
+  for (let abs = 0; abs <= 100; abs++) {
+    const y = yOf(abs);
+    if (abs % 5 === 0) {
+      out += `<line x1="${x0}" y1="${y.toFixed(2)}" x2="${x1}" y2="${y.toFixed(2)}" class="${abs === 0 || abs === 100 ? "wf-goal" : "wf-yard"}"/>`;
+      if (abs > 0 && abs < 100 && abs % 10 === 0) {
+        const n = abs <= 50 ? abs : 100 - abs;
+        out += `<text x="15" y="${(y + 1.15).toFixed(2)}" class="wf-num wf-num-coach">${n}</text><text x="85" y="${(y + 1.15).toFixed(2)}" class="wf-num wf-num-coach">${n}</text>`;
+      }
+    } else {
+      out += `<line x1="${(hashLeft - 0.7).toFixed(2)}" y1="${y.toFixed(2)}" x2="${(hashLeft + 0.7).toFixed(2)}" y2="${y.toFixed(2)}" class="wf-hash"/><line x1="${(hashRight - 0.7).toFixed(2)}" y1="${y.toFixed(2)}" x2="${(hashRight + 0.7).toFixed(2)}" y2="${y.toFixed(2)}" class="wf-hash"/>`;
+    }
+  }
+  out += `<line x1="${x0}" y1="${top.toFixed(2)}" x2="${x0}" y2="${bottom.toFixed(2)}" class="wf-side"/><line x1="${x1}" y1="${top.toFixed(2)}" x2="${x1}" y2="${bottom.toFixed(2)}" class="wf-side"/>`;
+  out += `<line x1="${x0}" y1="31" x2="${x1}" y2="31" class="wf-los" data-wf-los="${fp}"/>`;
+  if (p && p.down && p.distance != null && fp + p.distance <= 100) {
+    const firstY = yOf(fp + p.distance);
+    out += `<line x1="${x0}" y1="${firstY.toFixed(2)}" x2="${x1}" y2="${firstY.toFixed(2)}" class="wf-first" data-wf-first="${(fp + p.distance).toFixed(1)}"/>`;
+  }
+  out += `<g class="wf-coach-direction" transform="translate(50 25)"><path d="M0 3V-3M-2-1L0-3 2-1"/></g>`;
+  return out + `</g>`;
+}
+function watchSideWorldPoint(sideX, sideY) {
+  return [
+    (sideY - WATCH_SIDE.fieldTop) * 100 / WATCH_SIDE.fieldHeight,
+    31 - (sideX - 31) / (_watchSideDir * WATCH_SIDE.longitudinal)
+  ];
+}
+function watchSpecialProjectNode(node, cameraMode) {
+  if (!node || !Number.isFinite(node._watchSideX) || !Number.isFinite(node._watchSideY)) return null;
+  const [worldX, worldY] = watchSideWorldPoint(node._watchSideX, node._watchSideY);
+  const [x, y] = watchCameraPoint(cameraMode, worldX, worldY);
+  const scale = watchCameraScale(cameraMode, worldX, worldY);
+  node.dataset.worldX = worldX.toFixed(3);
+  node.dataset.worldY = worldY.toFixed(3);
+  node.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)}) scale(${scale.toFixed(3)})`);
+  return [x, y, worldX, worldY];
+}
+function watchSpecialPlace(node, sideX, sideY) {
+  if (!node) return;
+  node._watchSideX = sideX;
+  node._watchSideY = sideY;
+}
+function watchSpecialCameraFrame(svg, p, cameraMode, focusX, camState) {
+  svg.dataset.camera = cameraMode;
+  svg.classList.toggle("watch-camera-coach", cameraMode === "coach");
+  svg.classList.toggle("watch-camera-endzone", cameraMode === "endzone");
+  svg.classList.toggle("watch-camera-reverse", cameraMode === "reverse");
+  if (["coach", "endzone"].includes(cameraMode)) {
+    svg.setAttribute("viewBox", `0 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
+    return;
+  }
+  if (cameraMode === "all22") {
+    svg.setAttribute("viewBox", `${watchSideCameraX(p, 31).toFixed(2)} 0 ${WATCH_SIDE.viewW} ${WATCH_SIDE.viewH}`);
+    return;
+  }
+  const xPull = watchSideCameraX(p, focusX, camState.w) - camState.x;
+  camState.vx += Math.max(-0.075, Math.min(0.075, xPull * 0.11 - camState.vx));
+  camState.vx = Math.max(-2.1, Math.min(2.1, camState.vx));
+  if (Math.abs(xPull) < 0.35 && Math.abs(camState.vx) < 0.08) camState.vx = 0;
+  camState.x += camState.vx;
+  svg.setAttribute("viewBox", `${camState.x.toFixed(2)} ${camState.y.toFixed(2)} ${camState.w.toFixed(2)} ${camState.h.toFixed(2)}`);
+}
+
+function watchEndzoneFieldBase(p, board = null) {
+  const fp = Number.isFinite(p == null ? void 0 : p.fieldPos) ? p.fieldPos : 50;
+  const worldYOf = (absYard) => 31 - (absYard - fp) * WATCH_SIDE.ypu;
+  const edge = (absYard, worldX) => watchCameraPoint("endzone", worldX, worldYOf(absYard));
+  const quad = (a, b) => {
+    const al = edge(a, 0), ar = edge(a, 100), bl = edge(b, 0), br = edge(b, 100);
+    return `${al[0].toFixed(2)},${al[1].toFixed(2)} ${ar[0].toFixed(2)},${ar[1].toFixed(2)} ${br[0].toFixed(2)},${br[1].toFixed(2)} ${bl[0].toFixed(2)},${bl[1].toFixed(2)}`;
+  };
+  const homeOnOffense = (board == null ? void 0 : board.possession) !== "away";
+  const offFill = homeOnOffense ? board == null ? void 0 : board.homeFill : board == null ? void 0 : board.awayFill;
+  const defFill = homeOnOffense ? board == null ? void 0 : board.awayFill : board == null ? void 0 : board.homeFill;
+  let out = `<g class="wf-endzone-camera" data-watch-camera-layer="endzone"><rect width="100" height="56" class="wf-endzone-stadium"/>`;
+  out += `<polygon points="${quad(-10, 110)}" class="wf-turf"/>`;
+  for (let abs = -10; abs < 110; abs += 10) out += `<polygon points="${quad(abs, abs + 5)}" class="wf-mow"/>`;
+  out += `<polygon points="${quad(-10, 0)}" class="wf-endzone" fill="${offFill || "#37506f"}"/><polygon points="${quad(100, 110)}" class="wf-endzone" fill="${defFill || "#8b3440"}"/>`;
+  for (let abs = 0; abs <= 100; abs++) {
+    const left = edge(abs, 0), right = edge(abs, 100);
+    if (abs % 5 === 0) {
+      out += `<line x1="${left[0].toFixed(2)}" y1="${left[1].toFixed(2)}" x2="${right[0].toFixed(2)}" y2="${right[1].toFixed(2)}" class="${abs === 0 || abs === 100 ? "wf-goal" : "wf-yard"}"/>`;
+      if (abs > 0 && abs < 100 && abs % 10 === 0) {
+        const n = abs <= 50 ? abs : 100 - abs;
+        const lp = edge(abs, 12), rp = edge(abs, 88);
+        out += `<text x="${lp[0].toFixed(2)}" y="${(lp[1] + .8).toFixed(2)}" class="wf-num wf-num-endzone">${n}</text><text x="${rp[0].toFixed(2)}" y="${(rp[1] + .8).toFixed(2)}" class="wf-num wf-num-endzone">${n}</text>`;
+      }
+    } else {
+      const hl = edge(abs, 31.4), hr = edge(abs, 66.6);
+      const tick = Math.max(.18, watchCameraScale("endzone", 50, worldYOf(abs)) * .55);
+      out += `<line x1="${(hl[0] - tick).toFixed(2)}" y1="${hl[1].toFixed(2)}" x2="${(hl[0] + tick).toFixed(2)}" y2="${hl[1].toFixed(2)}" class="wf-hash"/><line x1="${(hr[0] - tick).toFixed(2)}" y1="${hr[1].toFixed(2)}" x2="${(hr[0] + tick).toFixed(2)}" y2="${hr[1].toFixed(2)}" class="wf-hash"/>`;
+    }
+  }
+  const nearL = edge(-10, 0), nearR = edge(-10, 100), farL = edge(110, 0), farR = edge(110, 100);
+  out += `<line x1="${nearL[0].toFixed(2)}" y1="${nearL[1].toFixed(2)}" x2="${farL[0].toFixed(2)}" y2="${farL[1].toFixed(2)}" class="wf-side"/><line x1="${nearR[0].toFixed(2)}" y1="${nearR[1].toFixed(2)}" x2="${farR[0].toFixed(2)}" y2="${farR[1].toFixed(2)}" class="wf-side"/>`;
+  const losL = edge(fp, 0), losR = edge(fp, 100);
+  out += `<line x1="${losL[0].toFixed(2)}" y1="${losL[1].toFixed(2)}" x2="${losR[0].toFixed(2)}" y2="${losR[1].toFixed(2)}" class="wf-los" data-wf-los="${fp}"/>`;
+  if (p && p.down && p.distance != null && fp + p.distance <= 100) {
+    const first = fp + p.distance, firstL = edge(first, 0), firstR = edge(first, 100);
+    out += `<line x1="${firstL[0].toFixed(2)}" y1="${firstL[1].toFixed(2)}" x2="${firstR[0].toFixed(2)}" y2="${firstR[1].toFixed(2)}" class="wf-first" data-wf-first="${first.toFixed(1)}"/>`;
+  }
+  out += `<g class="wf-endzone-direction" transform="translate(50 36)"><path d="M0 3V-3M-2-1L0-3 2-1"/></g>`;
+  return out + `</g>`;
+}
+
 function watchFieldBase(p, board = null) {
   const fp = Number.isFinite(p == null ? void 0 : p.fieldPos) ? p.fieldPos : null;
   const FT = WATCH_SIDE.fieldTop, FH = WATCH_SIDE.fieldHeight, FB = FT + FH;
@@ -5499,7 +6500,8 @@ function watchFieldBase(p, board = null) {
     }
   }
   wxLayer += `</g>`;
-  return defs + under + lines + `<line x1="31" y1="${FT}" x2="31" y2="${FB}" class="wf-los" data-wf-los="${fp == null ? "" : fp}"/><g class="wf-drive-direction" data-wf-direction="${_watchSideDir > 0 ? "right" : "left"}" transform="translate(31 ${(FT + 2.25).toFixed(1)})"><path d="${dirPath}"/></g>` + wxLayer;
+  const side = under + lines + `<line x1="31" y1="${FT}" x2="31" y2="${FB}" class="wf-los" data-wf-los="${fp == null ? "" : fp}"/><g class="wf-drive-direction" data-wf-direction="${_watchSideDir > 0 ? "right" : "left"}" transform="translate(31 ${(FT + 2.25).toFixed(1)})"><path d="${dirPath}"/></g>` + wxLayer;
+  return defs + `<g class="wf-side-camera" data-watch-camera-layer="side">${side}</g>` + watchCoachFieldBase(p, board) + watchEndzoneFieldBase(p, board);
 }
 function watchTick(immediate = false) {
   const w = _watch;
@@ -5526,6 +6528,147 @@ function watchPreSnapLine(p, d) {
   else action = "the snap\u2026";
   const form = p.offFormation ? `${p.offFormation} \u2014 ` : "";
   return `${dd ? dd + " \xB7 " : ""}${form}${action}`;
+}
+function watchClipName(w, p) {
+  const names = w.r.playerNames || {};
+  const featured = watchFeaturedMan(p);
+  const who = featured && names[featured.id] && names[featured.id].name;
+  if (p.td) return who ? `${who} touchdown` : "Touchdown";
+  if (p.turnover && p.turnoverType === "interception") return who ? `${who} interception` : "Interception";
+  if (p.sack) return who ? `${who} sack` : "Sack";
+  if (who) return `${who} · ${p.yards || 0} yards`;
+  return `${p.concept || p.type || "Play"} · ${p.yards || 0} yards`;
+}
+function watchSaveActiveClip(w) {
+  const p = w && w.activePlay;
+  const d = w && w.activeDrive;
+  if (!p || !d) {
+    notify("Pause on a play before saving a clip", "info");
+    return null;
+  }
+  const anim = _watchAnim || {};
+  const data = w.clip ? watchClone(w.clip) : buildReplayClipData(w.r, d, p, { driveIndex: w.activeDriveIndex || 0, playIndex: w.activePlayIndex || 0, board: w.activeBoard || null });
+  data.camera = normalizeWatchCamera(anim.cameraMode);
+  data.annotations = Array.isArray(anim.annotations) ? watchClone(anim.annotations) : data.annotations || [];
+  data.capturedAt = Date.now();
+  const home = (w.r.homeSchool && (w.r.homeSchool.abbr || w.r.homeSchool.name)) || "HOME";
+  const away = (w.r.awaySchool && (w.r.awaySchool.abbr || w.r.awaySchool.name)) || "AWAY";
+  const result = saveReplay(watchClipName(w, p), data, {
+    info: { matchup: `${away} @ ${home}`, score: `${w.r.awayScore || 0}–${w.r.homeScore || 0}`, week: p.half ? `${p.half === 1 ? "1st" : "2nd"} half` : "Replay" }
+  });
+  if (result.ok) {
+    w.clip = data;
+    notify("Saved to Film Room", "success");
+  } else notify(result.reason === "full" ? "Film Room is full" : "Replay could not be saved", "warning");
+  return result;
+}
+function watchDownloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+let _watchExportCss = null;
+function watchCssText() {
+  if (_watchExportCss != null) return _watchExportCss;
+  let css = "";
+  for (const sheet of Array.from(document.styleSheets || [])) {
+    try {
+      css += Array.from(sheet.cssRules || []).map((r) => r.cssText).filter((s) => /(?:watch-|wp-|wf-|wsp-|wab-|wo-|wd-|svg)/.test(s)).join("\n");
+    } catch (e) {
+    }
+  }
+  _watchExportCss = css;
+  return _watchExportCss;
+}
+function watchSerializedStill(svg, annotations = []) {
+  const clone = svg.cloneNode(true);
+  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  const style = document.createElementNS("http://www.w3.org/2000/svg", "style");
+  style.textContent = watchCssText();
+  clone.insertBefore(style, clone.firstChild);
+  if (annotations.length) {
+    const ink = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    ink.setAttribute("class", "watch-export-ink");
+    for (const stroke of annotations) {
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+      line.setAttribute("points", (stroke.points || []).map((pt) => `${pt.x.toFixed(2)},${pt.y.toFixed(2)}`).join(" "));
+      line.setAttribute("fill", "none");
+      line.setAttribute("stroke", stroke.color || "#ffd54a");
+      line.setAttribute("stroke-width", "0.8");
+      line.setAttribute("stroke-linecap", "round");
+      line.setAttribute("stroke-linejoin", "round");
+      ink.appendChild(line);
+    }
+    clone.appendChild(ink);
+  }
+  return new XMLSerializer().serializeToString(clone);
+}
+async function watchDrawSvgFrame(svg, annotations, canvas) {
+  const xml = watchSerializedStill(svg, annotations);
+  const url = URL.createObjectURL(new Blob([xml], { type: "image/svg+xml;charset=utf-8" }));
+  try {
+    const img = new Image();
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = url;
+    });
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+async function watchExportVideo(controller, svg) {
+  if (!controller || !svg || typeof MediaRecorder === "undefined" || !HTMLCanvasElement.prototype.captureStream) {
+    notify("Short-video export is not supported by this browser", "warning");
+    return false;
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = 960;
+  canvas.height = 540;
+  const stream = canvas.captureStream(8);
+  const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9" : "video/webm";
+  const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 3500000 });
+  const chunks = [];
+  recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+  const done = new Promise((resolve) => { recorder.onstop = resolve; });
+  const was = { t: controller.t, paused: controller.paused, rate: controller.rate };
+  controller.paused = true;
+  controller.exporting = true;
+  recorder.start(250);
+  const fps = 8;
+  const wallStep = 1000 / fps;
+  const playStep = Math.max(1, controller.duration / 7) / fps;
+  try {
+    for (let t = 0; t <= controller.duration + 0.001; t += playStep) {
+      controller.seek(Math.min(controller.duration, t));
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await watchDrawSvgFrame(svg, controller.annotations, canvas);
+      await new Promise((resolve) => setTimeout(resolve, wallStep));
+    }
+  } finally {
+    recorder.stop();
+    await done;
+    for (const track of stream.getTracks()) track.stop();
+    controller.exporting = false;
+    controller.rate = was.rate;
+    controller.paused = was.paused;
+    controller.seek(was.t);
+  }
+  if (!chunks.length) {
+    notify("The browser did not produce a video", "warning");
+    return false;
+  }
+  watchDownloadBlob(new Blob(chunks, { type: mime }), `blueprint-replay-${Date.now()}.webm`);
+  notify("Short replay video exported", "success");
+  return true;
 }
 function watchEventFlash(label, kind = "moment", ms = 1100, speed = 1) {
   const f = document.getElementById("watch-flash");
@@ -5568,11 +6711,19 @@ function watchTickBody(w, immediate = false) {
     holdMs = baseMs * 0.6;
   } else if (item.kind === "play") {
     const p = item.p;
+    w.activePlay = p;
+    w.activeDrive = item.d;
+    w.activeDriveIndex = item.di || 0;
+    w.activePlayIndex = (item.d.plays || []).indexOf(p);
     watchBug(p, item.d);
     stadiumStart(p.down >= 3 ? 0.42 : p.fieldPos >= 80 ? 0.34 : 0.22);
     const boardPalette = watchBoardColors(w, item.d);
-    const scriptDur = watchBoard(p, baseMs, boardPalette);
+    w.activeBoard = boardPalette;
+    const scriptDur = watchBoard(p, baseMs, boardPalette, w.clip ? w.clip.reel ? { replay: true } : { replay: true, interactive: true, clip: w.clip } : {});
     const desc = describePlay(p, names);
+    const film = buildBroadcastCommentary(p, names);
+    const analysis = document.getElementById("watch-analysis");
+    if (analysis) analysis.innerHTML = `<span>${escapeHtml(film.kicker)}</span><b>${escapeHtml(film.title)}</b><small>${escapeHtml(film.detail)}</small>`;
     let extra = "";
     if (p.coverage && String(p.type || "").startsWith("pass") && !p.sack) {
       const cpt = p.concept ? `${p.concept}${p.audible ? " (audible)" : ""} ` : "";
@@ -5593,7 +6744,7 @@ function watchTickBody(w, immediate = false) {
     else if (!p.complete && String(p.type || "").startsWith("pass")) tempo = 0.58;
     else if (yds <= 3) tempo = 0.7;
     holdMs = baseMs * tempo;
-    if (scriptDur) holdMs = Math.max(holdMs, scriptDur * 1e3 / w.speed + 1200);
+    if (scriptDur) holdMs = Math.max(holdMs, scriptDur * 1e3 / (w.speed * (w.clip && w.clip.reel ? 0.68 : 1)) + 1200);
     const formTag = p.offFormation && p.type !== "penalty" ? `<span class="pbp-form">[${escapeHtml(p.offFormation)}${p.defFront ? " v " + escapeHtml(p.defFront) : ""}]</span> ` : "";
     const fakeTag = p.stFake ? `<span class="wa-td">FAKE! </span>` : "";
     const patchScore = () => {
@@ -5665,7 +6816,7 @@ function watchTickBody(w, immediate = false) {
       reveal();
     }
     const replayWorthy = !!scriptDur && !!(p.td || p.turnover || p.sack || p.blocked || p.contested || p.brokenByCarrier || Math.abs(yds) >= 25);
-    if (replayWorthy && !w.paused) {
+    if (replayWorthy && !w.paused && !w.clip) {
       const liveWallMs = scriptDur * 1e3 / w.speed;
       const replayWallMs = scriptDur * 1e3 / (w.speed * 0.68);
       holdMs = Math.max(holdMs, liveWallMs + replayWallMs + 1050);

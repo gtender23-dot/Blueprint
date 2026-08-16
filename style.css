@@ -577,6 +577,11 @@ body::before {
 .pcard-stats { padding: 8px 16px 0; font-size: 11px; }
 .pcard-attrs { padding: 12px 16px 16px; }
 
+.btn-advance-locked {
+  /* multi-coach: play your programs first — the week is gated */
+  filter: grayscale(0.7) brightness(0.7);
+  opacity: 0.65; cursor: not-allowed;
+}
 .btn-advance {
   /* high-value action: team fill + brushed texture + a strong SECONDARY-color ring/glow */
   background:
@@ -1167,6 +1172,13 @@ th.col-drag-over {
   user-select: none;
 }
 .formation-card:hover { border-color: var(--text-1); background: rgba(255,255,255,0.03); }
+/* Playbook-owned look cards (Game Plan Package tab, 2026-08-15): read-only
+   diagram + label + a usage slider — no add/remove cursor affordance. */
+.pb-look-card { cursor: default; }
+.pb-look-card .pb-look-dia { margin: 0 0 6px; border-radius: 6px; overflow: hidden; }
+.pb-look-card .fw-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.pb-look-card .fw-slider { flex: 1; min-width: 0; }
+.pb-look-grid + .fw-bar { margin-top: 8px; }
 .formation-card.selected {
   border-color: var(--team-1);
   background: var(--team-a10);
@@ -3189,6 +3201,10 @@ input[type="range"] { accent-color: var(--team-1); }
   border-color: var(--red);
   box-shadow: 0 0 0 1px var(--red), 0 3px 10px rgba(255,82,82,0.4);
 }
+.field-slot.dropping {
+  border-color: var(--blue, #4a90d9);
+  box-shadow: 0 0 0 1px var(--blue, #4a90d9), 0 3px 10px rgba(74,144,217,0.4);
+}
 .fs-label {
   font-size: 9px; font-weight: 800; letter-spacing: 0.08em;
   color: var(--gold); text-align: center; margin-bottom: 1px;
@@ -3245,21 +3261,40 @@ input[type="range"] { accent-color: var(--team-1); }
 
 /* On-field blitz-share stepper (mirrors .fs-share, red accent) */
 .fs-blitz {
-  display: flex; align-items: center; justify-content: center;
-  gap: 3px; margin-top: 3px; border-top: 1px solid var(--border-sub); padding-top: 2px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  gap: 3px; margin-top: 4px; padding: 3px 4px; border-radius: 6px;
+  background: var(--bg-sunken, rgba(0,0,0,0.18));
+  border: 1px solid var(--border-sub);
 }
+.fs-blitz-tag {
+  flex-basis: 100%; text-align: center;
+  font-size: 8px; font-weight: 800; letter-spacing: 0.06em;
+  color: var(--text-2); opacity: 0.75; margin-bottom: 1px;
+}
+.fs-blitz.on { border-color: var(--red); background: rgba(255,82,82,0.12); }
+.fs-blitz.on .fs-blitz-tag { color: var(--red); opacity: 1; }
+.fs-drop.on { border-color: var(--blue, #4a90d9); background: rgba(74,144,217,0.14); }
+.fs-drop.on .fs-blitz-tag { color: var(--blue, #4a90d9); opacity: 1; }
 .fs-blitz-btn {
-  width: 16px; height: 16px; line-height: 1; border-radius: 4px;
+  width: 22px; height: 22px; line-height: 1; border-radius: 5px;
   background: var(--bg-raised); border: 1px solid var(--border);
-  color: var(--text-1); font-size: 12px; font-weight: 700; cursor: pointer;
+  color: var(--text-1); font-size: 15px; font-weight: 700; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
+  touch-action: manipulation; user-select: none;
 }
 .fs-blitz-btn:hover { background: var(--red); color: #fff; border-color: var(--red); }
+.fs-drop .fs-blitz-btn:hover { background: var(--blue, #4a90d9); border-color: var(--blue, #4a90d9); }
+.fs-blitz-btn:active { transform: translateY(1px); }
 .fs-blitz-val {
-  font-size: 10px; font-weight: 800; color: var(--red);
-  min-width: 22px; text-align: center; font-variant-numeric: tabular-nums;
+  font-size: 12px; font-weight: 800; color: var(--text-2);
+  min-width: 34px; text-align: center; font-variant-numeric: tabular-nums;
 }
-.blitzing .fs-blitz-val { text-shadow: 0 0 6px rgba(255,82,82,0.5); }
+.fs-blitz.on .fs-blitz-val { color: var(--red); }
+.fs-drop.on .fs-blitz-val { color: var(--blue, #4a90d9); }
+.fs-heat-lbl { font-size: 9px; font-weight: 800; letter-spacing: 0.06em; color: var(--text-2); }
+.fs-heat.on { border-color: var(--gold, #e8c05a); background: rgba(232,192,90,0.14); }
+.fs-heat.on .fs-heat-lbl, .fs-heat.on .fs-blitz-val { color: var(--gold, #e8c05a); }
+.fs-heat .fs-blitz-btn:hover { background: var(--gold, #e8c05a); border-color: var(--gold, #e8c05a); color: #000; }
 
 .blitz-legend {
   font-size: 11px; color: var(--text-2); display: flex; align-items: center;
@@ -3288,6 +3323,11 @@ input[type="range"] { accent-color: var(--team-1); }
   font-size: 12px; font-weight: 800; color: var(--green);
   width: 40px; text-align: right; font-variant-numeric: tabular-nums;
 }
+.share-diff-badge {
+  font-size: 10px; font-weight: 700; color: var(--gold);
+  width: 62px; text-align: right; white-space: nowrap;
+}
+.share-diff-badge.share-diff-none { visibility: hidden; }
 
 /* Scout history tab */
 .hist-natty { color: var(--gold); font-weight: 800; }
@@ -5847,6 +5887,12 @@ input[type="checkbox"],input[type="radio"] { accent-color:var(--team-1); image-r
 }
 .wsp-modern-athlete .wsp-jersey,.wsp-modern-athlete .wsp-arm,
 .wsp-modern-athlete .wsp-helmet,.wsp-modern-athlete .wsp-shoulder { stroke-width:.22; }
+/* Viewer Act 2 / A5: the roster's real height/weight scales one nested group,
+   composing with the position anatomy above instead of replacing it. */
+.wsp-identity-body { transform-box:fill-box; transform-origin:50% 100%; transform:scale(var(--wsp-body-x,1),var(--wsp-body-y,1)); }
+.wsp-frame-lean .wsp-shadow { opacity:.68; }
+.wsp-frame-power .wsp-shadow { opacity:.78; }
+.wsp-frame-massive .wsp-shadow { opacity:.84; transform:scaleX(1.1); }
 .wsp-gear-gloves circle.wsp-skin {
   fill:var(--wsp-off-hl,#f4f0d8);
   stroke:rgba(6,9,14,.82);
@@ -6096,7 +6142,9 @@ circle.wsp-skin { transform-box:fill-box; transform-origin:center; transform:sca
 /* Finish variants — the shell transform after the lunge, per recorded style. */
 #watch-board.watch-in-play .wp-tackling.wp-tk-wrap .wsp-shell      { animation:wsp-tkl-wrap .30s ease-out both !important; }
 #watch-board.watch-in-play .wp-tackling.wp-tk-collision .wsp-shell { animation:wsp-tkl-collide .34s cubic-bezier(.3,1.4,.5,1) both !important; }
+#watch-board.watch-in-play .wp-tackling.wp-tk-big-hit .wsp-shell   { animation:wsp-tkl-collide .34s cubic-bezier(.3,1.4,.5,1) both !important; }
 #watch-board.watch-in-play .wp-tackling.wp-tk-drag .wsp-shell      { animation:wsp-tkl-drag .40s ease-out both !important; }
+#watch-board.watch-in-play .wp-tackling.wp-tk-drag-down .wsp-shell { animation:wsp-tkl-drag .40s ease-out both !important; }
 #watch-board.watch-in-play .wp-tackling.wp-tk-gang .wsp-shell      { animation:wsp-tkl-gang .34s ease-out both !important; }
 #watch-board.watch-in-play .wp-tackling.wp-tk-goalline .wsp-shell  { animation:wsp-tkl-goal .30s ease-out both !important; }
 #watch-board.watch-in-play .wp-tackling.wp-tk-shoestring .wsp-shell{ animation:wsp-tkl-shoe .32s cubic-bezier(.3,.8,.4,1) both !important; }
@@ -6107,6 +6155,8 @@ circle.wsp-skin { transform-box:fill-box; transform-origin:center; transform:sca
 #watch-board.watch-in-play .wp-moving.wp-mv-hurdle .wsp-shell { animation:wsp-mv-hurdle .50s cubic-bezier(.3,.7,.3,1) both !important; }
 #watch-board.watch-in-play .wp-moving.wp-mv-truck .wsp-shell  { animation:wsp-mv-truck .40s cubic-bezier(.3,.8,.4,1) both !important; }
 #watch-board.watch-in-play .wp-moving.wp-mv-dive .wsp-shell   { animation:wsp-mv-dive .56s cubic-bezier(.3,.6,.4,1) both !important; }
+#watch-board.watch-in-play .wp-moving.wp-mv-pylon-dive .wsp-shell,
+#watch-board.watch-in-play .wp-moving.wp-mv-marker-dive .wsp-shell { animation:wsp-mv-dive .56s cubic-bezier(.3,.6,.4,1) both !important; }
 #watch-board.watch-in-play .wp-moving.wp-mv-recover .wsp-shell{ animation:wsp-mv-recover .48s ease-in-out both !important; }
 /* Stiff-arm: swap the near carry arm for the extended fend. */
 .wp-moving.wp-mv-stiff .wsp-pose-carry { display:none; }
@@ -7270,6 +7320,118 @@ body *::after {
   .watch-drives { min-height: 56px; padding-top: 31px; }
 }
 
+/* ── Phone LANDSCAPE — the watch / coach viewer (turn the phone sideways) ──────
+   A short, wide screen. The default flex column puts the full-width field on top,
+   whose ~16:9 height overflows a ~400px-tall phone and shoves the controls off
+   the bottom. Here the field goes on the LEFT sized to the available HEIGHT (the
+   SVG letterboxes via its own preserveAspectRatio), and a compact control rail
+   sits on the RIGHT. Keyed on max-height so it catches every phone in landscape
+   (incl. the big ones that clear the 900px desktop-landscape width) and never a
+   real desktop/tablet. Purely CSS — the layout follows the device rotating, no
+   JS. (Playbook-Root era mobile pass, 2026-08-15.) */
+@media (orientation: landscape) and (max-height: 560px) {
+  .watch-live-overlay > .modal { width: 100%; max-width: none; }
+  .watch-live-overlay .result-tab-body { padding: 5px 7px; overflow: hidden; }
+
+  .watch-root {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(148px, 30vw, 240px);
+    grid-template-areas:
+      "field score"
+      "field feed"
+      "field controls"
+      "field drives";
+    grid-template-rows: auto auto 1fr auto;
+    gap: 5px 8px;
+    height: 100%;
+    min-height: 0;
+    align-items: start;
+    padding: 3px 2px;
+  }
+
+  /* The field fills the column height; the SVG's preserveAspectRatio letterboxes
+     the field so it never overflows and never distorts. */
+  .watch-board-wrap {
+    grid-area: field;
+    align-self: stretch;
+    height: 100%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .watch-board-wrap::before { content: none !important; } /* no "SIDELINE CAM" on a phone */
+  #watch-board, .watch-ink { width: 100%; height: 100%; max-height: 100%; }
+
+  /* Compact right rail: score, the play feed, the controls, the drive chart. */
+  .watch-bug { grid-area: score; align-self: start; }
+  .watch-ticker {
+    grid-area: feed;
+    min-height: 0;
+    max-height: 4.6em;
+    padding: 6px 8px;
+    font-size: .8em;
+    overflow: hidden;
+  }
+  .watch-ticker::before { content: none !important; } /* no "LIVE PLAY FEED" label */
+  .watch-controls.broadcast-bar {
+    grid-area: controls;
+    margin-top: 0;
+    padding: 5px 6px;
+    gap: 4px;
+    justify-content: flex-start;
+    align-self: start;
+  }
+  .watch-drives {
+    grid-area: drives;
+    align-self: end;
+    max-height: 3.4em;
+    overflow: hidden;
+  }
+  /* No room for the desktop-only extras on a phone (override the ≥900px reveal). */
+  .watch-desktop-insight,
+  .watch-desktop-only { display: none !important; }
+
+  /* Coaching (watch-call-mode): the field on the left, the call sheet as the
+     right rail, so you can watch and call at the same time. */
+  .game-result-modal.watch-call-mode .result-tab-body {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .watch-call-mode .watch-root {
+    max-height: none;
+    height: 100%;
+    flex: 1 1 auto;
+    grid-template-columns: 1fr;
+    grid-template-areas: "field";
+    grid-template-rows: 1fr;
+  }
+  .watch-call-mode .watch-call-embed {
+    flex: 0 0 clamp(200px, 40vw, 340px);
+    max-height: 100%;
+    margin: 0;
+    overflow-y: auto;
+  }
+  /* Once the play settles the board is dropped — hand the whole width to the sheet. */
+  .watch-board-collapsed .watch-root { display: none; }
+  .watch-board-collapsed .watch-call-embed { flex: 1 1 auto; }
+
+  /* The score bug can render as a floating broadcast overlay; in the rail that
+     made it land ON TOP of the play feed. Pin it in-flow at the top of the rail
+     so the scoreboard and the play-by-play stack cleanly instead of overlapping. */
+  .watch-bug { position: relative; top: auto; left: auto; right: auto; bottom: auto; transform: none; width: 100%; z-index: 1; }
+  /* The "1ST HALF — LIVE" header ate a big band of a short screen — slim it. */
+  .watch-live-overlay .modal-header { padding: 3px 10px; min-height: 0; gap: 8px; }
+  .watch-live-overlay .modal-header h2 { font-size: 12px; margin: 0; line-height: 1.2; }
+}
+
+/* The on-field "play info" analysis overlay (front/coverage read) duplicates the
+   play-by-play feed — retired by owner call (2026-08-15). Kept in the DOM but
+   never shown, so nothing that populates it needs touching. */
+#watch-analysis { display: none !important; }
+
 @media (max-width: 640px) {
   .wsb-matchup { min-height: 43px; }
   .wsb-side { gap: 5px; padding: 5px 6px; }
@@ -7771,6 +7933,30 @@ body *::after {
 #watch-board.watch-in-play .wp-catching.wp-catch-breakup .wsp-shell {
   animation:wsp-catch-breakup-body .46s cubic-bezier(.2,.72,.35,1) both !important;
 }
+/* Viewer Act 2 / A2: geometry-selected finishes refine the established catch
+   families. They alter only the puppet pose; the M21 hand/ball constraint owns
+   the catch point throughout. */
+#watch-board.watch-in-play .wp-catching.wp-catch-layout .wsp-shell {
+  animation:wsp-a2-catch-layout .54s cubic-bezier(.18,.72,.3,1) both !important;
+}
+#watch-board.watch-in-play .wp-catching.wp-catch-highpoint .wsp-shell {
+  animation:wsp-a2-catch-highpoint .46s cubic-bezier(.16,.82,.26,1) both !important;
+}
+#watch-board.watch-in-play .wp-catching.wp-catch-onehand .wsp-shell {
+  animation:wsp-a2-catch-onehand .48s cubic-bezier(.18,.78,.3,1) both !important;
+}
+#watch-board.watch-in-play .wp-catching.wp-catch-battle .wsp-shell {
+  animation:wsp-a2-catch-battle .48s cubic-bezier(.2,.78,.32,1) both !important;
+}
+#watch-board .wp-catching.wp-catch-onehand .wsp-catch-arm-l,
+#watch-board .wp-catching.wp-catch-onehand .wsp-sd-catch-arm { animation:wsp-a2-one-hand-reach .48s ease-out both !important; }
+#watch-board .wp-catching.wp-catch-onehand .wsp-catch-arm-r { animation:wsp-a2-one-hand-balance .48s ease-out both !important; }
+@keyframes wsp-a2-catch-layout { 0% { transform:translateY(.08px) rotate(0); } 48% { transform:translate(.5px,-.46px) rotate(18deg) scaleY(.98); } 100% { transform:translate(.82px,.36px) rotate(31deg) scaleY(.82); } }
+@keyframes wsp-a2-catch-highpoint { 0% { transform:translateY(.08px) scaleY(.96); } 52% { transform:translateY(calc(-.18px - var(--wsp-catch-rise))) scaleY(1.08); } 100% { transform:translateY(-.16px) scaleY(1.01); } }
+@keyframes wsp-a2-catch-onehand { 0% { transform:translateY(.08px) rotate(0); } 55% { transform:translate(.32px,-.48px) rotate(11deg) scaleY(1.03); } 100% { transform:translate(.18px,-.08px) rotate(5deg); } }
+@keyframes wsp-a2-catch-battle { 0% { transform:translate(0,.08px) rotate(0); } 44% { transform:translate(-.22px,-.5px) rotate(-7deg) scaleX(1.06); } 72% { transform:translate(.18px,-.14px) rotate(6deg) scaleX(.97); } 100% { transform:translateY(.04px) rotate(2deg); } }
+@keyframes wsp-a2-one-hand-reach { 0% { transform:rotate(12deg) translateY(.1px); } 58% { transform:rotate(-48deg) translate(.16px,-.34px) scaleY(1.12); } 100% { transform:rotate(-18deg) translateY(-.12px); } }
+@keyframes wsp-a2-one-hand-balance { 0%,100% { transform:rotate(-8deg); } 55% { transform:rotate(34deg) translate(.12px,.18px); } }
 #watch-board.watch-in-play .wp-catching.wp-catch-toetap .wsp-sd-thigh-f {
   animation:wsp-catch-toe-leg .5s cubic-bezier(.2,.78,.3,1) both !important;
 }
@@ -7890,6 +8076,29 @@ body *::after {
   74% { transform:translate(.72px,-.12px) rotate(48deg) scaleY(.88); }
   100% { transform:translate(.84px,.38px) rotate(72deg) scaleY(.82); }
 }
+
+/* Viewer Act 2 / A1: landmark dives reach across the runner's true boundary
+   side. They are pose-only transforms on top of the unchanged endpoint track. */
+#watch-board.watch-in-play .wp-moving.wp-mv-pylon-dive.wp-mv-boundary-left .wsp-shell,
+#watch-board.watch-in-play .wp-moving.wp-mv-marker-dive.wp-mv-boundary-left .wsp-shell {
+  animation:wsp-a1-landmark-left .58s cubic-bezier(.18,.7,.3,1) both !important;
+}
+#watch-board.watch-in-play .wp-moving.wp-mv-pylon-dive.wp-mv-boundary-right .wsp-shell,
+#watch-board.watch-in-play .wp-moving.wp-mv-marker-dive.wp-mv-boundary-right .wsp-shell {
+  animation:wsp-a1-landmark-right .58s cubic-bezier(.18,.7,.3,1) both !important;
+}
+@keyframes wsp-a1-landmark-left {
+  0% { transform:translate(0,0) rotate(0); }
+  42% { transform:translate(-.58px,-.46px) rotate(-24deg) scaleY(.96); }
+  76% { transform:translate(-1.04px,-.14px) rotate(-58deg) scaleY(.88); }
+  100% { transform:translate(-1.18px,.36px) rotate(-78deg) scaleY(.82); }
+}
+@keyframes wsp-a1-landmark-right {
+  0% { transform:translate(0,0) rotate(0); }
+  42% { transform:translate(.58px,-.46px) rotate(24deg) scaleY(.96); }
+  76% { transform:translate(1.04px,-.14px) rotate(58deg) scaleY(.88); }
+  100% { transform:translate(1.18px,.36px) rotate(78deg) scaleY(.82); }
+}
 @keyframes wsp-mv-balance-modern {
   0% { transform:rotate(0) translateX(0); }
   22% { transform:rotate(-14deg) translateX(-.48px); }
@@ -7924,7 +8133,9 @@ body *::after {
 #watch-board .wp-down.wp-hit-form .wsp-shell { animation:wsp-down-form .4s cubic-bezier(.3,.7,.4,1) both !important; }
 #watch-board .wp-down.wp-hit-wrap .wsp-shell { animation:wsp-down-wrap .42s cubic-bezier(.3,.7,.4,1) both !important; }
 #watch-board .wp-down.wp-hit-collision .wsp-shell { animation:wsp-down-collision .38s cubic-bezier(.2,.72,.32,1) both !important; }
+#watch-board .wp-down.wp-hit-big-hit .wsp-shell { animation:wsp-down-collision .38s cubic-bezier(.2,.72,.32,1) both !important; }
 #watch-board .wp-down.wp-hit-drag .wsp-shell { animation:wsp-down-drag .48s cubic-bezier(.3,.7,.4,1) both !important; }
+#watch-board .wp-down.wp-hit-drag-down .wsp-shell { animation:wsp-down-drag .48s cubic-bezier(.3,.7,.4,1) both !important; }
 #watch-board .wp-down.wp-hit-gang .wsp-shell { animation:wsp-down-gang .42s cubic-bezier(.24,.72,.34,1) both !important; }
 #watch-board .wp-down.wp-hit-goalline .wsp-shell { animation:wsp-down-goalline .38s cubic-bezier(.25,.75,.35,1) both !important; }
 #watch-board .wp-down.wp-hit-shoestring .wsp-shell { animation:wsp-down-shoestring .5s cubic-bezier(.22,.7,.38,1) both !important; }
@@ -8051,6 +8262,34 @@ body *::after {
 .trait-chip.trait-flaw { border-color: #c05a5a; color: #d98080; }
 .trait-chip.trait-flaw .trait-pips { color: #d98080; }
 .trait-chip.trait-fogged { opacity: .75; font-style: italic; }
+
+/* Item 10 — full TRAITS block on the player card (touch-friendly, no hover needed) */
+.trait-detail-card .card-sub { font-size: 11px; color: var(--muted, #9a90b0); margin-left: 8px; }
+.trait-detail-list { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.trait-detail-row {
+  padding: 8px 10px; border-radius: 8px;
+  background: var(--raised, #262033); border-left: 3px solid var(--border, #3a3150);
+}
+.trait-detail-row.trait-detail-bridge { border-left-color: var(--gold, #e8c05a); }
+.trait-detail-row.trait-detail-flaw { border-left-color: #c05a5a; }
+.trait-detail-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.trait-detail-name { font-size: 13px; font-weight: 700; color: var(--text, #e8e2f4); }
+.trait-detail-bridge .trait-detail-name { color: var(--gold, #e8c05a); }
+.trait-detail-flaw .trait-detail-name { color: #d98080; }
+.trait-detail-lv { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--accent, #c778f0); }
+.trait-detail-tag { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted, #9a90b0); }
+.trait-detail-desc { font-size: 12px; color: var(--text-1, #cfc7e0); margin-top: 3px; line-height: 1.4; }
+.trait-detail-grow { font-size: 11px; color: var(--muted, #9a90b0); margin-top: 4px; font-style: italic; }
+
+/* Item 10 — compact trait strip on the roster row */
+.trait-mini-row { display: inline-flex; flex-wrap: wrap; gap: 3px; margin-left: 6px; vertical-align: middle; }
+.trait-mini {
+  font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 999px;
+  background: var(--raised, #262033); border: 1px solid var(--border, #3a3150);
+  color: var(--text-1, #cfc7e0); white-space: nowrap;
+}
+.trait-mini-bridge { border-color: var(--gold, #e8c05a); color: var(--gold, #e8c05a); }
+.trait-mini-flaw { border-color: #c05a5a; color: #d98080; }
 .frame-line strong { font-weight: 700; }
 .frame-jobs { display: inline-flex; gap: 3px; align-items: baseline; margin-left: 2px; }
 .frame-job-chip {
@@ -8458,6 +8697,79 @@ body *::after {
 @keyframes wsp-m13-arm-follow { 0% { transform:rotate(-38deg) translate(-.12px,-.12px); } 58% { transform:rotate(52deg) translate(.16px,.02px); } 100% { transform:rotate(74deg) translate(-.06px,.24px); } }
 @keyframes wsp-m13-guide-finish { 0% { transform:rotate(-5deg) translateY(-.06px); } 62% { transform:rotate(16deg) translate(.1px,.08px); } 100% { transform:rotate(9deg) translateY(.12px); } }
 
+/* Boot action: the track owns the rollout; these poses put the shoulders on
+   the move and let the throw finish without snapping back to a pocket stance. */
+#watch-board.watch-qb-mechanics .wp-qb-rollout.wp-qb-drop.wp-qb-rollout-left .wsp-shell,
+#watch-board.watch-qb-mechanics .wp-qb-rollout.wp-qb-hitch.wp-qb-rollout-left .wsp-shell {
+  animation:wsp-a1-boot-left .34s ease-in-out infinite !important;
+}
+#watch-board.watch-qb-mechanics .wp-qb-rollout.wp-qb-drop.wp-qb-rollout-right .wsp-shell,
+#watch-board.watch-qb-mechanics .wp-qb-rollout.wp-qb-hitch.wp-qb-rollout-right .wsp-shell {
+  animation:wsp-a1-boot-right .34s ease-in-out infinite !important;
+}
+#watch-board.watch-qb-mechanics .wp-qb-rollout.wp-qb-load .wsp-shell { animation:wsp-a1-boot-load .22s ease-out both !important; }
+#watch-board.watch-qb-mechanics .wp-qb-rollout.wp-qb-follow .wsp-shell { animation:wsp-a1-boot-follow .42s ease-out both !important; }
+@keyframes wsp-a1-boot-left { 0%,100% { transform:translate(-.12px,.04px) rotate(-7deg); } 50% { transform:translate(.08px,-.1px) rotate(-3deg) scaleY(1.02); } }
+@keyframes wsp-a1-boot-right { 0%,100% { transform:translate(.12px,.04px) rotate(7deg); } 50% { transform:translate(-.08px,-.1px) rotate(3deg) scaleY(1.02); } }
+@keyframes wsp-a1-boot-load { 0% { transform:translateY(.04px) rotate(-4deg); } 100% { transform:translate(-.18px,.08px) rotate(-12deg) scaleY(.94); } }
+@keyframes wsp-a1-boot-follow { 0% { transform:translate(-.18px,.08px) rotate(-12deg); } 62% { transform:translate(.38px,-.08px) rotate(18deg) scaleX(1.05); } 100% { transform:translate(.2px,.06px) rotate(8deg); } }
+
+/* Viewer Act 2 / A2: the release reads differently when the stamped QB track
+   is moving, resetting under pressure, or carrying out play action. */
+#watch-board.watch-qb-mechanics .wp-qb-escape.wp-qb-reset .wsp-shell { animation:wsp-a2-qb-escape .28s steps(2,end) infinite !important; }
+#watch-board.watch-qb-mechanics .wp-qb-throw-sidearm.wp-qb-load .wsp-shell { animation:wsp-a2-sidearm-load .2s ease-out both !important; }
+#watch-board.watch-qb-mechanics .wp-qb-throw-sidearm.wp-qb-follow .wsp-shell { animation:wsp-a2-sidearm-follow .4s ease-out both !important; }
+#watch-board.watch-qb-mechanics .wp-qb-throw-on-run.wp-qb-follow .wsp-shell { animation:wsp-a2-onrun-follow .4s ease-out both !important; }
+#watch-board.watch-qb-mechanics .wp-qb-throw-off-platform.wp-qb-follow .wsp-shell { animation:wsp-a2-offplatform-follow .4s cubic-bezier(.18,.76,.3,1) both !important; }
+#watch-board.watch-qb-mechanics .wp-qb-pa-carry.wp-qb-mesh .wsp-shell { animation:wsp-a2-pa-carry .34s cubic-bezier(.2,.78,.3,1) both !important; }
+#watch-board .wp-qb-throw-sidearm.wp-qb-follow .wsp-throw-arm,
+#watch-board .wp-qb-throw-sidearm.wp-qb-follow .wsp-sd-throw-arm { animation:wsp-a2-sidearm-arm .4s ease-out both !important; }
+@keyframes wsp-a2-qb-escape { 0%,100% { transform:translate(-.22px,.1px) rotate(-9deg) scaleY(.92); } 50% { transform:translate(.24px,.04px) rotate(8deg) scaleY(.95); } }
+@keyframes wsp-a2-sidearm-load { 0% { transform:translateY(.06px) rotate(-2deg); } 100% { transform:translate(-.2px,.16px) rotate(-14deg) scaleY(.9); } }
+@keyframes wsp-a2-sidearm-follow { 0% { transform:translate(-.2px,.16px) rotate(-14deg); } 58% { transform:translate(.46px,.08px) rotate(21deg) scaleX(1.07); } 100% { transform:translate(.24px,.12px) rotate(10deg); } }
+@keyframes wsp-a2-onrun-follow { 0% { transform:translate(-.12px,.08px) rotate(-8deg); } 58% { transform:translate(.52px,-.04px) rotate(16deg) scale(1.06,.96); } 100% { transform:translate(.28px,.08px) rotate(7deg); } }
+@keyframes wsp-a2-offplatform-follow { 0% { transform:translate(-.16px,.14px) rotate(-11deg) scaleY(.91); } 58% { transform:translate(.4px,-.12px) rotate(19deg) skewX(-5deg); } 100% { transform:translate(.18px,.12px) rotate(8deg) scaleY(.94); } }
+@keyframes wsp-a2-pa-carry { 0% { transform:translate(.12px,.02px) rotate(3deg); } 52% { transform:translate(-.42px,.12px) rotate(-12deg) scale(.98,.92); } 100% { transform:translate(-.16px,.04px) rotate(-4deg); } }
+@keyframes wsp-a2-sidearm-arm { 0% { transform:rotate(-28deg) translate(-.1px,-.08px); } 60% { transform:rotate(82deg) translate(.24px,.18px); } 100% { transform:rotate(96deg) translate(.08px,.28px); } }
+
+/* The M11 pass-set families already own the body cadence. These semantic A2
+   labels make kick-slide/anchor/redirect and speed/bull/counter readable to
+   probes and add a small silhouette accent without replacing that cadence. */
+#watch-board .wp-trench-kick-slide .wsp-shadow { transform:scaleX(1.14); }
+#watch-board .wp-trench-anchor .wsp-shadow { transform:scaleX(1.3); }
+#watch-board .wp-trench-redirect .wsp-shadow { transform:skewX(-10deg) scaleX(1.12); }
+#watch-board .wp-trench-rusher-speed .wsp-shell { --wsp-lean:8deg; }
+#watch-board .wp-trench-rusher-bull .wsp-shadow { transform:scaleX(1.22); }
+#watch-board .wp-trench-rusher-counter .wsp-shadow { transform:skewX(9deg) scaleX(1.12); }
+
+/* Viewer Act 2 / A3: secondary weight. The locomotion controller already owns
+   lean and stride; these accents consume its state without moving an actor. */
+#watch-board .wp-a3-weight .wsp-shadow {
+  opacity:var(--a3-shadow-opacity,.72);
+  transform:skewX(var(--a3-shadow-skew,0deg)) scaleX(var(--a3-shadow-scale,1));
+  transform-origin:center;
+}
+#watch-board .wp-a3-sprint .wsp-shoulder { transform:translateY(-.08px) scaleX(1.03); }
+#watch-board .wp-a3-gather:not(.wp-catching):not(.wp-tackling):not(.wp-blocking) .wsp-sd-thigh-f { animation:wsp-a3-gather-front .2s ease-out both !important; }
+#watch-board .wp-a3-gather:not(.wp-catching):not(.wp-tackling):not(.wp-blocking) .wsp-sd-thigh-b { animation:wsp-a3-gather-back .2s ease-out both !important; }
+#watch-board .wp-a3-head-left:not(.wp-catching) .wsp-head { transform:translate(-.12px,-.1px) scale(var(--wsp-head-scale)) rotate(-9deg); }
+#watch-board .wp-a3-head-right:not(.wp-catching) .wsp-head { transform:translate(.12px,-.1px) scale(var(--wsp-head-scale)) rotate(9deg); }
+@keyframes wsp-a3-gather-front { 0% { transform:rotate(-12deg); } 58% { transform:rotate(31deg) translateY(.12px); } 100% { transform:rotate(15deg) translateY(.06px); } }
+@keyframes wsp-a3-gather-back { 0% { transform:rotate(14deg); } 58% { transform:rotate(-28deg) translateY(.1px); } 100% { transform:rotate(-12deg) translateY(.05px); } }
+
+/* Viewer Act 2 / A4: the engine-stamped outside-arm exchange. The carried ball
+   crosses the body in JS; these limbs sell the same short secure-and-transfer. */
+#watch-board .wp-carry-arm-left .wsp-carry-arm-r { opacity:.34; }
+#watch-board .wp-carry-arm-right .wsp-carry-arm-l { opacity:.34; }
+#watch-board .wp-arm-switching:not(.wp-tackling):not(.wp-catching) .wsp-pose-carry { animation:wsp-a4-switch-shell .28s ease-in-out both; }
+#watch-board .wp-arm-switching:not(.wp-tackling):not(.wp-catching) .wsp-carry-arm-l { animation:wsp-a4-switch-left .28s ease-in-out both !important; }
+#watch-board .wp-arm-switching:not(.wp-tackling):not(.wp-catching) .wsp-carry-arm-r { animation:wsp-a4-switch-right .28s ease-in-out both !important; }
+#watch-board .wp-arm-switching:not(.wp-tackling):not(.wp-catching) .wsp-sd-carry-arm { animation:wsp-a4-switch-side .28s ease-in-out both !important; }
+@keyframes wsp-a4-switch-shell { 0%,100% { transform:none; } 50% { transform:rotate(-3deg) translateY(.08px); } }
+@keyframes wsp-a4-switch-left { 0% { transform:rotate(-2deg); } 50% { transform:rotate(15deg) translate(.35px,-.42px); } 100% { transform:rotate(3deg); } }
+@keyframes wsp-a4-switch-right { 0% { transform:rotate(2deg); } 50% { transform:rotate(-15deg) translate(-.35px,-.42px); } 100% { transform:rotate(-3deg); } }
+@keyframes wsp-a4-switch-side { 0%,100% { transform:none; } 50% { transform:rotate(18deg) translate(-.2px,-.34px); } }
+
 /* Milestone 14: pursuit and tackle setup. The existing tackle cue owns the
    hitter, carrier, assist, impact side, style and spot; these poses simply make
    the final six-tenths of a second read like coached open-field tackling. */
@@ -8823,3 +9135,678 @@ body *::after {
 .ts-school { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ts-coach { font-size: 11px; }
 .ts-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; opacity: 0.7; }
+
+/* ── The Creator / Workshop (Creativity Tools UI) ─────────────────────────── */
+.creator-wrapper { max-width: 720px; margin: 0 auto; padding: 8px 4px 40px; min-width: 0; }
+/* The Workshop mounts inside .newgame-wrapper, which is display:flex — a flex
+   item keeps min-width:auto by default and won't shrink below its content, so on
+   a phone the play diagram / composer rows push the whole block past the screen
+   and body{overflow-x:hidden} clips the right edge (the "composer too big on
+   mobile" report). min-width:0 here + on the shrinkable children lets it fit. */
+.creator-hub-head { text-align: center; margin: 8px 0 22px; }
+.creator-title { font-size: 30px; font-weight: 800; letter-spacing: 0.5px; }
+.creator-sub { font-size: 13px; opacity: 0.7; margin-top: 6px; }
+.creator-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+@media (max-width: 560px) { .creator-grid { grid-template-columns: 1fr; } }
+.creator-card { display: flex; align-items: center; gap: 12px; text-align: left; padding: 16px; border-radius: 12px; cursor: pointer; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10); color: inherit; transition: background 0.12s, border-color 0.12s, transform 0.06s; }
+.creator-card:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.22); }
+.creator-card:active { transform: translateY(1px); }
+.creator-card-icon { font-size: 26px; flex: 0 0 auto; }
+.creator-card-body { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-width: 0; }
+.creator-card-name { font-size: 15px; font-weight: 700; }
+.creator-card-desc { font-size: 11.5px; opacity: 0.68; line-height: 1.3; }
+.creator-card-count { font-size: 11px; font-weight: 700; opacity: 0.55; white-space: nowrap; flex: 0 0 auto; }
+.creator-back { width: 100%; margin-top: 4px; }
+
+/* ── Playbook Builder ──────────────────────────────────────────────────────── */
+.pb-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.pb-row { display: flex; gap: 6px; align-items: stretch; }
+.pb-row-open { flex: 1; display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10); color: inherit; cursor: pointer; }
+.pb-row-open:hover { background: rgba(255,255,255,0.08); }
+.pb-row-name { font-weight: 700; }
+.pb-row-meta { font-size: 11px; opacity: 0.55; }
+.pb-actions { display: flex; gap: 8px; margin-top: 10px; }
+.pb-actions .btn-mm { flex: 1; }
+.pb-name { width: 100%; margin-bottom: 8px; font-size: 15px; font-weight: 700; }
+.pb-msg { font-size: 12px; padding: 6px 10px; border-radius: 8px; margin-bottom: 10px; }
+.pb-msg.ok { background: rgba(60,180,90,0.12); color: #8fdca0; }
+.pb-msg.warn { background: rgba(220,170,60,0.12); color: #e6c877; }
+.pb-msg.err { background: rgba(220,80,80,0.14); color: #eb9797; }
+.pb-forms { display: flex; flex-direction: column; gap: 6px; }
+.pb-form { border-radius: 9px; border: 1px solid rgba(255,255,255,0.08); padding: 8px 10px; background: rgba(255,255,255,0.02); }
+.pb-form.on { border-color: rgba(120,170,255,0.35); background: rgba(120,170,255,0.06); }
+.pb-form-head { display: flex; align-items: center; gap: 10px; }
+.pb-form-toggle { flex: 1; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.pb-form-name { font-weight: 600; }
+.pb-weight { width: 48px; text-align: center; padding: 4px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.2); color: inherit; }
+.pb-expand { padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: inherit; cursor: pointer; font-size: 11px; white-space: nowrap; }
+.pb-concepts { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); }
+@media (max-width: 560px) { .pb-concepts { grid-template-columns: 1fr; } }
+.pb-concept { display: flex; align-items: center; gap: 6px; font-size: 12px; opacity: 0.72; cursor: pointer; }
+.pb-concept.on { opacity: 1; font-weight: 600; }
+
+/* ── Play Composer ─────────────────────────────────────────────────────────── */
+.play-parts { margin-top: 4px; }
+.play-preview { background: rgba(120,170,255,0.06); border: 1px solid rgba(120,170,255,0.25); border-radius: 9px; padding: 10px 12px; margin-bottom: 10px; }
+.play-preview-head { font-size: 12px; font-weight: 700; text-transform: capitalize; margin-bottom: 4px; }
+.play-cov-row { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+.play-cov-lbl { font-weight: 700; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.4px; padding: 1px 6px; border-radius: 5px; margin-right: 6px; }
+.play-cov-lbl.good { background: rgba(60,180,90,0.16); color: #8fdca0; }
+.play-cov-lbl.bad { background: rgba(220,120,60,0.16); color: #e6b077; }
+.play-name-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.play-name-row .form-input { flex: 1; }
+
+/* ── Team Editor ───────────────────────────────────────────────────────────── */
+.te-preview { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 18px; border-radius: 12px; margin-bottom: 14px; background: linear-gradient(135deg, var(--c1) 0%, var(--c1) 60%, var(--c2) 60%, var(--c2) 100%); }
+.te-logo { font-size: 40px; }
+.te-name { font-size: 20px; font-weight: 800; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+.te-nick { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.9); text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
+.te-form { display: flex; flex-direction: column; gap: 10px; }
+.te-field { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.te-field > span { font-size: 11px; font-weight: 700; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.4px; }
+.te-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.te-color input[type=color] { width: 100%; height: 34px; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; background: transparent; cursor: pointer; }
+.te-logos { display: flex; flex-wrap: wrap; gap: 4px; }
+.te-logo-pick { font-size: 18px; width: 32px; height: 32px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); cursor: pointer; }
+.te-logo-pick.on { border-color: rgba(120,170,255,0.6); background: rgba(120,170,255,0.15); }
+
+/* ── Film Room (saved replay clips) ────────────────────────────────────────── */
+.rp-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.rp-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10); }
+.rp-play { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(120,170,255,0.4); background: rgba(120,170,255,0.15); color: inherit; cursor: pointer; font-size: 13px; }
+.rp-play:hover { background: rgba(120,170,255,0.28); }
+.rp-body { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rp-name { font-weight: 700; }
+.rp-sub { font-size: 11px; opacity: 0.6; display: flex; gap: 8px; }
+.rp-when { opacity: 0.7; }
+
+/* ── Division Editor ───────────────────────────────────────────────────────── */
+.dv-confs { display: flex; flex-direction: column; gap: 6px; }
+.dv-conf { border-radius: 9px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02); overflow: hidden; }
+.dv-conf.open { border-color: rgba(120,170,255,0.3); }
+.dv-conf-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
+.dv-conf-name { flex: 1; font-weight: 700; background: transparent; border: 1px solid transparent; }
+.dv-conf-name:focus { border-color: rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); }
+.dv-conf-tier { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; opacity: 0.6; text-transform: uppercase; }
+.dv-conf-toggle { padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: inherit; cursor: pointer; font-size: 11px; white-space: nowrap; }
+.dv-teams { display: flex; flex-direction: column; }
+.dv-team { border-top: 1px solid rgba(255,255,255,0.06); padding: 6px 10px 6px 18px; }
+.dv-team.open { background: rgba(120,170,255,0.05); }
+.dv-team-head { display: flex; align-items: center; gap: 8px; }
+.dv-team-name { flex: 1; text-align: left; background: none; border: none; color: inherit; cursor: pointer; font-size: 13px; }
+.dv-team-name:hover { text-decoration: underline; }
+.dv-card { margin: 8px 0 4px; padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.2); border-left: 4px solid var(--c1); display: flex; flex-direction: column; gap: 8px; }
+.dv-card-logos { display: flex; flex-wrap: wrap; gap: 4px; }
+.dv-reroll { align-self: flex-start; font-size: 12px; }
+
+/* ── Season Mode ───────────────────────────────────────────────────────────── */
+.sm-field { margin-bottom: 14px; }
+.sm-field > span { display: block; font-size: 11px; font-weight: 700; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
+.sm-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.sm-pick { padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); color: inherit; cursor: pointer; font-weight: 600; }
+.sm-pick.on { border-color: rgba(120,170,255,0.6); background: rgba(120,170,255,0.18); }
+.sm-resume { width: 100%; margin-bottom: 16px; }
+.sm-you { text-align: center; font-size: 16px; margin-bottom: 12px; }
+.sm-you-logo { font-size: 20px; }
+.sm-progress { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.08); overflow: hidden; margin-bottom: 4px; }
+.sm-progress-bar { height: 100%; background: linear-gradient(90deg, #4a80d8, #6ba3ff); transition: width 0.3s; }
+.sm-progress-lbl { text-align: center; font-size: 11px; opacity: 0.6; margin-bottom: 14px; }
+.sm-head { font-size: 12px; font-weight: 700; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.4px; margin: 12px 0 6px; }
+.sm-standings { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sm-standings td { padding: 5px 8px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.sm-standings td:first-child { opacity: 0.5; width: 24px; }
+.sm-standings td:nth-child(3) { text-align: right; font-weight: 700; }
+.sm-standings tr.me { background: rgba(120,170,255,0.12); font-weight: 700; }
+.sm-champ { text-align: center; font-size: 20px; padding: 16px; margin-bottom: 8px; }
+
+/* ── Creator polish (2026-08-14) — .creator-screen scope beats the wrapper's squared-button rule ── */
+.creator-screen .creator-card { border-radius: 14px; }
+.creator-screen .pb-row-open, .creator-screen .rp-row, .creator-screen .pb-form,
+.creator-screen .dv-conf, .creator-screen .play-preview, .creator-screen .pb-msg,
+.creator-screen .te-preview, .creator-screen .dv-card, .creator-screen .sm-you { border-radius: 12px; }
+.creator-screen .btn-mm, .creator-screen .form-input, .creator-screen .pb-name,
+.creator-screen .pb-expand, .creator-screen .dv-conf-toggle, .creator-screen .sm-pick,
+.creator-screen .pb-weight, .creator-screen .btn-mm-del, .creator-screen input[type=color],
+.creator-screen select { border-radius: 8px; }
+.creator-screen .te-logo-pick { border-radius: 7px; }
+.creator-screen .rp-play { border-radius: 50%; }
+.creator-screen .btn-mm { padding: 12px 16px; font-weight: 700; }
+.creator-screen .creator-card:hover { transform: translateY(-1px); }
+.creator-screen .creator-title { line-height: 1.1; }
+.creator-screen .pb-msg { border-radius: 8px; }
+
+/* ── Creator RE-SKIN to the pixel-art theme (2026-08-14) — match the game ──────── */
+.creator-screen .creator-card, .creator-screen .pb-row-open, .creator-screen .rp-row,
+.creator-screen .pb-form, .creator-screen .dv-conf, .creator-screen .play-preview,
+.creator-screen .dv-card, .creator-screen .sm-you, .creator-screen .sm-standings,
+.creator-screen .pb-msg {
+  background: var(--px-panel-2); border: 2px solid var(--px-line-dim);
+  box-shadow: 3px 3px 0 var(--px-shadow); border-radius: 0 !important; color: var(--px-paper);
+}
+.creator-screen .creator-card:hover, .creator-screen .pb-row-open:hover { border-color: var(--px-cyan); background: var(--px-panel-3); transform: none; }
+.creator-screen .creator-card:active { transform: translate(1px,1px); box-shadow: 2px 2px 0 var(--px-shadow); }
+.creator-screen .pb-form.on, .creator-screen .dv-conf.open, .creator-screen .play-preview { border-color: var(--px-cyan); }
+.creator-screen .creator-title { color: var(--px-paper); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 900; }
+.creator-screen .creator-sub, .creator-screen .creator-card-desc, .creator-screen .pb-row-meta,
+.creator-screen .rp-sub, .creator-screen .muted, .creator-screen .sm-progress-lbl,
+.creator-screen .sm-head, .creator-screen .creator-card-count { color: var(--px-muted); }
+.creator-screen .creator-card-name, .creator-screen .pb-row-name, .creator-screen .rp-name,
+.creator-screen .pb-form-name, .creator-screen .creator-card-icon { color: var(--px-paper); }
+.creator-screen .sm-pick, .creator-screen .pb-expand, .creator-screen .dv-conf-toggle,
+.creator-screen .pb-weight { background: var(--px-ink); border: 2px solid var(--px-line-dim); box-shadow: 2px 2px 0 var(--px-shadow); border-radius: 0 !important; color: var(--px-paper); font-weight: 800; }
+.creator-screen .sm-pick.on, .creator-screen .te-logo-pick.on { border-color: var(--px-cyan) !important; background: var(--px-panel-3) !important; color: var(--px-paper); }
+.creator-screen .pb-concept.on { color: var(--px-cyan); }
+.creator-screen .rp-play { border: 2px solid var(--px-cyan); background: var(--px-panel-3); box-shadow: 2px 2px 0 var(--px-shadow); border-radius: 0 !important; color: var(--px-paper); }
+.creator-screen .sm-progress { background: var(--px-ink); border: 2px solid var(--px-line-dim); border-radius: 0; height: 12px; }
+.creator-screen .sm-progress-bar { background: var(--px-cyan); }
+.creator-screen .sm-champ { color: var(--px-yellow); font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; }
+.creator-screen .sm-standings tr.me { background: var(--px-panel-3); box-shadow: none; }
+.creator-screen .sm-standings { box-shadow: none; border: none; }
+.creator-screen .pb-msg.ok { color: var(--px-cyan); }
+.creator-screen .pb-msg.warn { color: var(--px-yellow); }
+.creator-screen .te-logo-pick { border: 2px solid var(--px-line-dim); background: var(--px-ink); border-radius: 0 !important; box-shadow: 1px 1px 0 var(--px-shadow); }
+
+/* ── Star selector + crest in editors (2026-08-14) ─────────────────────────── */
+/* Stars render in REVERSE value order (max..1) so row-reverse displays them
+   1..max left-to-right AND the :hover ~ .star sibling rule fills LEFTWARD (the
+   correct direction for a rating). Without this the hover filled to the right —
+   the "wonky" behavior. On container hover every star dims first, then the
+   hovered range re-fills, giving a clean 1..N preview independent of the saved
+   value. */
+.star-sel { display: inline-flex; flex-direction: row-reverse; justify-content: flex-end; gap: 2px; align-items: center; }
+.star-sel .star { font-size: 22px; line-height: 1; background: none; border: none; box-shadow: none; cursor: pointer; color: var(--px-line-dim); padding: 0 1px; }
+.creator-screen .star-sel .star { background: none !important; border: none !important; box-shadow: none !important; }
+.star-sel .star.on { color: var(--px-yellow); }
+.star-sel:hover .star { color: var(--px-line-dim); }
+.star-sel .star:hover, .star-sel .star:hover ~ .star { color: var(--px-yellow); }
+.te-crest { display: inline-flex; margin-bottom: 4px; }
+.te-crest .crest, .te-row-crest .crest { display: block; }
+.te-row-crest { display: inline-flex; vertical-align: middle; margin-right: 6px; }
+.te-crest-note { font-size: 11px; margin-top: 6px; }
+.sm-you-logo .crest { display: inline-block; vertical-align: middle; }
+.dv-team-name .te-row-crest { display: inline-flex; vertical-align: middle; }
+.te-reroll { margin-top: 6px; }
+.te-city-row { display: inline-flex; align-items: center; gap: 6px; }
+.te-city-name { font-weight: 600; }
+.te-recity { background: none !important; border: none !important; box-shadow: none !important; cursor: pointer; font-size: 14px; padding: 0 2px; opacity: 0.75; }
+.te-recity:hover { opacity: 1; }
+.dv-quick-reroll { background: none !important; border: none !important; box-shadow: none !important; cursor: pointer; font-size: 15px; padding: 0 4px; opacity: 0.7; }
+.dv-quick-reroll:hover { opacity: 1; }
+.dv-card-crest { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.dv-card-shield .crest { display: block; }
+
+/* Season Mode — league customizer + team picker */
+.dv-pick-banner { margin: 6px 0 10px; padding: 8px 10px; font-size: 13px; background: var(--px-panel-2); border: 1px solid var(--px-line-dim); display: flex; align-items: center; gap: 8px; }
+.dv-pick-banner.has-pick { border-color: var(--px-yellow); }
+.dv-pick-banner .crest { display: block; }
+.dv-playas { font-size: 11px; padding: 2px 8px; cursor: pointer; background: var(--px-panel-2); border: 1px solid var(--px-line-dim); color: inherit; white-space: nowrap; }
+.dv-playas:hover { border-color: var(--px-yellow); }
+.dv-playas.picked { background: var(--px-yellow); color: #05070c; border-color: var(--px-yellow); font-weight: 700; }
+.dv-card-playas { margin-top: 8px; width: 100%; }
+.dv-team-picked { outline: 2px solid var(--px-yellow); outline-offset: -2px; }
+.btn-mm-disabled { opacity: 0.45; }
+
+/* Season Mode — champion takeover */
+.season-complete-card { text-align: center; max-width: 380px; }
+.season-complete-card .sc-trophy { font-size: 44px; line-height: 1; margin-bottom: 4px; }
+.season-complete-card .sc-kicker { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; opacity: 0.75; margin-bottom: 10px; }
+.season-complete-card .sc-champ { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px; }
+.season-complete-card .sc-champ-name { font-size: 20px; font-weight: 800; }
+.season-complete-card .sc-champ .crest { display: block; }
+.season-complete-card .sc-you { font-size: 13px; margin: 2px 0 14px; }
+.season-complete-card .sc-you-won { font-weight: 700; }
+.season-complete-card .sc-actions { display: flex; flex-direction: column; gap: 8px; }
+/* ── Viewer Act B: broadcast analysis + replay lab ───────────────────────── */
+.replay-screen { min-height:100vh; padding:18px; background:radial-gradient(circle at 50% -20%,#1f3656 0,#09111d 58%,#050910 100%); color:var(--px-white,#f5f7fa); }
+.replay-screen-head { max-width:1280px; margin:0 auto 12px; display:flex; align-items:center; gap:16px; }
+.replay-screen-head h1 { margin:2px 0 0; font-size:clamp(18px,2vw,28px); line-height:1.08; }
+.replay-screen-kicker { color:var(--px-yellow,#ffd54a); font-size:9px; font-weight:900; letter-spacing:.18em; }
+.replay-watch-root { max-width:1280px; margin:0 auto; }
+.watch-ink { position:absolute; inset:4px; width:calc(100% - 8px); height:calc(100% - 8px); z-index:18; pointer-events:none; touch-action:none; }
+.watch-ink.drawing { pointer-events:auto; cursor:crosshair; }
+.watch-replay-tools { position:absolute; left:50%; bottom:8px; z-index:25; display:none; align-items:center; gap:5px; width:min(96%,980px); padding:6px; transform:translateX(-50%); background:rgba(5,10,18,.91); border:1px solid rgba(255,255,255,.2); border-radius:8px; box-shadow:0 5px 20px rgba(0,0,0,.45); }
+.watch-replay-tools.on { display:flex; }
+.watch-replay-tools .bc-btn { min-height:30px; border-radius:5px; }
+.watch-replay-tools .bc-btn.active { color:#101722; background:var(--px-yellow,#ffd54a); border-color:var(--px-yellow,#ffd54a); }
+.replay-scrub { min-width:100px; flex:1 1 240px; accent-color:var(--px-yellow,#ffd54a); }
+.watch-analysis { position:absolute; z-index:16; top:36px; left:12px; width:min(360px,42%); display:flex; flex-direction:column; gap:2px; padding:8px 10px; color:#f8fbff; background:linear-gradient(90deg,rgba(4,9,16,.92),rgba(4,9,16,.66)); border-left:4px solid var(--px-yellow,#ffd54a); pointer-events:none; text-shadow:0 1px 2px #000; }
+.watch-analysis:empty { display:none; }
+.watch-analysis span { color:var(--px-yellow,#ffd54a); font-size:7px; font-weight:900; letter-spacing:.16em; }
+.watch-analysis b { font-size:11px; line-height:1.15; }
+.watch-analysis small { color:#cad5e4; font-size:8px; line-height:1.25; }
+.watch-player-pop { position:absolute; right:12px; top:46px; z-index:30; display:none; min-width:190px; padding:10px 34px 10px 11px; color:#f5f7fa; background:rgba(5,10,18,.96); border:1px solid rgba(255,213,74,.66); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.5); }
+.watch-player-pop.on { display:flex; flex-direction:column; }
+.watch-player-pop > button { position:absolute; right:5px; top:4px; width:24px; height:24px; padding:0; color:#fff; background:transparent; border:0; }
+.watch-player-pop span { color:var(--px-yellow,#ffd54a); font-size:8px; font-weight:900; letter-spacing:.1em; text-transform:uppercase; }
+.watch-player-pop b { margin-top:2px; font-size:14px; }
+.watch-player-pop small { margin-top:2px; color:#b8c4d3; }
+.replay-watch-root .replay-clip-summary { display:none; }
+.replay-watch-root .watch-drives { display:none; }
+.replay-watch-root .watch-board-wrap { min-height:min(72vh,760px); }
+.replay-watch-root #watch-board { height:min(72vh,760px); }
+.result-moment-replay { appearance:none; width:100%; color:inherit; text-align:left; font:inherit; cursor:pointer; border-left-width:3px; border-radius:6px; }
+.result-moment-replay:hover,.result-moment-replay:focus-visible { outline:1px solid rgba(255,213,74,.65); background:rgba(255,213,74,.08); }
+.moment-play { margin-left:auto; color:var(--px-yellow,#ffd54a); font-size:10px; }
+.box-reel-label { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.box-reel-label .box-reel-play { padding:4px 8px; color:var(--px-yellow,#ffd54a); background:rgba(255,213,74,.08); border:1px solid rgba(255,213,74,.42); border-radius:6px; font:inherit; cursor:pointer; }
+.watch-export-ink { pointer-events:none; }
+.replay-watch-root .wp-actor { cursor:pointer; pointer-events:all; }
+
+@media (max-width:700px) {
+  .replay-screen { padding:8px; }
+  .replay-screen-head { align-items:flex-start; gap:8px; }
+  .replay-screen-head h1 { font-size:15px; }
+  .watch-analysis { top:28px; left:7px; width:58%; padding:5px 7px; }
+  .watch-analysis b { font-size:8px; }
+  .watch-analysis small { display:none; }
+  .watch-replay-tools { bottom:4px; gap:3px; padding:4px; flex-wrap:wrap; }
+  .watch-replay-tools .bc-btn { min-height:26px; padding:3px 6px; font-size:8px; }
+  .replay-scrub { order:-1; flex-basis:100%; width:100%; height:14px; }
+  .replay-watch-root .watch-board-wrap { min-height:0; height:auto; padding-bottom:72px; }
+  .replay-watch-root #watch-board { display:block; min-height:0; height:auto; aspect-ratio:100 / 56; }
+  .replay-watch-root .watch-ink { bottom:auto; height:calc(100% - 80px); }
+  .watch-player-pop { top:36px; right:7px; min-width:150px; }
+}
+
+/* ── Viewer Act C: world-space camera projections ────────────────────────── */
+#watch-board [data-watch-camera-layer="coach"] { display:none; }
+#watch-board.watch-camera-coach [data-watch-camera-layer="side"] { display:none; }
+#watch-board.watch-camera-coach [data-watch-camera-layer="coach"] { display:inline; }
+#watch-board [data-watch-camera-layer="endzone"] { display:none; }
+#watch-board.watch-camera-endzone [data-watch-camera-layer="side"],
+#watch-board.watch-camera-endzone [data-watch-camera-layer="coach"] { display:none; }
+#watch-board.watch-camera-endzone [data-watch-camera-layer="endzone"] { display:inline; }
+.wf-endzone-stadium { fill:#07101c; }
+.wf-endzone-camera .wf-turf { fill:#1d653a; }
+.wf-endzone-camera .wf-mow { fill:rgba(255,255,255,.035); }
+.wf-endzone-camera .wf-yard { stroke:rgba(255,255,255,.6); stroke-width:.18; }
+.wf-endzone-camera .wf-goal,
+.wf-endzone-camera .wf-side { stroke:#fff; stroke-width:.42; }
+.wf-endzone-camera .wf-hash { stroke:rgba(255,255,255,.74); stroke-width:.18; }
+.wf-num-endzone { fill:rgba(255,255,255,.72); font-size:2px; text-anchor:middle; dominant-baseline:middle; }
+.wf-endzone-direction path { fill:none; stroke:rgba(255,255,255,.68); stroke-width:.45; stroke-linecap:square; stroke-linejoin:miter; }
+#watch-board.watch-camera-endzone .wf-first,
+#watch-board.watch-camera-endzone .wf-los { stroke-width:.5; }
+#watch-board.watch-camera-endzone .wp-actor .wsp-tag { opacity:.9; }
+#watch-board.watch-camera-endzone .wp-actor .wsp-shadow { transform:scaleX(.82); opacity:calc(.52 - var(--a3-shadow-opacity,0) * .18); }
+#watch-board.watch-camera-endzone #wp-ball .wab-lift { transform:scale(calc(.86 + var(--watch-ball-z,0) * .24)); transform-origin:center; }
+#watch-board.watch-camera-endzone #wp-ball .wab-shadow { opacity:calc(.72 - var(--watch-ball-z,0) * .46); transform:scale(calc(1 - var(--watch-ball-z,0) * .34)); transform-origin:center; }
+.wf-coach-stadium { fill:#07101c; }
+.wf-coach-camera .wf-turf { fill:#1e6a3d; }
+.wf-coach-camera .wf-mow { fill:rgba(255,255,255,.035); }
+.wf-coach-camera .wf-yard { stroke:rgba(255,255,255,.62); stroke-width:.18; }
+.wf-coach-camera .wf-goal { stroke:#fff; stroke-width:.42; }
+.wf-coach-camera .wf-side { stroke:#fff; stroke-width:.42; }
+.wf-coach-camera .wf-hash { stroke:rgba(255,255,255,.75); stroke-width:.2; }
+.wf-coach-camera .wf-num-coach { fill:rgba(255,255,255,.74); font-size:2.6px; text-anchor:middle; dominant-baseline:middle; }
+.wf-coach-endzone-label { fill:rgba(255,255,255,.9); font-family:var(--font-display); font-size:3.2px; font-weight:900; letter-spacing:.11em; text-anchor:middle; }
+.wf-coach-direction path { fill:none; stroke:rgba(255,255,255,.65); stroke-width:.45; stroke-linecap:square; stroke-linejoin:miter; }
+#watch-board.watch-camera-coach .wf-first { stroke-width:.5; }
+#watch-board.watch-camera-coach .wf-los { stroke-width:.5; }
+#watch-board.watch-camera-coach .wp-actor .wsp-tag { opacity:.9; }
+#watch-board.watch-camera-coach .wp-actor .wsp-shadow { transform:scaleX(.82); opacity:calc(.52 - var(--a3-shadow-opacity,0) * .18); }
+#watch-board.watch-camera-coach #wp-ball .wab-lift { transform:scale(calc(.82 + var(--watch-ball-z,0) * .22)); transform-origin:center; }
+#watch-board.watch-camera-coach #wp-ball .wab-shadow { opacity:calc(.72 - var(--watch-ball-z,0) * .46); transform:scale(calc(1 - var(--watch-ball-z,0) * .34)); transform-origin:center; }
+#watch-board.watch-camera-reverse .wf-drive-direction { transform-box:fill-box; transform-origin:center; }
+
+/* Viewer Act E: replay direction, label hierarchy, and projection-height grounding. */
+#replay-director.active {
+  color:#101722 !important;
+  background:var(--px-yellow,#ffd54a) !important;
+  border-color:var(--px-paper,#f6f0dc) !important;
+  border-bottom-color:var(--px-yellow,#ffd54a) !important;
+}
+#watch-board.watch-director-cut { animation:watch-director-cut .24s ease-out; }
+@keyframes watch-director-cut {
+  0% { filter:brightness(.76) saturate(.82); opacity:.88; }
+  100% { filter:none; opacity:1; }
+}
+#watch-board .wp-actor .wsp-tag { transition:opacity .14s ease; }
+#watch-board .wp-actor.wp-label-muted .wsp-tag { opacity:0 !important; }
+#watch-board .wp-actor.wp-label-featured .wsp-tag {
+  paint-order:stroke fill;
+  stroke:rgba(3,8,14,.86);
+  stroke-width:.7px;
+  stroke-linejoin:round;
+}
+#watch-board.watch-camera-endzone .wp-actor .wsp-tag { font-size:2.05px; }
+.wp-ball-ground-shadow {
+  display:none;
+  fill:#020407;
+  pointer-events:none;
+  filter:blur(.12px);
+}
+#watch-board.watch-camera-coach .wp-ball-ground-shadow.on,
+#watch-board.watch-camera-endzone .wp-ball-ground-shadow.on { display:inline; }
+#watch-board.watch-camera-coach #wp-ball .wab-shadow,
+#watch-board.watch-camera-endzone #wp-ball .wab-shadow { visibility:hidden !important; }
+@media (prefers-reduced-motion:reduce) {
+  #watch-board.watch-director-cut { animation:none; }
+  #watch-board .wp-actor .wsp-tag { transition:none; }
+}
+
+/* ── Route art & the visual Play Composer (EA-style) ───────────────────────
+   The route-art primitive (js/ui/views/routeart.js) draws every play. These
+   styles theme the standalone glyphs, the route-picker tiles, the live play
+   card, and the play-list thumbnails. */
+
+/* standalone route glyph */
+.route-glyph { display:block; }
+.route-glyph-los { stroke: var(--border-str); stroke-width:1; stroke-dasharray:2 3; }
+.route-glyph-path { fill:none; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
+.route-glyph-hat { fill: var(--text-1); }
+
+/* the route picker — a grid of tappable tiles, each showing its route */
+.route-tiles { display:grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap:8px; margin-top:4px; }
+.route-tile { position:relative; display:flex; flex-direction:column; align-items:center; gap:2px;
+  padding:8px 4px 6px; border:1px solid var(--border); border-radius:10px; background: var(--bg-input);
+  cursor:pointer; transition: border-color .12s, background .12s, transform .08s; }
+.route-tile:hover { background: var(--bg-hover); border-color: var(--border-str); }
+.route-tile:active { transform: scale(.97); }
+.route-tile input { position:absolute; opacity:0; width:0; height:0; pointer-events:none; }
+.route-tile .route-glyph { opacity:.9; }
+.route-tile-name { font-size:10px; font-weight:700; letter-spacing:.2px; color: var(--text-1); text-align:center; line-height:1.1; }
+.route-tile.on { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 12%, var(--bg-input)); box-shadow: 0 0 0 1px var(--gold) inset; }
+.route-tile.on .route-tile-name { color: var(--text-0); }
+.route-tile.on .route-glyph { opacity:1; }
+.route-tile.is-full { opacity:.4; cursor:not-allowed; }
+.route-tile.is-full:hover { background: var(--bg-input); border-color: var(--border); }
+
+/* the live play card — routes drawn on turf */
+.play-canvas { margin:10px 0 12px; }
+.play-card-svg { display:block; border-radius:12px; border:1px solid var(--border-str);
+  box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+.play-card-turf { fill:#15321f; }
+.play-card-yard { stroke: rgba(255,255,255,.09); stroke-width:1; }
+.play-card-hash { stroke: rgba(255,255,255,.06); stroke-width:1; stroke-dasharray:2 6; }
+.play-card-los  { stroke: rgba(255,255,255,.34); stroke-width:1.5; stroke-dasharray:4 3; }
+.play-card-ol { fill: rgba(255,255,255,.30); }
+.play-card-qb { fill: var(--gold); }
+.play-card-route { fill:none; stroke-width:3; stroke-linecap:round; stroke-linejoin:round;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.5)); }
+.play-card-route-fill { stroke: rgba(255,255,255,.34); stroke-width:2; stroke-dasharray:3 3; filter:none; }
+.play-card-block { fill: #e8ecf1; }
+.play-card-block-stem { stroke: #e8ecf1; stroke-width: 2; stroke-linecap: round; }
+/* Defensive call cards (Defensive Playbook v2 — zones, man lines, rush) */
+.dcz { stroke-dasharray: 3 3; }
+.dcz-deep { fill: rgba(77,210,255,.12); stroke: rgba(77,210,255,.45); }
+.dcz-under { fill: rgba(124,252,158,.10); stroke: rgba(124,252,158,.4); }
+.dcz-lbl { font-size: 7.5px; fill: rgba(160,220,255,.85); font-family: inherit; letter-spacing: .04em; }
+.dc-man { stroke: #ffd34d; stroke-width: 1.5; stroke-dasharray: 4 3; opacity: .85; }
+.dc-ghost { fill: none; stroke: #ffd34d; opacity: .75; }
+.dc-ghost-ol { fill: rgba(255,255,255,.28); }
+.dc-rush { stroke: #ff7a7a; stroke-width: 2; }
+.dc-rush-head { fill: #ff7a7a; }
+.dc-dog { stroke: #ffd34d; stroke-width: 2; }
+.dc-dog-head { fill: #ffd34d; }
+.dc-drop { fill: none; stroke: #4dd2ff; stroke-width: 1.8; stroke-dasharray: 4 3; }
+.dc-drop-dot { fill: #4dd2ff; }
+.dc-box-lbl { font-size: 8px; fill: #ff9d5c; font-weight: 700; }
+/* Defensive Playbook v2 — shelves, call tiles, card editor */
+.def-shelf { margin: 10px 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; }
+.def-shelf-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.def-shelf-name { font-weight: 700; color: var(--text-0); font-size: 13px; }
+.def-shelf-desc { font-size: 11px; }
+.def-shelf-cards { display: flex; gap: 10px; flex-wrap: wrap; align-items: stretch; }
+.def-call-tile { width: 224px; display: flex; flex-direction: column; gap: 4px; }
+.def-call-tile-row { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.def-call-name { font-weight: 700; font-size: 12px; color: var(--text-0); }
+.def-call-sub { font-size: 10px; }
+.def-shelf-add { min-width: 120px; min-height: 90px; border: 1px dashed var(--border); border-radius: 8px; background: none; color: var(--text-1); cursor: pointer; font-size: 12px; }
+.def-shelf-add:hover { border-color: var(--text-1); color: var(--text-0); }
+.def-card-preview { max-width: 300px; margin: 8px 0; }
+.def-cov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.def-cov-card { border: 1px solid var(--border); border-radius: 8px; background: none; padding: 5px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; }
+.def-cov-card.on { border-color: var(--gold, #ffd34d); box-shadow: 0 0 0 1px var(--gold, #ffd34d); }
+.def-cov-name { font-size: 11px; font-weight: 700; color: var(--text-0); }
+.def-answer-row { display: flex; align-items: center; gap: 10px; margin: 5px 0; flex-wrap: wrap; }
+.def-answer-lbl { min-width: 150px; font-size: 12px; color: var(--text-1); }
+.def-identity .pb-forms { margin-bottom: 6px; }
+.play-card-rec { fill:#fff; stroke:#15321f; stroke-width:1.2; }
+.play-canvas-empty { border:1px dashed var(--border-str); border-radius:12px; padding:34px 12px;
+  text-align:center; font-size:12px; }
+.play-form-pick { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.play-form-pick > span { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; opacity:.7; }
+.play-form-pick select { flex:1; }
+
+/* Team Editor — star players */
+.te-star-section { margin-top:14px; }
+.te-star-row { display:flex; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap; }
+.te-star-pos, .te-star-cy { flex:0 0 auto; width:64px; padding:6px; }
+.te-star-name { flex:1 1 120px; min-width:100px; padding:6px 8px; }
+.te-star-cal { display:inline-flex; gap:4px; }
+.te-cal { padding:5px 9px; border-radius:7px; border:1px solid var(--border); background: var(--bg-input);
+  color: var(--text-1); cursor:pointer; font-size:11px; font-weight:700; }
+.te-cal:hover { background: var(--bg-hover); border-color: var(--border-str); }
+.te-cal.on { border-color: var(--gold); color: var(--text-0); background: color-mix(in srgb, var(--gold) 14%, var(--bg-input)); }
+.te-star-add { margin-top:2px; }
+.creator-screen .te-cal { background: var(--px-ink); border: 2px solid var(--px-line-dim); box-shadow: 1px 1px 0 var(--px-shadow); border-radius: 0 !important; color: var(--px-paper); }
+.creator-screen .te-cal:hover { border-color: var(--px-cyan); background: var(--px-panel-3); }
+.creator-screen .te-cal.on { border-color: var(--px-yellow) !important; background: var(--px-panel-3) !important; }
+
+/* the built play — one row per route (who / flip / repeat / remove) */
+.assign-list { display:flex; flex-direction:column; gap:6px; margin:6px 0 12px; }
+.assign-row { display:flex; align-items:center; gap:8px; padding:5px 8px; border:1px solid var(--border);
+  border-radius:10px; background: var(--bg-input); }
+.assign-glyph { flex:0 0 auto; display:block; width:30px; }
+.assign-glyph .route-glyph { width:30px; height:auto; }
+.assign-name { flex:0 0 74px; font-size:12px; font-weight:700; }
+.assign-who { flex:1 1 auto; min-width:0; padding:5px 6px; }
+.assign-route { flex:1 1 auto; min-width:0; padding:5px 6px; }
+.assign-pos { font-size:9px; font-weight:700; opacity:.5; }
+.assign-glyph-block { display:inline-flex; align-items:center; justify-content:center; width:30px; height:36px; font-size:16px; opacity:.7; }
+.assign-lane { flex:1 1 auto; font-size:11px; opacity:.6; }
+.assign-btn { flex:0 0 auto; width:30px; height:30px; border-radius:8px; border:1px solid var(--border);
+  background: var(--bg-raised); color: var(--text-1); cursor:pointer; font-size:13px; line-height:1; }
+.assign-btn:hover { background: var(--bg-hover); color: var(--text-0); border-color: var(--border-str); }
+.assign-btn.on { border-color: var(--gold); color: var(--text-0); background: color-mix(in srgb, var(--gold) 16%, var(--bg-raised)); }
+.assign-btn:disabled { opacity:.35; cursor:not-allowed; }
+.assign-del:hover { border-color:#d9534f; color:#ff9b97; }
+.assign-add-head { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; margin:2px 0 6px; }
+
+/* ── Play Composer on a phone ─────────────────────────────────────────────────
+   Each receiver row (glyph · name · route dropdown · flip) was laid out for a
+   wide screen; on a narrow phone the route dropdown gets crushed to a sliver and
+   the taps are tiny. On phone widths the row WRAPS: glyph + name + flip stay on
+   the top line, and the route dropdown drops to its own full-width line at a
+   thumb-sized height. (Mobile pass, 2026-08-15.) */
+@media (max-width: 560px) {
+  .assign-row { flex-wrap: wrap; row-gap: 7px; padding: 7px 9px; }
+  .assign-glyph, .assign-glyph-block { order: 0; }
+  .assign-name { order: 1; flex: 1 1 auto; font-size: 13px; }
+  .assign-btn { order: 2; width: 40px; height: 40px; }
+  .assign-route { order: 3; flex: 1 1 100%; min-width: 0; min-height: 40px; font-size: 14px; }
+  .play-form-pick select { min-height: 40px; font-size: 14px; }
+  .pb-name { min-height: 40px; font-size: 14px; }
+  /* Every composer piece stays inside the phone width — the diagram, the rows,
+     the coverage box and the dropdowns can all shrink to fit. */
+  .play-canvas, .assign-list, .assign-row, .play-preview, .play-cov { min-width: 0; max-width: 100%; }
+  .play-card-svg { max-width: 100%; height: auto; }
+  .play-form-pick, .play-form-pick select { min-width: 0; max-width: 100%; }
+}
+.play-card-legend { display:flex; flex-wrap:wrap; gap:6px 12px; justify-content:center; margin-top:8px; }
+.play-card-leg { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color: var(--text-1); }
+.play-card-swatch { width:11px; height:11px; border-radius:3px; display:inline-block; }
+
+/* play-list rows show a diagram thumbnail */
+.play-row .pb-row-open { display:flex; align-items:center; gap:10px; text-align:left; }
+.play-row-thumb { flex:0 0 auto; width:64px; border-radius:8px; overflow:hidden; display:block;
+  border:1px solid var(--border); background:#15321f; }
+.play-row-thumb .play-card-svg, .play-row-thumb .formation-diagram { border:none; box-shadow:none; border-radius:0; }
+.play-row-thumb-named { display:flex; align-items:center; justify-content:center; width:44px; height:40px;
+  font-size:18px; background: var(--bg-input); }
+.play-row-copy { display:flex; flex-direction:column; gap:2px; min-width:0; }
+
+/* run diagram */
+.run-card-path { fill:none; stroke:#ffd34d; stroke-width:3; stroke-linecap:round; stroke-linejoin:round;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.5)); }
+.run-card-arrow { fill:#ffd34d; }
+.run-card-pull { fill:none; stroke:#7cc7ff; stroke-width:2.2; stroke-linecap:round; }
+.run-card-lead { fill:none; stroke:#7cfc9e; stroke-width:2.2; stroke-linecap:round; }
+.run-card-pitch { stroke: rgba(255,255,255,.55); stroke-width:1.6; stroke-dasharray:3 3; }
+.run-card-motion { stroke:#ffd34d; stroke-width:1.8; stroke-dasharray:2 3; }
+
+/* formation diagram nodes */
+.formation-diagram { display:block; border-radius:10px; }
+.fd-ol { fill: rgba(255,255,255,.34); }
+.fd-node { stroke: rgba(0,0,0,.45); stroke-width:1; }
+.fd-wr   { fill:#2f6fb0; } .fd-slot { fill:#2f855a; } .fd-te { fill:#b7791f; }
+.fd-rb   { fill:#8a63c8; } .fd-qb   { fill:#e0b52e; }
+/* defensive front nodes */
+.fd-dl { fill:#c0392b; } .fd-lb { fill:#c99a2e; } .fd-db { fill:#2f8fb0; }
+
+/* ── Defensive Playbook Builder ─────────────────────────────────────────────── */
+.def-card.is-base { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+.def-base-tag { font-size:9px; font-weight:800; letter-spacing:.4px; background: var(--gold); color:#1a1200;
+  padding:1px 5px; border-radius:4px; vertical-align:middle; margin-left:4px; }
+.def-section-head { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.4px;
+  margin:14px 0 6px; color: var(--text-1); }
+.def-section-head .muted { font-weight:600; text-transform:none; letter-spacing:0; }
+.def-pick-row { display:flex; flex-wrap:wrap; gap:6px; }
+.def-pick { padding:8px 12px; border-radius:9px; border:1px solid var(--border); background: var(--bg-input);
+  color: var(--text-1); cursor:pointer; font-size:12px; font-weight:700; transition: border-color .12s, background .12s; }
+.def-pick:hover { background: var(--bg-hover); border-color: var(--border-str); }
+.def-pick.on { border-color: var(--gold); color: var(--text-0); background: color-mix(in srgb, var(--gold) 14%, var(--bg-input)); box-shadow: 0 0 0 1px var(--gold) inset; }
+.def-source { display:flex; gap:8px; }
+.def-src-field { flex:1; display:flex; flex-direction:column; gap:4px; }
+.def-src-field > span { font-size:11px; font-weight:700; opacity:.7; text-transform:uppercase; letter-spacing:.3px; }
+.def-src-field input { text-align:center; }
+.def-toggles { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+.def-toggle { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer; }
+.def-toggle .muted { font-weight:500; }
+.def-preset-row { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:8px; }
+.def-preset { display:flex; flex-direction:column; gap:2px; padding:9px 11px; text-align:left; cursor:pointer;
+  border:1px solid var(--border); border-radius:10px; background: var(--bg-input); transition: border-color .12s, background .12s; }
+.def-preset:hover { background: var(--bg-hover); border-color: var(--border-str); }
+.def-preset-name { font-weight:800; font-size:13px; }
+.def-preset-sub { font-size:11px; opacity:.65; text-transform:capitalize; }
+.creator-screen .def-preset { background: var(--px-ink); border: 2px solid var(--px-line-dim);
+  box-shadow: 2px 2px 0 var(--px-shadow); border-radius: 0 !important; color: var(--px-paper); }
+.creator-screen .def-preset:hover { border-color: var(--px-cyan); background: var(--px-panel-3); }
+.creator-screen .def-preset-sub { color: var(--px-muted); }
+
+/* pixel-theme fit for the defensive builder */
+.creator-screen .def-pick { background: var(--px-ink); border: 2px solid var(--px-line-dim);
+  box-shadow: 2px 2px 0 var(--px-shadow); border-radius: 0 !important; color: var(--px-paper); font-weight: 800; }
+.creator-screen .def-pick:hover { border-color: var(--px-cyan); background: var(--px-panel-3); }
+.creator-screen .def-pick.on { border-color: var(--px-yellow) !important; background: var(--px-panel-3) !important; }
+.creator-screen .def-card.is-base { border-color: var(--px-yellow); }
+.creator-screen .def-base-tag { background: var(--px-yellow); color: var(--px-ink); border-radius:0; }
+.creator-screen .def-section-head { color: var(--px-paper); }
+.fd-lbl  { fill:#fff; font-size:8px; font-weight:800; text-anchor:middle;
+  font-family: inherit; pointer-events:none; }
+
+/* ── Playbook Builder: formation cards + concept grid (EA-style) ───────────── */
+.pb-forms { display:grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap:10px; }
+.fb-card { display:flex; flex-direction:column; padding:0 !important; overflow:hidden; }
+.fb-card.open { grid-column: 1 / -1; }
+.fb-card-toggle { display:flex; align-items:center; gap:10px; padding:10px; cursor:pointer; }
+.fb-card-toggle input { flex:0 0 auto; }
+.fb-card-diagram { flex:0 0 auto; width:120px; border-radius:8px; overflow:hidden; display:block; }
+.fb-card-meta { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.fb-card-name { font-weight:800; }
+.fb-card-pers { font-size:11px; opacity:.7; }
+.fb-card-count { font-size:11px; font-weight:700; }
+.fb-card-add { font-size:11px; opacity:.55; }
+.fb-card-tools { display:flex; align-items:center; gap:10px; padding:0 10px 10px; }
+.fb-weight-lbl { font-size:11px; font-weight:700; opacity:.7; display:inline-flex; align-items:center; gap:6px; }
+.fb-card .pb-expand { margin-left:auto; }
+
+.concept-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap:8px;
+  padding:10px; border-top:1px solid var(--border); }
+.concept-card { display:flex; flex-direction:column; gap:4px; padding:6px 6px 8px; cursor:pointer;
+  border:1px solid var(--border); border-radius:10px; background: var(--bg-input); text-align:center;
+  transition: border-color .12s, background .12s, transform .08s; }
+.concept-card:hover { background: var(--bg-hover); border-color: var(--border-str); }
+.concept-card:active { transform: scale(.98); }
+.concept-card-thumb { display:block; border-radius:7px; overflow:hidden; border:1px solid var(--border); }
+.concept-card-name { font-size:10.5px; font-weight:700; line-height:1.15; color: var(--text-1); }
+.concept-card.on { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 12%, var(--bg-input)); box-shadow: 0 0 0 1px var(--gold) inset; }
+.concept-card.on .concept-card-name { color: var(--text-0); }
+
+/* formation variation picker (Base / Big / Twins …) */
+.fb-var-row { display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:0 10px 8px; }
+.fb-var-lbl { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; opacity:.55; margin-right:2px; }
+.fb-var { padding:4px 10px; border-radius:7px; border:1px solid var(--border); background: var(--bg-input); color: var(--text-1); cursor:pointer; font-size:11px; font-weight:700; }
+.fb-var:hover { background: var(--bg-hover); border-color: var(--border-str); }
+.fb-var.on { border-color: var(--gold); color: var(--text-0); background: color-mix(in srgb, var(--gold) 14%, var(--bg-input)); }
+.fb-var-tag { font-size:9px; font-weight:800; letter-spacing:.3px; background: var(--gold); color:#1a1200; padding:1px 5px; border-radius:4px; vertical-align:middle; margin-left:4px; }
+/* multiple looks (Base + variations) per formation */
+.fb-look-row { display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:0 10px 8px; }
+.fb-look { display:inline-flex; align-items:center; gap:4px; }
+.fb-look-btn { padding:4px 10px; border-radius:7px; border:1px solid var(--border); background: var(--bg-input); color: var(--text-1); cursor:pointer; font-size:11px; font-weight:700; }
+.fb-look-btn:hover { background: var(--bg-hover); border-color: var(--border-str); }
+.fb-look.on .fb-look-btn { border-color: var(--gold); color: var(--text-0); background: color-mix(in srgb, var(--gold) 14%, var(--bg-input)); }
+.fb-look-weight { width:44px; }
+.creator-screen .fb-look-btn { background: var(--px-ink); border: 2px solid var(--px-line-dim); box-shadow: 1px 1px 0 var(--px-shadow); border-radius: 0 !important; color: var(--px-paper); }
+.creator-screen .fb-look-btn:hover { border-color: var(--px-cyan); background: var(--px-panel-3); }
+.creator-screen .fb-look.on .fb-look-btn { border-color: var(--px-yellow) !important; background: var(--px-panel-3) !important; }
+/* each look as a card with its own alignment diagram */
+.fb-card-head-lite { display:flex; align-items:baseline; justify-content:space-between; gap:8px; padding:8px 10px 2px; }
+.fb-look-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap:8px; padding:4px 10px 8px; }
+.fb-look-card { display:flex; flex-direction:column; gap:4px; }
+.fb-look-pick { display:flex; flex-direction:column; gap:2px; padding:4px; cursor:pointer; text-align:center;
+  border:1px solid var(--border); border-radius:9px; background: var(--bg-input); color: var(--text-1); }
+.fb-look-pick:hover { background: var(--bg-hover); border-color: var(--border-str); }
+.fb-look-card.on .fb-look-pick { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; color: var(--text-0); }
+.fb-look-dia { display:block; border-radius:6px; overflow:hidden; }
+.fb-look-name { font-size:11px; font-weight:800; }
+.fb-look-pers { font-size:9px; opacity:.6; }
+.fb-look-wlbl { font-size:10px; font-weight:700; opacity:.7; display:flex; align-items:center; gap:4px; justify-content:center; }
+.fb-look-wlbl .fb-look-weight { width:44px; }
+.creator-screen .fb-look-pick { background: var(--px-ink); border: 2px solid var(--px-line-dim); box-shadow: 2px 2px 0 var(--px-shadow); border-radius: 0 !important; color: var(--px-paper); }
+.creator-screen .fb-look-pick:hover { border-color: var(--px-cyan); background: var(--px-panel-3); }
+.creator-screen .fb-look-card.on .fb-look-pick { border-color: var(--px-yellow) !important; }
+.creator-screen .fb-look-pers { color: var(--px-muted); }
+.creator-screen .fb-var { background: var(--px-ink); border: 2px solid var(--px-line-dim); box-shadow: 1px 1px 0 var(--px-shadow); border-radius: 0 !important; color: var(--px-paper); }
+.creator-screen .fb-var:hover { border-color: var(--px-cyan); background: var(--px-panel-3); }
+.creator-screen .fb-var.on { border-color: var(--px-yellow) !important; background: var(--px-panel-3) !important; }
+.creator-screen .fb-var-tag { background: var(--px-yellow); color: var(--px-ink); border-radius:0; }
+
+/* row preview button + static (read-only) concept cards */
+.pb-row-preview { flex:0 0 auto; padding:6px 9px; border-radius:8px; border:1px solid var(--border);
+  background: var(--bg-raised); color: var(--text-1); cursor:pointer; font-size:14px; }
+.pb-row-preview:hover { background: var(--bg-hover); color: var(--text-0); border-color: var(--border-str); }
+.concept-card.is-static { cursor:default; }
+.concept-card.is-static:hover { background: var(--bg-input); border-color: var(--border); transform:none; }
+
+/* ── Playbook preview (full browse) ────────────────────────────────────────── */
+.pbv-form { margin: 4px 0 14px; }
+.pbv-form-head { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+.pbv-form-diagram { flex:0 0 auto; width:130px; border-radius:8px; overflow:hidden; display:block; }
+.pbv-form-meta { display:flex; flex-direction:column; gap:3px; }
+.pbv-form-name { font-weight:800; font-size:15px; }
+.pbv-form-sub { font-size:11px; opacity:.7; }
+.pbv-grid { padding:0; border-top:none; }
+.pbv-empty { padding:8px 2px; font-size:12px; }
+
+/* ── Creator pixel-theme fit for the new play-graphics UI ──────────────────── */
+.creator-screen .route-tile, .creator-screen .concept-card, .creator-screen .fb-card,
+.creator-screen .play-canvas-empty {
+  background: var(--px-ink); border: 2px solid var(--px-line-dim);
+  box-shadow: 2px 2px 0 var(--px-shadow); border-radius: 0 !important; color: var(--px-paper); }
+.creator-screen .route-tile.on, .creator-screen .concept-card.on {
+  border-color: var(--px-cyan) !important; background: var(--px-panel-3) !important; box-shadow: 2px 2px 0 var(--px-shadow); }
+.creator-screen .route-tile:hover, .creator-screen .concept-card:hover { border-color: var(--px-cyan); background: var(--px-panel-3); }
+.creator-screen .route-tile-name, .creator-screen .concept-card-name,
+.creator-screen .fb-card-name, .creator-screen .fb-card-count { color: var(--px-paper); }
+.creator-screen .fb-card-pers, .creator-screen .fb-card-add, .creator-screen .fb-weight-lbl { color: var(--px-muted); }
+.creator-screen .fb-card.on { border-color: var(--px-cyan); }
+.creator-screen .play-card-svg, .creator-screen .formation-diagram,
+.creator-screen .concept-card-thumb, .creator-screen .fb-card-diagram,
+.creator-screen .play-row-thumb { border-radius: 0 !important; }
+.creator-screen .play-card-legend { color: var(--px-paper); }
+.creator-screen .pb-row-preview { background: var(--px-ink); border: 2px solid var(--px-line-dim);
+  box-shadow: 2px 2px 0 var(--px-shadow); border-radius: 0 !important; color: var(--px-paper); }
+.creator-screen .pb-row-preview:hover { border-color: var(--px-cyan); background: var(--px-panel-3); }
+.creator-screen .pbv-form-name { color: var(--px-paper); }
+.creator-screen .pbv-form-sub { color: var(--px-muted); }
+.creator-screen .concept-card.is-static:hover { border-color: var(--px-line-dim); background: var(--px-ink); }
+.creator-screen .assign-row { background: var(--px-ink); border: 2px solid var(--px-line-dim);
+  box-shadow: 2px 2px 0 var(--px-shadow); border-radius: 0 !important; }
+.creator-screen .assign-name { color: var(--px-paper); }
+.creator-screen .assign-lane { color: var(--px-muted); }
+.creator-screen .assign-btn { background: var(--px-panel-2); border: 2px solid var(--px-line-dim);
+  box-shadow: 1px 1px 0 var(--px-shadow); border-radius: 0 !important; color: var(--px-paper); }
+.creator-screen .assign-btn:hover { border-color: var(--px-cyan); background: var(--px-panel-3); }
+.creator-screen .assign-btn.on { border-color: var(--px-yellow) !important; background: var(--px-panel-3); }
