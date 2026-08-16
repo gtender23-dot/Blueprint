@@ -7422,6 +7422,21 @@ body *::after {
      made it land ON TOP of the play feed. Pin it in-flow at the top of the rail
      so the scoreboard and the play-by-play stack cleanly instead of overlapping. */
   .watch-bug { position: relative; top: auto; left: auto; right: auto; bottom: auto; transform: none; width: 100%; z-index: 1; }
+  /* Scoreboard bug crammed into the narrow rail: the full-size crests/identities
+     and 24px scores can't fit the ~150–240px width, so the score numbers rode
+     over the center clock. The max-width:640px compaction never fires here — a
+     phone in landscape is WIDE — so compact the bug directly: drop crests and the
+     full-name line, keep the 4-letter abbr, and shrink score/clock to fit. */
+  .watch-bug .wsb-matchup { min-height: 0; }
+  .watch-bug .wsb-crest { display: none; }
+  .watch-bug .wsb-identity small { display: none; }
+  .watch-bug .wsb-identity b { font-size: 9px; }
+  .watch-bug .wsb-side { gap: 5px; padding: 4px 6px; }
+  .watch-bug .wsb-score { font-size: 15px !important; }
+  .watch-bug .wsb-clockbox { min-width: 0; padding: 3px 7px; }
+  .watch-bug .wsb-clock { font-size: 13px; }
+  .watch-bug .wsb-network, .watch-bug .wsb-half { font-size: 6px; }
+  .watch-bug .wsb-situation { min-height: 0; padding: 2px 7px; font-size: 7px; }
   /* The "1ST HALF — LIVE" header ate a big band of a short screen — slim it. */
   .watch-live-overlay .modal-header { padding: 3px 10px; min-height: 0; gap: 8px; }
   .watch-live-overlay .modal-header h2 { font-size: 12px; margin: 0; line-height: 1.2; }
