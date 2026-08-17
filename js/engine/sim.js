@@ -1750,6 +1750,12 @@ function resolvePassPlay(playType, offPersonnel, defPersonnel, offRoster, defRos
     }
     result.rushN = passRushers.length;
     result.rush3 = true;
+    // M5 bring-3 audit (2026-08-17): record WHO dropped — the card draws a
+    // lineman bending back into coverage on bring 3, and this is the sim-side
+    // proof the same exchange genuinely ran (the ids below are grafted into
+    // the coverage personnel at _covExtra). Recording-only, mirrors
+    // blitzerIds; zero RNG; sparse (absent on every non-rush3 snap).
+    if (rush3DroppedIds.length) result.rush3DroppedIds = [...rush3DroppedIds];
   }
   // [PLAYTEST 2026-08-12 item 4A — INVESTIGATED, DELIBERATELY NOT "FIXED"]
   // The comment above claims the fire-zone drop obeys the same body-conservation

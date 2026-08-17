@@ -1,7 +1,11 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-16 session (D4 · M2 PRESENTATION HALF — look-true
+Last updated: **2026-08-17 session (D9 · M5 DEFBOOK CLOSE-OUT — bring-3 sim
+audit clean + probe-pinned, the 2026-08-15 defbook-v2 probe debt PAID; new
+entry below. Parallel this window: D6 (M3 RPO) and D8 (plan home + seasons)
+are LIVE in this tree — see D9's shared-file notes.) Prior: 2026-08-16
+session (D4 · M2 PRESENTATION HALF — look-true
 cards everywhere, the big card, composer RUNS + biting blocking, the
 pre-snap play-art overlay, blurbs + three manual chapters — BUILT +
 NODE-GATED, browser tier owed; new entry below. M2 is now BUILT END TO END
@@ -9,6 +13,89 @@ NODE-GATED, browser tier owed; new entry below. M2 is now BUILT END TO END
 window: D3 · M2 engine half; D7 · M4 watch/time controls; D2 · M1 bench;
 D5 · M3 audit RATIFIED.) Plan of record: BUILD ORDER v2 (2026-08-17),
 dispatch prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+
+## 2026-08-17 — D9 · M5 DEFBOOK CLOSE-OUT (bring-3 audit · the v2 probe debt PAID)
+## NODE-GATED — the 2026-08-15 "DEFENSIVE PLAYBOOK V2 ⚠ VERIFICATION OWED" node items are CLOSED
+
+**OWNER CHECKLIST**
+- **Browser-owed UNCHANGED from the 2026-08-15 v2 ledger — only the live
+  click-through remains:** Workshop → Defensive Playbook (open a starter,
+  edit a card, save), Playbook Builder starter row, Game Plan "Starter books"
+  optgroups, new-game Starting Defense. This session added NOTHING new to the
+  browser ledger (engine observability + probes only). Every other 2026-08-15
+  v2 ledger item is now paid: defbook_probe extended ✔, defsheet_probe new ✔,
+  creator_store/resilience re-run ✔, clean build ✔ (boot/gate tiers have been
+  riding the D3/D4 sessions since).
+- **FOR D6 (not mine, observed on this tree):** `card_lint_probe` C6 flags
+  four in-flight M3 concepts with NO BLURB yet — Zone Read / RPO Glance /
+  RPO Bubble / QB Draw (D6's constants.js additions landed mid-window;
+  blurbs ship with them, conceptblurbs.js). C1–C5 all green here — C5 (the
+  #33 CARD half, 352 call cards) green is half of this session's agreement
+  proof.
+- Standing debt unchanged: viewer act B/D local scrub + full local gate + a
+  green night run before the next deploy; M4 phone eyeball; M1 first bench
+  session; D4 browser eyeball.
+- **Shared-file note (commit scoping):** `js/engine/sim.js` carries the
+  parallel D6 session's live M3 hunks (QB_RUN_BASE dice kill + scramble
+  re-anchor under `__qbDiceLegacy`). My commit stages ONLY my
+  rush3DroppedIds hunk (single-hunk `git apply --cached`); D6's hunks stay
+  in the working tree for D6 to commit with its probes. `_gate_manifest.mjs`
+  diff was exclusively mine (defbook note + defsheet entry) and is committed.
+
+**1. THE BRING-3 AUDIT (#33 sim half, dispatch item 1) — VERDICT: the engine
+already runs the genuine exchange; NO OUTCOME FIX NEEDED, now probe-pinned.**
+The trace (documented in defsheet_probe's header): card bring "3" →
+`cardToDefCall` `{rush3:true}` → `applyDefCall` (the ONE entry point every
+path flows through; `__noCovFamilies` kill-switch) → `syncDefEff` →
+`rush3Eff` → the PASS 3 cut in `resolvePassPlay`: `blitzPct` forced to 0
+(you don't drop eight AND send more), the assembled front cut to its best
+THREE by rushGrade, and every cut id grafted into the coverage personnel
+(`_covExtra` → assignCoverage genuinely counts eight). On the 4-3 —
+`DEF_DROP_ELIGIBLE["4-3"]` is empty, no native drop slots — all four shown
+rushers are down linemen, so the cut man is a LINEMAN by construction: the
+same fire-zone exchange the call card draws (card_lint C5 pins the drawing;
+the F1-loaded-Prevent-never-cut bug in this seam was already found and fixed
+2026-08-16, sim.js:4633 note). Prevent BUNDLES rush3 (owner call 2026-08-08)
+— verified riding the same path. The one real gap was OBSERVABILITY: nothing
+recorded who dropped. Fixed — **`result.rush3DroppedIds`** (sim.js, mirrors
+the blitzerIds precedent): recording-only, zero RNG, sparse (absent on every
+non-rush3 snap), and AI never authors rush3 calls, so AI-game records are
+byte-identical.
+
+**2. THE V2 PROBE DEBT (standing ledger from 2026-08-15) — PAID.**
+- **`defbook_probe` EXTENDED 26 → 75 checks:** shelf/card/answer validation
+  gates (unknown shelf/front/coverage/bring/look, over-cap, malformed,
+  negative weight; off-shelf answer = warning not error); shelf→defCalls
+  (shelf order, name dedupe first-wins, the 12-call cap is structural —
+  5 shelves × cap 2); shelf→cells writes DEF FIELDS ONLY (the full
+  coverage×bring grid leak-checked) preserving a cell's offensive keys, the
+  TOP-WEIGHTED card wins the shelf, the Gamble shelf (no cells) writes none;
+  answers→formChecks ≡ cardToFormCheck; v1→v2 repair lossless (zero changes,
+  empty shelves/answers, spine preserved) + dead-card repair keeps the CALL;
+  starter-book round-trip (zero-change repair, shelves/answers byte-stable,
+  apply→extract preserves the spine).
+- **`defsheet_probe` NEW, 77 checks, registered in CORE:** all 6 defensive
+  starters validate clean (no warnings), ≥1 base-shelf card, compile fully
+  (headset calls / shelf cells / formChecks), and every card's compiled call
+  speaks ONLY `applyDefCall`'s vocabulary — the pin is pickDefCall's
+  NORMALIZED list, so a key either layer strips fails loudly (the "pressure
+  look written to a dead field" bug class, 2026-08-15). All 6 offensive
+  starters: every look real, weights positive, every carried formation
+  sheeted, every sheet entry legal. Plus the bring-3 sim arms (item 1):
+  25 pinned-seed 4-3 bring-3 snaps — every one rushN=3 + rush3 + no blitz +
+  exactly one dropped DL body; bring-4 contrast (never cuts, shows four on
+  no-blitz snaps); Prevent bundles rush3; the 3-4 arm lands on three.
+  Deterministic end to end (the bench's pinned seeds).
+
+**Gate (this sandbox, node):** `defbook_probe` **75/0 ×3** ·
+`defsheet_probe` **77/0 ×3** · re-runs green: `creator_store_probe` 50/0 ·
+`creator_resilience_probe` 20/0 · `bench_probe` 34/0 · `record_call_probe`
+12/0 · `live_book_call_probe` 14/0 · `card_lint_probe` 20/1 (the 1 = D6's
+in-flight blurbs, ledgered above; C5 green). Clean esbuild build (all
+sanity checks PASS, 3699 KB — built in /tmp, the mount forbids dist/
+deletion; outputs copied back) + bundle syntax parse (2 blocks) + CSS braces
+balanced. Note the gates ran on the mid-window tree (D6/D8 in-flight work
+present), same as prior parallel sessions.
 
 ## 2026-08-16 — D4 · M2 PRESENTATION HALF (look-true cards · the big card · composer runs+blocking · pre-snap play-art overlay · blurbs + manual)
 ## BUILT + NODE-GATED — ⚠ BROWSER TIER OWED
