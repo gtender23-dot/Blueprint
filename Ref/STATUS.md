@@ -1,7 +1,11 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-17 FULL-GATE TRIAGE (diagnosis only, no code) — all
+Last updated: **2026-08-17 QB-RUN READING LIST drafted (research prep, NO
+fetches) — the D5/D6 brain-research ledger item now has its owner-approval
+list at `Ref/READING_LIST_QBRUN_2026-08-17.md`; answer with source numbers
+("approve 1,2,5") to start the fetch pass (entry below). Prior same day:
+FULL-GATE TRIAGE (diagnosis only, no code) — all
 18 `_night_full_log.txt` reds classified in
 `Ref/FULLGATE_TRIAGE_2026-08-17.md`: ONE real product bug (dead
 Rest-of-Game timeout chips), 2 healed at HEAD, 8 test-stale, 3 flakes, 3
@@ -27,6 +31,22 @@ D6's in-flight concepts is RESOLVED in this session, card_lint 21/0 ×3.)
 Prior: D4 · M2 presentation; D3 · M2 engine; D7 · M4; D2 · M1; D5 · M3
 audit RATIFIED. Plan of record: BUILD ORDER v2 (2026-08-17), dispatch
 prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+
+## 2026-08-17 — QB-RUN/RPO READING LIST (research prep — NO fetches, owner approval owed)
+
+The D5/D6 "needs brain research" ledger item (provisional §5C bands,
+PFF/ESPN/FantasyPoints NFL-floor anchors) now has its reading list:
+**`Ref/READING_LIST_QBRUN_2026-08-17.md`** — 8 candidate PUBLIC sources,
+EV-ordered (CFBD/cfbfastR distribution pull first, Sports-Reference
+exemplar ladder, PFF-free/FantasyPoints spot anchors, coaching-clinic RPO
+ratios as the only public line on keep share), each mapped to the band it
+should pin (B1–B6 + the two D6 flags: widened-Dual scramble dilution F1,
+pocket broken-play residue F2) with a confidence guess. Paywalled PFF
+Premium / SIS noted for what they'd add, NOT listed for approval. Nothing
+was fetched — SIM_RESEARCH_PROJECT.md rule: owner approves the list before
+use. **Answer with source numbers ("approve 1,2,5"; recommended minimum
+1,2,5) to start the fetch/extract pass.** Committed: the list + this entry,
+nothing else. NOT pushed.
 
 ## 2026-08-17 — FULL-GATE TRIAGE (this sandbox, diagnosis ONLY — no code changed)
 
@@ -152,6 +172,8 @@ you have everything owed.
   are provisional (PFF/ESPN/FantasyPoints anchors). Two D6 notes for that
   pass: the widened Dual's scramble share ~3.5–4.5% vs the 5–8% band;
   pocket "designed" ≈1.4/g includes ~0.5 broken-play/Empty floor keeps.
+  **→ Reading list DRAFTED 2026-08-17** (`Ref/READING_LIST_QBRUN_2026-08-17.md`,
+  entry above) — approve sources by number to start the fetch pass.
 
 **Browser / device eyeballs (one `node tools/build.mjs` + `npx serve dist`
 covers all of these; details in each entry's OWNER CHECKLIST):**
