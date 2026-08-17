@@ -1,6 +1,6 @@
-import { PASS_CONCEPTS, RUN_CONCEPTS } from '../concepts.js';
 import { FORMATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, aliasFormation } from '../constants.js';
 import { OFF_FIELD_LAYOUTS, OL_SLOTS } from '../constants_field.js';
+import { filterConceptsForPersonnel } from './playbook.js';
 
 // ── Formation Composer — Stage 7 of the Playbook-Root refactor ──────────────
 // (Ref/PLAYBOOK_ROOT_ARCHITECTURE.md Stage 7; Ref/CREATOR_FIDELITY.md item 5:
@@ -155,26 +155,12 @@ function formationArchetype(pkg) {
   }
   return best || "Single Back";
 }
-// The legal call list: the archetype's book FILTERED (never widened).
+// The legal call list: the archetype's book FILTERED (never widened). The
+// filter itself is the ONE shared fits-function (playbook.js, M1) — the
+// Designer's auto-install, the Builder's auto-select and the test bench's
+// play list all speak it, so the surfaces can't disagree.
 function _playbookOf(pkg, archetype) {
-  const wide = pkg.WR || 0, backs = (pkg.RB || 0) + (pkg.FB || 0);
-  const base = FORMATION_PLAYBOOK[archetype] || [];
-  return base.filter((nm) => {
-    const pc = PASS_CONCEPTS[nm];
-    if (pc) {
-      if (pc.minWR && wide < pc.minWR) return false;
-      if ((nm === "Flea Flicker" || nm === "HB Pass" || nm === "Slip Screen" || nm === "RB Screen") && backs < 1) return false;
-      return true;
-    }
-    const rc = RUN_CONCEPTS[nm];
-    if (rc) {
-      if (nm === "Wildcat Power" || nm === "Jet Sweep") return false; // need slots/motion structure customs don't author
-      if ((nm === "Triple Option" || nm === "Speed Option") && backs < 2) return false;
-      if (nm === "QB Sneak" || nm === "Draw" || nm === "QB Power") return true;
-      return backs >= 1;
-    }
-    return false;
-  });
+  return filterConceptsForPersonnel(FORMATION_PLAYBOOK[archetype] || [], pkg, { custom: true });
 }
 // Deterministic slot records: canonical ids/labels by position, receivers
 // keyed outside-in (X left, Z right), so every downstream surface — target

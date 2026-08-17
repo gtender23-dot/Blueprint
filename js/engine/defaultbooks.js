@@ -1,4 +1,4 @@
-import { legalConceptsForFormation, emptyPlaybook, validatePlaybook } from './playbook.js';
+import { legalConceptsForFormation, fittingConceptsForFormation, emptyPlaybook, validatePlaybook } from './playbook.js';
 import { emptyDefBook, emptyDefCard, validateDefBook } from './defbook.js';
 
 // ── The starter book library (Ref/DEFENSIVE_PLAYBOOK_V2.md §5, Aug 2026) ────
@@ -146,4 +146,31 @@ DEFAULT_DEF_BOOKS = DEFAULT_DEF_BOOKS.filter((b) => {
 function defaultOffBook(name) { return DEFAULT_OFF_BOOKS.find((b) => b.name === name) || null; }
 function defaultDefBook(name) { return DEFAULT_DEF_BOOKS.find((b) => b.name === name) || null; }
 
-export { DEFAULT_OFF_BOOKS, DEFAULT_DEF_BOOKS, defaultOffBook, defaultDefBook };
+// ── Shipped sheet weights (M1 #23, 2026-08-17) ─────────────────────────────
+// The formation's SHIPPED game-day weighting, merged across every starter
+// book that carries it (highest weight wins where books disagree). Data only —
+// the starter books above are the source; nothing here invents a number.
+function shippedSheetWeights(formationId) {
+  const out = {};
+  for (const b of DEFAULT_OFF_BOOKS) {
+    const s = b.sheets && b.sheets[formationId];
+    if (!s) continue;
+    for (const [c, w] of Object.entries(s)) out[c] = Math.max(out[c] || 0, typeof w === "number" ? w : 0);
+  }
+  return out;
+}
+// Auto-select's seed sheet: every FITTING concept for the look (the one shared
+// fits-function), weighted by the shipped sheets — NOT flat. Concepts a
+// starter book features carry its weight; the rest sit at a modest base so
+// the shipped identity stands out instead of a diluted everything-equal book.
+var AUTO_SHEET_BASE_W = 40;
+function autoSheetForFormation(formationId, variation) {
+  const shipped = shippedSheetWeights(formationId);
+  const sheet = {};
+  for (const c of fittingConceptsForFormation(formationId, variation)) {
+    sheet[c] = shipped[c] != null ? shipped[c] : AUTO_SHEET_BASE_W;
+  }
+  return sheet;
+}
+
+export { DEFAULT_OFF_BOOKS, DEFAULT_DEF_BOOKS, defaultOffBook, defaultDefBook, shippedSheetWeights, autoSheetForFormation };

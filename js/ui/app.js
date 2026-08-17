@@ -45,6 +45,8 @@ import { spriteMarkup, ballMarkup, spriteMotionTick, wspPlace } from './sprite.j
 import { stadiumPause, stadiumReact, stadiumStart } from './sound.js';
 import { archetypeLabel, escapeHtml, fullName, ratingColor, renderCrest, renderPlayerPortrait } from '../utils.js';
 import { syncCustomFormations } from '../engine/formcompose.js';
+import { benchSnap, benchLookOptions, benchOutcome, benchGameShell } from '../engine/bench.js';
+import { fittingConceptsForFormation } from '../engine/playbook.js';
 
 // Stage 7 (Playbook-Root): register the library's custom formations into the
 // live tables at boot — after this, every surface that lists or fields a
@@ -677,6 +679,110 @@ function setupReplayClipScreen() {
   if (!parts) return;
   initWatchMode(parts.r, parts.d.possession === "home", { key: state.ui.replayClip, clip: state.ui.replayClip });
 }
+// ── THE TEST BENCH (M1, 2026-08-17) — a PLAY-DESIGN instrument ─────────────
+// One screen: run ONE play between the bench's even scratch teams against a
+// forced defensive look, watch it on the REAL board (the clip path — zero new
+// viewer wiring), and rep it: RUN AGAIN rolls fresh, SAME ROLL AGAIN replays
+// the pinned seed byte-identically. Reps live HERE (module state), never in
+// state.ui — a bench session can never leak into a save. Owner boundary:
+// play design only — no scouting hooks, no opponent practice, no lessons.
+var _bench = null;
+function _benchState() {
+  const cfg = state.ui.bench;
+  if (!cfg) return null;
+  if (!_bench || _bench.cfg !== cfg) _bench = { cfg, reps: [], lastSeed: null, n: 0 };
+  return _bench;
+}
+function renderBenchScreen() {
+  const b = _benchState();
+  if (!b) return `<div class="replay-screen bench-screen"><button class="btn-ghost" id="bench-back">← Back</button><div class="empty-state">Nothing on the bench. Open it from the Workshop — the Composer, the Formation Designer, or a Playbook Builder card.</div></div>`;
+  const cfg = b.cfg;
+  const fid = aliasFormation(cfg.formationId);
+  const vset = FORMATION_VARIATIONS[fid] || {};
+  const vLabel = cfg.variation && vset[cfg.variation] ? vset[cfg.variation].label : null;
+  const fits = fittingConceptsForFormation(fid, cfg.variation || undefined);
+  const hasCustom = !!cfg.customPlayData;
+  const playOpts = [
+    ...(hasCustom ? [`<option value="__custom"${!cfg.concept ? " selected" : ""}>★ ${escapeHtml(cfg.label || "Your play")} (composed)</option>`] : []),
+    ...(cfg.concept && !fits.includes(cfg.concept) ? [`<option value="${escapeHtml(cfg.concept)}" selected>${escapeHtml(cfg.concept)}</option>`] : []),
+    ...fits.map((c) => `<option value="${escapeHtml(c)}"${cfg.concept === c ? " selected" : ""}>${escapeHtml(c)}</option>`)
+  ].join("");
+  const opts = benchLookOptions();
+  const dl = cfg.defLook || (cfg.defLook = { front: "4-3", coverage: "c3", bring: "4" });
+  const log = b.reps.length ? b.reps.map((rep) => `<div class="bench-line${rep.real ? "" : " bench-line-flag"}">
+      <span class="bench-line-n">#${rep.n}</span>
+      <span class="bench-line-call">${escapeHtml(rep.call)}</span>
+      <span class="muted">vs ${escapeHtml(rep.look)} · rolled ${escapeHtml(rep.rolled || "—")} →</span>
+      <span class="bench-line-out">${escapeHtml(rep.outcome)}</span>
+    </div>`).join("") : `<div class="muted bench-line-empty">No reps yet — run the play.</div>`;
+  return `<div class="replay-screen bench-screen">
+    <div class="replay-screen-head">
+      <button class="btn-ghost" id="bench-back">← Workshop</button>
+      <div><div class="replay-screen-kicker">THE TEST BENCH</div><h1>${escapeHtml(fid)}${vLabel ? ` · ${escapeHtml(vLabel)}` : ""}</h1></div>
+    </div>
+    <div class="bench-controls">
+      <label class="bench-ctl"><span>Play</span><select class="form-input" id="bench-play">${playOpts}</select></label>
+      <label class="bench-ctl"><span>Front</span><select class="form-input" id="bench-front">${opts.fronts.map((f) => `<option value="${escapeHtml(f)}"${dl.front === f ? " selected" : ""}>${escapeHtml(f)}</option>`).join("")}</select></label>
+      <label class="bench-ctl"><span>Coverage</span><select class="form-input" id="bench-cov">${opts.coverages.map((c) => `<option value="${c.id}"${dl.coverage === c.id ? " selected" : ""}>${escapeHtml(c.label)}</option>`).join("")}</select></label>
+      <label class="bench-ctl"><span>Pressure</span><select class="form-input" id="bench-bring">${opts.brings.map((x) => `<option value="${x.id}"${dl.bring === x.id ? " selected" : ""}>${escapeHtml(x.label)}</option>`).join("")}</select></label>
+      <div class="bench-btns">
+        <button class="btn-mm btn-mm-new" id="bench-run">▶ ${b.reps.length ? "Run again" : "Run the play"}</button>
+        <button class="btn-mm btn-mm-secondary" id="bench-same"${b.lastSeed == null ? " disabled" : ""} title="Replay the exact same roll">⟲ Same roll again</button>
+      </div>
+    </div>
+    <div class="bench-log">${log}</div>
+    <div id="watch-root" class="watch-root replay-watch-root"></div>
+  </div>`;
+}
+function setupBenchScreen() {
+  var _a, _b, _c, _d, _e, _f, _g;
+  const b = _benchState();
+  (_a = document.getElementById("bench-back")) == null ? void 0 : _a.addEventListener("click", () => navigate("creator"));
+  if (!b) return;
+  const cfg = b.cfg;
+  (_b = document.getElementById("bench-play")) == null ? void 0 : _b.addEventListener("change", (e) => {
+    cfg.concept = e.target.value === "__custom" ? null : e.target.value;
+    rerender();
+  });
+  (_c = document.getElementById("bench-front")) == null ? void 0 : _c.addEventListener("change", (e) => { cfg.defLook.front = e.target.value; });
+  (_d = document.getElementById("bench-cov")) == null ? void 0 : _d.addEventListener("change", (e) => { cfg.defLook.coverage = e.target.value; });
+  (_e = document.getElementById("bench-bring")) == null ? void 0 : _e.addEventListener("change", (e) => { cfg.defLook.bring = e.target.value; });
+  const opts = benchLookOptions();
+  const run = (seed) => {
+    const useCustom = cfg.customPlayData && !cfg.concept;
+    const r = benchSnap({
+      formationId: aliasFormation(cfg.formationId),
+      variation: cfg.variation || null,
+      concept: useCustom ? null : cfg.concept,
+      customPlayId: useCustom ? cfg.customPlayId || "_bench" : null,
+      customPlayData: useCustom ? cfg.customPlayData : null,
+      defLook: { ...cfg.defLook },
+      seed
+    });
+    if (!r.ok) { notify(r.error || "The bench could not run that play", "warning"); return; }
+    b.lastSeed = r.seed;
+    b.n = (b.n || 0) + 1;
+    const covL = ((opts.coverages.find((c) => c.id === cfg.defLook.coverage) || {}).label) || cfg.defLook.coverage;
+    const bringL = ((opts.brings.find((x) => x.id === cfg.defLook.bring) || {}).label) || cfg.defLook.bring;
+    b.reps.unshift({
+      n: b.n, real: r.real, play: r.play, seed: r.seed,
+      call: useCustom ? `★ ${cfg.label || "Your play"}` : cfg.concept || "sheet",
+      look: `${cfg.defLook.front} · ${covL} · ${bringL}`,
+      rolled: r.rolled, outcome: benchOutcome(r.play)
+    });
+    if (b.reps.length > 12) b.reps.length = 12; // a bench, not an archive
+    rerender();
+  };
+  (_f = document.getElementById("bench-run")) == null ? void 0 : _f.addEventListener("click", () => run((Math.random() * 4294967296) >>> 0));
+  (_g = document.getElementById("bench-same")) == null ? void 0 : _g.addEventListener("click", () => { if (b.lastSeed != null) run(b.lastSeed); });
+  // The latest REAL rep rides the real board through the clip path.
+  const latest = b.reps.find((rep) => rep.real && rep.play);
+  if (latest) {
+    const shell = benchGameShell(latest.play);
+    const clip = buildReplayClipData(shell, shell.drives[0], latest.play, { driveIndex: 0, playIndex: 0 });
+    initWatchMode(clip.game, true, { key: latest, clip });
+  }
+}
 function renderApp() {
   var _a, _b, _c, _d, _e, _f, _g, _h;
   const _scroll = captureScroll();
@@ -740,6 +846,12 @@ function renderApp() {
   if (view === "replayclip") {
     root.innerHTML = renderReplayClipScreen() + renderNotification();
     setupReplayClipScreen();
+    syncOverlayInert(); lastRenderedView = view;
+    return;
+  }
+  if (view === "bench") {
+    root.innerHTML = renderBenchScreen() + renderNotification();
+    setupBenchScreen();
     syncOverlayInert(); lastRenderedView = view;
     return;
   }

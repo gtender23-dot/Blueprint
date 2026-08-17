@@ -1,8 +1,8 @@
-import { state, rerender, notify } from '../../state.js';
+import { state, rerender, notify, navigate } from '../../state.js';
 import { FORMATION_PACKAGES, FORMATION_PLAYBOOK, FORMATION_VARIATIONS, aliasFormation } from '../../constants.js';
-import { emptyPlaybook, validatePlaybook, legalConceptsForFormation } from '../../engine/playbook.js';
+import { emptyPlaybook, validatePlaybook, legalConceptsForFormation, fittingConceptsForFormation } from '../../engine/playbook.js';
 import { listCreations, loadCreationData, saveCreation, deleteCreation } from '../../engine/creator.js';
-import { DEFAULT_OFF_BOOKS } from '../../engine/defaultbooks.js';
+import { DEFAULT_OFF_BOOKS, autoSheetForFormation } from '../../engine/defaultbooks.js';
 import { renderFormationDiagram, renderConceptThumb } from './routeart.js';
 
 // "1 RB · 1 TE · 3 WR" from a personnel package object
@@ -79,6 +79,7 @@ function renderPlaybookEditor() {
       return `<button type="button" class="concept-card${sel ? " on" : ""}" data-pb-concept="${esc(fid)}|${esc(c)}" aria-pressed="${sel}">
         <span class="concept-card-thumb">${renderConceptThumb(c, { w: 120, h: 72, scale: 0.72, formation: fid })}</span>
         <span class="concept-card-name">${esc(c)}</span>
+        <span class="concept-card-test" data-pb-testc="${esc(fid)}|${esc(c)}" title="Test ${esc(c)} on the bench" role="button">🧪</span>
       </button>`;
     }).join("")}</div>` : "";
     const lookGrid = `<div class="fb-look-grid">${looks.map((l) => {
@@ -91,6 +92,7 @@ function renderPlaybookEditor() {
           <span class="fb-look-pers">${esc(l.pers)}</span>
         </button>
         ${inc ? `<label class="fb-look-wlbl">Usage <input class="pb-weight fb-look-weight" type="number" min="0" max="99" value="${e.weight != null ? e.weight : 0}" data-pb-lookweight="${esc(fid)}|${esc(l.key)}"/></label>` : ""}
+        <button type="button" class="fb-look-test" data-pb-test="${esc(fid)}|${esc(l.key)}" title="Test this look on the bench">🧪 Test</button>
       </div>`;
     }).join("")}</div>`;
     return `<div class="pb-form fb-card${anyOn ? " on" : ""}${open ? " open" : ""}">
@@ -200,8 +202,40 @@ function playbooksListeners() {
     } else {
       const entry = { id: fid, weight: 25 }; if (vk) entry.variation = vk;
       pb.formations.push(entry); state.ui.pbExpand = fid;
+      // #23 auto-select: a formation arrives with its FITTING plays already
+      // chosen (the one shared fits-function), seeded with the SHIPPED sheet
+      // weights — not a flat everything-equal book. Deselect freely.
+      pb.sheets = pb.sheets || {};
+      if (!pb.sheets[fid] || !Object.keys(pb.sheets[fid]).length) {
+        const seeded = autoSheetForFormation(fid, vk || undefined);
+        if (Object.keys(seeded).length) pb.sheets[fid] = seeded;
+      }
     }
     rerender();
+  }));
+  // ── M1 test-bench entrance: any BUILT-IN look or concept, one tap ─────────
+  const benchDefaults = () => ({ front: "4-3", coverage: "c3", bring: "4" });
+  document.querySelectorAll("[data-pb-test]").forEach((b) => b.addEventListener("click", () => {
+    _syncName();
+    const raw = b.dataset.pbTest; const sep = raw.indexOf("|");
+    const fid = aliasFormation(raw.slice(0, sep)); const vk = raw.slice(sep + 1) || null;
+    const pb = _pb();
+    const sheet = (pb && pb.sheets && pb.sheets[fid]) || {};
+    const top = Object.entries(sheet).sort((a, b2) => (b2[1] || 0) - (a[1] || 0)).map((e) => e[0])[0];
+    const concept = top || fittingConceptsForFormation(fid, vk || undefined)[0] || null;
+    if (!concept) { notify("No play fits this look yet", "warning"); return; }
+    state.ui.bench = { formationId: fid, variation: vk, concept, defLook: benchDefaults() };
+    navigate("bench");
+  }));
+  document.querySelectorAll("[data-pb-testc]").forEach((el) => el.addEventListener("click", (e) => {
+    e.stopPropagation();
+    _syncName();
+    const raw = el.dataset.pbTestc; const sep = raw.indexOf("|");
+    const fid = aliasFormation(raw.slice(0, sep)); const concept = raw.slice(sep + 1);
+    const pb = _pb();
+    const entry = (pb && pb.formations || []).find((f) => aliasFormation(f.id) === fid);
+    state.ui.bench = { formationId: fid, variation: (entry && entry.variation) || null, concept, defLook: benchDefaults() };
+    navigate("bench");
   }));
   document.querySelectorAll("[data-pb-expand]").forEach((b) => b.addEventListener("click", () => {
     _syncName();

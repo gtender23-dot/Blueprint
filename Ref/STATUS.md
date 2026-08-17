@@ -1,12 +1,97 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-16 session (D5 · M3 audit — report-only — delivered:
-`Ref/RPO_AUDIT_2026-08-16.md` + `tools/rpo_audit_probe.mjs`; STOPPED for
-owner ratification, D6 blocked on it). Plan of record: BUILD ORDER v2
+Last updated: **2026-08-16 session (D2 · M1 THE TEST BENCH — BUILT +
+NODE-GATED, browser playtest owed — see the entry below. Parallel this
+window: D5 · M3 audit delivered report-only, STOPPED for owner
+ratification, D6 blocked on it). Plan of record: BUILD ORDER v2
 (2026-08-17), dispatch prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`. Prior:
 Act F reconcile; functional playtest of Stages 3–7 PASSED — visual eyeball
 still owed, now scheduled to ride the first M1 bench session.**
+
+## 2026-08-16 — D2 · M1 THE TEST BENCH (the instrument)
+## BUILT + NODE-GATED — ⚠ BROWSER PLAYTEST OWED (the first bench session)
+
+**OWNER CHECKLIST**
+- **First bench session (browser, owner's machine)** — `node tools/build.mjs`,
+  then Workshop → any of the three entrances (below). **This session DOUBLES
+  as the standing Stages 3–7 visual eyeball** (same screens: the bench rides
+  the real watch board, the Designer/Composer/Builder cards are the Stage 4–7
+  surfaces). What to drive: (1) Play Composer → build a play → "🧪 Test on
+  the bench" → run reps, change the defensive look, SAME ROLL AGAIN repeats
+  the identical rep; (2) Formation Designer → save a look → the bench opens
+  on it with its fitting concepts installed; (3) Playbook Builder → "🧪 Test"
+  on a look card and the 🧪 corner of any concept card; also confirm #23:
+  adding a look to a book auto-selects its fitting plays at SHIPPED weights
+  (deselect freely). Then `node tools/_boot_check.mjs dist/index.html` +
+  `node tools/_gate.mjs` (bench_probe is now in CORE).
+- Standing debt unchanged from prior entries: act B/D local scrub re-run +
+  full local gate + a green night run before the next deploy.
+
+**What shipped (`js/` + `style.css` + tools/, all four dispatch items):**
+- **ENGINE — `js/engine/bench.js` (new).** `bench(formationId, variation,
+  playOrConcept, defensiveLook)` / `benchSnap(opts)`: ONE play between two
+  even-matched scratch teams through the REAL `simulateDrive`, honoring
+  `forcedCall` (+variation, + composed `customPlayData`) and a forced
+  defensive call — front + the 8-picture coverage catalog + bring 3/4/5/6 —
+  compiled by the defensive playbook's own `cardToDefCall`. The scratch
+  teams are generated ONCE from a pinned PRNG stream (both rosters from the
+  SAME stream → attribute-identical position for position, flat tier-1,
+  distinct ids) and every rep plays on fresh clones, so no rep leaks into
+  the next. Every rep runs under a pinned seed: same seed → byte-identical
+  record. A pre-snap flag is reported as the rep's outcome, never silently
+  rerolled. NOTHING persisted: no state/persistence imports, no storage.
+- **CONTROLS — the bench screen (app.js `renderBenchScreen`/`setupBenchScreen`,
+  view `bench`, + style.css).** RUN AGAIN (fresh 32-bit seed) and SAME ROLL
+  AGAIN (replays `lastSeed` — the probes' seeded-stream trick, now a
+  player-facing control). One result line per rep: the call, the forced look,
+  the coverage ROLLED, the outcome (yards/result via `benchOutcome`). The
+  latest rep animates on the REAL watchphys board through the existing clip
+  path (`benchGameShell` → `buildReplayClipData` → `initWatchMode`) — zero
+  new viewer wiring. Reps live in module state, NEVER in `state.ui` (a bench
+  session can't reach a save); only the small config rides `state.ui.bench`.
+- **THREE ENTRANCES.** Play Composer: "🧪 Test on the bench" runs the play
+  BEING BUILT (saved or not — the lineup payload goes straight to the sim's
+  proven composed-call path). Formation Designer: on save → re-sync installs
+  every fitting concept (the registry's call list IS the fits-function's
+  answer) → the bench opens on the new look. Playbook Builder: a "🧪 Test"
+  button on every look card + a 🧪 corner on every concept card — any
+  BUILT-IN look/concept, as M2's verification demands.
+- **ONE SHARED FITS-FUNCTION (`js/engine/playbook.js`).**
+  `filterConceptsForPersonnel` — Stage 7's `compileFormation` filter (minWR,
+  back-built plays need a back, options need two backs, no Wildcat/Jet for
+  customs) — extracted and exported, with `fittingConceptsForFormation(fid,
+  variation)` (variation pkg override honored, so an Empty look never offers
+  a two-back play). `formcompose._playbookOf` now calls it (custom rules
+  preserved, probe-proven identical); Designer auto-install, Builder
+  auto-select and the bench's play list all speak it. **#23:** adding a look
+  in the Builder seeds `pb.sheets[fid]` with every fitting concept at the
+  formation's SHIPPED sheet weights (`autoSheetForFormation` /
+  `shippedSheetWeights` in defaultbooks.js — starter-book weights carry
+  through, the rest at a modest base; never flat, deselect freely, only when
+  the formation has no sheet yet).
+- **Owner boundary honored:** play design only — no scouting hooks, no
+  opponent practice, no lesson layer anywhere in the bench.
+
+**Gate (this sandbox, node):** new **`bench_probe`** (34/0 ×3, registered in
+the CORE manifest): the known-play-vs-forced-look record (concept, coachCall,
+defCoachCall, formation, rolled coverage); defCall vocabulary compile
+(families pinned on the ledger — a Tampa 2 picture ROLLS Tampa 2); same-seed
+byte-identity ×3; teams even/flat/distinct/cached; ZERO save writes (runtime
+localStorage counter + static import check); composed play runs as itself
+with its Stage-5 id stamp; variation rides; `buildPlayScript` scripts the
+rep and the shell names every participant; fits ⊆ legal + personnel rules +
+customs-never-Wildcat/Jet; auto-select sheet = exactly the fitting list with
+shipped weights carried (not flat). Re-proof all green:
+`formation_compose_probe` 39/0 · `play_compose_probe` 17/0 ·
+`live_book_call_probe` 13/0 · `record_call_probe` 12/0 · `watchphys_probe`
+FULLY GREEN (1338 snaps scripted) · `playbook_build_probe` PASS ·
+`playbook_shape_probe` 24/0 · `defbook_probe` 26/0. Clean esbuild bundle
+(0 warnings) + bundle syntax parse + CSS parse.
+
+**Scope note:** built on the tree as found mid-window (a parallel D5 session
+and prior uncommitted work are present); my change-set is the 10 files in
+this entry's commit only.
 
 ## 2026-08-16 — D5 · M3 RPO/QB-RUN AUDIT (report-only) — STOPPED FOR OWNER
 

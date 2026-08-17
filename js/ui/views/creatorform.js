@@ -1,4 +1,4 @@
-import { state, rerender, notify } from '../../state.js';
+import { state, rerender, notify, navigate } from '../../state.js';
 import { listCreations, loadCreationData, saveCreation, deleteCreation } from '../../engine/creator.js';
 import {
   FORM_ANCHORS, QB_DEPTH, FORM_POS, emptyCustomFormation, validateCustomFormation,
@@ -168,9 +168,22 @@ function formListeners() {
     if (!r.ok) { notify(r.reason === "full" ? `The shelf is full (${r.cap}). Delete one first.` : "Couldn't save the formation."); return; }
     state.ui.formId = r.id;
     resyncFormations();
-    notify(`\u{1F4BE} ${cf.name} saved — it's now a formation your playbooks can carry.`);
+    // M1: on save, every fitting concept is auto-installed (the registry's
+    // call list IS the shared fits-function's answer) — then the bench opens
+    // on the new look so the first thing you do with a formation is TEST it.
+    const c = _tryCompile(cf);
     state.ui.form = null;
     state.ui.formId = null;
+    if (c && c.playbook.length) {
+      notify(`\u{1F4BE} ${cf.name} saved — ${c.playbook.length} fitting concepts installed. Take it to the bench.`);
+      state.ui.bench = {
+        formationId: c.id, variation: null, concept: c.playbook[0],
+        defLook: { front: "4-3", coverage: "c3", bring: "4" }
+      };
+      navigate("bench");
+      return;
+    }
+    notify(`\u{1F4BE} ${cf.name} saved — it's now a formation your playbooks can carry.`);
     rerender();
   });
 }

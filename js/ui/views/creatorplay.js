@@ -1,4 +1,4 @@
-import { state, rerender, notify } from '../../state.js';
+import { state, rerender, notify, navigate } from '../../state.js';
 import { FORMATION_PACKAGES } from '../../constants.js';
 import { listCreations, loadCreationData, saveCreation, deleteCreation } from '../../engine/creator.js';
 import { baseConceptsForKind, emptyCustomPlay, validateCustomPlay } from '../../engine/customplay.js';
@@ -157,6 +157,7 @@ function renderComposeEditor() {
     <div class="assign-list">${rows}</div>
     <div class="pb-actions">
       <button class="btn-mm btn-mm-new" data-play-save="1"${v.errors.length ? " disabled" : ""}>Save Play</button>
+      <button class="btn-mm btn-mm-secondary" data-play-test="1"${v.errors.length ? " disabled" : ""}>🧪 Test on the bench</button>
       <button class="btn-mm btn-mm-secondary" data-play-cancel="1">Cancel</button>
     </div>
   </div>`;
@@ -238,5 +239,21 @@ function playsListeners() {
     else notify(r.reason === "full" ? "Library is full" : "Could not save", "warning");
   });
   document.querySelector("[data-play-cancel]")?.addEventListener("click", () => { state.ui.play = null; state.ui.playId = null; rerender(); });
+  // M1 test-bench entrance: run the play BEING BUILT (saved or not) against a
+  // forced defensive look on the bench — the composer's own live rep.
+  document.querySelector("[data-play-test]")?.addEventListener("click", () => {
+    _syncName(); const p = _p();
+    if (!p || p.mode === "name") return;
+    const payload = _lineupPayload(_ensureLineup(p));
+    const v = validateComposedPlay(payload);
+    if (!v.ok) { notify(v.errors[0], "warning"); return; }
+    state.ui.bench = {
+      formationId: p.formation, variation: null, concept: null,
+      customPlayId: state.ui.playId || "_composer", customPlayData: payload,
+      label: payload.name || "My Play",
+      defLook: { front: "4-3", coverage: "c3", bring: "4" }
+    };
+    navigate("bench");
+  });
 }
 export { renderPlaysTab, playsListeners };

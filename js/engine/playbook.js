@@ -1,4 +1,5 @@
 import { FORMATION_PLAYBOOK, FORMATION_PACKAGES, FORMATION_VARIATIONS, PASS_TENDENCY, aliasFormation } from '../constants.js';
+import { PASS_CONCEPTS, RUN_CONCEPTS } from '../concepts.js';
 
 // ── customPlaybook shape (Creativity Tools, Pass 1 foundation, Aug 2026) ────
 // A customPlaybook is the portable, saveable bundle the Playbook Builder edits
@@ -20,6 +21,48 @@ var PLAYBOOK_SCHEMA_VERSION = 1;
 
 function legalConceptsForFormation(formationId) {
   return FORMATION_PLAYBOOK[aliasFormation(formationId)] || [];
+}
+// ── The ONE shared fits-function (M1, 2026-08-17) ───────────────────────────
+// Stage 7's compileFormation call-list filter, extracted so every surface that
+// asks "which plays FIT this look?" gives the same answer: the Formation
+// Designer's auto-install, the Playbook Builder's auto-select (#23), and the
+// test bench's play list all call this. Personnel rules in football terms:
+// a pass concept needs its receivers on the field (minWR); back-built plays
+// (screens to a back, the throwback gadgets) need a back; option football
+// needs two backs; Wildcat/Jet structure only exists in the shipped looks, so
+// customs never offer them. `custom` gates the customs-only exclusions —
+// shipped formations keep their curated books verbatim.
+function filterConceptsForPersonnel(list, pkg, { custom = false } = {}) {
+  const p = pkg || {};
+  const wide = p.WR || 0, backs = (p.RB || 0) + (p.FB || 0);
+  return (list || []).filter((nm) => {
+    const pc = PASS_CONCEPTS[nm];
+    if (pc) {
+      if (pc.minWR && wide < pc.minWR) return false;
+      if ((nm === "Flea Flicker" || nm === "HB Pass" || nm === "Slip Screen" || nm === "RB Screen") && backs < 1) return false;
+      return true;
+    }
+    const rc = RUN_CONCEPTS[nm];
+    if (rc) {
+      if (custom && (nm === "Wildcat Power" || nm === "Jet Sweep")) return false; // need slots/motion structure customs don't author
+      if ((nm === "Triple Option" || nm === "Speed Option") && backs < 2) return false;
+      if (nm === "QB Sneak" || nm === "Draw" || nm === "QB Power") return true;
+      return backs >= 1;
+    }
+    return false;
+  });
+}
+// "Which of this formation's legal calls fit this LOOK?" — the formation's
+// book filtered by the fielded personnel (a variation's pkg override counts,
+// so an Empty look never offers a two-back play). Always a subset of
+// legalConceptsForFormation — legality is the gate, fit is the refinement.
+function fittingConceptsForFormation(formationId, variation) {
+  const fid = aliasFormation(formationId);
+  const pkg = { ...(FORMATION_PACKAGES[fid] || {}) };
+  const vset = FORMATION_VARIATIONS[fid];
+  const vpkg = variation && vset && vset[variation] && vset[variation].pkg;
+  if (vpkg) Object.assign(pkg, vpkg);
+  return filterConceptsForPersonnel(FORMATION_PLAYBOOK[fid] || [], pkg);
 }
 function isFormation(formationId) {
   return !!FORMATION_PACKAGES[aliasFormation(formationId)];
@@ -150,4 +193,4 @@ function repairPlaybook(pb) {
   return { pb: out, changes, ok: validatePlaybook(out).ok };
 }
 
-export { PLAYBOOK_SCHEMA_VERSION, legalConceptsForFormation, emptyPlaybook, validatePlaybook, applyPlaybookToGameplan, playbookFromGameplan, repairPlaybook };
+export { PLAYBOOK_SCHEMA_VERSION, legalConceptsForFormation, filterConceptsForPersonnel, fittingConceptsForFormation, emptyPlaybook, validatePlaybook, applyPlaybookToGameplan, playbookFromGameplan, repairPlaybook };
