@@ -1,7 +1,10 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-17 NIGHT GATE session — both night giants GREEN on
+Last updated: **2026-08-17 STATUS errand (after NIGHT GATE) — D8 dial map
+SIGNED OFF: KEEP CURRENT on both PROPOSED items, zero code change, and the
+Workshop-template doctrine owner-ratified (recorded at the dial map in the
+D8 entry). Prior same day: NIGHT GATE session — both night giants GREEN on
 the D1–D9 tree, no reds, no flakes; the nine sessions' owner checklists are
 consolidated into ONE list in the NIGHT GATE entry below. Prior same day:
 D6 · M3 BUILD** (that entry follows the night-gate one). Original D6 header
@@ -12,8 +15,8 @@ archetype-keyed AI rates at the audit's targets, clean-pocket scramble,
 widened Dual band, counters verified biting — BUILT + NODE-GATED,
 `rpo_probe` 60/0 ×3 in CORE, browser tier owed; new entry below. **M3 IS
 BUILT** — with D8/D9 this window, every milestone M0–M5 now has its build
-session in. Same window earlier: D8 · M5 plan home (dial map STILL awaits
-owner sign-off) · D9 · M5 defbook close-out — D9's card_lint blurb flag on
+session in. Same window earlier: D8 · M5 plan home (dial map since SIGNED
+OFF — KEEP CURRENT, owner 2026-08-17) · D9 · M5 defbook close-out — D9's card_lint blurb flag on
 D6's in-flight concepts is RESOLVED in this session, card_lint 21/0 ×3.)
 Prior: D4 · M2 presentation; D3 · M2 engine; D7 · M4; D2 · M1; D5 · M3
 audit RATIFIED. Plan of record: BUILD ORDER v2 (2026-08-17), dispatch
@@ -105,9 +108,12 @@ per-entry versions keep the step-by-step detail. Read this list once and
 you have everything owed.
 
 **Decisions (no machine needed):**
-- [ ] **D8 — SIGN OFF THE DIAL-REDISTRIBUTION MAP** (the D8 entry, item 4:
-  only the dispatch-mandated move was made; both PROPOSED moves await your
-  (a)/(b) call — recommendation (a) on both).
+- [x] **D8 — DIAL-REDISTRIBUTION MAP SIGNED OFF** (owner, 2026-08-17):
+  **(a) KEEP CURRENT on both PROPOSED items** — tendency/passDepth/rushInPct
+  stay live on the Offense tab (book seeds, week overrides); the Defense
+  tab's identity dials stay (tab = week, editor = book). Zero code change.
+  The organizing doctrine was ratified alongside — recorded at the dial map
+  in the D8 entry.
 - [ ] **D5/D6 — brain-research ledger stands:** the RPO/QB-run target bands
   are provisional (PFF/ESPN/FantasyPoints anchors). Two D6 notes for that
   pass: the widened Dual's scramble share ~3.5–4.5% vs the 5–8% band;
@@ -193,7 +199,8 @@ covers all of these; details in each entry's OWNER CHECKLIST):**
   remains the one standing flag (NOTHING new).
 - Standing debt unchanged: act B/D local scrub + full local gate + a green
   night run before the next deploy; M4 phone eyeball; M1 first bench
-  session; D4/D8 browser eyeballs; D8 dial map sign-off.
+  session; D4/D8 browser eyeballs. (D8 dial map: since signed off —
+  KEEP CURRENT, owner 2026-08-17.)
 
 **What shipped (js/ + style.css + tools/; the ratified §7 point by point):**
 - **THE AUTHORED FAMILY (#45, §7.7 — all five in v1).** concepts.js: `Zone
@@ -304,12 +311,12 @@ exclusively my rpo_probe entry. `tools/_build_inplace_tmp.mjs` +
 `tools/_gate_last.json` (runner state) left uncommitted — not mine.
 
 ## 2026-08-17 — D8 · M5 GAME-PLAN HOME + SEASONS (embedded editable books · push-to-Workshop restamp · def identity panel · dial map · season pickers)
-## BUILT + NODE-GATED — ⚠ BROWSER TIER OWED · ⚠ DIAL MAP AWAITS SIGN-OFF
+## BUILT + NODE-GATED — ⚠ BROWSER TIER OWED · DIAL MAP SIGNED OFF (KEEP CURRENT, owner 2026-08-17)
 
 **OWNER CHECKLIST**
-- **SIGN OFF THE DIAL-REDISTRIBUTION MAP** (item 4, below in this entry) —
-  what moved is only the dispatch-mandated piece (formation usage → Plan
-  Home); everything marked PROPOSED stayed where it was pending your call.
+- ~~SIGN OFF THE DIAL-REDISTRIBUTION MAP~~ **DONE (owner, 2026-08-17):
+  KEEP CURRENT on both PROPOSED items — zero code change.** The dial map
+  below records the resolution and the ratified organizing doctrine.
 - **Browser eyeball (the D8 browser-owed):**
   (1) **In-dynasty edit → push → Workshop shows it:** Game Plan → Plan Home
   → ✏️ Edit playbook — the embedded Builder opens ON the book you carry
@@ -341,7 +348,8 @@ exclusively my rpo_probe entry. `tools/_build_inplace_tmp.mjs` +
   green night run before the next deploy; M4 phone eyeball; M1 first bench
   session.
 
-**THE DIAL-REDISTRIBUTION MAP (item 4 — for owner sign-off).** The law
+**THE DIAL-REDISTRIBUTION MAP (item 4 — SIGNED OFF, owner 2026-08-17:
+KEEP CURRENT on both PROPOSED items, zero code change).** The law
 (ratified): BOOK properties live with the book, WEEK properties with the
 controller. The manifest (`PLAN_FIELD_SIDE`, teamplan.js) already sides
 every field; this maps the SCREENS onto it:
@@ -350,21 +358,33 @@ every field; this maps the SCREENS onto it:
   look/sheet AUTHORING → the embedded editors (was: Workshop-only). The
   Offense → Package tab now holds only tendency + 4th-down nerve and points
   home.
-- **PROPOSED, NOT MOVED (contentious — your call):** `tendency`, `passDepth`,
-  `rushInPct` are book fields in the manifest AND ride saved books, but
-  coaches turn them weekly — they SIT on the Offense tab today. Options:
-  (a) leave them (book seeds them, the week overrides them — current
-  behavior), or (b) move them into the embedded editor and make the Offense
-  tab read-only for them. Recommendation: (a) — FM's tactic-vs-touchline
-  keeps matchday overrides live.
-- **PROPOSED, NOT MOVED:** the Defense tab's identity dials (front /
-  coverage / pressure) duplicate what the embedded def editor authors. Same
-  (a)/(b) choice; same recommendation (a) — the tab is the week, the editor
-  is the book.
+- **RESOLVED — KEEP CURRENT (owner, 2026-08-17):** `tendency`, `passDepth`,
+  `rushInPct` STAY live on the Offense tab — the book seeds them, the week
+  overrides them (option (a), as recommended: FM's tactic-vs-touchline
+  keeps matchday overrides live). They remain book fields in the manifest
+  and ride saved books, unchanged.
+- **RESOLVED — KEEP CURRENT (owner, 2026-08-17):** the Defense tab's
+  identity dials (front / coverage / pressure) STAY — the tab is the week,
+  the editor is the book (option (a)).
 - **STAYS IN THE CONTROLLER (week, untouched):** baseTempo + motion (Tempo &
   Motion tab), fourthDown, maxFGDist, situations grid, defAggression/
   blitzPct, target shares, run direction, per-look WEIGHT overrides
   (Offense → Playbook tab), quick-slots A/B/C, halftime adjust.
+
+**THE ORGANIZING DOCTRINE (owner-ratified 2026-08-17):** "The Workshop
+book is a TEMPLATE. Loading it into a world instantiates that world's
+copy. In-season editing is part of that world — edits save to the league
+save only. Pushing back to the Workshop is a manual overwrite, never
+automatic." In-season adjustments (the week dials) live in the world,
+same principle. Verified against the shipped seam (read-only sanity
+check, 2026-08-17): `bookpush.js` matches the doctrine —
+`applyEditedBookToSchool` writes ONLY the school's league-saved gameplan
+(no Creator-library write anywhere in the save path), and
+`pushBookToWorkshop` is reachable ONLY from the explicit "⤴ Push to
+Workshop" click handlers (creatorplaybook.js / creatordef.js), overwrites
+the Workshop source creation in place, and restamps
+`_bookSourceId`/`_bookSourceSaved` (def pair likewise) from the entry
+just written. No automatic push path exists.
 
 **What shipped (js/ + style.css + tools/; D8 dispatch items 1–5):**
 - **EMBEDDED EDITABLE PLAYBOOKS (#39).** New `js/engine/bookpush.js` — the
