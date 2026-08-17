@@ -164,6 +164,9 @@ export const MANIFEST = [
   { name: 'presentation_live_probe.mjs', tier: 'core', kind: 'pw', timeoutSec: 500, seedFlaky: true,
     note: 'M25 structure laws: weather group + lawful kind, wear, band, both mascots, #watch-lower, state-leak law. Weather kind / lower-third content are sightings (seeded per matchup).' },
 
+  { name: 'timecontrol_probe.mjs', tier: 'core', kind: 'node', timeoutSec: 300,
+    note: 'M4 watch/time controls (D7, 2026-08-16) — the big-moment spec (4th downs / red zone / inside 2:00 / one-score Q4 / OT, 3rd downs OFF the list), toggle cadence honored + changeable mid-game both directions, possession skip (skipPoss) and half/end skip (skipUntil) mute asks and clear themselves, skipped stretches summarize via driveSummariesFrom (never silence), records stay real, and a mid-skip pending is still a live pause (gamePauseIsLive) with no skip state surviving to serialization. Demote to full once settled.' },
+
   // ── core: UI trio + build stamp ────────────────────────────────────────────
   { name: 'st_ui_smoke.mjs', tier: 'core', kind: 'pw', timeoutSec: 200 },
   { name: 'ui_playcall_smoke.mjs', tier: 'core', kind: 'pw', timeoutSec: 300 },

@@ -23,7 +23,7 @@ async function settleToSheet(maxMs = 45000) {
   const t0 = Date.now();
   while (Date.now() - t0 < maxMs) {
     if (await page.locator('.cs-form-strip').count() && await page.locator('[data-cs-drill], [data-cs-callconcept]').count()) return true;
-    const ride = page.locator('#dc-ride');
+    const ride = page.locator('#dc-send');
     if (await ride.count()) { await ride.click().catch(() => {}); await page.waitForTimeout(500); continue; }
     const fourth = page.locator('[data-fourth="go"]');
     if (await fourth.count()) { await fourth.first().click().catch(() => {}); await page.waitForTimeout(500); continue; }
@@ -72,7 +72,7 @@ async function gameContinues(maxMs = 30000) {
   const t0 = Date.now();
   while (Date.now() - t0 < maxMs) {
     if (await page.locator('.cs-form-strip').count()) return true;
-    if (await page.locator('#dc-ride').count()) return true;
+    if (await page.locator('#dc-send').count()) return true;
     if (await page.locator('[data-fourth]').count()) return true;
     if (await page.locator('.watch-live-overlay').count()) return true;
     if (await page.locator('#close-game-result-btn').count()) return true;

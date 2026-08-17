@@ -64,7 +64,7 @@ await page.evaluate(async () => { const m = await import('./js/state.js'); await
 await page.waitForTimeout(300);
 g('kickoff prompt appears on the game day', await page.locator('.kickoff-overlay').count() === 1);
 g('three modes + remembered default offered', await page.locator('[data-kickoff]').count() === 3
-  && await page.locator('.kickoff-opt.selected[data-kickoff="off"]').count() === 1);
+  && await page.locator('.kickoff-opt.selected[data-kickoff="watch"]').count() === 1);
 await page.screenshot({ path: '/tmp/smoke_kickoff.png' });
 
 // Coach Mode gating (Jul 2026): OFF hides the headset modes and offers a single
@@ -95,7 +95,7 @@ if (await page.locator('#watch-live-skip').count()) { await page.click('#watch-l
 // headset (dc-panel). Ride the plan through any defensive stops until our
 // offensive sheet is up — the offensive flow below is what this smoke pins.
 for (let i = 0; i < 15 && !(await page.locator('.cs-strip').count()); i++) {
-  if (await page.locator('#dc-ride').count()) { await page.click('#dc-ride'); await page.waitForTimeout(600); }
+  if (await page.locator('#dc-send').count()) { await page.click('#dc-send'); await page.waitForTimeout(600); }
   if (await page.locator('#watch-live-skip').count()) { await page.click('#watch-live-skip'); await page.waitForTimeout(400); }
   else if (await page.locator('[data-fourth]').count()) { await page.click('#fourth-auto'); await page.waitForTimeout(500); }
   else await page.waitForTimeout(300);

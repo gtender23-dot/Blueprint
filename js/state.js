@@ -14,7 +14,7 @@ import { commitSeasonGoals, initPreseason } from './engine/offseason.js';
 import { listSaves, loadGame, saveGame, deleteSlotData } from './engine/persistence.js';
 import { initBudget } from './engine/recruiting.js';
 import { activateCoachedChair, advanceDay, beginCoachedGame, coachedGamesForDay, coachedSchoolIds, getPhase, playerGameOpponentForDay, restoreCoachWeekChair, resumeFromFourthDown, resumeFromHalftime, resumeFromPlayCall, simCurrentCoachedGame, weekLabel, weekShort } from './engine/season.js';
-import { finishInteractiveGame, resumeFromCall, resumeFromDecision, setAutoCounter, simulateFirstHalf, stepSecondHalf } from './engine/sim.js';
+import { driveSummariesFrom, finishInteractiveGame, isKeyDownSituation, resumeFromCall, resumeFromDecision, setAutoCounter, simulateFirstHalf, stepSecondHalf } from './engine/sim.js';
 import { applyStart } from './engine/starts.js';
 import { generateRecruitPool, generateSchedule, generateWorld, hashStr, repairRecruitLocations } from './engine/world.js';
 import { fullName, uuid } from './utils.js';
@@ -582,7 +582,18 @@ function handleGamePendingEvents(events) {
     state.ui.liveWatch = null;
     {
       const token2 = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
-      if (token2) {
+      if (token2 && token2._skipAnim) {
+        // M4 (#54/#55): a skipped stretch never animates and never goes silent —
+        // the feed gets one DRIVE-SUMMARY line per drive the skip walked past,
+        // and the watch pointers advance so the board doesn't replay it.
+        const from = token2._skipAnim.fromPlays || 0;
+        const total = tokenAllPlays(token2).length;
+        const sums = driveSummariesFrom(token2, from).map((s) => ({ sum: s, poss: s.poss }));
+        state.ui.callFeed = sums;
+        token2._feedSeen = tokenFeedItems(token2).length;
+        token2._watchedPlays = total;
+        token2._skipAnim = null;
+      } else if (token2) {
         const all = tokenFeedItems(token2);
         state.ui.callFeed = all.slice(token2._feedSeen || 0);
         token2._feedSeen = all.length;
@@ -605,7 +616,15 @@ function handleGamePendingEvents(events) {
     state.ui.showCallSheet = false;
     state.ui.halftimeTab = "offense";
     state.ui.halftimeOpenSitKey = null;
-    if (liveWatchOn()) {
+    const skipTok = (state.pendingHalftime == null ? void 0 : state.pendingHalftime.token) || halftime.token || null;
+    if (skipTok && skipTok._skipAnim) {
+      // M4 (#55): sim-to-half skipped the animation — straight to the locker
+      // room; the half's story lives in the halftime report, not a rewatch.
+      skipTok._watchedPlays = tokenAllPlays(skipTok).length;
+      skipTok._feedSeen = tokenFeedItems(skipTok).length;
+      skipTok._skipAnim = null;
+      state.ui.showHalftime = true;
+    } else if (liveWatchOn()) {
       state.ui.showHalftime = false;
       state.ui.liveWatch = { stage: "halftime" };
     } else {
@@ -645,11 +664,14 @@ function tokenFeedItems(token) {
 }
 async function chooseKickoffMode(mode) {
   state.settings.lastCallMode = mode;
-  state._callModeToday = mode;
+  // M4: "watch" is an involvement LEVEL, not an engine mode — the engine runs
+  // "all" (a pending every snap, so the coach can take the headset back at any
+  // moment) and the UI auto-answers (ui.autoRun).
+  state._callModeToday = mode === "watch" ? "all" : mode;
   const cwGameId = state.ui.pendingKickoff && state.ui.pendingKickoff.coachWeekGameId;
   state.ui.pendingKickoff = null;
   state.ui.callSheetFormation = null;
-  state.ui.autoRun = false;
+  state.ui.autoRun = mode === "watch";
   if (cwGameId) {
     // Multi-coach: this pregame belongs to one of the player's programs. Start
     // THAT game (to halftime) rather than advancing the league day.
@@ -716,6 +738,12 @@ async function answerPlayCall(call) {
   state.ui.callDrill = null;
   state.ui.showCallSheet = false;
   if (handleGamePendingEvents(events)) return;
+  if (token == null ? void 0 : token._skipAnim) {
+    // M4 (#55): the game ended inside a skipped stretch — no final rewatch
+    // board; straight to the box score (the summary of record).
+    state.ui._skipFinalBoard = true;
+    token._skipAnim = null;
+  }
   state.ui._finalWatched = liveWatchOn() && (token == null ? void 0 : token._watchedPlays) || null;
   processEvents(events);
   await autosave();
@@ -729,13 +757,51 @@ async function setCallModeMidGame(mode) {
   if (token.pending.kind === "fourth") await answerFourthDown("auto");
   else await answerPlayCall({ concept: "sheet" });
 }
-async function simToQuarterEnd() {
-  var _a, _b, _c, _d, _e;
+// ── M4: the 3-level involvement toggle ──────────────────────────────────────
+// One dial, changeable mid-game (FM's law): WATCH every play (the board plays
+// each snap and auto-continues — the headset auto-answers with the sheet, so
+// you can grab it back on any snap) · coach the big MOMENTS (the sim runs and
+// interrupts pre-snap, call sheet open, only on the big-moment spec) · coach
+// EVERY play (full coordinator mode). The engine keeps its existing callMode
+// vocabulary ("all"/"keydowns"/"off"); WATCH is callMode "all" + ui.autoRun.
+function involvementLevel() {
+  var _a;
+  if (state.ui.autoRun) return "watch";
+  const t = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
+  const m = (t == null ? void 0 : t.callMode) || state._callModeToday;
+  return m === "keydowns" ? "moments" : m === "all" ? "every" : "watch";
+}
+async function setInvolvement(level) {
+  var _a;
+  state.settings = state.settings || {};
+  state.settings.lastCallMode = level === "moments" ? "keydowns" : level === "every" ? "all" : "watch";
+  const token = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
+  if (token) token.callMode = level === "moments" ? "keydowns" : "all";
+  state.ui.autoRun = level === "watch";
+  if (!(token == null ? void 0 : token.pending)) {
+    rerender();
+    return;
+  }
+  if (level === "every") {
+    // The snap on the table is yours now — leave the pending open. (If the
+    // board is still catching up, it finishes and hands you the sheet.)
+    rerender();
+    return;
+  }
+  // WATCH and MOMENTS both step back: answer the open snap with the plan and
+  // let the sim roll — to the next play (watch) or the next big moment.
+  if (token.pending.kind === "fourth") await answerFourthDown("auto");
+  else await answerPlayCall({ concept: "sheet" });
+}
+// M4 (#54): sim the current possession, skipping the animation — the Retro
+// Bowl "skip playing defense" loop. Asks stay silent until possession flips.
+async function simToPossessionEnd() {
+  var _a;
   const token = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
   const p = token == null ? void 0 : token.pending;
   if (!p) return;
-  const clock = p.kind === "fourth" ? p.clock : (_e = (_d = (_c = (_b = p.drive) == null ? void 0 : _b.sit) == null ? void 0 : _c.clock) != null ? _d : p.clock) != null ? _e : 0;
-  if (p.half !== 3) token.skipUntil = { half: p.half, clock: clock > 900 ? 900 : 0 };
+  token.skipPoss = p.possession;
+  token._skipAnim = { fromPlays: tokenAllPlays(token).length };
   if (p.kind === "fourth") await answerFourthDown("auto");
   else await answerPlayCall({ concept: "sheet" });
 }
@@ -745,6 +811,8 @@ async function simToBreak() {
   const p = token == null ? void 0 : token.pending;
   if (!p) return;
   if (p.half !== 3) token.skipUntil = { half: p.half, clock: 0 };
+  // M4 (#55): the skipped stretch lands as drive summaries, not an animation.
+  token._skipAnim = { fromPlays: tokenAllPlays(token).length };
   if (p.kind === "fourth") await answerFourthDown("auto");
   else await answerPlayCall({ concept: "sheet" });
 }
@@ -757,6 +825,10 @@ async function answerFourthDown(decision) {
   const events = resumeFromFourthDown(state, decision);
   state.ui.showFourthDown = false;
   if (handleGamePendingEvents(events)) return;
+  if (token == null ? void 0 : token._skipAnim) {
+    state.ui._skipFinalBoard = true;
+    token._skipAnim = null;
+  }
   state.ui._finalWatched = liveWatchOn() && (token == null ? void 0 : token._watchedPlays) || null;
   processEvents(events);
   await autosave();
@@ -851,6 +923,10 @@ async function exhibitionResume(fn) {
     handleGamePendingEvents(events);
     return;
   }
+  if (token._skipAnim) {
+    state.ui._skipFinalBoard = true;
+    token._skipAnim = null;
+  }
   state.ui._finalWatched = liveWatchOn() && token._watchedPlays || null;
   exhibitionFinal(token);
 }
@@ -865,13 +941,14 @@ function exhibitionFinal(token) {
   state.pendingHalftime = null;
   state.ui.lastGameResult = result;
   state.ui.gameResultTab = "boxscore";
-  if (liveWatchOn()) {
+  if (liveWatchOn() && !state.ui._skipFinalBoard) {
     state.ui.liveWatch = { stage: "final" };
     state.ui.showGameResult = false;
     state.ui.autoRun = false;
   } else {
     state.ui.showGameResult = true;
   }
+  state.ui._skipFinalBoard = false;
   rerender();
 }
 async function skipToOffseason() {
@@ -995,13 +1072,14 @@ function processEvents(events, { suppressModal = false } = {}) {
         }
         if (!suppressModal && ((_d = state.settings) == null ? void 0 : _d.showGameResultModal) !== false) {
           state.ui.lastGameResult = r;
-          if (liveWatchOn()) {
+          if (liveWatchOn() && !state.ui._skipFinalBoard) {
             state.ui.liveWatch = { stage: "final" };
             state.ui.showGameResult = false;
             state.ui.autoRun = false;
           } else {
             state.ui.showGameResult = true;
           }
+          state.ui._skipFinalBoard = false;
           state.ui.gameResultTab = "boxscore";
         }
       }
@@ -1358,4 +1436,4 @@ LEGACY_VIEW_MAP = {
   history: ["statsgroup", "history"]
 };
 
-export { startSeasonRun, exitSeasonRun, advanceDay2, answerFourthDown, answerPlayCall, chooseKickoffMode, closeInstantClassicReplay, continueExhibitionSpectator, devAddBudget, devForceSign, devSimToPlayoffs, devSkipToNextGame, endExhibition, getAllBoardEntries, getBoardEntry, getConferenceStandings, getPhaseLabel, getPlayerSchool, getRecruit, getSchool, getScoutSchool, getUpcomingGame, getWeekLabel, getWeekShort, liveWatchOn, loadFromSlot, navigate, navigateBack, notify, notifyJobMoveCosts, openSchool, processEvents, programGroupTab, pushNav, refreshSaves, rerender, resumeHalftime, saveNow, saveToSlot, seasonGroupTab, setCallModeMidGame, setGroupTab, setNotifyFn, setRenderFn, afterCoachedGameResultClose, kickoffCoachedGame, simCoached, simCoachedGameFromAgenda, simToBreak, simToQuarterEnd, skipToOffseason, startExhibition, startInstantClassicReplay, startNewGame, startNewGamePrepared, state, statsGroupTab, summarizeCommitmentNotifications, switchTreeSlot, teamGroupTab, tokenAllPlays, unwatchedPlayCount, advanceDay2 as advanceDay };
+export { startSeasonRun, exitSeasonRun, advanceDay2, answerFourthDown, answerPlayCall, chooseKickoffMode, closeInstantClassicReplay, continueExhibitionSpectator, devAddBudget, devForceSign, devSimToPlayoffs, devSkipToNextGame, endExhibition, getAllBoardEntries, getBoardEntry, getConferenceStandings, getPhaseLabel, getPlayerSchool, getRecruit, getSchool, getScoutSchool, getUpcomingGame, getWeekLabel, getWeekShort, liveWatchOn, loadFromSlot, navigate, navigateBack, notify, notifyJobMoveCosts, openSchool, processEvents, programGroupTab, pushNav, refreshSaves, rerender, resumeHalftime, saveNow, saveToSlot, seasonGroupTab, setCallModeMidGame, setGroupTab, setInvolvement, involvementLevel, setNotifyFn, setRenderFn, afterCoachedGameResultClose, kickoffCoachedGame, simCoached, simCoachedGameFromAgenda, simToBreak, simToPossessionEnd, skipToOffseason, startExhibition, startInstantClassicReplay, startNewGame, startNewGamePrepared, state, statsGroupTab, summarizeCommitmentNotifications, switchTreeSlot, teamGroupTab, tokenAllPlays, unwatchedPlayCount, advanceDay2 as advanceDay };

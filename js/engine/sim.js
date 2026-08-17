@@ -152,8 +152,19 @@ function conceptGroups() {
   }
   return g;
 }
+// M4 (Aug 2026) — the BIG-MOMENT spec, owner-ratified: 4th downs, red-zone
+// trips, inside two minutes of either half, and every snap of a one-score 4th
+// quarter (or overtime — sudden football is all big moments). 3rd downs came
+// OFF the list in the redesign: the old cadence stopped the game too often to
+// feel like "jumping in for the moments". Turnovers and scores are watch
+// moments only — they end drives, so no pre-snap ask ever fires on them.
 function isKeyDownSituation(sit) {
-  return sit.down >= 3 || sit.fieldPos >= 80 || sit.clock <= 120;
+  if (sit.down >= 4) return true;
+  if (sit.fieldPos >= 80) return true;
+  if (sit.clock <= 120) return true;
+  if (sit.half === 3) return true;
+  if (sit.half === 2 && sit.clock <= 900 && sit.score && Math.abs((sit.score.off || 0) - (sit.score.def || 0)) <= 8) return true;
+  return false;
 }
 // F3 (openers): the situations the script always yields to.
 var OPENERS_YIELDS = /* @__PURE__ */ new Set(["goal_line", "backed_up", "two_min_trail", "four_min_lead", "red_zone"]);
@@ -5857,6 +5868,9 @@ function playHalf(token, half, resume = null) {
   // without the counter read 99 — the script never mis-fires on a stale save.
   if (!resume && half === 1) token._dnums = { home: 0, away: 0 };
   if (!token._dnums) token._dnums = { home: 99, away: 99 };
+  // M4: a possession-skip never leaks across a break — the 2nd half (and OT)
+  // opens with the headset live again.
+  if (!resume) token.skipPoss = null;
   while ((clock > 0 || resumeDrive) && driveCount < 20) {
     activateControlledSide(token, possession);
     const controlled = tokenControlsSide(token, possession);
@@ -5880,6 +5894,14 @@ function playHalf(token, half, resume = null) {
     };
     const skipHolds = (sit) => {
       var _a2;
+      // M4 (#54): sim-the-possession — asks stay silent while THIS possession
+      // keeps the ball; the flag clears itself the moment possession flips
+      // (checked per drive, so the next series asks again). Cleared at every
+      // fresh half start below and in overtime, like skipUntil.
+      if (token.skipPoss) {
+        if (possession === token.skipPoss) return true;
+        token.skipPoss = null;
+      }
       const sk = token.skipUntil;
       if (!sk) return false;
       if (half > sk.half) {
@@ -6396,12 +6418,18 @@ function runToken(token) {
         continue;
       }
       token.stage = "done";
+      // M4: skip state is engine-transient — nothing skip-related survives
+      // the final gun (and so nothing skip-related can ever serialize).
+      token.skipUntil = null;
+      token.skipPoss = null;
       return token;
     } else if (token.stage === "ot") {
       const r = playOvertime(token, token._resume || null);
       token._resume = null;
       if (r === "PENDING") return token;
       token.stage = "done";
+      token.skipUntil = null;
+      token.skipPoss = null;
       return token;
     } else return token;
   }
@@ -6410,6 +6438,7 @@ function runToken(token) {
 function playOvertime(token, resume = null) {
   const { homeTeam, awayTeam, homeRoster, awayRoster, log, drives, homeStats, awayStats } = token;
   token.skipUntil = null;
+  token.skipPoss = null;
   if (!token.otState) {
     token.otIsHome = Math.random() < 0.5;
     token.otState = { clock: 300, fieldPos: 75, half: 3, score: { off: 0, def: 0 }, timeouts: { home: C.TIMEOUTS_OT, away: C.TIMEOUTS_OT }, playerSide: token.playerSide };
@@ -6477,6 +6506,33 @@ function playOvertime(token, resume = null) {
 }
 function finishInteractiveGame(token) {
   return finishGame(token);
+}
+// M4 (#54/#55): one summary row per drive touched by a skipped stretch — the
+// play-by-play feed shows these instead of silence. Pure read: walks the
+// token's drives (plus the pending drive) counting flat play indexes, and
+// summarizes every drive with at least one play at index >= fromPlays.
+function driveSummariesFrom(token, fromPlays) {
+  const out = [];
+  let seen = 0;
+  const drv = [...token.drives || []];
+  if (token.pending && token.pending.drive && Array.isArray(token.pending.drive.plays)) {
+    drv.push({ possession: token.pending.possession, plays: token.pending.drive.plays, result: null, points: 0, _live: true });
+  }
+  for (const d of drv) {
+    const ps = d.plays || [];
+    const skippedHere = Math.max(0, seen + ps.length - Math.max(seen, fromPlays));
+    if (skippedHere > 0) {
+      out.push({
+        poss: d.possession,
+        plays: ps.length,
+        yards: ps.reduce((n, pl) => n + (pl.yards || 0), 0),
+        result: d._live ? "live" : d.result || null,
+        points: d.points || 0
+      });
+    }
+    seen += ps.length;
+  }
+  return out;
 }
 function resumeFromDecision(token, decision) {
   if (!(token == null ? void 0 : token.pending)) return token;
@@ -7006,4 +7062,4 @@ DIFFICULTY_EDGE = {
 export { callContext, decisionContext, finishInteractiveGame, midGameReport, pinnedFirst, resumeFromCall, resumeFromDecision, setAutoCounter, setPenaltyScale, simulateFirstHalf, simulateGame, simulateSecondHalf, stepSecondHalf };
 
 // additional exports consumed by tools/ probes
-export { attemptFG, catchResolution, coverageStrength, simulateDrive, rpoConflictRead, fgLateStretch, fgMakeProb, fourthDownDecision, fourthDownIsCoachCall, fourthDownIsMoment, isKeyDownSituation, motionMisreadProb, pickPassConcept, pickRunConcept, puntDistance, qbRead, resolveFakeFG, resolveFakePunt, resolvePassRush, returnMuff, returnOutcome, xpMakeProb };
+export { attemptFG, catchResolution, coverageStrength, simulateDrive, driveSummariesFrom, rpoConflictRead, fgLateStretch, fgMakeProb, fourthDownDecision, fourthDownIsCoachCall, fourthDownIsMoment, isKeyDownSituation, motionMisreadProb, pickPassConcept, pickRunConcept, puntDistance, qbRead, resolveFakeFG, resolveFakePunt, resolvePassRush, returnMuff, returnOutcome, xpMakeProb };

@@ -53,7 +53,7 @@ async function settleToCall(maxMs = 30000) {
   while (Date.now() - t0 < maxMs) {
     if (await page.locator('[data-cs-drill]').count() > 0 || await page.locator('[data-fourth]').count() > 0) return true;
     // Madden pass: every-snap mode also stops on the DEFENSIVE panel — ride it.
-    const ride = page.locator('#dc-ride');
+    const ride = page.locator('#dc-send');
     if (await ride.count()) { await ride.click().catch(() => {}); await page.waitForTimeout(500); continue; }
     const dcSend = page.locator('#dc-send');
     if (await dcSend.count()) { await dcSend.click().catch(() => {}); await page.waitForTimeout(500); continue; }
@@ -88,7 +88,7 @@ async function settleToSkipBreak(maxMs = 30000) {
       await fourth.first().click().catch(() => {});
     }
     // Madden pass: ride defensive every-snap stops so the loop keeps settling.
-    const ride = page.locator('#dc-ride');
+    const ride = page.locator('#dc-send');
     if (await ride.count()) { await ride.click().catch(() => {}); await page.waitForTimeout(500); continue; }
     const skip = page.locator('#watch-live-skip');
     if (await skip.count()) await skip.click().catch(() => {});
@@ -125,7 +125,7 @@ await page.locator('#tc-skipbreak').first().click();
 await page.waitForTimeout(1500);
 // halftime live-watch replay may be up — skip it
 for (let i = 0; i < 30 && !(await page.locator('#btn-resume-halftime').count()); i++) {
-  const ride = page.locator('#dc-ride');
+  const ride = page.locator('#dc-send');
   if (await ride.count()) await ride.click().catch(() => {});
   const skip = page.locator('#watch-live-skip');
   if (await skip.count()) await skip.click().catch(() => {});
@@ -162,7 +162,7 @@ if (secondHalfState === 'call') {
 }
 // final live-watch replay → skip → result modal
 for (let i = 0; i < 30 && !(await page.locator('#close-game-result-btn').count()); i++) {
-  const ride = page.locator('#dc-ride');
+  const ride = page.locator('#dc-send');
   if (await ride.count()) await ride.click().catch(() => {});
   const skip = page.locator('#watch-live-skip');
   if (await skip.count()) await skip.click().catch(() => {});

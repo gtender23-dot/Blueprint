@@ -164,13 +164,6 @@ function renderSettings() {
           </div>
           ${toggle("liveWatch", s.liveWatch !== false, "Default to live Coach Mode for future games")}
         </div>
-        <div class="setting-row">
-          <div class="setting-info">
-            <div class="setting-label">8-Bit Players</div>
-            <div class="setting-desc">ON (default): the live chalkboard runs the play with little Tecmo-style sprite players in each team's colors. OFF: the classic dots-and-X's markers. Presentation only \u2014 the game underneath is identical.</div>
-          </div>
-          ${toggle("spriteWatch", s.spriteWatch !== false, "8-bit sprite players on the live chalkboard")}
-        </div>
         <div class="offseason-item">
           <span class="offseason-label">Sound &amp; vibration</span>
           ${toggle("sound", s.sound !== false, "Sound and haptic cues")}
@@ -209,6 +202,34 @@ function renderSettings() {
           <div class="gp-options" style="flex-wrap:nowrap">
             ${[["off", "Off"], ["full", "On"]].map(([v, l]) => `<button class="gp-option gp-option-sm${(s.recruitAssist || (s.autoRecruit ? "full" : "off")) === v ? " active" : ""}" data-assist-level="${v}">${l}</button>`).join("")}
           </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="card settings-card">
+      <div class="card-header"><span class="card-title">PRESENTATION</span></div>
+      <div class="settings-list">
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Instant Replays</div>
+            <div class="setting-desc">How often the broadcast cuts to a replay during a live watch. High: every big play. Low: scores and turnovers only. Off: never. (The watch bar's Replays button is this same dial.) Presentation only.</div>
+          </div>
+          <div class="gp-options" style="flex-wrap:nowrap">
+            ${(() => {
+    const rf = s.replayFreq === "off" || s.replayFreq === "low" || s.replayFreq === "high" ? s.replayFreq : s.watchReplays === false ? "off" : "high";
+    return [["off", "Off"], ["low", "Low"], ["high", "High"]].map(([v, l]) => `<button class="gp-option gp-option-sm${rf === v ? " active" : ""}" data-replayfreq="${v}">${l}</button>`).join("");
+  })()}
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">8-Bit Players</div>
+            <div class="setting-desc">ON (default): the live chalkboard runs the play with little Tecmo-style sprite players in each team's colors. OFF: the classic dots-and-X's markers. Presentation only — the game underneath is identical.</div>
+          </div>
+          ${toggle("spriteWatch", s.spriteWatch !== false, "8-bit sprite players on the live chalkboard")}
         </div>
 
       </div>
@@ -410,6 +431,14 @@ function setupListeners15() {
     btn.addEventListener("click", () => {
       if (!state.settings) state.settings = {};
       state.settings.gameplanMode = btn.dataset.gpmode;
+      rerender();
+    });
+  });
+  document.querySelectorAll("[data-replayfreq]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (!state.settings) state.settings = {};
+      state.settings.replayFreq = btn.dataset.replayfreq;
+      delete state.settings.watchReplays;
       rerender();
     });
   });

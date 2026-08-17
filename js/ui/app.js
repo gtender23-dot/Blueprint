@@ -15,7 +15,7 @@ import { repairComposedPlay } from '../engine/playcompose.js';
 import { renderConceptThumb, renderFormationDiagram, renderPlayCard, resolveComposedReceivers } from './views/routeart.js';
 import { SITUATION_KEYS, SITUATION_LABELS } from '../engine/situations.js';
 import { isTreeGame, lockstepBlock, treeSnapshot } from '../engine/tree.js';
-import { afterCoachedGameResultClose, answerFourthDown, answerPlayCall, chooseKickoffMode, closeInstantClassicReplay, continueExhibitionSpectator, exitSeasonRun, getPhaseLabel, getPlayerSchool, getUpcomingGame, getWeekLabel, getWeekShort, navigate, navigateBack, notify, openSchool, programGroupTab, refreshSaves, rerender, resumeHalftime, saveToSlot, seasonGroupTab, setCallModeMidGame, setGroupTab, setNotifyFn, setRenderFn, simCoached, simToBreak, simToQuarterEnd, state, statsGroupTab, switchTreeSlot, teamGroupTab } from '../state.js';
+import { afterCoachedGameResultClose, answerFourthDown, answerPlayCall, chooseKickoffMode, closeInstantClassicReplay, continueExhibitionSpectator, exitSeasonRun, getPhaseLabel, getPlayerSchool, getUpcomingGame, getWeekLabel, getWeekShort, navigate, navigateBack, notify, openSchool, programGroupTab, refreshSaves, rerender, resumeHalftime, saveToSlot, seasonGroupTab, setCallModeMidGame, setGroupTab, setInvolvement, involvementLevel, setNotifyFn, setRenderFn, simCoached, simToBreak, simToPossessionEnd, state, statsGroupTab, switchTreeSlot, teamGroupTab } from '../state.js';
 import { chapterById } from './manual/index.js';
 import { tipById, tipTerm } from './manual/tips.js';
 import { renderAwards, setupListeners4 } from './views/awards.js';
@@ -555,6 +555,10 @@ function syncOverlayInert() {
       el.removeAttribute("aria-hidden");
     }
   }
+  // M0 #7: any render that leaves no watch viewer on screen drops the wake
+  // lock (syncOverlayInert runs on every render path, so no close site can
+  // be missed).
+  if (_wakeWanted && !document.getElementById("watch-root")) watchWakeRelease();
 }
 
 // Act B replay payloads deliberately save the recorded play—not animation
@@ -2664,11 +2668,6 @@ function setupGlobalListeners() {
     }
     answerPlayCall(call);
   };
-  (document.getElementById("dc-ride") || {}).onclick = () => {
-    if (!callTapOk()) return;
-    state.ui.defCallName = null;
-    answerPlayCall({ concept: "sheet" });
-  };
   (_F = document.getElementById("cs-sheet-call")) == null ? void 0 : _F.addEventListener("click", () => {
     if (callTapOk()) answerPlayCall({ concept: "sheet" });
   });
@@ -2677,17 +2676,6 @@ function setupGlobalListeners() {
   }));
   (_G = document.getElementById("fourth-auto")) == null ? void 0 : _G.addEventListener("click", () => {
     if (callTapOk()) answerFourthDown("auto");
-  });
-  (_H = document.getElementById("cs-skip-quarter")) == null ? void 0 : _H.addEventListener("click", () => simToQuarterEnd());
-  (_I = document.getElementById("cs-mode-keydowns")) == null ? void 0 : _I.addEventListener("click", () => setCallModeMidGame("keydowns"));
-  (_J = document.getElementById("cs-mode-off")) == null ? void 0 : _J.addEventListener("click", () => setCallModeMidGame("off"));
-  (_K = document.getElementById("cs-mode-everycall")) == null ? void 0 : _K.addEventListener("click", () => {
-    var _a2;
-    const t = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token;
-    if (t) {
-      t.callMode = "all";
-      renderApp();
-    }
   });
   (_L = document.getElementById("cs-recover")) == null ? void 0 : _L.addEventListener("click", () => {
     var _a2, _b2;
@@ -2706,49 +2694,38 @@ function setupGlobalListeners() {
   document.querySelectorAll("[data-cs-quickcat]").forEach((btn) => btn.addEventListener("click", () => {
     if (callTapOk()) answerPlayCall({ category: btn.dataset.csQuickcat });
   }));
-  (_M = document.getElementById("tc-keydowns")) == null ? void 0 : _M.addEventListener("click", () => {
-    if (callTapOk()) setCallModeMidGame("keydowns");
+  wireTimeControls();
+}
+// M4 — the transport row + involvement toggle, wired in one place. Rendered
+// by timeControlBar() into the call sheet, the fourth-down panel AND the live
+// watch bar; this runs after every render pass (and mountLiveWatch injects
+// before it runs), so every copy on screen is live. The old row's dead
+// cs-skip-quarter / cs-autorun listeners and the tc-tempo chips are gone —
+// tempo is hurry-up/chew-clock STRATEGY and lives with the game plan
+// (Game Plan → Tempo & Motion, and the timeout modal's Rest of Game tab).
+function wireTimeControls() {
+  var _a, _b, _c;
+  document.querySelectorAll("[data-tc-invo]").forEach((b) => b.addEventListener("click", () => {
+    if (!callTapOk()) return;
+    const level = b.dataset.tcInvo;
+    if (level === involvementLevel()) return;
+    setInvolvement(level);
+  }));
+  (_a = document.getElementById("tc-simposs")) == null ? void 0 : _a.addEventListener("click", () => {
+    if (callTapOk()) simToPossessionEnd();
   });
-  (_N = document.getElementById("tc-headset")) == null ? void 0 : _N.addEventListener("click", () => {
-    var _a2, _b2;
-    state.ui.autoRun = true;
-    const lw = state.ui.liveWatch;
-    if (lw && !lw.boardDone) {
-      renderApp();
-      return;
-    }
-    const t = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token;
-    if (((_b2 = t == null ? void 0 : t.pending) == null ? void 0 : _b2.kind) === "fourth") answerFourthDown("auto");
-    else answerPlayCall({ concept: "sheet" });
-  });
-  (_O = document.getElementById("tc-jumpin")) == null ? void 0 : _O.addEventListener("click", () => {
-    state.ui.autoRun = false;
-    watchStop();
-    _watch = null;
-    if (state.ui.liveWatch) state.ui.liveWatch.boardDone = true;
-    renderApp();
-  });
-  (_P = document.getElementById("tc-skipbreak")) == null ? void 0 : _P.addEventListener("click", () => {
+  (_b = document.getElementById("tc-skipbreak")) == null ? void 0 : _b.addEventListener("click", () => {
     if (callTapOk()) simToBreak();
   });
-  document.querySelectorAll("[data-tc-tempo]").forEach((b) => b.addEventListener("click", () => {
-    var _a2, _b2;
-    const tk = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token;
-    if (!tk) return;
-    const meHome = ((_b2 = tk.homeSchool) == null ? void 0 : _b2.id) === state.playerSchoolId;
-    const gp2 = meHome ? tk.homeGP : tk.awayGP;
-    if (!gp2) return;
-    gp2._liveTempo = b.dataset.tcTempo || null;
-    renderApp();
-  }));
-  (_Q = document.getElementById("cs-autorun")) == null ? void 0 : _Q.addEventListener("click", () => {
-    var _a2, _b2, _c2;
-    state.ui.autoRun = true;
-    if (((_c2 = (_b2 = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token) == null ? void 0 : _b2.pending) == null ? void 0 : _c2.kind) === "fourth") answerFourthDown("auto");
-    else answerPlayCall({ concept: "sheet" });
-  });
-  (_R = document.getElementById("cs-autorun-stop")) == null ? void 0 : _R.addEventListener("click", () => {
+  // Take control NEXT SNAP: cut the board short, keep the headset. (The toggle
+  // set to Every Play waits for the backlog to finish; this one doesn't.)
+  (_c = document.getElementById("tc-takeover")) == null ? void 0 : _c.addEventListener("click", () => {
+    var _a2;
+    if (!callTapOk()) return;
     state.ui.autoRun = false;
+    const t = (_a2 = state.pendingHalftime) == null ? void 0 : _a2.token;
+    if (t) t.callMode = "all";
+    if (state.settings) state.settings.lastCallMode = "all";
     watchStop();
     _watch = null;
     if (state.ui.liveWatch) state.ui.liveWatch.boardDone = true;
@@ -2874,7 +2851,9 @@ function renderKickoffModal() {
   const next = getUpcomingGame();
   const isHome = next ? next.homeId === (school == null ? void 0 : school.id) : true;
   const opp = next ? (_b = (_a = state.world) == null ? void 0 : _a.schools) == null ? void 0 : _b.find((s) => s.id === (isHome ? next.awayId : next.homeId)) : null;
-  const last = ((_c = state.settings) == null ? void 0 : _c.lastCallMode) || "off";
+  // M4: legacy "off" (headset off, watch in bulk) maps onto the WATCH level.
+  const _lastRaw = ((_c = state.settings) == null ? void 0 : _c.lastCallMode) || "watch";
+  const last = _lastRaw === "off" ? "watch" : _lastRaw;
   let scoutHtml = "";
   if (opp) {
     const og = opp.gameplan || {};
@@ -2933,9 +2912,9 @@ function renderKickoffModal() {
           </div>
           ${((_i = state.settings) == null ? void 0 : _i.liveWatch) !== false ? `
           <div class="kickoff-section-label">HOW MUCH OF THE HEADSET DO YOU WANT?</div>
-          ${opt("off", "\u{1F4CB}", "Headset Off", "The call sheet runs the whole game \u2014 zero prompts.")}
-          ${opt("keydowns", "\u{1F3AF}", "Key Downs", "3rd &amp; 4th downs, the red zone, the two-minute drill \u2014 and the big go/punt/kick calls.")}
-          ${opt("all", "\u{1F3A7}", "Every Snap", "Full coordinator mode \u2014 every play on offense AND defense, plus the big 4th-down calls.")}
+          ${opt("watch", "\u{1F441}", "Watch Every Play", "The sheet calls it, the board plays every snap \u2014 and the headset is one tap away all game.")}
+          ${opt("keydowns", "\u{1F3AF}", "Coach the Big Moments", "4th downs, the red zone, inside two minutes, a one-score 4th quarter \u2014 the sheet opens pre-snap when it matters.")}
+          ${opt("all", "\u{1F3A7}", "Coach Every Play", "Full coordinator mode \u2014 every play on offense AND defense, plus the big 4th-down calls.")}
           ` : `
           <button class="kickoff-opt kickoff-simhalf" id="kickoff-sim-half">
             <span class="kickoff-opt-icon">\u23E9</span>
@@ -2959,8 +2938,15 @@ function renderCallFeed(token) {
     names[pl.id] = { name: `${pl.name.first[0]}. ${pl.name.last}`, pos: pl.position };
   }
   const mySide = ((_a = token.pending) == null ? void 0 : _a.possession) || token.playerSide || "home";
-  const items = feed.slice(-8).map(({ p, poss }) => {
+  const items = feed.slice(-8).map(({ p, poss, sum }) => {
     const mine = poss === mySide;
+    if (sum) {
+      // M4: a skipped stretch reads as one summary line per drive — never silence.
+      const team = (poss === "home" ? token.homeSchool : token.awaySchool)?.abbr || (poss === "home" ? "HOME" : "AWAY");
+      const RESULT_LBL = { touchdown: "TOUCHDOWN", field_goal: "FIELD GOAL", punt: "punt", turnover: "TURNOVER", turnover_on_downs: "turnover on downs", missed_fg: "missed FG", end_half: "end of half", safety: "SAFETY", punt_return_td: "PUNT RETURN TD", live: "drive alive" };
+      const big = sum.result === "touchdown" || sum.result === "turnover" || sum.result === "field_goal" || sum.result === "safety" || sum.result === "punt_return_td";
+      return `<div class="cs-feed-item cs-feed-sum${mine ? " mine" : " theirs"}${big ? " big" : ""}">${mine ? "▶" : "◀"} ⏩ ${escapeHtml(team)} drive: ${sum.plays} play${sum.plays === 1 ? "" : "s"}, ${sum.yards >= 0 ? "" : "−"}${Math.abs(sum.yards)} yds — ${RESULT_LBL[sum.result] || "over"}</div>`;
+    }
     let tag = "";
     if (p.td) tag = " \u2014 <b>TOUCHDOWN</b>";
     else if (p.turnover) tag = p.turnoverType === "interception" ? " \u2014 <b>INTERCEPTED</b>" : " \u2014 <b>FUMBLE</b>";
@@ -3046,22 +3032,29 @@ function renderTimeoutAdjustOverlay() {
   const toLeft = (_f = _to[mySide]) != null ? _f : C.TIMEOUTS_PER_HALF;
   return renderTimeoutAdjustModal(gp, toLeft, school);
 }
+// M4 \u2014 the involvement toggle + transport row (#51/#54/#55). One component,
+// rendered on the call sheet, the fourth-down panel, the defensive call panel
+// and the live watch bar; wireTimeControls() is its single wiring point.
+// Tempo is NOT here \u2014 it's hurry-up/chew-clock strategy and lives with the
+// game plan (Game Plan \u2192 Tempo & Motion; timeout modal \u2192 Rest of Game).
+function involvementToggleHtml() {
+  const cur = involvementLevel();
+  const seg = (id, icon, lbl, tip) => `<button class="tc-invo-btn${cur === id ? " active" : ""}" data-tc-invo="${id}" title="${tip}" aria-pressed="${cur === id}">${icon} ${lbl}</button>`;
+  return `<span class="tc-invo-group" role="group" aria-label="How much of the headset do you want?">` + seg("watch", "\u{1F441}", "Watch", "Watch every play \u2014 the sheet calls it, the board plays it, and you can take the headset back any time") + seg("moments", "\u{1F3AF}", "Moments", "Coach the big moments \u2014 4th downs, the red zone, inside two minutes, a one-score 4th quarter") + seg("every", "\u{1F3A7}", "Every play", "Coach every play \u2014 full coordinator mode, both sides of the ball") + `</span>`;
+}
 function timeControlBar() {
-  var _a, _b;
+  var _a;
   const lw = state.ui.liveWatch;
   const token = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
   if (!(token == null ? void 0 : token.pending) || (lw == null ? void 0 : lw.stage) !== "call") return "";
   const half = token.pending.half;
   const auto = !!state.ui.autoRun;
-  const breakLabel = half === 1 ? "\u23ED Skip to halftime" : "\u23ED Skip to final";
-  const meHome = ((_b = token.homeSchool) == null ? void 0 : _b.id) === state.playerSchoolId;
-  const myGP = meHome ? token.homeGP : token.awayGP;
-  const lt = (myGP == null ? void 0 : myGP._liveTempo) || "";
-  const tBtn = (v, l, tip) => `<button class="bc-btn bc-text tc-tempo${lt === v ? " tc-tempo-on" : ""}" data-tc-tempo="${v}" title="${tip}">${l}</button>`;
-  const tempoGroup = `<span class="tc-tempo-group" title="Live tempo \u2014 beats the game plan until you hand it back">` + tBtn("Chew", "\u{1F422}", "Chew clock: milk the play clock on every snap") + tBtn("", "TEMPO", "Back to the game plan\u2019s tempo") + tBtn("Hurry", "\u26A1", "Hurry-up: no-huddle pace (tires both sides)") + `</span>`;
-  const mid = auto ? `<button class="bc-btn bc-text tc-coach" id="tc-jumpin" title="Take the headset back and call the plays yourself">\u{1F3A7} Coach up</button>` : `<button class="bc-btn bc-text" id="tc-keydowns" title="Game plan runs the sim; stops at the next key down">\u23E9 Sim to next key down</button>
-     <button class="bc-btn bc-text" id="tc-headset" title="Headset off \u2014 the game plan calls it and you watch">\u{1F3A7} Headset off</button>`;
-  return `<div class="tc-bar">${tempoGroup}${mid}<button class="bc-btn bc-text" id="tc-skipbreak" title="Sim straight to the ${half === 1 ? "locker room" : "final gun"}">${breakLabel}</button></div>`;
+  const poss = token.pending.possession;
+  const mine = poss === (token.playerSide || poss);
+  const breakLabel = half === 3 ? "\u23ED\u23ED Sim to final" : half === 1 ? "\u23ED\u23ED Sim to half" : "\u23ED\u23ED Sim to end";
+  const possBtn = `<button class="bc-btn bc-text" id="tc-simposs" title="Sim the rest of ${mine ? "this possession" : "their possession"} \u2014 no animation, drive summary in the feed">\u23ED Sim possession</button>`;
+  const takeover = auto ? `<button class="bc-btn bc-text tc-coach" id="tc-takeover" title="Take the headset next snap">\u{1F3A7} Take control</button>` : "";
+  return `<div class="tc-bar">${involvementToggleHtml()}${possBtn}<button class="bc-btn bc-text" id="tc-skipbreak" title="Sim straight to the ${half === 1 ? "locker room" : "final gun"} \u2014 no animation, drive summaries in the feed">${breakLabel}</button>${takeover}</div>`;
 }
 var CONCEPT_ROUTE_ART = {
   "Mesh": ["M18 46 L18 31 L44 26 L76 26", "M82 46 L82 31 L56 28 L28 28"],
@@ -3330,11 +3323,9 @@ function defCallPanelHtml() {
     </div>` : ""}`;
   })()}
     ${rows}
+    ${timeControlBar()}
     <div class="cs-footer dc-footer">
       <button class="btn primary dc-send" id="dc-send">${nSel ? `\u{1F6E1} SEND IT (${nSel} call${nSel > 1 ? "s" : ""})` : "\u{1F6E1} RIDE THE PLAN →"}</button>
-      <button class="btn-secondary" id="dc-ride">Ride the plan →</button>
-      <button class="btn-secondary" id="cs-mode-keydowns" title="Only stop me on key downs">⏩ Key downs only</button>
-      <button class="btn-secondary" id="cs-mode-off" title="Put the game plan on the headset">\u{1F4FB} Auto-run rest</button>
     </div>
   </div>`;
 }
@@ -3864,6 +3855,51 @@ function mountLiveWatch() {
   });
 }
 var _watch = null;
+// ── M0 #7: the screen stays awake while a game is on the board ─────────────
+// Screen Wake Lock API, feature-detected + try/caught — a safe no-op where
+// unsupported (older iOS Safari, desktop browsers without the API). The OS
+// auto-releases the sentinel whenever the tab hides; the visibilitychange
+// listener below re-acquires it if the viewer is still up. Release rides
+// syncOverlayInert (every render path), so any screen without a watch viewer
+// drops the lock — no per-close-site bookkeeping to miss.
+var _wakeSentinel = null;
+var _wakeWanted = false;
+function watchWakeAcquire() {
+  _wakeWanted = true;
+  try {
+    if (!navigator.wakeLock || typeof navigator.wakeLock.request !== "function") return;
+    if (_wakeSentinel && !_wakeSentinel.released) return;
+    navigator.wakeLock.request("screen").then((s) => {
+      if (!_wakeWanted) {
+        try { s.release(); } catch (e) {}
+        return;
+      }
+      _wakeSentinel = s;
+      try { s.addEventListener("release", () => { if (_wakeSentinel === s) _wakeSentinel = null; }); } catch (e) {}
+    }).catch(() => {});
+  } catch (e) {}
+}
+function watchWakeRelease() {
+  _wakeWanted = false;
+  const s = _wakeSentinel;
+  _wakeSentinel = null;
+  if (s) { try { const p = s.release(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+}
+document.addEventListener("visibilitychange", () => {
+  if (_wakeWanted && document.visibilityState === "visible" && document.getElementById("watch-root")) watchWakeAcquire();
+});
+// M0 #9 → M4 Presentation: the replay toggle grew into a FREQUENCY —
+// Off / Low (scores + turnovers only) / High (the tuned predicate, default).
+// settings.replayFreq is the value; a legacy watchReplays === false save
+// reads as Off. Lives in Settings → PRESENTATION and on the watch bar.
+function watchReplayFreq() {
+  const s = state.settings || {};
+  if (s.replayFreq === "off" || s.replayFreq === "low" || s.replayFreq === "high") return s.replayFreq;
+  return s.watchReplays === false ? "off" : "high";
+}
+function watchReplaysOn() {
+  return watchReplayFreq() !== "off";
+}
 var _lastCallClick = 0;
 function callTapOk() {
   const n = Date.now();
@@ -3897,6 +3933,7 @@ function initWatchMode(r, isHome, opts = {}) {
   var _a, _b, _c;
   const root = document.getElementById("watch-root");
   if (!root) return;
+  watchWakeAcquire();
   const key = (_a = opts.key) != null ? _a : r;
   const clipMode = !!opts.clip;
   const _resumeActive = !!(_watch && _watch.key === key && !_watch.paused && _watch.idx > 0);
@@ -3968,10 +4005,11 @@ function initWatchMode(r, isHome, opts = {}) {
   <div class="watch-controls broadcast-bar${clipMode ? " replay-clip-summary" : ""}">
     ${isLive ? "" : `<button class="bc-btn bc-icon" id="watch-stepback" title="Step back">\u23EE</button>`}
     <button class="bc-btn bc-icon bc-play" id="watch-pause" title="Play / pause">\u23F8</button>
-    ${isLive ? "" : `<button class="bc-btn bc-icon" id="watch-stepfwd" title="Step forward">\u23ED</button>`}
+    ${isLive ? `<button class="bc-btn bc-icon" id="watch-skipplay" title="Skip this play's animation">\u23ED</button>` : `<button class="bc-btn bc-icon" id="watch-stepfwd" title="Step forward">\u23ED</button>`}
     <button class="bc-btn bc-speed" id="watch-speed" title="Playback speed">1\xD7</button>
     <button class="bc-btn bc-text" id="watch-landscape" title="Rotate to landscape">⤢ Landscape</button>
     <button class="bc-btn bc-text watch-desktop-only" id="watch-art" title="Show or hide the developing play trail">Play Art: On</button>
+    ${clipMode ? "" : `<button class="bc-btn bc-text" id="watch-replays" title="Instant replays after big plays">Replays: On</button>`}
     ${clipMode ? "" : `<button class="bc-btn bc-text" id="watch-save-clip" title="Save this play to Film Room">Save Clip</button>`}
     ${isLive ? "" : `<button class="bc-btn bc-text" id="watch-nextdrive" title="Next drive">Next Drive \u23ED</button>`}
     ${liveCall ? timeControlBar() : `<button class="bc-btn bc-text bc-final" id="watch-final" title="${finalTitle}">${finalLabel}</button>`}
@@ -4001,6 +4039,15 @@ function initWatchMode(r, isHome, opts = {}) {
       watchTick(true);
     });
   }
+  // M4: the working FF button — skip THIS play's animation and land on the
+  // next item (the board keeps rolling if it was rolling).
+  const skipPlayBtn = document.getElementById("watch-skipplay");
+  if (skipPlayBtn) skipPlayBtn.addEventListener("click", () => {
+    // watchTick advances w.idx after rendering, so idx already names the NEXT
+    // item — kill the in-flight animation and tick straight to it.
+    watchStop();
+    watchTick(true);
+  });
   document.getElementById("watch-pause").addEventListener("click", () => {
     w.paused = !w.paused;
     const pb = document.getElementById("watch-pause");
@@ -4046,6 +4093,21 @@ function initWatchMode(r, isHome, opts = {}) {
     syncArt();
   });
   syncArt();
+  // M4 Presentation: the watch-bar replay button cycles the FREQUENCY
+  // High → Low → Off (same value as Settings → PRESENTATION).
+  const repBtn = document.getElementById("watch-replays");
+  const _RF_LBL = { high: "High", low: "Low", off: "Off" };
+  const syncReplays = () => {
+    if (repBtn) repBtn.textContent = `Replays: ${_RF_LBL[watchReplayFreq()]}`;
+  };
+  repBtn == null ? void 0 : repBtn.addEventListener("click", () => {
+    if (!state.settings) state.settings = {};
+    const cur = watchReplayFreq();
+    state.settings.replayFreq = cur === "high" ? "low" : cur === "low" ? "off" : "high";
+    delete state.settings.watchReplays;
+    syncReplays();
+  });
+  syncReplays();
   const saveClipBtn = document.getElementById("watch-save-clip");
   if (saveClipBtn) saveClipBtn.addEventListener("click", () => watchSaveActiveClip(w));
   (_c = document.getElementById("watch-final")) == null ? void 0 : _c.addEventListener("click", () => {
@@ -4308,7 +4370,12 @@ function watchSideX(worldY) {
   return 31 + _watchSideDir * (31 - worldY) * WATCH_SIDE.longitudinal;
 }
 function watchSideY(worldX) {
-  return WATCH_SIDE.fieldTop + worldX * (WATCH_SIDE.fieldHeight / 100);
+  // #49: the lateral axis mirrors with the drive direction (see
+  // projectWatchPoint) so the fielded look keeps the card's handedness in
+  // both drive directions. This helper and watchSideWorldPoint are the local
+  // pair; they must always invert each other.
+  const latX = _watchSideDir < 0 ? 100 - worldX : worldX;
+  return WATCH_SIDE.fieldTop + latX * (WATCH_SIDE.fieldHeight / 100);
 }
 function watchSidePoint(worldX, worldY) {
   return [watchSideX(worldY), watchSideY(worldX)];
@@ -6589,8 +6656,9 @@ function watchCoachFieldBase(p, board = null) {
   return out + `</g>`;
 }
 function watchSideWorldPoint(sideX, sideY) {
+  const latX = (sideY - WATCH_SIDE.fieldTop) * 100 / WATCH_SIDE.fieldHeight;
   return [
-    (sideY - WATCH_SIDE.fieldTop) * 100 / WATCH_SIDE.fieldHeight,
+    _watchSideDir < 0 ? 100 - latX : latX, // #49: undo the lateral mirror
     31 - (sideX - 31) / (_watchSideDir * WATCH_SIDE.longitudinal)
   ];
 }
@@ -7194,8 +7262,10 @@ function watchTickBody(w, immediate = false) {
     } else {
       reveal();
     }
-    const replayWorthy = !!scriptDur && !!(p.td || p.turnover || p.sack || p.blocked || p.contested || p.brokenByCarrier || Math.abs(yds) >= 25);
-    if (replayWorthy && !w.paused && !w.clip) {
+    // M4 Presentation: Low keeps only the biggest moments (scores + turnovers).
+    const _rf = watchReplayFreq();
+    const replayWorthy = !!scriptDur && (_rf === "low" ? !!(p.td || p.turnover) : !!(p.td || p.turnover || p.sack || p.blocked || p.contested || p.brokenByCarrier || Math.abs(yds) >= 25));
+    if (replayWorthy && !w.paused && !w.clip && _rf !== "off") {
       const liveWallMs = scriptDur * 1e3 / w.speed;
       const replayWallMs = scriptDur * 1e3 / (w.speed * 0.68);
       holdMs = Math.max(holdMs, liveWallMs + replayWallMs + 1050);

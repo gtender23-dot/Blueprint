@@ -96,7 +96,7 @@ try {
   // .modal-overlay at all, which is why this is keyed on "is the advance button gone?"
   // rather than on any overlay class.
   const TAKEOVERS = [
-    '[data-kickoff="off"]',   // game day: headset off, the sheet calls the whole game
+    '[data-kickoff="watch"]',   // game day: headset off, the sheet calls the whole game
     '#kickoff-sim-half',      // same prompt with Coach Mode off
     '#btn-resume-halftime',   // locker room
     '#btn-rec-skip',          // "your recruiting board is empty"
