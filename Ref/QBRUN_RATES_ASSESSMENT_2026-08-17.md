@@ -29,26 +29,27 @@ designed QB runs/team-game (ESPN) → pocket ≈0; PFF's 75% pressure-coupled
 verified verbatim; X&O Labs coach survey: 34.4% of coaches run RPOs on
 25–50% of offense, and a give-heavy exemplar pull rate ~15% at 82% comp.
 
-### THE PICK-LIST (answer with letters, e.g. "approve a,b,c")
+### THE PICK-LIST — (a)–(d) RATIFIED (owner, 2026-08-17); (e)/(f) still open
 
-- **(a) RATIFY B1, B3, B5, B6 as source-pinned at current values.** Zero
+- [x] **(a) RATIFY B1, B3, B5, B6 as source-pinned at current values.** Zero
   code/probe change — the ledger note "provisional, NFL-floor inference"
-  comes off these four. *(recommended)*
-- **(b) F1 RESOLVED AS A BAND FIX:** spec the Dual scramble band at
-  **3.5–8% of dropbacks** in `rpo_probe` S4 (today it's the 5–8% target with
+  comes off these four. **RATIFIED 2026-08-17.**
+- [x] **(b) F1 RESOLVED AS A BAND FIX:** spec the Dual scramble band at
+  **3.5–8% of dropbacks** in `rpo_probe` S4 (was the 5–8% target with
   ad-hoc padding to 1.5–9). The widened class (legLean −14..−3) is
   physically slower than the band's author assumed; sources show scramble
   rate is a mobility GRADIENT (FantasyPoints r=.357 vs pressure — a trait,
   not a situation), so the slower class legitimately sits lower. Probe
   comment change + tightened floor (1.5→3.5); no engine change.
-  *(recommended)*
-- **(c) F2 RESOLVED — ACCEPT:** pocket "designed" ≈1.4/g including ~0.5
+  **RATIFIED 2026-08-17 — APPLIED (rpo_probe S4, ×3 green same session).**
+- [x] **(c) F2 RESOLVED — ACCEPT:** pocket "designed" ≈1.4/g including ~0.5
   broken-play/Empty floor keeps is in band (true designed ≈0.9 vs 0–1
   target; SR statues + the NFL ≈1.1/team-game floor both allow it). Ledger
-  closes; no change. *(recommended)*
-- **(d) B4 STAYS PROVISIONAL at 10–15 / 5–10 / ~0.** No public number
+  closes; no change. **RATIFIED 2026-08-17.**
+- [x] **(d) B4 STAYS PROVISIONAL at 10–15 / 5–10 / ~0.** No public number
   exists (only PFF Premium would pin it); the coached three-phase keep is
-  confirmed, direction right. Keep the probe band as shipped. *(recommended)*
+  confirmed, direction right. Keep the probe band as shipped.
+  **RATIFIED 2026-08-17.**
 - **(e) OPTIONAL — option-team floor:** raise the option floor target
   (currently 5–12 designed/g) toward **12–20 total QB designed carries** to
   match service-academy reality (18–23 gross att/g, minimal sacks). NEEDS a
@@ -103,9 +104,12 @@ D6 ship (`rpo_probe` S4 targets).
   (scramble freq vs pressure rate) supports rate-as-mobility-gradient, so a
   physically slower mid class at 3.5–4.5% is legitimate, not a bug.
 - **Recommendation:** keep 8–12 / — / 1–3; re-spec dual to **3.5–8%**.
-- **Diff vs D6 ship:** `rpo_probe` S4 line ~251: `>= 1.5 && <= 9` with the
-  "widened-class padding" comment becomes a spec'd band `>= 3.5 && <= 9`
-  (8% + noise) with a source-cited comment. Nothing else moves.
+- **Diff vs D6 ship:** `rpo_probe` S4: the dual scramble assert `>= 1.5 &&
+  <= 9` ("widened-class padding") becomes the spec'd band — **spec 3.5–8%,
+  asserted `>= 3.0 && <= 9`** (the probe's standard ± noise pad on both
+  edges; an unpadded 3.5 floor was tried and flaked once immediately —
+  observed run values 5.1 / 3.3 / 4.1%db). Source-cited comment. Nothing
+  else moves. **APPLIED 2026-08-17, rpo_probe 60/0 ×3.**
 
 ### B3 — RPO share of snaps, RPO-fit formations: 20–30 / 15–25 / 8–15
 

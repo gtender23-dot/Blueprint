@@ -245,10 +245,14 @@ const L = runLeague(N_MAIN);
   ok(pc(s.scr, s.db) >= 7.5 && pc(s.scr, s.db) <= 14, 'scrambler scramble share in band (8–12% ±noise)');
   ok(pc(s.rpoFit, s.snapsFit) >= 16 && pc(s.rpoFit, s.snapsFit) <= 33, 'scrambler RPO share (fit formations) in band (20–30% ±noise)');
   ok(pc(s.rpoKeep, s.rpo) >= 7 && pc(s.rpoKeep, s.rpo) <= 18, 'scrambler RPO keep share in band (10–15% ±noise)');
-  // dual (5–8 designed · 5–8% scr · 15–25% RPO · 5–10% keep; the widened band
-  // dilutes real mobility — bands padded low, ledgered in STATUS)
+  // dual (5–8 designed · scramble SPEC 3.5–8% · 15–25% RPO · 5–10% keep).
+  // The scramble band is SPEC'D, not padded: the widened Dual class
+  // (legLean −14..−3) is physically slower than the original 5–8% target
+  // assumed, and scramble rate is a mobility gradient (FantasyPoints r=.357
+  // vs pressure; SOURCE_LIBRARY §R #60). Owner-ratified 2026-08-17 —
+  // QBRUN_RATES_ASSESSMENT_2026-08-17.md pick (b).
   ok(pg(d.designed, d) >= 3.5 && pg(d.designed, d) <= 11, 'dual designed QB runs in band');
-  ok(pc(d.scr, d.db) >= 1.5 && pc(d.scr, d.db) <= 9, 'dual scramble share in band (widened-class padding)');
+  ok(pc(d.scr, d.db) >= 3.0 && pc(d.scr, d.db) <= 9, 'dual scramble share in band (spec 3.5–8%, ±noise ⇒ 3.0–9)');
   ok(pc(d.rpoFit, d.snapsFit) >= 11 && pc(d.rpoFit, d.snapsFit) <= 29, 'dual RPO share in band');
   ok(pc(d.rpoKeep, d.rpo) >= 1 && pc(d.rpoKeep, d.rpo) <= 13, 'dual RPO keep share in band');
   // pocket (0–1 designed +broken-play residue · 1–3% scr · 8–15% RPO · ~0 keep)

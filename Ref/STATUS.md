@@ -1,7 +1,10 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-17 FULL-GATE S-TIER FIXES (owner-ratified triage
+Last updated: **2026-08-17 QBRUN PICKS (a)–(d) RATIFIED (owner) — F1 re-spec
+applied to rpo_probe S4 (dual scramble spec 3.5–8%, asserted 3.0–9 w/ noise
+pad), rpo_probe 60/0 ×3; picks (e)/(f) still open (entry below). Prior same
+day: FULL-GATE S-TIER FIXES (owner-ratified triage
 plan, steps 1–3 EXECUTED): the ONE product bug FIXED (timeout Rest-of-Game
 chips wired — live browser proof owed), commit_rate's day-3 posReviewed
 hang FIXED (3× full season ~104 s exit 0), the manifest-correction batch
@@ -141,6 +144,20 @@ tools/nav_back_smoke.mjs · tools/formation_playbook_probe.mjs ·
 tools/tipdrill_probe.mjs · Ref/STATUS.md. NOT pushed. (Parallel session
 note: the QB-RUN research entries below landed mid-window; gates ran on
 the tree as found.)
+
+## 2026-08-17 — QBRUN PICKS (a)–(d) RATIFIED (owner) · F1 re-spec APPLIED · rpo_probe 60/0 ×3
+
+Owner ratified assessment picks **(a)–(d)** (all recommended items): B1/B3/
+B5/B6 stand source-pinned at shipped values, F2 accepted in band, B4 stays
+provisional — all zero-change. The ONE implied change is applied: **`rpo_probe`
+S4's dual scramble cell is now SPEC'D at 3.5–8% of dropbacks** (was the 5–8%
+target with ad-hoc 1.5–9 padding), asserted `3.0–9` with the probe's standard
+noise pad — an unpadded 3.5 floor was tried first and flaked on run 2
+(observed values across final runs: 5.1 / 3.3 / 4.1%db), so the pad matches
+the sibling cells' convention. No engine change; RNG untouched.
+**Gate: `rpo_probe` 60/0 ×3 on the final probe.** Pick-list marked in the
+assessment ((e) option-floor raise, (f) local keyed CFBD run still OPEN —
+owner deciding). Committed: probe + assessment + this entry. NOT pushed.
 
 ## 2026-08-17 — QB-RUN/RPO RESEARCH PASS (all 8 sources owner-APPROVED · fetched · assessed — NO outcome code changed)
 
