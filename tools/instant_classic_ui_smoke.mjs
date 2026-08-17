@@ -8,10 +8,10 @@
 // (watch viewer ids, INSTANT CLASSIC header, Back to Coach Select) is unchanged.
 // Two deliberate differences from the old coach-path assertions, both real moves:
 // - the row prints "Season N · week", NOT "World N" — a tree has exactly one world.
-// - there is NO delete control on a tree classic row. [data-mm-classic-del] only ever
-//   rendered on the unreachable coach home, so classic DELETE currently has no door.
-//   Product gap ledgered in STATUS 2026-08-17 — when a delete door lands, drive it here
-//   (the old checks also proved the payload leaves the world save; restore that too).
+// - delete is RE-HOMED (owner decision 2026-08-17): each tree classic row now carries
+//   [data-mm-tree-classic-del] (the coach-home [data-mm-classic-del] door stays
+//   unreachable). The old delete drive is restored below against the tree door,
+//   including the payload-leaves-the-world-save proof.
 import { chromium } from 'playwright-core';
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -39,7 +39,7 @@ try {
   await page.waitForTimeout(250); await page.locator(`[data-mm-tree="${seeded}"]`).click(); await page.waitForTimeout(200);
   check(await page.locator('[data-mm-tree-classic="ic-ui"]').count()===1,'tree home lists the Instant Classic');
   const row=await page.locator('[data-mm-tree-classic="ic-ui"]').innerText(); check(row.includes('Home State 31–30 Away Tech')&&row.includes('Season 3'),'classic row shows matchup, score, and season (a tree has one world — no World tag)',row.replace(/\n/g,' | '));
-  check(await page.locator('[data-mm-classic-del="ic-ui"]').count()===0,'tree classic rows expose no delete door yet (product gap, STATUS 2026-08-17 — flip this check into a real delete drive when the door lands)');
+  check(await page.locator('[data-mm-tree-classic-del="ic-ui"]').count()===1,'tree classic row carries the re-homed delete door (owner decision 2026-08-17)');
   check(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1),'classic list fits a 390px phone');
   await page.locator('[data-mm-tree-classic="ic-ui"]').click(); await page.waitForTimeout(250);
   check(await page.locator('#watch-root').count()===1,'replay opens directly in Watch');
@@ -55,11 +55,16 @@ try {
   check(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1),'replay viewer fits desktop');
   await page.locator('#close-game-result-btn').click(); await page.waitForTimeout(200);
   check(await page.locator('[data-mm-tree-classic="ic-ui"]').count()===1,'Back to Coach Select returns to the tree home with the classic still listed');
-  // The old delete drive ([data-mm-classic-del] click → row gone → payload gone from the
-  // world save) is NOT ported: no delete control renders on the tree path (see header).
   // The payload half is still asserted directly against the tree's world save:
   const replayIntact=await page.evaluate(async()=>{const cp=await import('./js/engine/coachprofile.js');const p=await import('./js/engine/persistence.js');const tree=cp.listTrees()[0];const saved=await p.loadGame(cp.treeWorldKey(tree.id));return (saved?.instantClassics||[]).some(item=>item.id==='ic-ui'&&!!item.result);});
   check(replayIntact,'the full replay payload survives in the tree\'s world save after watching');
+  // The delete drive, restored onto the re-homed tree door (2026-08-17): confirm →
+  // row gone → payload gone from the tree's ONE world save AND from the menu meta.
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('[data-mm-tree-classic-del="ic-ui"]').click(); await page.waitForTimeout(300);
+  check(await page.locator('[data-mm-tree-classic="ic-ui"]').count()===0,'deleting the classic removes the row from the tree home');
+  const replayGone=await page.evaluate(async()=>{const cp=await import('./js/engine/coachprofile.js');const p=await import('./js/engine/persistence.js');const tree=cp.listTrees()[0];const saved=await p.loadGame(cp.treeWorldKey(tree.id));const meta=(cp.getTree(tree.id)?.meta?.classics)||[];return !(saved?.instantClassics||[]).some(item=>item.id==='ic-ui')&&!meta.some(item=>item.id==='ic-ui');});
+  check(replayGone,'the delete strips the payload from the world save and the row from the menu meta');
   check(errors.length===0,'zero page errors',errors.slice(0,3).join(' | '));
 } finally { await browser.close(); await new Promise(resolve=>server.close(resolve)); }
 console.log(fails?`\nFAIL — ${fails} Instant Classic UI check(s)`:'\nINSTANT CLASSIC UI SMOKE PASS'); process.exit(fails?1:0);

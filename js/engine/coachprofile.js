@@ -148,6 +148,16 @@ function noteTreeMeta(treeId, meta) {
     t.meta = __spreadProps(__spreadValues({}, meta), { timestamp: Date.now() });
   });
 }
+// Tree twin of removeWorldClassicMeta — a tree's classics ride in the menu
+// snapshot at t.meta.classics (written by noteTreeMeta on autosave), so the
+// delete strips the same list the Coaching Tree screen draws from. Added
+// 2026-08-17 when classic DELETE was re-homed onto the tree rows.
+function removeTreeClassicMeta(treeId, classicId) {
+  updateTree(treeId, (t) => {
+    if (!t.meta) return;
+    t.meta.classics = (t.meta.classics || []).filter((item) => item.id !== classicId);
+  });
+}
 function saveGameplanToLibrary(coachId, name, gameplan, opts = {}) {
   let saved = false;
   updateCoach(coachId, (c) => {
@@ -652,4 +662,4 @@ DNA_BONUS = {
   // live on the skill ladder again (SKILL_DEVELOPER_STEP / SKILL_RECRUITER_STEP).
 };
 
-export { DNA_AXES, MAX_COACHES, MAX_GAMEPLANS, MAX_SAVED_TEAMS, MAX_TREES, MAX_WORLDS, addDnaXP, bankIntoTree, clearWorldSlot, coachDNA, coachRecords, createCoach, createTree, deleteCoach, deleteLibraryPlan, deleteSavedTeam, deleteTree, divisionMemory, dnaBankable, dnaBonus, dnaGrade, dnaGrades, dnaInheritance, dnaStarLabel, dnaStarTier, dnaTitle, dnaXpForNextGrade, getCoach, getTree, instantiateSavedTeam, listCoaches, listSavedTeams, listSoloCoaches, listTrees, migrateDna, noteCoachRecords, noteDivisionMemory, noteTreeMeta, noteWorldMeta, removeWorldClassicMeta, saveGameplanToLibrary, saveTeamToLibrary, treeWorldKey, trickleIntoTree, unfoldDnaToSkills, updateCoach, updateTree, worldSlotKey };
+export { DNA_AXES, MAX_COACHES, MAX_GAMEPLANS, MAX_SAVED_TEAMS, MAX_TREES, MAX_WORLDS, addDnaXP, bankIntoTree, clearWorldSlot, coachDNA, coachRecords, createCoach, createTree, deleteCoach, deleteLibraryPlan, deleteSavedTeam, deleteTree, divisionMemory, dnaBankable, dnaBonus, dnaGrade, dnaGrades, dnaInheritance, dnaStarLabel, dnaStarTier, dnaTitle, dnaXpForNextGrade, getCoach, getTree, instantiateSavedTeam, listCoaches, listSavedTeams, listSoloCoaches, listTrees, migrateDna, noteCoachRecords, noteDivisionMemory, noteTreeMeta, noteWorldMeta, removeTreeClassicMeta, removeWorldClassicMeta, saveGameplanToLibrary, saveTeamToLibrary, treeWorldKey, trickleIntoTree, unfoldDnaToSkills, updateCoach, updateTree, worldSlotKey };

@@ -1,6 +1,6 @@
 import { __spreadProps, __spreadValues } from '../../_spread.js';
 import { gradeFromXP } from '../../engine/coach.js';
-import { DNA_AXES, MAX_COACHES, MAX_TREES, MAX_WORLDS, clearWorldSlot, coachDNA, createCoach, createTree, deleteCoach, deleteLibraryPlan, deleteSavedTeam, deleteTree, dnaBonus, dnaGrade, dnaGrades, dnaStarLabel, dnaStarTier, dnaTitle, dnaXpForNextGrade, getCoach, getTree, listCoaches, listSoloCoaches, listTrees, removeWorldClassicMeta, treeWorldKey, worldSlotKey } from '../../engine/coachprofile.js';
+import { DNA_AXES, MAX_COACHES, MAX_TREES, MAX_WORLDS, clearWorldSlot, coachDNA, createCoach, createTree, deleteCoach, deleteLibraryPlan, deleteSavedTeam, deleteTree, dnaBonus, dnaGrade, dnaGrades, dnaStarLabel, dnaStarTier, dnaTitle, dnaXpForNextGrade, getCoach, getTree, listCoaches, listSoloCoaches, listTrees, removeTreeClassicMeta, removeWorldClassicMeta, treeWorldKey, worldSlotKey } from '../../engine/coachprofile.js';
 import { deleteSlotData, loadGame, saveGame } from '../../engine/persistence.js';
 import { C } from '../../constants.js';
 import { weekLabel } from '../../engine/season.js';
@@ -336,7 +336,7 @@ function renderTreeClassics(t) {
   const slot = treeWorldKey(t.id);
   const body = classics.map((item) => {
     var _a2, _b2;
-    return '<div class="mm-classic-row"><button class="mm-classic-watch" data-mm-tree-classic="' + escapeHtml(item.id) + '" data-mm-tree-classic-slot="' + escapeHtml(slot) + '"><span class="mm-classic-score">★ ' + (item.score || 0) + '</span><span class="mm-classic-matchup">' + escapeHtml(item.homeName || "Home") + " " + ((_a2 = item.homeScore) != null ? _a2 : 0) + "–" + ((_b2 = item.awayScore) != null ? _b2 : 0) + " " + escapeHtml(item.awayName || "Away") + '</span><span class="mm-classic-meta">Season ' + (item.season || 1) + " \xB7 " + escapeHtml(item.week || "") + ' \xB7 Watch replay</span></button></div>';
+    return '<div class="mm-classic-row"><button class="mm-classic-watch" data-mm-tree-classic="' + escapeHtml(item.id) + '" data-mm-tree-classic-slot="' + escapeHtml(slot) + '"><span class="mm-classic-score">★ ' + (item.score || 0) + '</span><span class="mm-classic-matchup">' + escapeHtml(item.homeName || "Home") + " " + ((_a2 = item.homeScore) != null ? _a2 : 0) + "–" + ((_b2 = item.awayScore) != null ? _b2 : 0) + " " + escapeHtml(item.awayName || "Away") + '</span><span class="mm-classic-meta">Season ' + (item.season || 1) + " \xB7 " + escapeHtml(item.week || "") + ' \xB7 Watch replay</span></button><button class="btn-mm-del mm-classic-del" data-mm-tree-classic-del="' + escapeHtml(item.id) + '" data-mm-tree-classic-slot="' + escapeHtml(slot) + '" title="Delete replay" aria-label="Delete replay">✕</button></div>';
   }).join("");
   return '<div class="mm-section-label" style="margin-top:14px">INSTANT CLASSICS</div><div class="mm-classics">' + body + "</div>";
 }
@@ -666,6 +666,35 @@ async function setupListeners2() {
     }
     startInstantClassicReplay(classic);
   }));
+  // Delete a tree's Instant Classic — same shape as the coach-path delete
+  // below (confirm → strip the payload from the world save → strip the menu
+  // meta), keyed to the tree's ONE world save. Re-homed 2026-08-17: the
+  // coach-home [data-mm-classic-del] door is unreachable (W9 §12).
+  document.querySelectorAll("[data-mm-tree-classic-del]").forEach((b) => b.addEventListener("click", async (event) => {
+    event.stopPropagation();
+    if (!confirm("Delete this Instant Classic replay?")) return;
+    const classicId = b.dataset.mmTreeClassicDel;
+    const key = b.dataset.mmTreeClassicSlot;
+    const saved = await loadGame(key);
+    if (!saved || saved._incompatible) {
+      notify("That tree's world save could not be opened.", "warning");
+      return;
+    }
+    saved.instantClassics = (saved.instantClassics || []).filter((item) => item.id !== classicId);
+    const ok = await saveGame(saved, key);
+    if (!ok) {
+      notify("The replay could not be deleted.", "warning");
+      return;
+    }
+    removeTreeClassicMeta(mmTreeId, classicId);
+    rerender();
+  }));
+  // [2026-08-17] This coach-path delete (and [data-mm-team-del] below) is only
+  // reachable through the retired coach home — kept, NOT killed, because the
+  // whole legacy coach system is deliberately retained behind the doorless
+  // renderCoachSelect (see its W9 §12 comment: "to bring it back, restore the
+  // coach list"). The LIVE doors are [data-mm-tree-classic-del] above and
+  // [data-pn-saved-del] in playnow.js.
   document.querySelectorAll("[data-mm-classic-del]").forEach((b) => b.addEventListener("click", async (event) => {
     event.stopPropagation();
     if (!confirm("Delete this Instant Classic replay?")) return;

@@ -1,7 +1,17 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-17 VERIFICATION SWEEP (final tree) — the 24h of 12+
+Last updated: **2026-08-17 DELETE RE-HOME — the two product gaps the PW
+rewrite surfaced (saved-team DELETE, instant-classic DELETE) now have LIVE
+doors per the owner decision: [data-pn-saved-del] on Play Now's fielded
+snapshot row, [data-mm-tree-classic-del] on tree classic rows (world-save +
+menu-meta strip). The two smokes' tripwires flipped into real delete drives
+(saved_team_library, instant_classic); the unreachable coach-home wiring
+STAYS (part of the deliberately retained W9 §12 legacy block, commented).
+Clean build + CSS balanced + creator_store/creator_resilience/
+save_migration ×3 green; the two live delete click-throughs + the smokes'
+first PW runs are BROWSER-OWED (entry below). Prior same day:
+VERIFICATION SWEEP (final tree) — the 24h of 12+
 parallel sessions verified AS A WHOLE: NO stranded code hunks (js/ +
 style.css fully committed by their owners), reconciliation commit 77553b9
 (the stranded DISPATCH_PLAN + two runner-state files + .gitignore
@@ -72,6 +82,67 @@ D6's in-flight concepts is RESOLVED in this session, card_lint 21/0 ×3.)
 Prior: D4 · M2 presentation; D3 · M2 engine; D7 · M4; D2 · M1; D5 · M3
 audit RATIFIED. Plan of record: BUILD ORDER v2 (2026-08-17), dispatch
 prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+
+## 2026-08-17 — DELETE RE-HOME (this sandbox) — saved-team + classic DELETE get live doors (owner decision)
+## NODE-GATED — ⚠ the two live delete click-throughs + the smokes' first PW runs are BROWSER-OWED
+
+The PW-rewrite session (b6c6fb4) found both deletes wired only in the
+unreachable coach home. OWNER DECISION 2026-08-17: re-home, don't drop.
+
+**OWNER CHECKLIST (browser, one sitting — joins the standing local list):**
+- [ ] **Saved-team delete, live:** Play Now → field a saved dynasty team →
+  the ✕ on the SAVED SNAPSHOT row → confirm() → the option leaves the
+  "Saved dynasty teams" group and the panel falls back to a generated team.
+- [ ] **Classic delete, live:** tree home → an Instant Classic row's ✕ →
+  confirm() → row gone; re-open the tree and it stays gone (the replay
+  payload is stripped from the tree's world save, not just the menu meta).
+- [ ] **First local PW runs of the two UPDATED smokes**
+  (`saved_team_library_ui_smoke`, `instant_classic_ui_smoke`) — their
+  no-delete tripwires are now real end-to-end delete drives.
+
+**What shipped:**
+- **`js/ui/views/playnow.js`:** the fielded snapshot's `.pn-saved-meta` row
+  now carries `[data-pn-saved-del]` (✕, `btn-mm-del`), wired to the SAME
+  `deleteSavedTeam` the coach home used, behind `confirm()` (the app's
+  destructive convention — world/classic deletes). After delete, any side
+  fielding that snapshot falls back to a generated team.
+- **`js/ui/views/mainmenu.js`:** `renderTreeClassics` rows now carry
+  `[data-mm-tree-classic-del]` + slot; the handler mirrors the coach-path
+  delete byte-for-shape (confirm → strip `instantClassics` from the tree's
+  ONE world save → strip the menu meta → rerender), via the new
+  `removeTreeClassicMeta`.
+- **`js/engine/coachprofile.js`:** `removeTreeClassicMeta(treeId, classicId)`
+  — the tree twin of `removeWorldClassicMeta`, filtering `t.meta.classics`.
+- **`style.css`:** one rule (`.pn-saved-del` rides the meta row's right edge).
+- **The coach-home wiring STAYS** (`[data-mm-team-del]`,
+  `[data-mm-classic-del]`): it is not newly orphaned — it is part of the
+  deliberately retained W9 §12 legacy coach system (renderCoachSelect's
+  "to bring it back" comment); killing just the deletes would break that
+  block if ever restored. Commented in place pointing at the live doors.
+- **Smokes + manifest (data):** `instant_classic_ui_smoke` tripwire
+  (`[data-mm-classic-del]` count 0) flipped to assert the re-homed door and
+  the full delete drive restored (row gone + payload gone from save + meta);
+  `saved_team_library_ui_smoke` gained the picker-side delete drive
+  (control present → confirm → profile/picker/panel all clear). Everything
+  else in both is verbatim. Manifest notes for the two entries updated to
+  UPDATED/re-homed; `new_world`'s N7 heads-up note corrected (the deletes
+  now have doors; record book + plan-library management remain doorless).
+
+**Gate (this sandbox, node):** clean esbuild build in /tmp (standing
+workaround) — ALL sanity checks PASS, 3728 KB, cache `cfb-dynasty-a45683f292`,
+dist/ copied back byte-identical; bundle syntax parse (2 script blocks);
+all four new selectors/symbols verified IN the bundle; CSS braces balanced.
+`creator_store_probe` PASS ×3 · `creator_resilience_probe` PASS ×3 ·
+`save_migration_check` ALL PASS ×3. `node --check` clean on all six changed
+JS/tool files; `node tools/_gate.mjs --list` parses. PW unrunnable here
+(standing) — selector grep-verification table run instead (data-pn-saved-del,
+data-mm-tree-classic-del/-slot, removeTreeClassicMeta, optgroup label, all
+present in js/); the live click-throughs are the browser-owed half above.
+
+**Commit scoped to:** js/engine/coachprofile.js · js/ui/views/mainmenu.js ·
+js/ui/views/playnow.js · style.css · tools/instant_classic_ui_smoke.mjs ·
+tools/saved_team_library_ui_smoke.mjs · tools/_gate_manifest.mjs ·
+Ref/STATUS.md. NOT pushed.
 
 ## 2026-08-17 — VERIFICATION + HYGIENE SWEEP (this sandbox, node) — THE FINAL TREE VERIFIED AS A WHOLE
 ## 73/74 NODE PROBES GREEN ×1 · dist/ BYTE-FRESH · RECONCILIATION COMMITTED · ⚠ ONE NEW ENVIRONMENT LAW

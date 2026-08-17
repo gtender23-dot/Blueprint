@@ -7,10 +7,11 @@
 // source picker (playnow.js sourcePicker → instantiateSavedTeam), so the library half of
 // this smoke asserts the same substance there: the snapshot is listed, it stays attached
 // to its coach, and picking it actually fields the saved roster.
-// NOTE (ledgered in STATUS 2026-08-17): saved-team DELETE currently has no reachable
-// door anywhere — deleteSavedTeam is wired only in the unreachable coach home. That is a
-// product gap for the owner, not something this smoke can drive; when a delete door
-// lands, drive it here.
+// DELETE is RE-HOMED (owner decision 2026-08-17): a fielded snapshot's .pn-saved-meta
+// row now carries [data-pn-saved-del] (same deleteSavedTeam logic the unreachable coach
+// home wired, confirm() per the app's destructive convention). The delete drive below
+// asserts it: control present → confirm → snapshot gone from the coach profile, the
+// picker, and the fielded panel.
 import { chromium } from 'playwright-core';
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -63,6 +64,14 @@ try {
   const menuPhoneOverflow=await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1); check(!menuPhoneOverflow,'Play Now saved-team picker fits phone');
   await page.setViewportSize({width:1280,height:900}); await page.waitForTimeout(100);
   const desktopOverflow=await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1); check(!desktopOverflow,'Play Now saved-team picker fits desktop');
+  // The re-homed delete door (2026-08-17): lives on the fielded snapshot's meta row.
+  check(await page.locator('[data-pn-saved-del="home"]').count()===1,'the fielded snapshot shows its delete control');
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('[data-pn-saved-del="home"]').click(); await page.waitForTimeout(300);
+  const afterDelete=await page.evaluate(async()=>{const cp=await import('./js/engine/coachprofile.js');const sel=document.getElementById('pn-source-home');return {teams:cp.listSavedTeams().length,optgroup:!!sel?.querySelector('optgroup[label="Saved dynasty teams"]'),meta:!!document.querySelector('.pn-saved-meta')};});
+  check(afterDelete.teams===0,'deleting removes the snapshot from the coach profile');
+  check(!afterDelete.optgroup,'the Saved dynasty teams group is gone from the picker');
+  check(!afterDelete.meta,'Team 1 falls back to a generated team after the delete');
   check(errors.length===0,'zero page errors',errors.slice(0,2).join(' | '));
 } finally { await browser.close(); await new Promise(resolve=>server.close(resolve)); }
 console.log(fails?`\nFAIL — ${fails} saved-team library UI check(s)`:'\nSAVED-TEAM LIBRARY UI SMOKE PASS'); process.exit(fails?1:0);

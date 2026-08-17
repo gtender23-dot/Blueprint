@@ -1,7 +1,7 @@
 import { C } from '../../constants.js';
 import { setAIGameplan } from '../../engine/ai.js';
 import { synthesizeTeamPlan } from '../../engine/teamplan.js';
-import { instantiateSavedTeam, listSavedTeams } from '../../engine/coachprofile.js';
+import { deleteSavedTeam, instantiateSavedTeam, listSavedTeams } from '../../engine/coachprofile.js';
 import { listCreations, loadCreationData } from '../../engine/creator.js';
 import { ensureFieldAssignments } from '../../engine/fieldassign.js';
 import { generateExhibitionTeam, applyTeamStars } from '../../engine/world.js';
@@ -123,7 +123,7 @@ function teamPanel(side, school) {
       <div class="pn-seg">
         ${DIVS.map((d) => `<button class="pn-seg-btn${div === d ? " active" : ""}" data-pn-div="${side}:${d}">${d}</button>`).join("")}
       </div>
-      <div class="pn-stars">${starRow(side)}<span class="pn-star-hint">prestige \u2014 roster strength</span></div>` : (pn.source[side] || "").startsWith("creator:") ? `<div class="pn-saved-meta">CUSTOM TEAM \xB7 ${div}</div>` : `<div class="pn-saved-meta">SAVED SNAPSHOT${(saved == null ? void 0 : saved.season) ? ` \xB7 SEASON ${saved.season}` : ""}${(saved == null ? void 0 : saved.record) ? ` \xB7 ${saved.record.wins || 0}\u2013${saved.record.losses || 0}` : ""}</div>`}
+      <div class="pn-stars">${starRow(side)}<span class="pn-star-hint">prestige \u2014 roster strength</span></div>` : (pn.source[side] || "").startsWith("creator:") ? `<div class="pn-saved-meta">CUSTOM TEAM \xB7 ${div}</div>` : `<div class="pn-saved-meta">SAVED SNAPSHOT${(saved == null ? void 0 : saved.season) ? ` \xB7 SEASON ${saved.season}` : ""}${(saved == null ? void 0 : saved.record) ? ` \xB7 ${saved.record.wins || 0}\u2013${saved.record.losses || 0}` : ""}${saved ? `<button class="btn-mm-del pn-saved-del" data-pn-saved-del="${side}" title="Delete saved team" aria-label="Delete saved team ${escapeHtml(saved.name)}">\u2715</button>` : ""}</div>`}
     <div class="pn-card" style="--pn-c1:${((_a = school.colors) == null ? void 0 : _a[0]) || "#888"};--pn-c2:${((_b = school.colors) == null ? void 0 : _b[1]) || "#ccc"}">
       <div class="pn-card-head">
         <span class="pn-crest">${renderCrest(school, 40)}</span>
@@ -199,6 +199,25 @@ function playnowListeners() {
       const entry = savedByKey(key);
       pn[side] = instantiateSavedTeam(entry, side) || makeTeam(side);
       if (!entry) pn.source[side] = "";
+    }
+    rerender();
+  }));
+  // Delete a saved dynasty team from where it surfaces (the source picker).
+  // Same logic the retired coach home wired ([data-mm-team-del] → deleteSavedTeam),
+  // re-homed 2026-08-17; confirm() is the app's destructive-action convention
+  // (world delete, classic delete).
+  document.querySelectorAll("[data-pn-saved-del]").forEach((button) => button.addEventListener("click", () => {
+    const side = button.dataset.pnSavedDel;
+    const entry = savedByKey(pn.source[side]);
+    if (!entry) return;
+    if (!confirm(`Delete saved team "${entry.name}"? The snapshot is gone for good.`)) return;
+    deleteSavedTeam(entry.coachId, entry.id);
+    // Any side fielding this snapshot falls back to a generated team.
+    for (const s of ["home", "away"]) {
+      if (pn.source[s] === savedKey(entry)) {
+        pn.source[s] = "";
+        pn[s] = makeTeam(s);
+      }
     }
     rerender();
   }));
