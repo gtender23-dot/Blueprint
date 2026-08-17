@@ -1,7 +1,13 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-17 STATUS errand (after NIGHT GATE) — D8 dial map
+Last updated: **2026-08-17 FULL-GATE TRIAGE (diagnosis only, no code) — all
+18 `_night_full_log.txt` reds classified in
+`Ref/FULLGATE_TRIAGE_2026-08-17.md`: ONE real product bug (dead
+Rest-of-Game timeout chips), 2 healed at HEAD, 8 test-stale, 3 flakes, 3
+env-only + the log run was ABORTED mid-manifest. Prior same day: STATUS
+errand — D8 dial map** (details below). Earlier header kept: **STATUS
+errand (after NIGHT GATE) — D8 dial map
 SIGNED OFF: KEEP CURRENT on both PROPOSED items, zero code change, and the
 Workshop-template doctrine owner-ratified (recorded at the dial map in the
 D8 entry). Prior same day: NIGHT GATE session — both night giants GREEN on
@@ -21,6 +27,34 @@ D6's in-flight concepts is RESOLVED in this session, card_lint 21/0 ×3.)
 Prior: D4 · M2 presentation; D3 · M2 engine; D7 · M4; D2 · M1; D5 · M3
 audit RATIFIED. Plan of record: BUILD ORDER v2 (2026-08-17), dispatch
 prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+
+## 2026-08-17 — FULL-GATE TRIAGE (this sandbox, diagnosis ONLY — no code changed)
+
+The standing `_night_full_log.txt` debt (owner-machine FULL run, 2026-08-16
+15:13, pre-D1–D9) is now TRIAGED: every red classified against HEAD in
+**`Ref/FULLGATE_TRIAGE_2026-08-17.md`** — read that for the per-red
+sections, fixes sized S/M/L, and the suggested order for the fixing
+sitting. The shape: **18 reds, exactly ONE product bug** (the timeout
+screen's Rest-of-Game chips render but are never wired —
+`#to-adjust-root`, `js/ui/app.js`; one-block S fix). 2 HEALED at HEAD
+(covfam 17/0 and tipdrill 3/3, both re-run here at gate volume — and
+tipdrill's famous "[3/78]" was never the failing check; the gate log keeps
+only the last output line). 8 TEST-STALE, dominated by one family: four PW
+smokes still enter through the RETIRED coach main-menu door
+(`#btn-mm-newcoach`/`[data-mm-coach]`, tree-only since W9 §12) — plus
+new_world (staff step), nav_back (season-group tabs), dna_cards (manifest
+`kind:'pw'` feeds the dist path into its games argv → NaN → 0-game arms,
+REPRODUCED), formation_playbook (Mesh band mean now below the bar, 7-run
+evidence). commit_rate_test's TIMEOUT is a deterministic hang at the day-3
+`posReviewed` camp gate (hung on EVERY run since 08-12; one-line fix;
+full season completes 106 s here with it). 3 flakes (size_fit standing ·
+gaplist squib-zero needs `seedFlaky` · pass5_band_ab needs the flag its
+sibling pass6 has). 3 ENV-ONLY (defcall_ui, table_button_phone,
+position_gallery = 0xC000013A Ctrl-C — **the run was aborted there; five
+manifest probes after it never ran**). Several manifest "(cloud)" envKnown
+notes are misdiagnoses — they fail deterministically everywhere; correct
+them as fixes land. Committed: the triage report + this entry, nothing
+else. NOT pushed.
 
 ## 2026-08-17 — NIGHT GATE (this sandbox, node) — BOTH GIANTS GREEN, NO REDS, NO FLAKES
 
