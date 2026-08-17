@@ -35,7 +35,17 @@
 //       lineman over the bring, and everything in bounds.
 import { FORMATION_VARIATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, aliasFormation } from '../js/constants.js';
 import { OFF_FIELD_LAYOUTS, DEF_FIELD_LAYOUTS, variationLayoutSlots } from '../js/constants_field.js';
-import { renderConceptThumb, renderFormationDiagram, renderFrontDiagram, renderDefCallCard, conceptKind, CONCEPT_ROUTES } from '../js/ui/views/routeart.js';
+//   C6  (D4/M2) THE BIG CARD + THE WORDS — run cards draw the LOOK (5 OL from
+//       the authored layout, one designed path, in bounds); the big-card jobs
+//       render (jobs:true) stays in bounds; playAssignments answers with all
+//       ELEVEN jobs for every (formation × look × concept); every concept in
+//       the shipped catalog has a purpose blurb, and no blurb or job line
+//       ever prints a number (the help-language law, machine-checked);
+//       composed cards (pass and run) render lawfully through
+//       renderComposedCard for every look.
+import { renderConceptThumb, renderFormationDiagram, renderFrontDiagram, renderDefCallCard, conceptKind, CONCEPT_ROUTES, renderComposedCard, playAssignments } from '../js/ui/views/routeart.js';
+import { CONCEPT_BLURBS, conceptBlurb, composedBlurb } from '../js/ui/views/conceptblurbs.js';
+import { PASS_CONCEPTS, RUN_CONCEPTS } from '../js/concepts.js';
 import { projectWatchPoint } from '../js/ui/watchcamera.js';
 
 let pass = 0, fail = 0;
@@ -163,6 +173,15 @@ hdr('C3 — every (formation × variation × concept) card renders lawfully');
             if (bold !== kind.parts.length) bad.push(`${lookName(fid, vk)} · ${concept}: ${bold} bold routes for ${kind.parts.length} parts`);
             const dots = (svg.match(/class="play-card-rec"/g) || []).length;
             if (dots !== 5) bad.push(`${lookName(fid, vk)} · ${concept}: ${dots} skill dots (want 5)`);
+          } else {
+            // D4/M2: run cards draw the LOOK — the authored line (5 OL), one
+            // designed path, and every skill body on the card.
+            const olN = (svg.match(/class="play-card-ol"/g) || []).length;
+            if (olN !== 5) bad.push(`${lookName(fid, vk)} · ${concept}: run card drew ${olN} OL (want 5)`);
+            const pathN = (svg.match(/class="run-card-path"/g) || []).length;
+            if (pathN !== 1) bad.push(`${lookName(fid, vk)} · ${concept}: run card drew ${pathN} carrier paths (want 1)`);
+            const dots = (svg.match(/class="play-card-rec"/g) || []).length;
+            if (dots !== 5) bad.push(`${lookName(fid, vk)} · ${concept}: run card drew ${dots} skill dots (want 5)`);
           }
         }
       }
@@ -233,6 +252,75 @@ hdr('C5 — defensive graphics: side-explicit end labels (#31), the arrow count 
   if (bad.length > 20) console.log(`    …and ${bad.length - 20} more`);
   check(cards === fronts.length * 4 * 4 * 2, `walked every (front × bring × shell) call card (${cards})`);
   check(bad.length === 0, `every call card arrows its bring and stays in bounds (${bad.length} flags)`);
+}
+
+hdr('C6 — the big card and the words (D4/M2): jobs for all eleven, blurbs with no numbers');
+{
+  // every shipped concept carries a purpose blurb; no blurb ever prints a digit
+  const allConcepts = [...Object.keys(PASS_CONCEPTS), ...Object.keys(RUN_CONCEPTS)];
+  const noBlurb = allConcepts.filter((c) => !conceptBlurb(c));
+  noBlurb.forEach((c) => console.log(`    FLAG: no blurb for ${c}`));
+  check(noBlurb.length === 0, `every shipped concept has a purpose blurb (${allConcepts.length} concepts, ${noBlurb.length} missing)`);
+  const digitBlurbs = Object.entries(CONCEPT_BLURBS).filter(([, b]) => /\d/.test(b));
+  digitBlurbs.forEach(([c]) => console.log(`    FLAG: blurb prints a number: ${c}`));
+  check(digitBlurbs.length === 0, `no blurb prints a number (the help-language law)`);
+  const stale = Object.keys(CONCEPT_BLURBS).filter((c) => !PASS_CONCEPTS[c] && !RUN_CONCEPTS[c]);
+  stale.forEach((c) => console.log(`    FLAG: blurb for unknown concept ${c}`));
+  check(stale.length === 0, `no blurb names a concept that doesn't exist (${stale.length} stale)`);
+
+  // EVERY MAN'S JOB: eleven rows (5 OL + QB + 5 skill), no digits, for every
+  // (formation × look × concept) — and the big-card render stays in bounds
+  let walks = 0; const bad = [];
+  for (const fid of FIDS) {
+    const book = FORMATION_PLAYBOOK[fid] || [];
+    const vks = [null, ...Object.keys(FORMATION_VARIATIONS[fid] || {})];
+    for (const vk of vks) {
+      for (const concept of book) {
+        walks++;
+        const a = playAssignments({ name: concept }, { formation: fid, variation: vk || undefined });
+        if (a.rows.length !== 11) { bad.push(`${lookName(fid, vk)} · ${concept}: ${a.rows.length} job rows (want 11)`); continue; }
+        const olRows = a.rows.filter((r) => r.pos === 'OL').length;
+        if (olRows !== 5) bad.push(`${lookName(fid, vk)} · ${concept}: ${olRows} OL job rows (want 5)`);
+        for (const r of a.rows) {
+          if (!r.job || !r.job.trim()) { bad.push(`${lookName(fid, vk)} · ${concept}: empty job for ${r.label}`); break; }
+          if (/\d/.test(r.job)) { bad.push(`${lookName(fid, vk)} · ${concept}: job prints a number ("${r.job}")`); break; }
+        }
+      }
+      // the big-card render (jobs:true) for a sample of each look's book
+      for (const concept of book.slice(0, 3)) {
+        const svg = renderConceptThumb(concept, { w: 340, h: 215, formation: fid, variation: vk || undefined, jobs: true });
+        const err = svgInBounds(svg, 340, 215);
+        if (err) bad.push(`${lookName(fid, vk)} · ${concept} big card: ${err}`);
+      }
+    }
+  }
+  bad.slice(0, 20).forEach((w) => console.log(`    FLAG: ${w}`));
+  if (bad.length > 20) console.log(`    …and ${bad.length - 20} more`);
+  check(walks > 1200, `walked every (formation × look × concept) job sheet (${walks})`);
+  check(bad.length === 0, `every man's job reads lawfully on every card (${bad.length} flags)`);
+
+  // composed cards through the one dispatcher — a pass with authored blocks
+  // and every run design, on a spread and a heavy look, both sizes
+  const runs = [];
+  for (const path of ['inside', 'offtackle', 'outside', 'toss', 'draw'])
+    for (const scheme of ['zone', 'gap', 'trap', 'lead'])
+      runs.push({ name: 'R', kind: 'run', run: { path, scheme, carrier: path === 'draw' ? 'QB' : 'RB' }, parts: [], assigns: [], blocks: [], formations: ['Spread'] });
+  const passCp = { name: 'P', kind: 'pass', parts: ['go', 'drag', 'curl'], assigns: [], blocks: ['TE1'], formations: ['Spread'] };
+  let cBad = 0;
+  for (const cp of [...runs, passCp]) {
+    for (const [fid2, vk2] of [['Spread', null], ['Spread', 'trips'], ['Power-I', 'big'], ['Air Raid', 'empty']]) {
+      if (!FORMATION_PACKAGES[fid2] || vk2 && !(FORMATION_VARIATIONS[fid2] || {})[vk2]) continue;
+      for (const size of [{ w: 120, h: 72, scale: 0.72 }, { w: 300, h: 200, jobs: true }]) {
+        const svg = renderComposedCard(cp, { ...size, formation: fid2, variation: vk2 || undefined });
+        if (!svg || !svg.includes('<svg')) { cBad++; console.log(`    FLAG: composed ${cp.kind} empty render on ${fid2}/${vk2}`); continue; }
+        const err = svgInBounds(svg, size.w, size.h);
+        if (err) { cBad++; console.log(`    FLAG: composed ${cp.kind} ${cp.run ? cp.run.path + '/' + cp.run.scheme : ''} @${fid2}/${vk2 || 'base'} ${size.w}×${size.h}: ${err}`); }
+      }
+    }
+  }
+  check(cBad === 0, `every composed card (pass + all run designs) renders lawfully through renderComposedCard (${cBad} flags)`);
+  const rb = composedBlurb({ kind: 'run', run: { path: 'toss', scheme: 'gap', carrier: 'RB' } });
+  check(!!rb && !/\d/.test(rb), 'composed plays get a derived blurb with no numbers');
 }
 
 console.log(`\nCARD LINT PROBE — ${pass} pass, ${fail} fail`);

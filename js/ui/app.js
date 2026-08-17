@@ -12,7 +12,8 @@ import { callContext, decisionContext, midGameReport, setPenaltyScale } from '..
 import { defBookCalls } from '../engine/teamplan.js';
 import { listCreations, loadCreationData } from '../engine/creator.js';
 import { repairComposedPlay } from '../engine/playcompose.js';
-import { renderConceptThumb, renderFormationDiagram, renderPlayCard, resolveComposedReceivers } from './views/routeart.js';
+import { renderConceptThumb, renderFormationDiagram, renderPlayCard, resolveComposedReceivers, renderComposedCard, playAssignments, conceptKind, routeColor } from './views/routeart.js';
+import { conceptBlurb, composedBlurb } from './views/conceptblurbs.js';
 import { SITUATION_KEYS, SITUATION_LABELS } from '../engine/situations.js';
 import { isTreeGame, lockstepBlock, treeSnapshot } from '../engine/tree.js';
 import { afterCoachedGameResultClose, answerFourthDown, answerPlayCall, chooseKickoffMode, closeInstantClassicReplay, continueExhibitionSpectator, exitSeasonRun, getPhaseLabel, getPlayerSchool, getUpcomingGame, getWeekLabel, getWeekShort, navigate, navigateBack, notify, openSchool, programGroupTab, refreshSaves, rerender, resumeHalftime, saveToSlot, seasonGroupTab, setCallModeMidGame, setGroupTab, setInvolvement, involvementLevel, setNotifyFn, setRenderFn, simCoached, simToBreak, simToPossessionEnd, state, statsGroupTab, switchTreeSlot, teamGroupTab } from '../state.js';
@@ -39,7 +40,7 @@ import { renderScout, setupListeners8 } from './views/scout.js';
 import { renderSettings, setupListeners15 } from './views/settings.js';
 import { renderStandings, setupListeners13 } from './views/standings.js';
 import { renderStats, setupListeners14 } from './views/stats.js';
-import { buildPlayScript, sampleTrack, buildCameraPlan, buildOfficialsPlan, selectSecondaryMotion, buildBroadcastCommentary } from './watchphys.js';
+import { buildPlayScript, sampleTrack, buildCameraPlan, buildOfficialsPlan, selectSecondaryMotion, buildBroadcastCommentary, routeWaypoints } from './watchphys.js';
 import { normalizeWatchCamera, nextWatchCamera, watchCameraLabel, projectWatchPoint, watchProjectionScale, watchProjectionDepth, buildReplayDirectorPlan, buildSpecialTeamsDirectorPlan, selectWatchLabels, replayDirectorFocus, specialTeamsDirectorFocus } from './watchcamera.js';
 import { spriteMarkup, ballMarkup, spriteMotionTick, wspPlace } from './sprite.js';
 import { stadiumPause, stadiumReact, stadiumStart } from './sound.js';
@@ -3160,21 +3161,29 @@ function conceptTeaching(name) {
   });
   return { attacks, risk, best: pieces.length ? pieces.join(" plus ") : "Players whose strengths match the assignment." };
 }
-function conceptPreviewHtml(name, formation) {
+function conceptPreviewHtml(name, formation, variation) {
   const note = conceptTeaching(name);
-  // Stage 4: the preview draws the play with the Builder's card art, aligned to
-  // the formation the coach is calling from \u2014 same picture as the Workshop.
+  const blurb = conceptBlurb(name);
+  // D4/M2 (#16): the INFO drill-down IS the big card \u2014 the look-specific art
+  // at full size with the line's job drawn (jobs:true), a one-line purpose
+  // blurb (#21), and an expandable EVERY MAN'S JOB list covering all eleven,
+  // OL included. Stage 4 law unchanged: the art is the Builder's own card,
+  // aligned to the look the coach is calling from.
+  const jobs = playAssignments({ name }, { formation: formation || "Spread", variation: variation || void 0 });
+  const jobRows = jobs.rows.map((r) => `<div class="cs-job-row"><b>${escapeHtml(r.label)}</b><span class="cs-job-pos">${escapeHtml(r.pos)}</span><span class="cs-job-text">${escapeHtml(r.job)}</span></div>`).join("");
   return `<div class="cs-concept-preview">
   <button class="cs-drill-back" data-cs-previewback="1">\u2190 Back to plays</button>
   <div class="cs-preview-main">
-    <span class="cs-preview-art">${renderConceptThumb(name, { w: 260, h: 170, formation: formation || void 0 })}</span>
+    <span class="cs-preview-art">${renderConceptThumb(name, { w: 300, h: 195, formation: formation || void 0, variation: variation || void 0, jobs: true })}</span>
     <div class="cs-preview-copy">
       <h3>${escapeHtml(name)}</h3>
+      ${blurb ? `<div class="cs-preview-blurb">${escapeHtml(blurb)}</div>` : ""}
       <div class="cs-teach-row"><b>ATTACKS</b><span>${escapeHtml(note.attacks)}</span></div>
       <div class="cs-teach-row"><b>RISK</b><span>${escapeHtml(note.risk)}</span></div>
       <div class="cs-teach-row"><b>BEST WITH</b><span>${escapeHtml(note.best)}</span></div>
     </div>
   </div>
+  ${jobRows ? `<details class="cs-jobs"><summary>EVERY MAN'S JOB \u2014 all eleven, line included</summary><div class="cs-jobs-list">${jobRows}</div></details>` : ""}
   <button class="btn primary cs-call-play" data-cs-callconcept="${escapeHtml(name)}">CALL THIS PLAY \u2192</button>
 </div>`;
 }
@@ -3444,7 +3453,7 @@ function callSheetPanelHtml() {
     const meta = CATS.find(([, , g]) => g === _drillCat.grp);
     const list = conceptsFor(_drillCat.grp);
     const previewName = list.includes(state.ui.callConceptPreview) ? state.ui.callConceptPreview : null;
-    drillBlock = previewName ? conceptPreviewHtml(previewName, _thumbForm) : `
+    drillBlock = previewName ? conceptPreviewHtml(previewName, _thumbForm, state.ui.callFormation ? state.ui.callVariation : null) : `
       <div class="cs-drill">
         <div class="cs-drill-head">
           <button class="cs-drill-back" data-cs-drillback="1">\u2190 Plays</button>
@@ -3453,7 +3462,7 @@ function callSheetPanelHtml() {
         <p class="cs-diagram-hint">Tap the play to call it now. INFO opens the optional coaching notes.</p>
         <div class="cs-concepts">
           <button class="cs-concept cs-surprise" data-cs-concept="__surprise" data-cs-cat="${_drillCat.cat}"><span class="cs-surprise-die">\u{1F3B2}</span><span>Surprise me</span></button>
-          ${list.map((nm) => `<div class="cs-concept-tile"><button class="cs-concept cs-concept-card" data-cs-callconcept="${escapeHtml(nm)}" aria-label="Call ${escapeHtml(nm)}">${renderConceptThumb(nm, _thumbOpts)}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-learn">Call play \u2192</span></button><button class="cs-info-btn" data-cs-preview="${escapeHtml(nm)}" aria-label="Learn about ${escapeHtml(nm)}">INFO</button></div>`).join("") || `<div class="muted" style="padding:6px">No plays fit ${state.ui.callFormation ? "this formation" : "your carried formations"} \u2014 try Surprise me.</div>`}
+          ${list.map((nm) => `<div class="cs-concept-tile"><button class="cs-concept cs-concept-card" data-cs-callconcept="${escapeHtml(nm)}" aria-label="Call ${escapeHtml(nm)}" title="${escapeHtml(conceptBlurb(nm) || nm)}">${renderConceptThumb(nm, _thumbOpts)}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-learn">Call play \u2192</span></button><button class="cs-info-btn" data-cs-preview="${escapeHtml(nm)}" aria-label="Learn about ${escapeHtml(nm)}">INFO</button></div>`).join("") || `<div class="muted" style="padding:6px">No plays fit ${state.ui.callFormation ? "this formation" : "your carried formations"} \u2014 try Surprise me.</div>`}
         </div>
         ${(() => {
       const outs = conceptsOffSheet(_drillCat.grp);
@@ -3496,7 +3505,7 @@ function callSheetPanelHtml() {
   let formationPage = "";
   if (_selForm !== "__auto") {
     const _fpPreview = state.ui.callConceptPreview && conceptsFor("quick").concat(conceptsFor("dropback"), conceptsFor("shots"), conceptsFor("inside"), conceptsFor("perimeter"), conceptsFor("gadgets")).includes(state.ui.callConceptPreview) ? state.ui.callConceptPreview : null;
-    if (_fpPreview) formationPage = conceptPreviewHtml(_fpPreview, _thumbForm);
+    if (_fpPreview) formationPage = conceptPreviewHtml(_fpPreview, _thumbForm, _selVar);
     else {
       const _wOf = (nm) => { var _z; return weights ? Math.max(0, (_z = weights[nm]) != null ? _z : 50) : 50; };
       const GRP_META = [
@@ -3517,7 +3526,7 @@ function callSheetPanelHtml() {
         <div class="cs-drill-head"><span class="cs-drill-title">${label}</span></div>
         <div class="cs-concepts">
           <button class="cs-concept cs-surprise" data-cs-concept="__surprise" data-cs-cat="${cat}"><span class="cs-surprise-die">\u{1F3B2}</span><span>Surprise me</span></button>
-          ${list.map((nm) => `<div class="cs-concept-tile"><button class="cs-concept cs-concept-card" data-cs-callconcept="${escapeHtml(nm)}" aria-label="Call ${escapeHtml(nm)}">${renderConceptThumb(nm, _thumbOpts)}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-learn">Call play \u2192</span></button><button class="cs-info-btn" data-cs-preview="${escapeHtml(nm)}" aria-label="Learn about ${escapeHtml(nm)}">INFO</button></div>`).join("")}
+          ${list.map((nm) => `<div class="cs-concept-tile"><button class="cs-concept cs-concept-card" data-cs-callconcept="${escapeHtml(nm)}" aria-label="Call ${escapeHtml(nm)}" title="${escapeHtml(conceptBlurb(nm) || nm)}">${renderConceptThumb(nm, _thumbOpts)}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-learn">Call play \u2192</span></button><button class="cs-info-btn" data-cs-preview="${escapeHtml(nm)}" aria-label="Learn about ${escapeHtml(nm)}">INFO</button></div>`).join("")}
         </div>`;
       }).join("");
       const outs = ["inside", "perimeter", "quick", "dropback", "shots", "gadgets"].flatMap((grp) => conceptsOffSheet(grp));
@@ -3534,8 +3543,9 @@ function callSheetPanelHtml() {
       </div>`;
     }
   }
-  // Stage 4: the book's composed plays, callable as cards. Pass plays only
-  // (composer v1), so RPO/QB-Run (run-only tags) lock them like any pass tile.
+  // Stage 4: the book's composed plays, callable as cards. D4/M2: composed
+  // RUNS draw their own run diagrams now, but the RPO/QB-Run tags still lock
+  // the block — a composed call is the whole play; it never takes a tag.
   const _myPlaysBlock = (() => {
     if (_rpoOn || _qbRunOn) return "";
     const plays = composedPlaysForCall(school, _selForm !== "__auto" ? _selForm : null);
@@ -3545,7 +3555,7 @@ function callSheetPanelHtml() {
     return `
         <div class="cs-drill-head cs-myplays-head"><span class="cs-drill-title">\u{1F4D6} MY PLAYS \xB7 <span class="muted">${srcLbl}</span></span></div>
         <div class="cs-concepts cs-myplays">
-          ${plays.map((p) => `<div class="cs-concept-tile"><button class="cs-concept cs-concept-card" data-cs-callcustom="${escapeHtml(p.id)}" aria-label="Call ${escapeHtml(p.name)}">${renderPlayCard(p.cp.parts, { w: 120, h: 72, scale: 0.72, formation: _selForm !== "__auto" ? _selForm : p.cp.formations && p.cp.formations[0] || _thumbForm, variation: _selForm !== "__auto" ? _selVar || void 0 : void 0, assigns: p.cp.assigns, blocks: p.cp.blocks })}<span class="cs-c-name">${escapeHtml(p.name)}</span><span class="cs-c-learn">Call play →</span></button></div>`).join("")}
+          ${plays.map((p) => `<div class="cs-concept-tile"><button class="cs-concept cs-concept-card" data-cs-callcustom="${escapeHtml(p.id)}" aria-label="Call ${escapeHtml(p.name)}" title="${escapeHtml(composedBlurb(p.cp) || p.name)}">${renderComposedCard(p.cp, { w: 120, h: 72, scale: 0.72, formation: _selForm !== "__auto" ? _selForm : p.cp.formations && p.cp.formations[0] || _thumbForm, variation: _selForm !== "__auto" ? _selVar || void 0 : void 0 })}<span class="cs-c-name">${escapeHtml(p.name)}</span><span class="cs-c-learn">Call play →</span></button></div>`).join("")}
         </div>`;
   })();
   const _drillGrp = _drillCat ? _drillCat.grp : null;
@@ -4196,7 +4206,9 @@ function watchComposedRoutes(p, offSlots) {
     const bySlot = {};
     for (const rr of resolved) if (rr.slot) bySlot[rr.slot.id] = { part: rr.id, flip: !!rr.flip };
     const blocks = (r.cp.blocks || []).filter((b) => typeof b === "string" && !bySlot[b]);
-    return { bySlot, blocks };
+    // D4/M2: the pre-snap play-art overlay also wants the play's KIND and a
+    // composed run's authored design — stamp them on the cached plan.
+    return { bySlot, blocks, kind: r.cp.kind === "run" ? "run" : "pass", run: r.cp.run || null };
   })();
   return p._composedRoutes;
 }
@@ -4215,7 +4227,7 @@ function watchCalledCardHtml(p, opts) {
     if (data) {
       const r = repairComposedPlay(data);
       if (r.ok) {
-        art = renderPlayCard(r.cp.parts, { w: W, h: H, scale: 0.8, formation: p.offFormation, variation: p.variation || void 0, assigns: r.cp.assigns, blocks: r.cp.blocks });
+        art = renderComposedCard(r.cp, { w: W, h: H, scale: 0.8, formation: p.offFormation, variation: p.variation || void 0 });
         nm = r.cp.name || nm;
       }
     }
@@ -4224,6 +4236,117 @@ function watchCalledCardHtml(p, opts) {
   if (!art) return "";
   const look = watchLookLabel(p);
   return `<div class="wcc-kicker">THE CALL</div>${art}<div class="wcc-name">${escapeHtml(nm)}</div><div class="wcc-meta">${look ? escapeHtml(look) : ""}${p.bookName ? `${look ? " \xB7 " : ""}\u{1F4D6} ${escapeHtml(p.bookName)}` : ""}</div>`;
+}
+// ── D4/M2: the PRE-SNAP PLAY-ART OVERLAY (the Madden trust device) ─────────
+// The called play's card art drawn over the fielded players before the snap,
+// in WORLD space — the routes come from the script's own routeCues (the exact
+// shapes the bodies are about to run, which for a composed play are the
+// card's authored rows via COMPOSED_SHAPE), so card↔field agreement is
+// visible on every snap instead of asserted. Runs draw the designed path to
+// the recorded gap plus the pull. Projected through the frame's projectPoint,
+// so every camera and both drive directions inherit the #49 handedness law.
+// Replays and the Film Room inherit it for free (one scrimmage renderer).
+var _ART_SHAPE_COLOR = {
+  go: "go", seam: "go", sluggo: "go", fade: "fade", deepfade: "fade",
+  post: "post", postcorner: "corner", corner: "corner", dig: "dig",
+  out: "out", quickout: "out", outandup: "out", comeback: "comeback",
+  curl: "curl", hitch: "curl", pivot: "curl", slant: "slant", whip: "slant",
+  cross: "drag", deepcross: "drag", arrow: "flat", flat: "flat",
+  wheel: "wheel", bubble: "bubble", tunnel: "tunnel", slip: "screen",
+  stick: "checkdown"
+};
+function watchPlayArtPlan(p, script, offSlots) {
+  if (!p || !script || !offSlots || !/^(pass|run)/.test(String(p.type || ""))) return null;
+  const LOSW = 31, YPU = 0.85;
+  const toB = (s) => [s.x * 100, LOSW + Math.max(0, s.y - 0.5) * 18 * YPU];
+  const byId = {};
+  offSlots.forEach((s) => { byId[s.id] = s; });
+  const cr = p._composedRoutes || null;
+  const paths = [];
+  for (const cue of Array.isArray(script.routeCues) ? script.routeCues : []) {
+    const s = byId[cue.id];
+    if (!s) continue;
+    const [bx, by] = toB(s);
+    const flip = cr && cr.bySlot && cr.bySlot[cue.id] ? !!cr.bySlot[cue.id].flip : false;
+    const mid = (bx <= 50 ? 1 : -1) * (flip ? -1 : 1);
+    const wps = routeWaypoints(cue.shape, bx, by, mid);
+    paths.push({ pts: [[bx, by], ...wps], color: routeColor(_ART_SHAPE_COLOR[cue.shape] || "checkdown"), cls: "wp-art-route", arrow: true });
+  }
+  // authored stay-in blockers (composed plays): the football "T" at the man
+  for (const id of cr && Array.isArray(cr.blocks) ? cr.blocks : []) {
+    const s = byId[id];
+    if (!s) continue;
+    const [bx, by] = toB(s);
+    paths.push({ pts: [[bx, by], [bx, by - 1.4]], cls: "wp-art-block", tee: true });
+  }
+  // the run design: carrier's path to the recorded gap, plus the pull
+  if (String(p.type).startsWith("run")) {
+    const k = cr && cr.kind === "run" && cr.run ? { param: _artRunParam(cr.run) } : conceptKind(p.concept || "");
+    const param = k.param || (k.kind === "run" ? _artRunTypeParam(k.rtype) : null);
+    if (param) {
+      const BACKS = ["RB", "WING", "ABACK", "WILDCAT", "JETMAN"];
+      const qs = offSlots.find((s) => s.pos === "QB");
+      const backs = offSlots.filter((s) => BACKS.includes(s.pos)).slice().sort((a, b) => b.y - a.y);
+      const carrierSlot = p.carrierSlotId && byId[p.carrierSlotId] ? byId[p.carrierSlotId] : param.qb ? qs : backs[0] || qs;
+      if (carrierSlot) {
+        const [sx0, sy0] = toB(carrierSlot);
+        const side = p.runDir === "left" ? -1 : p.runDir === "right" ? 1 : sx0 <= 50 ? 1 : -1;
+        const gapX = Math.min(96, Math.max(4, 50 + side * (param.gap || 0.1) * 44));
+        paths.push({ pts: [[sx0, sy0], [gapX, LOSW + 0.8], [gapX, LOSW - 5]], cls: "wp-art-run", arrow: true });
+        if (param.pull) {
+          const ol = offSlots.filter((s) => s.pos === "OL").slice().sort((a, b) => a.x - b.x);
+          const g = ol[side > 0 ? 1 : 3];
+          if (g) {
+            const [gx, gy] = toB(g);
+            paths.push({ pts: [[gx, gy], [gx + side * 2, gy + 1.6], [gapX - side * 2, LOSW + 0.8]], cls: "wp-art-pull", arrow: true });
+          }
+        }
+      }
+    }
+  }
+  return paths.length ? paths : null;
+}
+// the card's run vocabulary, reachable without importing routeart internals
+function _artRunParam(run) {
+  const GAPS = { inside: 0.1, offtackle: 0.22, outside: 0.3, toss: 0.36, draw: 0.1 };
+  return { gap: GAPS[run.path] != null ? GAPS[run.path] : 0.1, pull: run.scheme === "gap" || run.scheme === "trap", qb: run.carrier === "QB" };
+}
+function _artRunTypeParam(rtype) {
+  const T = {
+    inside: { gap: 0.1 }, outside: { gap: 0.3 }, power: { gap: 0.22, pull: true },
+    counter: { gap: 0.22, pull: true }, trap: { gap: 0.08, pull: true }, draw: { gap: 0.1 },
+    dive: { gap: 0.05 }, sweep: { gap: 0.34, pull: true }, toss: { gap: 0.36 },
+    jet: { gap: 0.38 }, reverse: { gap: 0.34 }, option: { gap: 0.28, qb: true },
+    triple: { gap: 0.26, qb: true }, qbpower: { gap: 0.18, pull: true, qb: true }
+  };
+  return T[rtype] || T.inside;
+}
+// One frame of the overlay: project the world-space plan through the frame's
+// camera. Rebuilt only when the camera changes; per-frame cost is opacity.
+function watchPlayArtMarkup(plan, projectPoint) {
+  let out = "";
+  for (const row of plan) {
+    const pts = row.pts.map(([wx, wy]) => projectPoint(wx, wy));
+    const ptStr = pts.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
+    const style = row.color ? ` style="stroke:${row.color}"` : "";
+    out += `<polyline points="${ptStr}" class="${row.cls}"${style}/>`;
+    const n = pts.length;
+    if (row.arrow && n >= 2) {
+      const [x1, y1] = pts[n - 2], [x2, y2] = pts[n - 1];
+      const L = Math.hypot(x2 - x1, y2 - y1) || 1;
+      const ux = (x2 - x1) / L, uy = (y2 - y1) / L;
+      const w = 0.7;
+      out += `<polygon points="${(x2 + ux * 1.1).toFixed(2)},${(y2 + uy * 1.1).toFixed(2)} ${(x2 - uy * w).toFixed(2)},${(y2 + ux * w).toFixed(2)} ${(x2 + uy * w).toFixed(2)},${(y2 - ux * w).toFixed(2)}" class="${row.cls}-head"${row.color ? ` style="fill:${row.color}"` : ""}/>`;
+    }
+    if (row.tee && n >= 2) {
+      // the crossbar sits perpendicular to the stem, whatever the camera
+      const [x1, y1] = pts[n - 2], [x2, y2] = pts[n - 1];
+      const L = Math.hypot(x2 - x1, y2 - y1) || 1;
+      const ux = (x2 - x1) / L, uy = (y2 - y1) / L;
+      out += `<line x1="${(x2 - uy * 1.1).toFixed(2)}" y1="${(y2 + ux * 1.1).toFixed(2)}" x2="${(x2 + uy * 1.1).toFixed(2)}" y2="${(y2 - ux * 1.1).toFixed(2)}" class="wp-art-block"/>`;
+    }
+  }
+  return out;
 }
 function watchBug(p, d) {
   var _a, _b;
@@ -4733,7 +4856,7 @@ function watchBoard(p, durMs, board = null, opts = {}) {
     const [sx, sy] = initialPoint(_off0[i][0], _off0[i][1]);
     return watchOfficialMarkup(id, sx, sy);
   }).join("") + `</g>`;
-  svg.innerHTML = watchFieldBase(p, board) + `<polyline id="wp-trail" class="wp-trail" points=""/><g id="wp-spot" class="wp-spot" transform="translate(0,0)"><ellipse class="wp-spot-ring" rx="2.6" ry="1.15"/><path class="wp-spot-chevron" d="M-1.15 1.8L0 3.05l1.15-1.25z"/></g><g id="wp-engagements">${(script.blocks || []).map((b, i) => `<g class="wp-engage" data-wengage="${i}"><ellipse class="wp-engage-shadow" rx="1.45" ry=".48"/><path class="wp-engage-pads" d="M-1.8-.8L-.35 0-1.8.8M1.8-.8L.35 0 1.8.8"/><circle class="wp-engage-core" r=".32"/></g>`).join("")}</g><g id="wp-blocks">${(script.blocks || []).map((b, i) => `<line class="wp-block-link" data-wblock="${i}"/>`).join("")}</g>` + officialsMarkup + `<g id="wp-actors">` + script.actors.map((a) => {
+  svg.innerHTML = watchFieldBase(p, board) + `<polyline id="wp-trail" class="wp-trail" points=""/><g id="wp-spot" class="wp-spot" transform="translate(0,0)"><ellipse class="wp-spot-ring" rx="2.6" ry="1.15"/><path class="wp-spot-chevron" d="M-1.15 1.8L0 3.05l1.15-1.25z"/></g><g id="wp-engagements">${(script.blocks || []).map((b, i) => `<g class="wp-engage" data-wengage="${i}"><ellipse class="wp-engage-shadow" rx="1.45" ry=".48"/><path class="wp-engage-pads" d="M-1.8-.8L-.35 0-1.8.8M1.8-.8L.35 0 1.8.8"/><circle class="wp-engage-core" r=".32"/></g>`).join("")}</g><g id="wp-blocks">${(script.blocks || []).map((b, i) => `<line class="wp-block-link" data-wblock="${i}"/>`).join("")}</g><g id="wp-playart" class="wp-playart"></g>` + officialsMarkup + `<g id="wp-actors">` + script.actors.map((a) => {
     const [sx, sy] = initialPoint(a.track[0][0], a.track[0][1]);
     const face = watchCameraFacing(initialCamera, a.team);
     return `<g class="wp-actor wp-team-${a.team}${a.qb ? " wp-qb" : ""}${sprites ? ` wsp-still wsp-face-${face}` : ""}" data-wpa="${a.id}" data-wpg="${a.grp || ""}" transform="translate(${sx.toFixed(2)},${sy.toFixed(2)})">` + (sprites ? spriteMarkup(a, face) : glyph(a)) + `</g>`;
@@ -4777,6 +4900,11 @@ function watchBoard(p, durMs, board = null, opts = {}) {
   const actorLayer = svg.querySelector("#wp-actors");
   const ballN = svg.querySelector("#wp-ball"), ballGroundN = svg.querySelector("#wp-ball-ground-shadow"), trailN = svg.querySelector("#wp-trail"), fxN = svg.querySelector("#wp-fx");
   const spotN = svg.querySelector("#wp-spot");
+  // D4/M2: the pre-snap play-art overlay — computed once per board from the
+  // record + the script, projected per camera inside tick. Settings → Game →
+  // Presentation owns the switch (on by default; presentation only).
+  const playartN = svg.querySelector("#wp-playart");
+  const playArtPlan = ((_e2) => (_e2 == null ? void 0 : _e2.presnapArt) === false ? null : watchPlayArtPlan(p, script, offL))(state.settings);
   const blockNodes = [...svg.querySelectorAll("[data-wblock]")];
   const engageNodes = [...svg.querySelectorAll("[data-wengage]")];
   // M23: officials + crowd-band parallax handles
@@ -5026,6 +5154,21 @@ function watchBoard(p, durMs, board = null, opts = {}) {
     svg.classList.toggle("watch-pass-pocket", pocketOn);
     svg.classList.toggle("watch-route-live", routeCues.length > 0 && playOn && (catchT == null || t <= catchT + 0.08));
     svg.classList.toggle("watch-qb-mechanics", !!qbCue && t >= qbCue.start && t <= qbCue.followEnd);
+    // D4/M2: the pre-snap play-art overlay — full through the cadence, a
+    // short fade through the snap so the eye can carry the design onto the
+    // moving bodies. Re-projected only when the camera changes.
+    if (playartN && playArtPlan) {
+      const ART_FADE = 0.4;
+      if (t >= script.presnap + ART_FADE) {
+        if (playartN.childNodes.length) { playartN.innerHTML = ""; playartN.dataset.cam = ""; }
+      } else {
+        if (playartN.dataset.cam !== cameraMode || !playartN.childNodes.length) {
+          playartN.dataset.cam = cameraMode;
+          playartN.innerHTML = watchPlayArtMarkup(playArtPlan, projectPoint);
+        }
+        playartN.style.opacity = t < script.presnap ? "1" : Math.max(0, 1 - (t - script.presnap) / ART_FADE).toFixed(2);
+      }
+    }
     const actorPts = {};
     const actorDepth = [];
     // M20 engagement facing: contact sections below register face locks here;

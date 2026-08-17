@@ -226,6 +226,14 @@ function renderSettings() {
 
         <div class="setting-row">
           <div class="setting-info">
+            <div class="setting-label">Pre-Snap Play Art</div>
+            <div class="setting-desc">ON (default): the called play's card art draws over the fielded players before the snap — routes, blocks and the run path, exactly as the card shows them. Presentation only.</div>
+          </div>
+          ${toggle("presnapArt", s.presnapArt !== false, "Draw the called play over the field before the snap")}
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
             <div class="setting-label">8-Bit Players</div>
             <div class="setting-desc">ON (default): the live chalkboard runs the play with little Tecmo-style sprite players in each team's colors. OFF: the classic dots-and-X's markers. Presentation only — the game underneath is identical.</div>
           </div>
@@ -463,7 +471,7 @@ function setupListeners15() {
     btn.addEventListener("click", () => {
       if (!state.settings) state.settings = {};
       const key = btn.dataset.setting;
-      if (key === "showGameResultModal" || key === "rivalCommitNotifications" || key === "sound" || key === "injuries" || key === "liveWatch" || key === "spriteWatch") {
+      if (key === "showGameResultModal" || key === "rivalCommitNotifications" || key === "sound" || key === "injuries" || key === "liveWatch" || key === "spriteWatch" || key === "presnapArt") {
         state.settings[key] = state.settings[key] === false ? true : false;
       } else {
         state.settings[key] = !state.settings[key];

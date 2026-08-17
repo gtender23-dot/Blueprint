@@ -101,6 +101,30 @@ hdr('C1 — the composed call runs as itself (name, flag, one snap, pinned look)
   check(seen === N && misses.length === 0, `${seen}/${N} forced composed snaps recorded "Garrett Special", coachCall set, one snap per call (misses: ${misses.length})`);
 }
 
+hdr('C1b — D4/M2: a composed RUN runs as itself (run type, pulls ride, one snap)');
+{
+  const RUN_CP = {
+    schemaVersion: 2, name: 'Garrett Toss', kind: 'run',
+    run: { path: 'toss', scheme: 'gap', carrier: 'RB' },
+    parts: [], assigns: [], blocks: [], formations: ['Power-I'],
+  };
+  const N = 8;
+  let seen = 0, guard = 0, misses = [];
+  while (seen < N && guard < N * 4) {
+    guard++;
+    const { real } = forcedSnap('Power-I', { customPlay: 'r1', customPlayData: RUN_CP, formationId: 'Power-I' });
+    if (!real.length) continue;
+    seen++;
+    const p = real[0];
+    if (p.concept !== 'Garrett Toss') misses.push(`ran "${p.concept}" (type ${p.type})`);
+    if (!p.coachCall) misses.push('coachCall flag missing');
+    if (real.length > 1) misses.push(`one call produced ${real.length} snaps`);
+    if (p.type && !String(p.type).startsWith('run')) misses.push(`playType "${p.type}" not a run snap`);
+  }
+  for (const m of misses.slice(0, 5)) console.log(`    MISS: ${m}`);
+  check(seen === N && misses.length === 0, `${seen}/${N} forced composed RUN snaps recorded "Garrett Toss" as a run (misses: ${misses.length})`);
+}
+
 hdr('C2 — band safety + AI invisibility of the compile');
 {
   const before = JSON.stringify(Object.keys(PASS_CONCEPTS).sort());

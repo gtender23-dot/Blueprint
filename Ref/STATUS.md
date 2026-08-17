@@ -1,13 +1,147 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-16 session (D3 · M2 ENGINE HALF — per-look sheets +
-the pkg truth — BUILT + NODE-GATED, both dispatch proofs green, browser tier
-owed; see the new entry below. Also this window: D7 · M4 watch/time controls
-built + node-gated (phone eyeball owed); D2 · M1 THE TEST BENCH built +
-node-gated (browser playtest owed); D5 · M3 audit RATIFIED. D4 (M2 cards)
-is now UNBLOCKED by D3.) Plan of record: BUILD ORDER v2 (2026-08-17),
+Last updated: **2026-08-16 session (D4 · M2 PRESENTATION HALF — look-true
+cards everywhere, the big card, composer RUNS + biting blocking, the
+pre-snap play-art overlay, blurbs + three manual chapters — BUILT +
+NODE-GATED, browser tier owed; new entry below. M2 is now BUILT END TO END
+(D3 engine + D4 presentation) and D6 (M3 build) is unblocked. Earlier this
+window: D3 · M2 engine half; D7 · M4 watch/time controls; D2 · M1 bench;
+D5 · M3 audit RATIFIED.) Plan of record: BUILD ORDER v2 (2026-08-17),
 dispatch prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+
+## 2026-08-16 — D4 · M2 PRESENTATION HALF (look-true cards · the big card · composer runs+blocking · pre-snap play-art overlay · blurbs + manual)
+## BUILT + NODE-GATED — ⚠ BROWSER TIER OWED
+
+**OWNER CHECKLIST**
+- **Browser eyeball (the D4 browser-owed):**
+  (1) **Bench-verify #18/#19/#20/#49 fixed** (M0's fixes, now provable on the
+  instrument): Builder → Spread Ace / Pistol Diamond look cards + Red-Zone
+  Fade concept card, then 🧪 each — the card and the bench board must agree,
+  and an away-team drive must field the card's handedness.
+  (2) **The pre-snap overlay in a LIVE game:** the called play's routes,
+  stay-in blocks and run path draw over the fielded players through the
+  cadence and fade through the snap; pin a look, call a play — the overlay
+  IS the card's design on the grass, run direction included. In a saved
+  replay, flip cameras: the art re-projects (coach/end zone/reverse all
+  lawful). Settings → Game → Presentation → "Pre-Snap Play Art" turns it
+  off/on (on by default; the watch bar's Play Art button also hides it with
+  the trail).
+  (3) **The big card:** call sheet INFO now opens look-specific full-size art
+  with the LINE's job drawn + the purpose blurb + expandable "EVERY MAN'S
+  JOB — all eleven" list; the Builder's grid has an ℹ corner opening the
+  same panel per look. Run cards everywhere now draw the actual look
+  (Power-I Power ≠ Spread Power; Empty runs fall back to the QB).
+  (4) **The composer's run half:** Play Composer → Pass/Run toggle — author
+  a run (path · blocking scheme · carrier), the card draws it on the
+  formation with every blocker's job, 🧪 runs it on the bench AS A RUN;
+  save it and call it from MY PLAYS in a live game. A composed PASS with a
+  TE/HB set to "block" now genuinely keeps them in the protection.
+  (5) **Film Room** rows now show THE CALL's card per clip.
+- **Playwright tier locally:** `node tools/build.mjs` +
+  `node tools/_boot_check.mjs dist/index.html`, then the core gate
+  (`card_lint_probe` grew C6 — big cards, blurbs, composed cards).
+- **Side errand (owner ask):** `.pw-browsers` at the repo root is a WINDOWS
+  Playwright build (chrome-win64/); Playwright on this Linux sandbox wants
+  linux64 binaries and refuses it, and `npx playwright install
+  chromium-headless-shell` downloads nothing here (network blocked) — the
+  Playwright tier stays **OWED-LOCAL**, as before.
+- Standing debt unchanged: act B/D local scrub re-run + full local gate + a
+  green night run before the next deploy; M4 phone eyeball; M1 first bench
+  session (now doubled with (1) above).
+
+**What shipped (js/ + style.css + tools/; D4 dispatch items 1–5):**
+- **LOOK-TRUE CARDS AT EVERY RENDER SITE (#12/#14).** The one real gap was
+  RUN cards: `renderRunCard` ignored formation AND variation — every run
+  drew the same synthetic centered picture everywhere. It now resolves the
+  authored layout (same `_variationLayout` path as pass cards): OL, QB,
+  carrier, pull guard, lead back, pitch and jet motion all come from the
+  look's real slots (carrier = deepest back; jet = the widest receiver;
+  Empty → the QB). Also fixed: Builder play grids + read-only previews now
+  pass the look's variation (was in scope, never passed); the call sheet
+  INFO preview passes the pinned variation; Film Room rows draw THE CALL's
+  card (`clipCardHtml`, creatorreplay.js); MY PLAYS / THE CALL / composer
+  tiles route through the new `renderComposedCard` dispatcher so composed
+  runs draw run diagrams, never the pass renderer. No-formation callers keep
+  the old synthetic card byte-for-byte.
+- **THE BIG CARD (#16).** `playAssignments(entry, {formation, variation})`
+  (routeart.js) derives EVERY man's job — 5 OL + QB + 5 skill — from the
+  same tables the cards draw (concept routes / run signatures / a composed
+  play's own parts+blocks): routes in football words, OL pass sets or
+  reach/down/pull blocks, TE seals, WR stalks, QB depth/handoff/pitch text.
+  `jobs:true` renders the line's job marks on the art itself (pass-pro cups;
+  run block arrows; the puller path was already drawn). Surfaced in the call
+  sheet INFO drill-down (art at full size + `<details>` expandable list —
+  the nested/expandable card screen) and the Builder's new ℹ panel per look.
+  Help-language law machine-checked: no digit ever appears in a blurb or a
+  job line (card_lint C6).
+- **THE COMPOSER GROWS RUNS + BLOCKING (the rest of #37), band-clamped.**
+  playcompose.js v2: a composed run is PATH (inside / off-tackle / outside
+  stretch / toss / draw) + BLOCKING-SCHEME signature (zone / gap / trap /
+  lead) + CARRIER (RB/QB). `compilePlay` derives `type`, `vsBox`, `pulls`,
+  `qbCarry`, `exec` from fixed tables, with vsBox clamped to the band
+  DERIVED from the shipped RUN_CONCEPTS catalog at load (rebalance the
+  catalog and the clamp follows; a composed run can never outgrade the
+  strongest shipped run). Blocking assignments on PASS plays now BITE:
+  authored TE/RB blocks compile to `keepIn`, honored at the sim's protection
+  assembly (blockingTEIds topped up deterministically; rbReleased forced
+  false) — WR "blocks" earn no protection credit (the lost route is the
+  honest price). Sim seams (3, tiny): composed playType honors
+  `composedCall.type` for runs; the composed grade application mirrors
+  pickRunConcept's boxState fork reading the compiled vsBox; `_conceptCtx
+  .def = composedCall` (already there) carries pulls/qbCarry/keepIn to the
+  existing readers — zone/gap fork, pull reps, QB carrier all fire for a
+  composed run exactly like a catalog run. AI-invisible both tables
+  (probe-pinned); RNG stream untouched for every non-composed snap.
+  Composer UI (creatorplay.js): Pass ⇄ Run toggle, run design pickers,
+  box-answer preview in plain words, bench hook and save both run-aware;
+  repairComposedPlay round-trips run designs (dead path → needs-rebuilding).
+- **PRE-SNAP PLAY-ART OVERLAY (the Madden trust device).** New
+  `<g id="wp-playart">` under the actors in the ONE scrimmage renderer
+  (watchBoard) — replays, clip screen, Film Room and the bench all inherit
+  it. Geometry: `watchPlayArtPlan` draws routes from the script's own
+  routeCues via `routeWaypoints` (now exported from watchphys) — the EXACT
+  world-space shapes the bodies are about to run, which for a composed play
+  are the card's authored rows via COMPOSED_SHAPE (card↔field agreement is
+  therefore visible, not asserted); composed stay-in blockers get the "T";
+  runs draw the carrier's designed path to the recorded gap (`p.runDir`
+  rides) + the pull from the actual backside guard. Every point goes through
+  the frame's `projectPoint`, so all five cameras and both drive directions
+  inherit the #49 handedness law; rebuilt only on camera change, opacity
+  fades through the snap. Off-switch: Settings → Game → Presentation
+  ("Pre-Snap Play Art", default on) + the existing Play Art watch-bar button
+  hides it via `.watch-art-off`. Zero `rnd()` consumed; zero changes to
+  buildPlayScript's tracks (watchphys_probe byte-laws untouched).
+- **CONCEPT BLURBS + MANUAL (#21).** New js/ui/views/conceptblurbs.js: one
+  purpose line per shipped concept — "what it is · what it does · what it
+  risks" — all 62 concepts covered (Reverse, Sluggo Seam, Flea Flicker and
+  HB Pass answer the owner's #21 list directly); composed plays get a
+  derived line from their own design. Shown under the big card and as tile
+  tooltips (call sheet + Builder). Three new manual chapters in normalized
+  help language: **The Workshop** (garage tour + the bench's boundary),
+  **Composed Plays** (the grader, biting blocks, human-call-only law),
+  **Books, Looks & Sheets** (inherit-then-fork, real personnel, book vs
+  week) — registered in js/ui/manual/index.js.
+
+**Gate (this sandbox, node):** `card_lint_probe` **21/0 ×3** — new **C6**
+(every shipped concept has a blurb / no digit in any blurb or job line /
+11-row job sheets for every (formation × look × concept), 1539 walked /
+big-card renders in bounds / every composed pass+run design renders lawfully
+through renderComposedCard) + C3 extended for look-true run cards (5 OL, one
+carrier path, 5 skill dots — 3078 renders, 0 flags). `play_compose_probe`
+**33/0 ×3** — run validation laws, all 40 path×scheme×carrier compiles
+band-clamped to the catalog-derived run band with pulls/qbCarry/exec laws,
+gap-beats-loaded football sense, run repair round-trip, keepIn compile laws
+(TE/RB counted, WR not), RUN_CONCEPTS as AI-invisible as PASS_CONCEPTS.
+`custom_play_probe` 221/0 ×3. `live_book_call_probe` **14/0 ×3** — new C1b:
+a forced composed RUN records its own name as a run snap with coachCall set,
+8/8. `watchphys_probe` **FULLY GREEN** (1336 snaps scripted, all byte-laws
+hold). Re-proof green: `draw_up_probe` 21/0 · `record_call_probe` 12/0 ·
+`bench_probe` 34/0 · `look_sheet_probe` 44/0 · `play_fidelity_probe` ALL
+GREEN (18). Clean esbuild build (all sanity checks PASS, 3683 KB — built in
+/tmp; this sandbox's mount forbids `dist/` deletion, outputs copied back) +
+bundle syntax parse + CSS braces balanced. **PW tier owed** (see checklist:
+Windows-only .pw-browsers, downloads blocked): boot check + UI smokes.
 
 ## 2026-08-16 — D3 · M2 ENGINE HALF (per-LOOK sheets, inherit-with-override + the pkg truth)
 ## BUILT + NODE-GATED, BOTH DISPATCH PROOFS GREEN — ⚠ BROWSER TIER OWED

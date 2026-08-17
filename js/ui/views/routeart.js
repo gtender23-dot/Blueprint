@@ -1,5 +1,6 @@
 import { OFF_FIELD_LAYOUTS, DEF_FIELD_LAYOUTS, DEF_BLITZ_ELIGIBLE, variationLayoutSlots } from '../../constants_field.js';
 import { aliasFormation, FORMATION_VARIATIONS, FORMATION_PACKAGES } from '../../constants.js';
+import { runCardParam } from '../../engine/playcompose.js';
 
 // ── Route art — the reusable play-graphics primitive ───────────────────────
 // One place that knows how to DRAW a route. Every Creator screen that shows a
@@ -215,8 +216,20 @@ function renderPlayCard(parts, opts) {
       return `<line x1="${_fmt(bx)}" y1="${_fmt(by - 4)}" x2="${_fmt(bx)}" y2="${_fmt(by - 10)}" class="play-card-block-stem"/><rect x="${_fmt(bx - 7)}" y="${_fmt(by - 13)}" width="14" height="3.5" rx="1" class="play-card-block"/>`;
     }).join("");
     dots = skill.map((s) => `<circle cx="${_fmt(sxSlot(s))}" cy="${_fmt(sy(s.y))}" r="4.2" class="play-card-rec"/>`).join("") + blocks;
-    line = layout.slots.filter((s) => s.pos === "OL").map((s) => `<rect x="${_fmt(sx(s.x) - 4)}" y="${_fmt(sy(s.y) - 4)}" width="8" height="8" rx="1.5" class="play-card-ol"/>`).join("");
     const q = layout.slots.find((s) => s.pos === "QB");
+    // D4/M2 (#16): the big-card view (o.jobs) shows the LINE's job too — each
+    // lineman's pass set drawn as a short cup toward the QB's depth. Vague on
+    // purpose (a set, not a numbered slide call) per the help-language rules.
+    line = layout.slots.filter((s) => s.pos === "OL").map((s) => {
+      const x = sx(s.x), y = sy(s.y);
+      let job = "";
+      if (o.jobs) {
+        const qx = q ? sx(q.x) : W / 2;
+        const ex = x + (x < qx - 2 ? 2.6 : x > qx + 2 ? -2.6 : 0), ey = Math.min(H - 5, y + 8.5);
+        job = `<path d="M${_fmt(x)} ${_fmt(Math.min(H - 5, y + 4))} Q ${_fmt(x)} ${_fmt(Math.min(H - 5, y + 7))} ${_fmt(ex)} ${_fmt(ey)}" class="play-card-pp"/>`;
+      }
+      return `<rect x="${_fmt(x - 4)}" y="${_fmt(y - 4)}" width="8" height="8" rx="1.5" class="play-card-ol"/>` + job;
+    }).join("");
     qb = q ? `<rect x="${_fmt(sx(q.x) - 4)}" y="${_fmt(sy(q.y) - 4)}" width="8" height="8" rx="1.5" class="play-card-qb"/>` : "";
     yard = _fieldLines(W, H, losY);
   } else {
@@ -535,10 +548,111 @@ var _RUN_PARAM = {
 // (with a stretch, delay, or counter step where the concept calls for it) plus
 // the signature block — a pulling lineman, a lead back, a pitch man, or jet
 // motion. Distinct per run type so Power ≠ Sweep ≠ Draw ≠ Counter at a glance.
+//
+// D4/M2 (#12/#14): the run card now draws THE LOOK — pass o.formation (+
+// o.variation) and the line, the QB and the carrier come from the authored
+// layout row (the same slots the field and the sim resolve), so a Power-I Big
+// Power and a Spread Power are different pictures. o.param overrides the run
+// signature (composed runs author it directly); o.jobs adds every blocker's
+// job mark (#16 — the big-card view). No formation keeps the old synthetic
+// centered picture, byte-identically.
+function _runCardFromLayout(rtype, p, layout, o, W, H) {
+  const box = { x0: 4, x1: W - 4, y0: 5, y1: H - 5 };
+  const cl = (x, y) => _clampPt(x, y, box);
+  const P = (x, y) => { const [a, b] = cl(x, y); return `${_fmt(a)} ${_fmt(b)}`; };
+  const padX = 14;
+  const sx = (x) => padX + x * (W - 2 * padX);
+  const losY = H * 0.52;
+  const sy = (y) => losY + (y - 0.5) * (H * 0.6);
+  const slots = layout.slots;
+  const ol = slots.filter((s) => s.pos === "OL").slice().sort((a, b) => a.x - b.x);
+  const q = slots.find((s) => s.pos === "QB");
+  const skill = slots.filter((s) => s.pos !== "OL" && s.pos !== "QB");
+  const BACKS = ["RB", "WING", "ABACK", "WILDCAT", "JETMAN"];
+  const isFB = (s) => String(s.role || "").startsWith("FB");
+  const backs = skill.filter((s) => BACKS.includes(s.pos)).slice().sort((a, b) => b.y - a.y);
+  const wides = skill.filter((s) => !BACKS.includes(s.pos));
+  const qx = q ? sx(q.x) : W / 2, qy = q ? sy(q.y) : losY + H * 0.12;
+  const side = 1;
+  const jet = !!p.jet;
+  // THE CARRIER, from the look actually drawn: QB runs keep the QB, jet and
+  // reverse hand to the widest receiver in motion, everything else the deepest
+  // true back — and a look with no back at all (Empty) falls back to the QB.
+  let carrier = null, carrierIsQB = false;
+  if (p.qb || !backs.length && !jet) { carrierIsQB = true; }
+  else if (jet) carrier = wides.slice().sort((a, b) => Math.abs(b.x - 0.5) - Math.abs(a.x - 0.5))[0] || backs[0] || null;
+  else carrier = backs.find((s) => !isFB(s)) || backs[0] || null;
+  if (!carrier && !carrierIsQB) carrierIsQB = true;
+  const startX = carrierIsQB ? qx : sx(carrier.x);
+  const startY = carrierIsQB ? qy : sy(carrier.y);
+  const gapX = Math.min(W - 12, Math.max(12, sx(0.5) + side * p.gap * (W - 2 * padX)));
+  const top = Math.max(6, H * 0.12);
+  let px = startX, py = startY;
+  let extras = "";
+  if (jet && !carrierIsQB) {
+    // jet motion: the wideout sweeps behind the QB to take the handoff
+    extras += `<line x1="${_fmt(startX)}" y1="${_fmt(startY)}" x2="${_fmt(qx)}" y2="${_fmt(Math.min(H - 6, qy + 3))}" class="run-card-motion"/>`;
+    px = qx; py = Math.min(H - 6, qy + 3);
+  }
+  let d;
+  if (p.delay) d = `M${P(px, py)} C ${P(px, py + 8)}, ${P(gapX, losY + 14)}, ${P(gapX, losY - 6)} L ${P(gapX, top)}`;
+  else if (p.counter) { const cxo = px - side * 0.14 * W; d = `M${P(px, py)} C ${P(cxo, py - 4)}, ${P(cxo, losY + 10)}, ${P(gapX, losY - 6)} L ${P(gapX, top)}`; }
+  else if (p.stretch) { const ex = px + (rtype === "reverse" ? -side : side) * p.stretch * W; d = `M${P(px, py)} C ${P(px, py - 6)}, ${P(ex, losY + 16)}, ${P(gapX, losY - 4)} L ${P(gapX, top)}`; }
+  else d = `M${P(px, py)} C ${P(px, py - 10)}, ${P((px + gapX) / 2, losY + 6)}, ${P(gapX, losY - 8)} L ${P(gapX, top)}`;
+  const arrow = `<polygon points="${_fmt(gapX - 5)},${_fmt(top + 6)} ${_fmt(gapX + 5)},${_fmt(top + 6)} ${_fmt(gapX)},${_fmt(Math.max(2, top - 4))}" class="run-card-arrow"/>`;
+  const pullIdx = p.pull ? (side > 0 ? 1 : 3) : -1;
+  if (p.pull) {
+    const g = ol[pullIdx];
+    const g0x = g ? sx(g.x) : sx(0.5) - side * 0.12 * W, g0y = g ? sy(g.y) : losY;
+    const g1x = gapX - side * 8;
+    extras += `<path d="M${P(g0x, g0y)} C ${P(g0x, g0y + 11)}, ${P(g1x, losY + 9)}, ${P(g1x, losY - 2)}" class="run-card-pull"/>`;
+  }
+  if (p.lead) {
+    const fb = backs.find((s) => s !== carrier) || null;
+    const lx = fb ? sx(fb.x) : sx(0.5), ly = fb ? sy(fb.y) : losY + H * 0.22;
+    extras += `<path d="M${P(lx, ly)} L ${P(gapX - side * 4, losY - 4)}" class="run-card-lead"/>`;
+  }
+  if (p.pitch && !carrierIsQB) {
+    // the QB opens and pitches to the drawn carrier
+    extras += `<line x1="${_fmt(qx)}" y1="${_fmt(qy)}" x2="${_fmt(startX)}" y2="${_fmt(startY)}" class="run-card-pitch"/>`;
+  }
+  let jobs = "";
+  if (o.jobs) {
+    // #16: every blocker's job. The line reaches (zone) or blocks down toward
+    // the point of attack (gap/trap); tight ends seal, receivers stalk.
+    jobs += ol.map((s, i) => {
+      if (i === pullIdx) return "";
+      const x = sx(s.x), y = sy(s.y);
+      const dx = p.pull || p.trap ? (x < gapX ? 3.5 : -3.5) : side * 4.5;
+      const [ex, ey] = cl(x + dx, y - 9);
+      return `<line x1="${_fmt(x)}" y1="${_fmt(y - 4)}" x2="${_fmt(ex)}" y2="${_fmt(ey)}" class="run-card-block-arrow"/>`;
+    }).join("");
+    jobs += wides.map((s) => {
+      if (s === carrier) return "";
+      const x = sx(s.x), y = sy(s.y);
+      const [ex, ey] = cl(x + (s.pos === "TE" ? side * 3 : 0), y - 8);
+      return `<line x1="${_fmt(x)}" y1="${_fmt(y - 4)}" x2="${_fmt(ex)}" y2="${_fmt(ey)}" class="run-card-block-arrow"/>`;
+    }).join("");
+  }
+  const line = ol.map((s) => `<rect x="${_fmt(sx(s.x) - 4)}" y="${_fmt(sy(s.y) - 4)}" width="8" height="8" rx="1.5" class="play-card-ol"/>`).join("");
+  const qbMark = q ? `<rect x="${_fmt(qx - 4)}" y="${_fmt(qy - 4)}" width="8" height="8" rx="1.5" class="play-card-qb"/>` : "";
+  const dots = skill.map((s) => `<circle cx="${_fmt(sx(s.x))}" cy="${_fmt(sy(s.y))}" r="4.2" class="play-card-rec"/>`).join("");
+  return `<svg class="play-card-svg" viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${_esc(rtype)} run diagram">
+    <rect x="0" y="0" width="${W}" height="${H}" class="play-card-turf"/>
+    ${_fieldLines(W, H, losY)}
+    ${line}${jobs}${extras}
+    <path d="${d}" class="run-card-path"/>
+    ${arrow}
+    ${qbMark}
+    ${dots}
+  </svg>`;
+}
 function renderRunCard(rtype, opts) {
   const o = opts || {}, W = o.w || 260, H = o.h || 170;
+  const p = o.param || _RUN_PARAM[rtype] || _RUN_PARAM.inside;
+  const layout = o.formation ? (o.variation ? _variationLayout(o.formation, o.variation) : (OFF_FIELD_LAYOUTS[aliasFormation(o.formation)] || OFF_FIELD_LAYOUTS[o.formation])) : null;
+  if (layout) return _runCardFromLayout(rtype, p, layout, o, W, H);
   const losY = H * 0.5, cx = W / 2, side = 1;
-  const p = _RUN_PARAM[rtype] || _RUN_PARAM.inside;
   const gapX = cx + side * p.gap * W;
   const qbY = losY + H * 0.12;
   const runnerIsQB = !!p.qb;
@@ -574,5 +688,125 @@ function renderConceptThumb(name, opts) {
   const k = conceptKind(name);
   return k.kind === "run" ? renderRunCard(k.rtype, opts) : renderPlayCard(k.parts, opts);
 }
+// D4/M2: one dispatcher for a COMPOSED play's card — a composed run draws the
+// run diagram from its authored path/scheme signature (runCardParam), a
+// composed pass draws its parts. Every composed-card site goes through here so
+// run plays never fall into the pass renderer.
+function renderComposedCard(cp, opts) {
+  const o = opts || {};
+  if (cp && cp.kind === "run" && cp.run) return renderRunCard("composed", { ...o, param: runCardParam(cp.run) });
+  return renderPlayCard(cp ? cp.parts : [], { ...o, assigns: cp ? cp.assigns : null, blocks: cp ? cp.blocks : null });
+}
 
-export { ROUTE_ART, routePathD, routeEnd, routeColor, routeGlyph, renderPlayCard, renderFormationDiagram, renderFrontDiagram, renderDefCallCard, formationReceivers, CONCEPT_ROUTES, conceptKind, renderConceptThumb, resolveComposedReceivers };
+// ── EVERY MAN'S JOB (#16) — the big card's assignment list ─────────────────
+// One row per body on the field: what he does on this play, in football words.
+// Derived from the same tables the card draws (CONCEPT_ROUTES / RUN
+// signatures / a composed play's own parts+blocks), so the list and the
+// picture can't disagree. Help-language rules bind: no numbers, no weights.
+var _ROUTE_JOB = {
+  go: "clears the top on a go", post: "bends it in on the post",
+  corner: "breaks for the pylon on the corner", dig: "works the deep in-cut",
+  out: "snaps off the out at the sticks", curl: "pushes up and settles on the curl",
+  slant: "wins inside leverage on the slant", drag: "drags across the traffic",
+  flat: "leaks to the flat as the easy answer", wheel: "swings, then wheels up the sideline",
+  screen: "slips out behind the rush for the screen", checkdown: "stays late, then offers the checkdown",
+  bubble: "swings flat for the bubble", tunnel: "comes back under the traffic on the tunnel",
+  comeback: "stems deep and works back to the boundary", deepout: "runs the deep out off a full stem",
+  fade: "releases outside and plays the back-shoulder ball"
+};
+var _DEPTH_QB_JOB = {
+  short: "quick rhythm — the ball is out on the last step",
+  medium: "full dropback, works the progression front to back",
+  deep: "holds for the shot and trusts the protection"
+};
+function _gapWord(gap) {
+  const g = Math.abs(gap || 0);
+  return g <= 0.12 ? "A-gap" : g <= 0.26 ? "off-tackle lane" : "edge";
+}
+function _olLabel(s, i) { return s.label || ["LT", "LG", "C", "RG", "RT"][i] || "OL"; }
+// entry: { name } (a catalog concept) or { cp } (a composed play).
+// opts: { formation, variation }. Returns { rows: [{label, pos, job}] } for
+// all eleven, OL included.
+function playAssignments(entry, opts) {
+  const o = opts || {};
+  const fid = o.formation || "Spread";
+  const layout = o.variation ? _variationLayout(fid, o.variation) : (OFF_FIELD_LAYOUTS[aliasFormation(fid)] || OFF_FIELD_LAYOUTS[fid]);
+  if (!layout) return { rows: [] };
+  const slots = layout.slots;
+  const ol = slots.filter((s) => s.pos === "OL").slice().sort((a, b) => a.x - b.x);
+  const q = slots.find((s) => s.pos === "QB");
+  const skill = slots.filter((s) => s.pos !== "OL" && s.pos !== "QB");
+  const BACKS = ["RB", "WING", "ABACK", "WILDCAT", "JETMAN"];
+  const rows = [];
+  const cp = entry && entry.cp;
+  const kind = cp ? (cp.kind === "run" && cp.run ? { kind: "run", rtype: "composed", param: runCardParam(cp.run) } : { kind: "pass", parts: cp.parts, assigns: cp.assigns, blocks: cp.blocks })
+    : conceptKind(entry && entry.name || "");
+  if (kind.kind === "pass") {
+    const parts = kind.parts || [];
+    const assigns = kind.assigns || null;
+    const blockSet = new Set(Array.isArray(kind.blocks) ? kind.blocks : []);
+    const { resolved, used } = resolveComposedReceivers(parts, assigns, slots);
+    const jobBySlot = {};
+    resolved.forEach((r) => { if (r.slot) jobBySlot[r.slot.id] = _ROUTE_JOB[r.id] || "runs his route"; });
+    const isScreen = parts.some((pt) => pt === "screen" || pt === "bubble" || pt === "tunnel");
+    if (q) rows.push({ label: q.label || "QB", pos: "QB", job: _DEPTH_QB_JOB[cp ? null : ((conceptDepthOf(entry.name)) || "medium")] || _DEPTH_QB_JOB.medium });
+    for (const s of skill) {
+      const job = jobBySlot[s.id] ? jobBySlot[s.id]
+        : blockSet.has(s.id) ? "stays home and blocks"
+        : `free release — ${_ROUTE_JOB[_fillRoute(s)] || "works open late"}`;
+      rows.push({ label: s.label, pos: s.pos, job });
+    }
+    ol.forEach((s, i) => rows.push({
+      label: _olLabel(s, i), pos: "OL",
+      job: isScreen ? "sets, invites the rush, then releases out in front of the screen"
+        : i === 2 ? "makes the protection call, then anchors the middle"
+        : "pass protection — sets, mirrors his man, passes off the games"
+    }));
+  } else {
+    const p = kind.param || _RUN_PARAM[kind.rtype] || _RUN_PARAM.inside;
+    const gw = _gapWord(p.gap);
+    const backs = skill.filter((s) => BACKS.includes(s.pos)).slice().sort((a, b) => b.y - a.y);
+    const isFB = (s) => String(s.role || "").startsWith("FB");
+    const jet = !!p.jet;
+    const wides = skill.filter((s) => !BACKS.includes(s.pos));
+    let carrier = null;
+    if (!p.qb && backs.length) carrier = jet ? null : backs.find((s) => !isFB(s)) || backs[0];
+    if (jet) carrier = wides.slice().sort((a, b) => Math.abs(b.x - 0.5) - Math.abs(a.x - 0.5))[0] || backs[0] || null;
+    const qbJob = p.qb ? (p.pitch ? `reads the edge — keeps at the ${gw} or pitches off the defender` : `takes it himself, downhill at the ${gw}`)
+      : p.pitch ? "opens and pitches off the edge defender"
+      : p.delay ? "shows pass, then slips the ball to the back on the draw"
+      : "opens, hands it off, carries out the fake";
+    if (q) rows.push({ label: q.label || "QB", pos: "QB", job: qbJob });
+    for (const s of skill) {
+      let job;
+      if (s === carrier || !carrier && !p.qb && s === backs[0]) {
+        job = p.delay ? `waits on the delay, then hits the ${gw}` : p.stretch ? `stretches the front and presses the ${gw}` : `presses the ${gw} and reads the first block`;
+        if (jet) job = `comes in motion, takes the handoff at full speed for the ${gw}`;
+      } else if (BACKS.includes(s.pos)) job = p.lead ? "leads through the hole and takes on the first color" : p.pitch ? "keeps the pitch relationship off the QB's hip" : "blocks the first man off the edge";
+      else if (s.pos === "TE") job = "blocks down and seals the edge";
+      else job = "stalk-blocks the man over him";
+      rows.push({ label: s.label, pos: s.pos, job });
+    }
+    const pullIdx = p.pull ? 1 : -1;
+    ol.forEach((s, i) => {
+      let job;
+      if (i === pullIdx) job = p.trap ? "pulls short and traps the first man through" : "pulls and kicks out at the point of attack";
+      else if (p.pull || p.trap) job = "blocks down, angles, and walls off pursuit";
+      else if (p.delay) job = "shows pass set, then turns it into a run block";
+      else job = "reaches playside and climbs to the second level";
+      rows.push({ label: _olLabel(s, i), pos: "OL", job });
+    });
+  }
+  return { rows };
+}
+// depth lookup without importing concepts.js art-side: derived from the
+// concept's drawn parts (deep stems read deep) — vague by design.
+function conceptDepthOf(name) {
+  const k = conceptKind(name);
+  if (k.kind !== "pass") return null;
+  const deep = (k.parts || []).filter((p) => ["go", "post", "corner", "wheel", "deepout", "comeback"].includes(p)).length;
+  const share = (k.parts || []).length ? deep / k.parts.length : 0;
+  return share >= 0.5 ? "deep" : share > 0 ? "medium" : "short";
+}
+
+export { ROUTE_ART, routePathD, routeEnd, routeColor, routeGlyph, renderPlayCard, renderFormationDiagram, renderFrontDiagram, renderDefCallCard, formationReceivers, CONCEPT_ROUTES, conceptKind, renderConceptThumb, resolveComposedReceivers, renderComposedCard, playAssignments };

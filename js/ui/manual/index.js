@@ -15,6 +15,9 @@ import { chapter7 } from './the-run-fit.js';
 import { chapter2 } from './the-year.js';
 import { chapter15 } from './your-career.js';
 import { chapter17 } from './the-coaching-tree.js';
+import { chapter18 } from './the-workshop.js';
+import { chapter19 } from './composed-plays.js';
+import { chapter20 } from './books-and-looks.js';
 
 var MANUAL_CHAPTERS = [
   chapter,
@@ -35,6 +38,11 @@ var MANUAL_CHAPTERS = [
   // the coaching tree reads straight off Your Career — the seat and the
   // carousel are its vocabulary.
   chapter17,
+  // D4/M2: the Workshop trio — the garage, the plays you build in it, and
+  // the book/look/sheet vocabulary they feed.
+  chapter18,
+  chapter19,
+  chapter20,
   chapter16
   // reference lookup — read start-to-finish it's the last stop; also reachable from card tooltips
 ];

@@ -1,5 +1,8 @@
 import { state, rerender, notify } from '../../state.js';
 import { listReplays, loadReplayData, deleteReplay, renameReplay } from '../../engine/replays.js';
+import { renderConceptThumb, renderComposedCard } from './routeart.js';
+import { loadCreationData } from '../../engine/creator.js';
+import { repairComposedPlay } from '../../engine/playcompose.js';
 
 // ── Film Room (Creativity Tools UI) — the home for saved replay clips ───────
 // Lists the clips the viewer (Codex) saves via js/engine/replays.js: play, rename,
@@ -17,16 +20,42 @@ function metaLine(info) {
   const bits = [info.matchup, info.score, info.week].filter(Boolean).map(esc);
   return bits.length ? `<span class="rp-meta">${bits.join(" · ")}</span>` : "";
 }
+// D4/M2 (#12/#14): every clip row shows THE CALL's card — the same look-
+// specific art the call sheet and the viewer draw, from the clip's own play
+// record (concept/customPlayId + formation + variation stamps).
+function clipCardHtml(id) {
+  try {
+    const data = loadReplayData(id);
+    const d = data && data.game && Array.isArray(data.game.drives) ? data.game.drives[data.driveIndex || 0] : null;
+    const p = d && Array.isArray(d.plays) ? d.plays[data.playIndex || 0] : null;
+    if (!p || p.type === "penalty") return "";
+    const o = { w: 120, h: 72, scale: 0.72, formation: p.offFormation, variation: p.variation || void 0 };
+    if (p.customPlayId) {
+      const cd = loadCreationData("plays", p.customPlayId);
+      if (cd) {
+        const r = repairComposedPlay(cd);
+        if (r.ok) return renderComposedCard(r.cp, o);
+      }
+    }
+    return p.concept && p.offFormation ? renderConceptThumb(p.concept, o) : "";
+  } catch (e) {
+    return "";
+  }
+}
 function renderReplaysTab() {
   const clips = listReplays();
-  const rows = clips.length ? clips.map((c) => `<div class="rp-row">
+  const rows = clips.length ? clips.map((c) => {
+    const card = clipCardHtml(c.id);
+    return `<div class="rp-row">
       <button class="rp-play" data-rp-play="${esc(c.id)}" title="Play clip">▶</button>
+      ${card ? `<span class="rp-card play-row-thumb">${card}</span>` : ""}
       <div class="rp-body">
         <span class="rp-name">🎬 ${esc(c.name)}</span>
         <span class="rp-sub">${metaLine(c.info)}<span class="rp-when">${when(c.saved)}</span></span>
       </div>
       <button class="btn-mm-del" data-rp-del="${esc(c.id)}" title="Delete" aria-label="Delete ${esc(c.name)}">✕</button>
-    </div>`).join("") : `<div class="mm-lib-empty muted">No clips yet. Save a highlight from the live viewer and it'll land here.</div>`;
+    </div>`;
+  }).join("") : `<div class="mm-lib-empty muted">No clips yet. Save a highlight from the live viewer and it'll land here.</div>`;
   return `<div class="creator-wrapper"><div class="creator-hub">
     <div class="creator-hub-head"><div class="creator-title">Film Room</div>
       <div class="creator-sub">Your saved replay clips — play them back, or clear them out.</div></div>

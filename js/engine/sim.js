@@ -1658,17 +1658,27 @@ function resolvePassPlay(playType, offPersonnel, defPersonnel, offRoster, defRos
   // the protEmphasis machinery exactly as it was (halfSlide = the old engine).
   const protId = (offPlan == null ? void 0 : offPlan.protIdentityEff) || (offPlan == null ? void 0 : offPlan.protIdentity) || "halfSlide";
   const _protC = C.PROT_IDENTITY;
+  // D4/M2: a composed play's AUTHORED blocking assignments. The author kept
+  // specific tight ends / backs home (compilePlay's keepIn) — those bodies
+  // block, no dice. Absent (every non-composed play), nothing here changes.
+  const _cKeep = (_conceptCtx == null ? void 0 : _conceptCtx.def) == null ? void 0 : _conceptCtx.def.keepIn;
   const blockingTEIds = new Set(
     tePlayers.filter((te) => {
       var _a2;
       return protId === "maxProtect" ? true : te._gameArch === "TE-Blocking" || te._gameArch === "TE-Hybrid" && Math.random() < (protId === "quick" ? _protC.quickTE : clamp2(0.35 + (((_a2 = offPlan == null ? void 0 : offPlan.protEmphasis) != null ? _a2 : 50) - 50) / 200, 0.1, 0.85));
     }).map((te) => te.id)
   );
+  if (_cKeep && _cKeep.TE > 0) {
+    for (const te of tePlayers) {
+      if (blockingTEIds.size >= _cKeep.TE) break;
+      blockingTEIds.add(te.id);
+    }
+  }
   for (const te of tePlayers) {
     if (blockingTEIds.has(te.id)) blockers.push(te);
   }
   const _rbPE = (_m = offPlan == null ? void 0 : offPlan.protEmphasis) != null ? _m : 50;
-  const rbReleased = rbPlayers.length > 0 && (protId === "maxProtect" ? false : protId === "quick" ? Math.random() < _protC.quickRelease : protId === "bob" ? Math.random() < _protC.bobRelease : _rbPE < 50 && Math.random() < (50 - _rbPE) / 50);
+  const rbReleased = _cKeep && _cKeep.RB > 0 ? false : rbPlayers.length > 0 && (protId === "maxProtect" ? false : protId === "quick" ? Math.random() < _protC.quickRelease : protId === "bob" ? Math.random() < _protC.bobRelease : _rbPE < 50 && Math.random() < (50 - _rbPE) / 50);
   if (rbPlayers.length > 0 && !rbReleased) blockers.push(rbPlayers[0]);
   result.rbKeptIn = rbPlayers.length > 0 && !rbReleased;
   // ── PASS 4 (green dog REFIT — owner call 2026-08-08, one model everywhere):
@@ -4733,7 +4743,9 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
         composedCallId = null;
       }
     }
-    if (composedCall) playType = "pass_" + composedCall.depth;
+    // D4/M2: a composed RUN carries its own play type (run_inside/run_outside
+    // from the authored path); composed passes keep the depth-derived type.
+    if (composedCall) playType = composedCall.type && composedCall.type.startsWith("run") ? composedCall.type : "pass_" + composedCall.depth;
     if (forcedCall && forcedCall.concept && forcedCall.concept !== "sheet") {
       const nm = forcedCall.concept;
       if (nm === "Draw") {
@@ -4948,7 +4960,14 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
       // compile above. The carry gate is bypassed exactly as it is for a
       // forced named concept (owner mandate: the call is the play).
       const skillC = execSkill(composedCall.exec || {}, offRoster, offPersonnel);
-      const vsC = (composedCall.vs || {})[covFam];
+      // D4/M2: a composed run grades exactly the way pickRunConcept grades a
+      // catalog run — the same boxState fork, reading the compiled (band-
+      // clamped) vsBox. Composed passes read vs[covFam] as before.
+      let vsC;
+      if (composedCall.type && composedCall.type.startsWith("run")) {
+        const boxStateC = (defEff.runCommit || 0) > 5 || defEff.covShell === "single" ? "loaded" : (defEff.runCommit || 0) < -5 || defEff.covShell === "two" ? "light" : null;
+        vsC = boxStateC ? (composedCall.vsBox || {})[boxStateC] : 0;
+      } else vsC = (composedCall.vs || {})[covFam];
       concept = { name: composedCall.name, mod: (vsC != null ? vsC : 0) * clamp2(1 + (skillC - 50) / 100, 0.6, 1.4) };
     } else if (playType.startsWith("pass")) concept = pickPassConcept(playType, offPersonnel, offRoster, covFam, _cwEff, forcedConceptName, _pbGate);
     else if (playType === "run_inside" || playType === "run_outside") concept = pickRunConcept(playType, offPersonnel, offRoster, defEff, _cwEff, forcedConceptName, _pbGate);

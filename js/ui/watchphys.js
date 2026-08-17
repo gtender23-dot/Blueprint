@@ -2469,4 +2469,4 @@ function sampleTrack(track, step, t) {
   ];
 }
 
-export { COMPOSED_SHAPE, buildPlayScript, sampleTrack, buildCameraPlan, buildOfficialsPlan, selectDuelMove, selectTackleStyle, selectLandmarkMove, selectCatchStyle, selectThrowStyle, selectTrenchStyle, selectSecondaryMotion, selectBodyExpression, buildArmSwitchPresentation, buildBroadcastCommentary };
+export { COMPOSED_SHAPE, buildPlayScript, sampleTrack, buildCameraPlan, buildOfficialsPlan, selectDuelMove, selectTackleStyle, selectLandmarkMove, selectCatchStyle, selectThrowStyle, selectTrenchStyle, selectSecondaryMotion, selectBodyExpression, buildArmSwitchPresentation, buildBroadcastCommentary, routeWaypoints };

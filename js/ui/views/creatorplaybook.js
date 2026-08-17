@@ -3,7 +3,8 @@ import { FORMATION_PACKAGES, FORMATION_PLAYBOOK, FORMATION_VARIATIONS, aliasForm
 import { emptyPlaybook, validatePlaybook, legalConceptsForFormation, fittingConceptsForFormation, lookSheetKey, resolveLookSheet } from '../../engine/playbook.js';
 import { listCreations, loadCreationData, saveCreation, deleteCreation } from '../../engine/creator.js';
 import { DEFAULT_OFF_BOOKS, autoSheetForFormation } from '../../engine/defaultbooks.js';
-import { renderFormationDiagram, renderConceptThumb } from './routeart.js';
+import { renderFormationDiagram, renderConceptThumb, playAssignments } from './routeart.js';
+import { conceptBlurb } from './conceptblurbs.js';
 
 // "1 RB · 1 TE · 3 WR" from a personnel package object
 function persStr(p) {
@@ -97,13 +98,30 @@ function renderPlaybookEditor() {
         ? `<span class="pb-sheet-pill muted">inherits the ${esc(fid)} base sheet — first edit gives ${esc(lookLabel)} its own</span>`
         : `<span class="pb-sheet-pill">its own sheet <button type="button" class="pb-unfork" data-pb-unfork="${esc(fid)}|${esc(vk)}" title="Drop this look's sheet and inherit the base sheet again">↩ inherit base</button></span>`
         : `<span class="pb-sheet-pill muted">the ${esc(fid)} base sheet — looks without their own sheet inherit it</span>`;
+      // D4/M2 (#12/#14): the grid's cards draw THIS look's alignment, and an
+      // ℹ corner opens the big card — full-size art with the line's jobs
+      // drawn, the purpose blurb (#21), and EVERY MAN'S JOB (#16).
+      const info = state.ui.pbInfo && state.ui.pbInfo.fid === fid && (state.ui.pbInfo.vk || "") === (vk || "") ? state.ui.pbInfo : null;
+      let infoPanel = "";
+      if (info && legal.includes(info.concept)) {
+        const blurb = conceptBlurb(info.concept);
+        const jobs = playAssignments({ name: info.concept }, { formation: fid, variation: vk || undefined });
+        infoPanel = `<div class="pb-cinfo">
+          <div class="pb-cinfo-head"><span class="pb-cinfo-name">${esc(info.concept)}</span><button type="button" class="btn-mm-del" data-pb-infoclose="1" aria-label="Close play info">✕</button></div>
+          ${blurb ? `<div class="pb-cinfo-blurb">${esc(blurb)}</div>` : ""}
+          <span class="pb-cinfo-art">${renderConceptThumb(info.concept, { w: 340, h: 215, formation: fid, variation: vk || undefined, jobs: true })}</span>
+          <div class="cs-jobs-list">${jobs.rows.map((r) => `<div class="cs-job-row"><b>${esc(r.label)}</b><span class="cs-job-pos">${esc(r.pos)}</span><span class="cs-job-text">${esc(r.job)}</span></div>`).join("")}</div>
+        </div>`;
+      }
       concepts = `<div class="pb-sheet-head"><b>${esc(fid)}${vk ? ` · ${esc(lookLabel)}` : ""}</b> ${pill}</div>
+      ${infoPanel}
       <div class="concept-grid">${legal.map((c) => {
         const sel = sheet[c] != null;
         const misfit = !fits.has(c);
-        return `<button type="button" class="concept-card${sel ? " on" : ""}${misfit ? " misfit" : ""}" data-pb-concept="${esc(fid)}|${esc(vk)}|${esc(c)}" aria-pressed="${sel}"${misfit ? ` title="Doesn't fit this look's personnel"` : ""}>
-        <span class="concept-card-thumb">${renderConceptThumb(c, { w: 120, h: 72, scale: 0.72, formation: fid })}</span>
+        return `<button type="button" class="concept-card${sel ? " on" : ""}${misfit ? " misfit" : ""}" data-pb-concept="${esc(fid)}|${esc(vk)}|${esc(c)}" aria-pressed="${sel}"${misfit ? ` title="Doesn't fit this look's personnel"` : ` title="${esc(conceptBlurb(c) || c)}"`}>
+        <span class="concept-card-thumb">${renderConceptThumb(c, { w: 120, h: 72, scale: 0.72, formation: fid, variation: vk || undefined })}</span>
         <span class="concept-card-name">${esc(c)}${misfit ? " ⚠" : ""}</span>
+        <span class="concept-card-info" data-pb-cinfo="${esc(fid)}|${esc(vk)}|${esc(c)}" title="Every man's job on ${esc(c)}" role="button">ℹ</span>
         <span class="concept-card-test" data-pb-testc="${esc(fid)}|${esc(c)}" title="Test ${esc(c)} on the bench" role="button">🧪</span>
       </button>`;
       }).join("")}</div>`;
@@ -160,7 +178,7 @@ function renderPlaybookPreview() {
     const sheet = resolveLookSheet(data.sheets, fid, f.variation || null) || {};
     const plays = Object.keys(sheet);
     const cards = plays.length
-      ? plays.map((c) => `<div class="concept-card is-static"><span class="concept-card-thumb">${renderConceptThumb(c, { w: 120, h: 72, scale: 0.72, formation: fid })}</span><span class="concept-card-name">${esc(c)}</span></div>`).join("")
+      ? plays.map((c) => `<div class="concept-card is-static"${conceptBlurb(c) ? ` title="${esc(conceptBlurb(c))}"` : ""}><span class="concept-card-thumb">${renderConceptThumb(c, { w: 120, h: 72, scale: 0.72, formation: fid, variation: f.variation || undefined })}</span><span class="concept-card-name">${esc(c)}</span></div>`).join("")
       : `<div class="muted pbv-empty">No plays chosen for this formation.</div>`;
     const vset = FORMATION_VARIATIONS[fid];
     const vLabel = f.variation && vset && vset[f.variation] ? vset[f.variation].label : null;
@@ -300,8 +318,26 @@ function playbooksListeners() {
   document.querySelectorAll("[data-pb-expand]").forEach((b) => b.addEventListener("click", () => {
     _syncName();
     state.ui.pbExpand = state.ui.pbExpand === b.dataset.pbExpand ? null : b.dataset.pbExpand;
+    state.ui.pbInfo = null;
     rerender();
   }));
+  // D4/M2: the ℹ corner — open/close the big card for one concept of the
+  // open look (art + blurb + every man's job).
+  document.querySelectorAll("[data-pb-cinfo]").forEach((el) => el.addEventListener("click", (e) => {
+    e.stopPropagation();
+    _syncName();
+    const raw = el.dataset.pbCinfo;
+    const s1 = raw.indexOf("|"), s2 = raw.indexOf("|", s1 + 1);
+    const next = { fid: aliasFormation(raw.slice(0, s1)), vk: raw.slice(s1 + 1, s2) || null, concept: raw.slice(s2 + 1) };
+    const cur = state.ui.pbInfo;
+    state.ui.pbInfo = cur && cur.fid === next.fid && (cur.vk || "") === (next.vk || "") && cur.concept === next.concept ? null : next;
+    rerender();
+  }));
+  document.querySelector("[data-pb-infoclose]")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    state.ui.pbInfo = null;
+    rerender();
+  });
   document.querySelectorAll("[data-pb-lookweight]").forEach((el) => el.addEventListener("change", () => {
     const raw = el.dataset.pbLookweight; const sep = raw.indexOf("|");
     const fid = aliasFormation(raw.slice(0, sep)); const vk = raw.slice(sep + 1);

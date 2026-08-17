@@ -2,8 +2,8 @@ import { state, rerender, notify, navigate } from '../../state.js';
 import { FORMATION_PACKAGES } from '../../constants.js';
 import { listCreations, loadCreationData, saveCreation, deleteCreation } from '../../engine/creator.js';
 import { baseConceptsForKind, emptyCustomPlay, validateCustomPlay } from '../../engine/customplay.js';
-import { routePartList, validateComposedPlay, compilePlay, COVERAGES } from '../../engine/playcompose.js';
-import { routeGlyph, renderPlayCard, routeColor, formationReceivers } from './routeart.js';
+import { routePartList, validateComposedPlay, compilePlay, COVERAGES, runPathList, runSchemeList, RUN_CARRIERS } from '../../engine/playcompose.js';
+import { routeGlyph, renderPlayCard, renderComposedCard, routeColor, formationReceivers } from './routeart.js';
 
 // ── Play Composer (Creativity Tools UI) ────────────────────────────────────
 // Two ways to make a play, both on the proven engine: NAME an existing concept
@@ -17,10 +17,12 @@ var MIN_PARTS = 2, MAX_PARTS = 5;
 function renderPlayList() {
   const plays = listCreations("plays");
   const rows = plays.length ? plays.map((p) => {
-    const kind = Array.isArray(p.data.parts) ? "composed" : "named";
-    const sub = kind === "composed" ? `${(p.data.parts || []).length} routes` : `= ${esc(p.data.base || "?")}`;
+    const isRun = p.data.kind === "run" && p.data.run;
+    const kind = Array.isArray(p.data.parts) || isRun ? "composed" : "named";
+    const sub = isRun ? `run · ${esc((runPathList().find((r) => r.id === p.data.run.path) || {}).label || p.data.run.path)}`
+      : kind === "composed" ? `${(p.data.parts || []).length} routes` : `= ${esc(p.data.base || "?")}`;
     const thumb = kind === "composed"
-      ? `<span class="play-row-thumb">${renderPlayCard(p.data.parts, { w: 120, h: 76, scale: 0.72, formation: (p.data.formations && p.data.formations[0]) || null, assigns: p.data.assigns, blocks: p.data.blocks })}</span>`
+      ? `<span class="play-row-thumb">${renderComposedCard(p.data, { w: 120, h: 76, scale: 0.72, formation: (p.data.formations && p.data.formations[0]) || null })}</span>`
       : `<span class="play-row-thumb play-row-thumb-named">📋</span>`;
     return `<div class="pb-row play-row">
       <button class="pb-row-open" data-play-open="${esc(p.id)}">${thumb}<span class="play-row-copy"><span class="pb-row-name">${esc(p.name)}</span><span class="pb-row-meta">${sub}</span></span></button>
@@ -114,8 +116,81 @@ function _lineupFromData(data) {
   }
   return { formation, lineup };
 }
+// ── D4/M2: RUN authoring (the rest of #37) ─────────────────────────────────
+// A run is a PATH + a BLOCKING SCHEME + a CARRIER — everyone else blocks for
+// him. Same law as routes: the author never types a number; the fixed tables
+// in playcompose derive the band-clamped grades.
+function _ensureRun(p) {
+  if (!p.formation || !FORMATION_PACKAGES[p.formation]) p.formation = DEF_FORMATION;
+  p.run = p.run && typeof p.run === "object" ? p.run : {};
+  if (!runPathList().some((r) => r.id === p.run.path)) p.run.path = "inside";
+  if (!runSchemeList().some((r) => r.id === p.run.scheme)) p.run.scheme = "zone";
+  if (!RUN_CARRIERS.includes(p.run.carrier)) p.run.carrier = "RB";
+  return p;
+}
+function _runPayload(p) {
+  return { name: p.name, kind: "run", run: { path: p.run.path, scheme: p.run.scheme, carrier: p.run.carrier }, parts: [], assigns: [], blocks: [], formations: [p.formation] };
+}
+function _boxSummary(vsBox) {
+  const rate = (v) => v >= 0.03 ? "strong" : v > 0 ? "solid" : v >= -0.01 ? "honest" : "outnumbered";
+  return `<div class="play-cov">
+    <div class="play-cov-row"><span class="play-cov-lbl good">Light box</span> ${rate(vsBox.light || 0)}</div>
+    <div class="play-cov-row"><span class="play-cov-lbl bad">Loaded box</span> ${rate(vsBox.loaded || 0)}</div>
+  </div>`;
+}
+function _kindToggle(p) {
+  const kind = p.kind === "run" ? "run" : "pass";
+  return `<div class="play-kind-row" role="group" aria-label="Play type">
+    <button type="button" class="cs-tag-btn${kind === "pass" ? " active" : ""}" data-compose-kind="pass">🎯 Pass</button>
+    <button type="button" class="cs-tag-btn${kind === "run" ? " active" : ""}" data-compose-kind="run">🏃 Run</button>
+  </div>`;
+}
+function renderRunEditor() {
+  const p = _ensureRun(_p());
+  const payload = _runPayload(p);
+  const v = validateComposedPlay(payload);
+  let grade = "";
+  if (v.ok) {
+    const c = compilePlay(payload);
+    grade = `<div class="play-preview-head">${esc(c.type === "run_outside" ? "outside" : "inside")} run · ${esc(p.run.carrier === "QB" ? "QB keeps it" : "back carries it")}${c.pulls ? " · a lineman pulls" : ""}</div>${_boxSummary(c.vsBox)}`;
+  }
+  const formPick = `<label class="play-form-pick"><span>Formation</span>
+    <select class="form-input" id="play-formation">
+      ${Object.keys(FORMATION_PACKAGES).map((f) => `<option value="${esc(f)}"${p.formation === f ? " selected" : ""}>${esc(f)}</option>`).join("")}
+    </select></label>`;
+  const canvas = `<div class="play-canvas">${formPick}
+    ${renderComposedCard(payload, { w: 300, h: 200, formation: p.formation, jobs: true })}
+  </div>`;
+  const pick = (list, cur, data, lbl) => `<label class="play-form-pick"><span>${lbl}</span>
+    <select class="form-input" ${data}>
+      ${list.map((r) => `<option value="${esc(r.id)}"${cur === r.id ? " selected" : ""}>${esc(r.label)}</option>`).join("")}
+    </select></label>`;
+  const msg = v.errors.length ? `<div class="pb-msg err">${esc(v.errors[0])}</div>` : `<div class="pb-msg ok">${esc(p.run.path)} · ${esc(p.run.scheme)} on ${esc(p.formation)} — ready to save.</div>`;
+  return `<div class="creator-hub">
+    <div class="creator-hub-head"><div class="creator-title">Compose a Play</div>
+      <div class="creator-sub">Pick where the ball is aimed, how the line blocks it, and who carries.</div></div>
+    <input class="form-input pb-name" id="play-name" type="text" maxlength="36" placeholder="Play name" value="${esc(p.name || "")}"/>
+    ${_kindToggle(p)}
+    ${canvas}
+    ${msg}
+    ${grade ? `<div class="play-preview">${grade}</div>` : ""}
+    <div class="assign-add-head muted">The design</div>
+    <div class="assign-list">
+      ${pick(runPathList(), p.run.path, 'data-run-path', "The path")}
+      ${pick(runSchemeList(), p.run.scheme, 'data-run-scheme', "The blocking")}
+      ${pick(RUN_CARRIERS.map((c) => ({ id: c, label: c === "QB" ? "The quarterback keeps it" : "The back carries it" })), p.run.carrier, 'data-run-carrier', "The carrier")}
+    </div>
+    <div class="pb-actions">
+      <button class="btn-mm btn-mm-new" data-play-save="1"${v.errors.length ? " disabled" : ""}>Save Play</button>
+      <button class="btn-mm btn-mm-secondary" data-play-test="1"${v.errors.length ? " disabled" : ""}>🧪 Test on the bench</button>
+      <button class="btn-mm btn-mm-secondary" data-play-cancel="1">Cancel</button>
+    </div>
+  </div>`;
+}
 function renderComposeEditor() {
-  const p = _ensureLineup(_p());
+  const p0 = _p();
+  if (p0 && p0.kind === "run") return renderRunEditor();
+  const p = _ensureLineup(p0);
   const recs = formationReceivers(p.formation);
   const payload = _lineupPayload(p);
   const parts = payload.parts;
@@ -150,6 +225,7 @@ function renderComposeEditor() {
     <div class="creator-hub-head"><div class="creator-title">Compose a Play</div>
       <div class="creator-sub">Pick a formation, then set what every receiver runs. Give at least ${MIN_PARTS} of them a route.</div></div>
     <input class="form-input pb-name" id="play-name" type="text" maxlength="36" placeholder="Play name" value="${esc(p.name || "")}"/>
+    ${_kindToggle(p)}
     ${canvas}
     ${msg}
     ${preview}
@@ -197,7 +273,9 @@ function playsListeners() {
   document.querySelectorAll("[data-play-open]").forEach((b) => b.addEventListener("click", () => {
     const data = loadCreationData("plays", b.dataset.playOpen);
     if (!data) return;
-    if (Array.isArray(data.parts)) {
+    if (data.kind === "run" && data.run) {
+      state.ui.play = _ensureRun({ name: data.name, kind: "run", formation: (data.formations && data.formations[0]) || DEF_FORMATION, run: { ...data.run }, mode: "compose" });
+    } else if (Array.isArray(data.parts)) {
       const { formation, lineup } = _lineupFromData(data);
       state.ui.play = { name: data.name, kind: "pass", formation, lineup, mode: "compose" };
     } else {
@@ -211,9 +289,24 @@ function playsListeners() {
     state.ui.play = mode === "name" ? { ...emptyCustomPlay("My Play"), mode: "name" } : { name: "My Play", kind: "pass", formation: DEF_FORMATION, lineup: {}, mode: "compose" };
     state.ui.playId = null; rerender();
   }));
+  // D4/M2: the pass ⇄ run toggle inside the composer
+  document.querySelectorAll("[data-compose-kind]").forEach((b) => b.addEventListener("click", () => {
+    _syncName(); const p = _p(); if (!p || p.mode === "name") return;
+    const kind = b.dataset.composeKind === "run" ? "run" : "pass";
+    if (p.kind === kind) return;
+    p.kind = kind;
+    if (kind === "run") _ensureRun(p); else _ensureLineup(p);
+    rerender();
+  }));
+  // run design pickers
+  document.querySelector("[data-run-path]")?.addEventListener("change", (e) => { _syncName(); _ensureRun(_p()).run.path = e.target.value; rerender(); });
+  document.querySelector("[data-run-scheme]")?.addEventListener("change", (e) => { _syncName(); _ensureRun(_p()).run.scheme = e.target.value; rerender(); });
+  document.querySelector("[data-run-carrier]")?.addEventListener("change", (e) => { _syncName(); _ensureRun(_p()).run.carrier = e.target.value; rerender(); });
   // formation-first lineup: change formation, set each receiver's route, or flip
   document.querySelector("#play-formation")?.addEventListener("change", (e) => {
-    _syncName(); const p = _p(); p.formation = e.target.value; _ensureLineup(p); rerender();
+    _syncName(); const p = _p(); p.formation = e.target.value;
+    if (p.kind === "run") _ensureRun(p); else _ensureLineup(p);
+    rerender();
   });
   document.querySelectorAll("[data-lineup-slot]").forEach((el) => el.addEventListener("change", () => {
     _syncName(); const p = _ensureLineup(_p()); const slot = el.dataset.lineupSlot;
@@ -231,7 +324,7 @@ function playsListeners() {
   document.querySelector("[data-play-save]")?.addEventListener("click", () => {
     _syncName(); const p = _p();
     const isCompose = p.mode !== "name";
-    const payload = isCompose ? _lineupPayload(_ensureLineup(p)) : { name: p.name, kind: p.kind, base: p.base };
+    const payload = isCompose ? (p.kind === "run" ? _runPayload(_ensureRun(p)) : _lineupPayload(_ensureLineup(p))) : { name: p.name, kind: p.kind, base: p.base };
     const v = isCompose ? validateComposedPlay(payload) : validateCustomPlay(payload);
     if (!v.ok) { notify(v.errors[0], "warning"); return; }
     const r = saveCreation("plays", p.name, payload, state.ui.playId ? { id: state.ui.playId } : {});
@@ -244,7 +337,7 @@ function playsListeners() {
   document.querySelector("[data-play-test]")?.addEventListener("click", () => {
     _syncName(); const p = _p();
     if (!p || p.mode === "name") return;
-    const payload = _lineupPayload(_ensureLineup(p));
+    const payload = p.kind === "run" ? _runPayload(_ensureRun(p)) : _lineupPayload(_ensureLineup(p));
     const v = validateComposedPlay(payload);
     if (!v.ok) { notify(v.errors[0], "warning"); return; }
     state.ui.bench = {
