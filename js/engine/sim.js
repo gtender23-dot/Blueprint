@@ -2582,6 +2582,50 @@ function resolvePassPlay(playType, offPersonnel, defPersonnel, offRoster, defRos
   // into coverage that can be intercepted (feeds INT%). Gate: __noCovSack.
   let covSackForce = false;
   const _covCovered = chosen._bestSep != null ? chosen._bestSep < C.COVSACK_COVERED_SEP : chosen._readCollapsed;
+  // ── M3 (D6, 2026-08-17, ratified §7.5): the CLEAN-POCKET take-off ────────
+  // When nobody gets open but the pocket is CLEAN, a mobile QB looks for the
+  // grass the extra coverage left behind — the more bodies the defense
+  // dropped, the fewer rushed, the bigger the escape lane. Coverage-
+  // conditioned (family grass factor), mobility-scaled via qbScrambleChance
+  // (a statue almost never takes off), spy/optionKey=qb tighten it, and the
+  // CLEAN_SCRAMBLE_MULT is tuned so ~75% of all scrambles stay pressure-
+  // coupled (PFF's charting). __noCleanScramble kills the rung.
+  const _cpTight = chosen._bestSep != null ? clamp2((C.CLEAN_COVERED_SEP - chosen._bestSep) / 0.28, 0, 1) : chosen._readCollapsed ? 1 : 0;
+  if (!globalThis.__noCleanScramble && qb && !hurried && _cpTight > 0 && !hotThrow) {
+    const _cpFam = (_conceptCtx == null ? void 0 : _conceptCtx.fam) || null;
+    const _cpGrass = _cpFam === "Prevent" ? 1.6 : _cpFam === "Cover 4" || _cpFam === "Cover 6" || _cpFam === "Tampa 2" || _cpFam === "Cover 2" ? 1.25 : _cpFam === "Cover 2-Man" ? 1.05 : _cpFam === "Cover 0" || _cpFam === "C3 Fire Zone" ? 0.5 : 1;
+    const _cpSpy = defPlan.spyQB === true;
+    const _cpSpyLv = _cpSpy ? (defPersonnel.LB || []).reduce((m, id) => {
+      const p = defRoster.find((pl) => pl.id === id);
+      return Math.max(m, traitLv(p, "spyEyes"));
+    }, 0) : 0;
+    const _cpStyle = ((defPlan == null ? void 0 : defPlan.covStyleEff) === "zone" ? 0.85 : (defPlan == null ? void 0 : defPlan.covStyleEff) === "man" ? 1.1 : 1) * ((defPlan == null ? void 0 : defPlan.optionKeyEff) === "qb" ? 0.85 : 1);
+    const _cpChance = qbScrambleChance(qb) * C.CLEAN_SCRAMBLE_MULT * _cpTight * _cpGrass * _cpStyle * (_cpSpy ? 0.45 * (1 - 0.05 * _cpSpyLv) : 1) * traitMult(qb, "pocketPresence", 0.03);
+    if (Math.random() < _cpChance) {
+      const _cpLane = (_cpSpy ? 0.22 : 0.36) + Math.random() * 0.2;
+      const _cpLbBox = (defPersonnel.LB || []).slice(0, Math.ceil((defPersonnel.LB || []).length / 2));
+      const _cpSecond = _cpLbBox.map((id) => defRoster.find((p) => p.id === id)).filter(Boolean);
+      const _cpDeep = (defPersonnel.DB || []).slice(0, 3).map((id) => defRoster.find((p) => p.id === id)).filter(Boolean);
+      const _cpDL = (defPersonnel.DL || []).map((id) => defRoster.find((p) => p.id === id)).filter(Boolean);
+      const _cpOut = runOutcome(qb, _cpLane, null, _cpSecond, _cpDeep, contextBoost, _cpDL);
+      const _cpContact = qbContactResult(qb, _cpOut);
+      result.type = "run_scramble";
+      result.yards = _cpContact.yards;
+      result.rusherId = qb.id;
+      result.tacklerId = _cpOut.tacklerId;
+      result.assistId = _cpOut.assistId;
+      result.tflId = _cpOut.tflId;
+      result.brokenById = _cpOut.brokenById;
+      result.brokenByCarrier = _cpOut.brokenById ? qb.id : null;
+      result.breakaway = _cpOut.breakaway || false;
+      result.isScramble = true;
+      result.cleanScramble = true;
+      result.qbSlid = _cpContact.slid === true;
+      result.qbInjured = _cpContact.qbInjured;
+      result.qbInjuryGames = _cpContact.injuryGamesOut;
+      return result;
+    }
+  }
   if (!globalThis.__noCovSack && qb && hurried && _covCovered && !hotThrow) {
     // Dual-threat escape (first, before the AWR split): a mobile QB flushed onto a
     // covered field takes off rather than eating the coverage sack — a second,
@@ -2814,7 +2858,20 @@ function qbScrambleChance(qb) {
   const pocket = (a.STR + a.TEC + a.AWR) / 3;
   const lean = mob - pocket;
   const absMob = (mob - 50) / 40;
-  return clamp2((absMob * 0.5 + lean / 40 * 0.6) * C.QB_SCRAMBLE_SCALE + 0.04, 0.02, 0.45);
+  // Legacy curve kept for the M3 A/B (audit gap #2 measured against it).
+  if (globalThis.__qbDiceLegacy) return clamp2((absMob * 0.5 + lean / 40 * 0.6) * C.QB_SCRAMBLE_SCALE + 0.04, 0.02, 0.45);
+  // M3 (D6, 2026-08-17): re-anchored on the LEAN — the archetype's own axis,
+  // tier-relative by construction (owner law §7.3: a 63 SPD is fast in D3 and
+  // slow in D1; the lean means the same thing in both). The lean rides a soft
+  // knee (everything below a statue's lean reads the same) so the curve
+  // separates scrambler ≫ dual ≫ pocket the way the audit's bands do;
+  // absolute mobility keeps a small residue (a burner breaks longer).
+  const effLean = clamp2(lean, -12, 20);
+  return clamp2(
+    C.QB_SCRAMBLE_BASE + (effLean + 12) / 24 * C.QB_SCRAMBLE_LEAN + absMob * C.QB_SCRAMBLE_ABS,
+    C.QB_SCRAMBLE_FLOOR,
+    C.QB_SCRAMBLE_CAP
+  );
 }
 function qbInjuryDuration() {
   const r = Math.random();
@@ -3100,11 +3157,18 @@ function resolveRunPlay(playType, offPersonnel, defPersonnel, offRoster, defRost
   const frontRoles = composedFrontRoles(frontId);
   const dlRoles = frontRoles.DL || [];
   const lbRoles = frontRoles.LB || [];
-  const qbRunChance = clamp2(
+  // M3 (D6, 2026-08-17, ratified §7.1): THE DICE ARE DEAD. A handoff concept
+  // becomes a QB keep only at the broken-play floor (bad mesh, bumped
+  // exchange) — designed QB runs now live in the authored family (Zone Read /
+  // QB Draw / QB Counter / QB Power / QB Sneak) and the qbRunPct dial prices
+  // THOSE calls, not these dice. Empty keeps its 1.0 exception (no back to
+  // hand to — the no-backfield guard below enforces it anyway). The legacy
+  // table + dial ride under __qbDiceLegacy for the A/B.
+  const qbRunChance = globalThis.__qbDiceLegacy ? clamp2(
     (QB_RUN_BASE[formationId] || 0.08) + (gameplan.qbRunPct || 0) / 100,
     0,
     0.65
-  );
+  ) : formationId === "Empty" ? 1 : C.QB_RUN_FLOOR;
   const fbIds = offPersonnel.FB || [];
   const rbIds = offPersonnel.RB || [];
   const noBackfield = rbIds.length === 0 && fbIds.length === 0;
@@ -4959,7 +5023,29 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     // base-keys-only, so this line resolves exactly as the old
     // formationPlaybooks[offFormationId] read did.
     const _fpbSheet = offPlan.formationPlaybooks && !(globalThis.__noAIFormSheets && offPlan._aiAuthoredSheets) ? resolveLookSheet(offPlan.formationPlaybooks, offFormationId, offVar) : null;
-    const _cwEff = _fpbSheet && Object.keys(_fpbSheet).length ? { ...offPlanEff.conceptWeights || {}, ..._fpbSheet } : offPlanEff.conceptWeights || null;
+    let _cwEff = _fpbSheet && Object.keys(_fpbSheet).length ? { ...offPlanEff.conceptWeights || {}, ..._fpbSheet } : offPlanEff.conceptWeights || null;
+    // ── M3 (D6, 2026-08-17): the qbRunPct dial prices the AUTHORED QB-run
+    // family now that the organic dice are dead (§7.1). Only entries the
+    // sheet does NOT set are defaulted from the dial — an explicit weight
+    // (AI archetype weights, a human's own sheet) always wins. Dial 0 ⇒ the
+    // family nearly never comes off an unset sheet (a pocket QB's coach
+    // doesn't dial up QB Counter); dial 25 ⇒ it's a featured call.
+    if (!globalThis.__qbDiceLegacy && (playType === "run_inside" || playType === "run_outside")) {
+      const _qrp = clamp2(offPlanEff.qbRunPct || 0, 0, 30);
+      for (const _qrNm of ["Zone Read", "QB Draw", "QB Counter", "QB Power"]) {
+        if (_pbGate && !_pbGate.includes(_qrNm)) continue;
+        if (!_cwEff) _cwEff = {};
+        else if (_cwEff === offPlanEff.conceptWeights) _cwEff = { ...offPlanEff.conceptWeights };
+        // Unset entries default from the dial; every entry then SCALES with
+        // it — the dial is the family's volume knob (a scrambler's staff
+        // doesn't just carry these plays, it builds the run game on them),
+        // and one knob serves the AI's archetype dial and the human's Game
+        // Plan dial identically. Weight-space, so the sheet's own relative
+        // preferences inside the family survive.
+        const _qrBase = _cwEff[_qrNm] != null ? _cwEff[_qrNm] : clamp2(8 + _qrp * 3, 5, 95);
+        _cwEff[_qrNm] = clamp2(_qrBase * (1 + _qrp / 13), 0, 320);
+      }
+    }
     if (composedCall) {
       // The composed call IS the play — same shape the forced-name branch of
       // pickPassConcept produces, but the grades come from the band-clamped
@@ -5098,13 +5184,21 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     }
     let effPlayType = playType;
     let rpoFlip = false, rpoKept = false;
+    // ── M3 (D6, 2026-08-17): the authored family's context. A called read
+    // play (Zone Read, an always-RPO) or QB Draw must never be hijacked by
+    // the organic option/jet/draw/gadget dice — the call IS the play. Old
+    // concepts (QB Power/Sneak included) keep their pre-M3 hijack behavior
+    // byte-for-byte.
+    const _m3def = (_conceptCtx == null ? void 0 : _conceptCtx.def) || null;
+    const _m3Authored = !!(_m3def && (_m3def.zoneRead || _m3def.rpo && _m3def.rpo.always || _m3def.qbCarry || _m3def.qbSneak));
+    let rpoKeepOv = null;
     let optionSnap = false, optionStyle = "triple";
     if (forcedGadget === "triple" && qb) {
       optionSnap = true;
     } else if (forcedGadget === "speed" && qb) {
       optionSnap = true;
       optionStyle = "speed";
-    } else if (playType.startsWith("run") && qb && !coachCalled) {
+    } else if (playType.startsWith("run") && qb && !coachCalled && !_m3Authored) {
       if (OPTION_CAPABLE[offFormationId] != null) {
         const optShare = offPlanEff.optionRate != null ? clamp2(offPlanEff.optionRate / 100, 0, 1) : OPTION_CAPABLE[offFormationId];
         optionSnap = Math.random() < optShare;
@@ -5116,11 +5210,41 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
         }
       }
     }
+    // ── M3 (D6, 2026-08-17): ZONE READ — the authored RPO+QB-run type (#46,
+    // ratified §7). The backside edge is the key: an end who crashes on the
+    // back opens the KEEP (the QB runs out the grass he vacated); an end who
+    // sits home means GIVE. edgePlay contain starves the keep, crash feeds
+    // it, optionKey=qb puts the key's eyes on the QB — the counters the
+    // audit demands (§5D) bite here by construction.
+    let zrSnap = null;
+    if (!optionSnap && !forcedGadget && qb && (_m3def == null ? void 0 : _m3def.zoneRead) && ((offPersonnel.RB || []).length + (offPersonnel.FB || []).length) > 0) {
+      const _zDl = defPersonnel.DL || [];
+      const _zkid = (defPersonnel.DE || [])[0] != null ? (defPersonnel.DE || [])[0] : _zDl.length ? _zDl[_zDl.length - 1] : (defPersonnel.OLB || [])[0] != null ? (defPersonnel.OLB || [])[0] : null;
+      const _zkey = _zkid != null ? defRoster.find((p) => p.id === _zkid) || null : null;
+      const _zEdge = defEff.edgePlay || "balanced";
+      const _zCrashP = (_zEdge === "crash" ? 0.62 : _zEdge === "contain" ? 0.22 : 0.44) * (defEff.optionKey === "qb" ? 0.55 : 1);
+      const _zCrash = Math.random() < _zCrashP;
+      const _zqbRead = ((qb.attributes.AWR || 50) * 0.65 + (qb.attributes.TEC || 50) * 0.35);
+      const _zReadP = clamp2(0.55 + (_zqbRead - ((((_zkey == null ? void 0 : _zkey.attributes) == null ? void 0 : _zkey.attributes.AWR) != null ? _zkey.attributes.AWR : 50) + 2 * traitLv(_zkey, "optionSound"))) * 6e-3 + 0.02 * traitLv(qb, "conflictReader"), 0.25, 0.85);
+      const _zRead = Math.random() < _zReadP;
+      const _zKeep = _zRead ? _zCrash : Math.random() < 0.25;
+      if (_zKeep) {
+        zrSnap = { phase: "keep", type: "run_outside", override: { carrier: qb, laneShift: _zRead ? 0.1 : -0.15, forcePenetrator: _zRead ? null : _zkey, phase: null } };
+      } else {
+        zrSnap = { phase: "give", type: "run_inside", override: { carrier: null, laneShift: _zRead && !_zCrash ? 0.08 : _zCrash ? -0.12 : 0.02, forcePenetrator: !_zRead && _zCrash ? _zkey : null, phase: null } };
+      }
+      effPlayType = zrSnap.type;
+    }
     const rpoFit = (_pa = C.RPO_FIT[offFormationId]) != null ? _pa : 0.5;
     const rpoKeyMult = defEff.optionKey === "qb" ? 0.7 : 1;
     const calledRPO = !!(offPlanEff && offPlanEff._forceRPO);
+    // M3: an authored RPO (RPO Glance / RPO Bubble) IS an RPO every snap —
+    // the call is the play, no volume dice. The defense's answers live in
+    // the read itself (pullEdge × rpoKeyMult, the keep share below), never
+    // in un-calling the play.
+    const rpoAlways = !!(_m3def && _m3def.rpo && _m3def.rpo.always);
     _rpoCtx = null;
-    if (!optionSnap && !forcedGadget && qb && (calledRPO || rpoFit > 0 && playType.startsWith("run") && Math.random() < ((_qa = offPlanEff.rpoRate) != null ? _qa : 40) / 100 * rpoFit * rpoKeyMult)) {
+    if (!optionSnap && !forcedGadget && !zrSnap && qb && (calledRPO || rpoAlways || rpoFit > 0 && playType.startsWith("run") && Math.random() < ((_qa = offPlanEff.rpoRate) != null ? _qa : 40) / 100 * rpoFit * rpoKeyMult)) {
       if (globalThis.__noRPOConflict) {
         // Legacy (pre-Pass-5) branch, byte-equivalent in behavior: team-dial
         // committed + flat LB-average read; the A/B isolates the new machinery.
@@ -5179,14 +5303,36 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
             edgePlay: (_conceptCtx == null ? void 0 : _conceptCtx.edgePlay) || "balanced"
           };
         } else {
+          // ── M3 (D6, 2026-08-17, ratified §7.6): the KEEP phase — the third
+          // way of the read (#46). On a clean give read, a mobile QB can pull
+          // it PAST the mesh and run: share dialed by gameplan.rpoKeepPct
+          // (archetype-keyed by the AI), mobility-scaled so a statue almost
+          // never keeps, and answered by the defense — optionKey=qb and a
+          // contained edge starve it, a crashing edge feeds it. The keep
+          // rides the option-keep run math (QB carrier through the run
+          // resolver). Misreads (wrongGive) never convert — a QB who missed
+          // the picture doesn't improvise a keep off it. __noRPOKeep kills.
+          let _kOutcome = rr.outcome;
+          if (!globalThis.__noRPOKeep && (rr.outcome === "give" || rr.outcome === "giveLate")) {
+            const _kDial = clamp2((offPlanEff.rpoKeepPct != null ? offPlanEff.rpoKeepPct : 0) / 100, 0, 0.35);
+            if (_kDial > 0) {
+              const _kMob = ((qb.attributes.SPD || 50) + (qb.attributes.AGI || 50)) / 2;
+              const _kMobScale = clamp2((_kMob - 38) / 22, 0.1, 1.5);
+              const _kDefMult = (defEff.optionKey === "qb" ? 0.55 : 1) * (defEff.edgePlay === "contain" ? 0.7 : defEff.edgePlay === "crash" ? 1.25 : 1);
+              if (Math.random() < clamp2(_kDial * 1.6 * _kMobScale * _kDefMult, 0, 0.5)) {
+                _kOutcome = "keep";
+                rpoKeepOv = { carrier: qb, laneShift: rr.outcome === "give" ? 0.08 : 0.02, forcePenetrator: null, phase: null };
+              }
+            }
+          }
           _rpoCtx = {
-            outcome: rr.outcome,
+            outcome: _kOutcome,
             tag: rpoTag,
             conflictId: (conflictDef == null ? void 0 : conflictDef.id) || null,
             qbId: qb.id,
-            giveEdge: rr.outcome === "give" ? 0.05 : rr.outcome === "giveLate" ? 0.025 : -0.07
+            giveEdge: _kOutcome === "keep" ? 0 : rr.outcome === "give" ? 0.05 : rr.outcome === "giveLate" ? 0.025 : -0.07
           };
-          if (calledRPO) rpoKept = true;
+          if (calledRPO || rpoAlways) rpoKept = true;
         }
       }
     }
@@ -5199,7 +5345,7 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
         const bySpeed = (arr) => arr.slice().sort((a, b) => (b.attributes.SPD || 0) - (a.attributes.SPD || 0))[0] || null;
         jetMan = bySpeed(onField.filter((p) => p.position === "WR")) || bySpeed(onField.filter((p) => p.position === "TE")) || bySpeed(onField.filter((p) => p.position === "RB")) || null;
       }
-    } else if (!optionSnap && !coachCalled && !_rpoCtx && effPlayType === "run_outside" && JET_CAPABLE[offFormationId] != null) {
+    } else if (!optionSnap && !coachCalled && !_rpoCtx && !zrSnap && !_m3Authored && effPlayType === "run_outside" && JET_CAPABLE[offFormationId] != null) {
       const jetShare = offPlanEff.jetRate != null ? clamp2(offPlanEff.jetRate / 100, 0, 1) : JET_CAPABLE[offFormationId];
       if (Math.random() < jetShare && (offField == null ? void 0 : offField.bySlot)) {
         jetMan = (JET_SLOTS[offFormationId] || []).map((sid) => offField.bySlot[sid]).map((id) => id && effOffRoster.find((p) => p.id === id)).filter(Boolean).sort((a, b) => (b.attributes.SPD || 0) - (a.attributes.SPD || 0))[0] || null;
@@ -5210,9 +5356,13 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
       wildcatTaker = effOffRoster.find((p) => p.id === offField.bySlot.RB_H) || null;
     }
     let drawSnap = false;
+    // M3: an authored QB Draw takes the draw MACHINERY (caught-blitz vs
+    // sniffed, below) with the QB as the carrier — it is not the organic
+    // roll's business, and it never renames to "Draw".
+    const qbDrawSnap = !!((_m3def == null ? void 0 : _m3def.qbDraw) && effPlayType === "run_inside" && !optionSnap && !forcedGadget && !zrSnap && !_rpoCtx && qb);
     if (forcedGadget === "draw" && effPlayType === "run_inside") {
       drawSnap = true;
-    } else if (!optionSnap && !jetMan && !wildcatTaker && !coachCalled && !_rpoCtx && effPlayType === "run_inside" && Math.random() < clamp2(((_sa = offPlanEff.drawRate) != null ? _sa : DRAW_DEFAULT) / 100, 0, 0.35)) {
+    } else if (!optionSnap && !jetMan && !wildcatTaker && !coachCalled && !_rpoCtx && !zrSnap && !_m3Authored && effPlayType === "run_inside" && Math.random() < clamp2(((_sa = offPlanEff.drawRate) != null ? _sa : DRAW_DEFAULT) / 100, 0, 0.35)) {
       drawSnap = true;
     }
     // ── PASS 5: trick-play snaps (gadget tier). A coach-called gadget always
@@ -5220,7 +5370,7 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     // __noGadgets: the calls fall back to their vanilla cousins (plain
     // outside run / plain deep dropback) — the switch isolates the machinery.
     let gadgetSnap = forcedGadget === "reverse" || forcedGadget === "fleaflicker" || forcedGadget === "hbpass" ? forcedGadget : null;
-    if (!gadgetSnap && !forcedGadget && !coachCalled && !optionSnap && !_rpoCtx && !jetMan && !wildcatTaker && !drawSnap && qb && !globalThis.__noGadgets) {
+    if (!gadgetSnap && !forcedGadget && !coachCalled && !optionSnap && !_rpoCtx && !zrSnap && !_m3Authored && !jetMan && !wildcatTaker && !drawSnap && qb && !globalThis.__noGadgets) {
       // PASS 6: + the weekly trick bump (_gadgetWk, re-rolled by
       // aiSetWeeklyReaction — a gambler leaning into an aggressive opponent).
       const _gWk = globalThis.__noTrickBrain ? 0 : offPlanEff._gadgetWk || 0;
@@ -5324,15 +5474,20 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
       );
     } else if (effPlayType === "run_inside" || effPlayType === "run_outside") {
       let drawOverride = null;
-      if (drawSnap) {
+      if (drawSnap || qbDrawSnap) {
+        // M3: qbDrawSnap rides the same caught-blitz/sniff fork with the QB
+        // carrying (the concept's qbCarry does that); phase stays null so the
+        // record keeps the authored name.
         const caughtBlitz = Math.random() < clamp2(((_va = defPlanEff.blitzPct) != null ? _va : 20) / 100 + (defPlanEff.edgePlayEff === "crash" ? 0.12 : defPlanEff.edgePlayEff === "contain" ? -0.06 : 0), 0.05, 0.75);
+        const _drPhase = qbDrawSnap ? null : "draw";
         if (caughtBlitz) {
-          drawOverride = { laneShift: 0.14, forcePenetrator: null, phase: "draw" };
+          drawOverride = { laneShift: 0.14, forcePenetrator: null, phase: _drPhase };
         } else {
           const mike = (defPersonnel.LB || []).map((id) => effDefRoster.find((p) => p.id === id)).filter(Boolean)[0] || null;
           const sniffP = clamp2(0.28 + (((_wa = mike == null ? void 0 : mike.attributes.AWR) != null ? _wa : 50) - 50) * 5e-3 - (((_xa = qb == null ? void 0 : qb.attributes.TEC) != null ? _xa : 50) - 50) * 18e-4 + Math.min(0.15, (oppMem.draw || 0) * 0.03), 0.1, 0.65);
-          drawOverride = Math.random() < sniffP ? { laneShift: -0.12, forcePenetrator: mike, phase: "draw" } : { laneShift: 0.04, forcePenetrator: null, phase: "draw" };
+          drawOverride = Math.random() < sniffP ? { laneShift: -0.12, forcePenetrator: mike, phase: _drPhase } : { laneShift: 0.04, forcePenetrator: null, phase: _drPhase };
         }
+        if (qbDrawSnap) drawOverride.carrier = qb;
       }
       playResult = resolveRunPlay(
         effPlayType,
@@ -5348,8 +5503,14 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
         qb,
         (offPlan == null ? void 0 : offPlan.rbCarryShares) || null,
         offDepth["RB"] || null,
-        wildcatTaker ? { carrier: wildcatTaker, laneShift: 0, forcePenetrator: null, phase: "wildcat" } : drawOverride
+        wildcatTaker ? { carrier: wildcatTaker, laneShift: 0, forcePenetrator: null, phase: "wildcat" } : zrSnap ? zrSnap.override : rpoKeepOv != null ? rpoKeepOv : drawOverride
       );
+      // M3 stamps: the record carries the family's own truth.
+      if (zrSnap && playResult) {
+        playResult.zoneRead = true;
+        playResult.zrPhase = zrSnap.phase;
+      }
+      if (qbDrawSnap && playResult) playResult.qbDraw = true;
     } else {
       if (rpoFlip) offPlanEff._rpoFlip = true;
       playResult = resolvePassPlay(
@@ -5418,7 +5579,7 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     if (playResult.jetSweep) oppMem.jet++;
     if (playResult.gadget === "reverse") oppMem.rev = (oppMem.rev || 0) + 1;
     if (playResult.rpo || playResult.rpoKept) oppMem.rpo++;
-    if (playResult.optionPhase === "draw") oppMem.draw++;
+    if (playResult.optionPhase === "draw" || playResult.qbDraw) oppMem.draw++;
     if (playResult.targetId) oppMem.targets[playResult.targetId] = (oppMem.targets[playResult.targetId] || 0) + 1;
     if (forcedCall) {
       playResult.coachCall = true;
@@ -7100,4 +7261,4 @@ DIFFICULTY_EDGE = {
 export { callContext, decisionContext, finishInteractiveGame, midGameReport, pinnedFirst, resumeFromCall, resumeFromDecision, setAutoCounter, setPenaltyScale, simulateFirstHalf, simulateGame, simulateSecondHalf, stepSecondHalf };
 
 // additional exports consumed by tools/ probes
-export { attemptFG, catchResolution, coverageStrength, simulateDrive, driveSummariesFrom, rpoConflictRead, fgLateStretch, fgMakeProb, fourthDownDecision, fourthDownIsCoachCall, fourthDownIsMoment, isKeyDownSituation, motionMisreadProb, pickPassConcept, pickRunConcept, puntDistance, qbRead, resolveFakeFG, resolveFakePunt, resolvePassRush, returnMuff, returnOutcome, xpMakeProb };
+export { attemptFG, catchResolution, coverageStrength, simulateDrive, driveSummariesFrom, rpoConflictRead, fgLateStretch, fgMakeProb, fourthDownDecision, fourthDownIsCoachCall, fourthDownIsMoment, isKeyDownSituation, motionMisreadProb, pickPassConcept, pickRunConcept, puntDistance, qbRead, qbScrambleChance, resolveFakeFG, resolveFakePunt, resolvePassRush, returnMuff, returnOutcome, xpMakeProb };

@@ -501,7 +501,35 @@ C = {
   ONSIDE_SURPRISE: 0.6,
   // 2-point conversion success (when attempted)
   QB_SCRAMBLE_SCALE: 0.4,
-  // steepness of the division-relative QB scramble curve
+  // steepness of the division-relative QB scramble curve (legacy A/B path only
+  // since M3 — the live curve uses the three constants below)
+  // ── M3 (D6, 2026-08-17): the scramble curve re-anchored on the LEAN ──
+  // Ratified law (§7.3): archetype is tier-relative, absolute speed is not.
+  // The curve now weights the mobility LEAN (the archetype's own axis) over
+  // absolute mobility so a D3 scrambler scrambles like a D1 scrambler.
+  QB_SCRAMBLE_BASE: 0.1,
+  // the curve's floor-anchor — a full statue (lean at the knee) sits here
+  QB_SCRAMBLE_LEAN: 0.34,
+  // across the knee-to-scrambler span ((lean+12)/24): the archetype axis
+  QB_SCRAMBLE_ABS: 0.08,
+  // per absMob unit: the small absolute-speed residue (a burner breaks longer)
+  QB_SCRAMBLE_FLOOR: 0.03,
+  QB_SCRAMBLE_CAP: 0.5,
+  // ── M3: the clean-pocket take-off (audit §7.5, coverage-conditioned) ──
+  // When nobody is open and the pocket is CLEAN, a mobile QB looks for the
+  // grass the coverage droppers left behind. Chance = qbScrambleChance * this
+  // * the coverage-grass factor (more droppers = fewer rushers = bigger
+  // lanes). Tuned so ~75% of all scrambles stay pressure-coupled (PFF).
+  CLEAN_SCRAMBLE_MULT: 1.1,
+  CLEAN_COVERED_SEP: 0.62,
+  // the clean-pocket rung's own "nothing open" line — looser than the
+  // under-pressure trigger (a QB with time waits longer before deciding
+  // nobody is open), and the chance scales with how covered the field is.
+  // ── M3: the QB_RUN_BASE dice are DEAD (audit §7.1) ──
+  // A handoff concept becomes a QB keep only at this broken-play floor now
+  // (bad mesh, bumped exchange). Empty keeps its 1.0 exception (no back to
+  // hand to). The authored family owns designed QB runs.
+  QB_RUN_FLOOR: 0.015,
   TTT_DEEP: 0.34,
   // time-to-throw: deep-drop pocket-exposure tax (escalates pressure a tier), cut by QB mobility/AWR + quick game
   TTT_SHORT: 0.2,
@@ -2765,10 +2793,10 @@ FORMATION_PLAYBOOK = {
   "Wishbone": ["Inside Zone", "Power", "Boot", "Iso", "Trap", "QB Sneak", "Counter", "Toss", "Wham", "Buck Sweep", "Pin-and-Pull", "Dart", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "RB Screen", "Curl-Flat", "Y-Cross", "PA Deep Cross", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "QB Power"],
   "Flexbone": ["Inside Zone", "Split-Zone", "Power", "Boot", "Iso", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Wham", "Buck Sweep", "Pin-and-Pull", "Dart", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Slip Screen", "Smash", "Seam-Read Smash", "Curl-Flat", "Y-Cross", "Flood", "PA Deep Cross", "Yankee", "Post-Wheel", "Mills (Post-Dig)", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "Spot", "Sail", "Levels", "Sluggo Seam", "QB Power", "Reverse"],
   "Wildcat": ["Inside Zone", "Power", "Boot", "Iso", "Trap", "QB Sneak", "Counter", "Toss", "Wham", "Buck Sweep", "Pin-and-Pull", "Dart", "Jet Sweep", "Draw", "Speed Option", "Triple Option", "Wildcat Power", "Slant-Flat", "Stick", "RB Screen", "Y-Cross", "PA Deep Cross", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "QB Power"],
-  "Spread": ["Inside Zone", "Split-Zone", "Power", "Boot", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Wham", "Buck Sweep", "Pin-and-Pull", "Dart", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Slip Screen", "Smash", "Seam-Read Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Spacing", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "Spot", "Sail", "Levels", "Sluggo Seam", "QB Power", "Reverse", "HB Pass", "Flea Flicker"],
-  "Trips/Bunch": ["Inside Zone", "Split-Zone", "Power", "Boot", "QB Sneak", "Outside Zone", "Toss", "Wham", "Buck Sweep", "Pin-and-Pull", "Dart", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Slip Screen", "Smash", "Seam-Read Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Yankee", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Spacing", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "Spot", "Sail", "Levels", "Sluggo Seam", "Reverse", "HB Pass", "Flea Flicker"],
-  "Pistol/RPO": ["Inside Zone", "Split-Zone", "Power", "Boot", "Trap", "QB Sneak", "Outside Zone", "Counter", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Slip Screen", "Smash", "Seam-Read Smash", "Curl-Flat", "Flood", "Dagger", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Spacing", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "Spot", "Sail", "Levels", "Sluggo Seam", "QB Power", "Reverse", "Flea Flicker"],
-  "Air Raid": ["Inside Zone", "QB Sneak", "Outside Zone", "Jet Sweep", "Draw", "Speed Option", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Slip Screen", "Smash", "Seam-Read Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Yankee", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Spacing", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "Spot", "Sail", "Levels", "Sluggo Seam", "Reverse"],
+  "Spread": ["Inside Zone", "Split-Zone", "Power", "Boot", "Trap", "QB Sneak", "Outside Zone", "Counter", "Toss", "Wham", "Buck Sweep", "Pin-and-Pull", "Dart", "Jet Sweep", "Draw", "Speed Option", "Zone Read", "RPO Glance", "RPO Bubble", "QB Draw", "QB Counter", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Slip Screen", "Smash", "Seam-Read Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Spacing", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "Spot", "Sail", "Levels", "Sluggo Seam", "QB Power", "Reverse", "HB Pass", "Flea Flicker"],
+  "Trips/Bunch": ["Inside Zone", "Split-Zone", "Power", "Boot", "QB Sneak", "Outside Zone", "Toss", "Wham", "Buck Sweep", "Pin-and-Pull", "Dart", "Jet Sweep", "Draw", "Speed Option", "Zone Read", "RPO Glance", "RPO Bubble", "QB Draw", "QB Counter", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Slip Screen", "Smash", "Seam-Read Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Yankee", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Spacing", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "Spot", "Sail", "Levels", "Sluggo Seam", "Reverse", "HB Pass", "Flea Flicker"],
+  "Pistol/RPO": ["Inside Zone", "Split-Zone", "Power", "Boot", "Trap", "QB Sneak", "Outside Zone", "Counter", "Jet Sweep", "Draw", "Speed Option", "Zone Read", "RPO Glance", "RPO Bubble", "QB Draw", "QB Counter", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Slip Screen", "Smash", "Seam-Read Smash", "Curl-Flat", "Flood", "Dagger", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Spacing", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "Spot", "Sail", "Levels", "Sluggo Seam", "QB Power", "Reverse", "Flea Flicker"],
+  "Air Raid": ["Inside Zone", "QB Sneak", "Outside Zone", "Jet Sweep", "Draw", "Speed Option", "RPO Glance", "RPO Bubble", "QB Draw", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "RB Screen", "Tunnel Screen", "Slip Screen", "Smash", "Seam-Read Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Yankee", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Spacing", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "Spot", "Sail", "Levels", "Sluggo Seam", "Reverse"],
   "Jumbo": ["Inside Zone", "Power", "Boot", "Iso", "Trap", "QB Sneak", "QB Power", "Counter", "Toss", "Wham", "Buck Sweep", "Pin-and-Pull", "Dart", "Draw", "RB Screen", "Slant-Flat", "Stick", "Y-Cross", "PA Deep Cross", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post"],
   "Empty": ["QB Sneak", "Jet Sweep", "Draw", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "Tunnel Screen", "Slip Screen", "Smash", "Seam-Read Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Yankee", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Spacing", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "Spot", "Sail", "Levels", "Sluggo Seam", "QB Power"]
 };

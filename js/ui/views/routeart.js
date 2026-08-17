@@ -524,6 +524,10 @@ var CONCEPT_ROUTES = {
 // the edge, pulls a lineman, leads with a back, pitches, or motions. Ordered
 // most-specific first.
 var RUN_SIGNATURES = [
+  // M3 (D6): the authored RPO / QB-run family — most-specific, so they win
+  // before the generic counter/draw/zone matches below.
+  [/zone read/i, "zoneread"], [/rpo glance/i, "rpoglance"], [/rpo bubble/i, "rpobubble"],
+  [/qb draw/i, "qbdraw"], [/qb counter/i, "qbcounter"],
   [/triple option/i, "triple"], [/speed option|\boption\b/i, "option"], [/jet/i, "jet"],
   [/reverse/i, "reverse"], [/toss|pitch/i, "toss"], [/sweep|pin-and-pull|buck/i, "sweep"],
   [/counter/i, "counter"], [/qb power/i, "qbpower"], [/\bpower\b|\bdart\b|wildcat/i, "power"],
@@ -542,7 +546,14 @@ var _RUN_PARAM = {
   sweep: { gap: 0.34, stretch: 0.28, pull: true }, toss: { gap: 0.36, stretch: 0.30, pitch: true },
   jet: { gap: 0.38, stretch: 0.30, jet: true }, reverse: { gap: -0.34, stretch: 0.30, jet: true },
   option: { gap: 0.28, pitch: true, qb: true }, triple: { gap: 0.26, pitch: true, qb: true },
-  qbpower: { gap: 0.18, qb: true, pull: true }
+  qbpower: { gap: 0.18, qb: true, pull: true },
+  // M3 (D6): the authored family's own pictures (#45). `keep` draws the QB's
+  // dashed keep path out the backside; `route` attaches the tagged throw.
+  zoneread: { gap: 0.10, keep: true },
+  rpoglance: { gap: 0.10, route: "slant" },
+  rpobubble: { gap: 0.26, stretch: 0.20, route: "bubble" },
+  qbdraw: { gap: 0.10, delay: true, qb: true },
+  qbcounter: { gap: 0.22, pull: true, counter: true, qb: true }
 };
 // A run diagram tailored to the concept: the ball-carrier's path to his gap
 // (with a stretch, delay, or counter step where the concept calls for it) plus
@@ -615,6 +626,39 @@ function _runCardFromLayout(rtype, p, layout, o, W, H) {
   if (p.pitch && !carrierIsQB) {
     // the QB opens and pitches to the drawn carrier
     extras += `<line x1="${_fmt(qx)}" y1="${_fmt(qy)}" x2="${_fmt(startX)}" y2="${_fmt(startY)}" class="run-card-pitch"/>`;
+  }
+  // M3 (D6, #45): Zone Read's dashed KEEP path — the QB out the BACKSIDE
+  // (away from the give's gap), off the end he is reading.
+  if (p.keep && !carrierIsQB) {
+    const kx = Math.max(10, Math.min(W - 10, sx(0.5) - (gapX - sx(0.5)) - 0.16 * (W - 2 * padX)));
+    const kTop = Math.max(8, H * 0.2);
+    extras += `<path d="M${P(qx, qy)} C ${P(qx, qy + 6)}, ${P(kx, losY + 10)}, ${P(kx, Math.max(10, kTop + 6))} L ${P(kx, kTop)}" class="run-card-keep"/>` +
+      `<polygon points="${_fmt(Math.max(6, kx - 4))},${_fmt(kTop + 5)} ${_fmt(Math.min(W - 6, kx + 4))},${_fmt(kTop + 5)} ${_fmt(kx)},${_fmt(Math.max(3, kTop - 3))}" class="run-card-keep-arrow"/>`;
+  }
+  // M3 (D6, #45): the RPO's tagged throw route riding the run card — the
+  // glance breaks inside off the nearest backside receiver, the bubble
+  // swings the widest slot flat toward the numbers.
+  if (p.route && wides.length) {
+    const isBubble = p.route === "bubble";
+    const pick = isBubble
+      ? wides.slice().sort((a, b) => Math.abs(b.x - 0.5) - Math.abs(a.x - 0.5))[0]
+      : wides.slice().sort((a, b) => Math.abs(a.x - 0.5) - Math.abs(b.x - 0.5))[0];
+    if (pick) {
+      const rx = sx(pick.x), ry = sy(pick.y);
+      let rd, ax, ay;
+      if (isBubble) {
+        ax = rx + (pick.x >= 0.5 ? 1 : -1) * 0.12 * W;
+        ay = Math.min(H - 8, ry + 7);
+        rd = `M${P(rx, ry)} C ${P(rx + (pick.x >= 0.5 ? 8 : -8), ry + 8)}, ${P(ax, ay + 3)}, ${P(ax, ay)}`;
+      } else {
+        ax = rx + (pick.x >= 0.5 ? -1 : 1) * 0.1 * W;
+        ay = Math.max(8, losY - H * 0.24);
+        rd = `M${P(rx, ry)} L ${P(rx + (pick.x >= 0.5 ? -3 : 3), ry - 5)} L ${P(ax, ay)}`;
+      }
+      const [cax, cay] = cl(ax, ay);
+      extras += `<path d="${rd}" class="run-card-route"/>` +
+        `<circle cx="${_fmt(cax)}" cy="${_fmt(cay)}" r="2.4" class="run-card-route-arrow"/>`;
+    }
   }
   let jobs = "";
   if (o.jobs) {
@@ -772,17 +816,28 @@ function playAssignments(entry, opts) {
     let carrier = null;
     if (!p.qb && backs.length) carrier = jet ? null : backs.find((s) => !isFB(s)) || backs[0];
     if (jet) carrier = wides.slice().sort((a, b) => Math.abs(b.x - 0.5) - Math.abs(a.x - 0.5))[0] || backs[0] || null;
-    const qbJob = p.qb ? (p.pitch ? `reads the edge — keeps at the ${gw} or pitches off the defender` : `takes it himself, downhill at the ${gw}`)
+    const qbJob = p.qb ? (p.pitch ? `reads the edge — keeps at the ${gw} or pitches off the defender` : p.delay ? "shows pass, then tucks it and slips out on the draw himself" : `takes it himself, downhill at the ${gw}`)
+      : p.keep ? "rides the mesh and reads the backside end — gives, or keeps out the grass the end left"
+      : p.route ? "reads the conflict defender at the mesh — give, keep it himself, or throw the tagged route now"
       : p.pitch ? "opens and pitches off the edge defender"
       : p.delay ? "shows pass, then slips the ball to the back on the draw"
       : "opens, hands it off, carries out the fake";
     if (q) rows.push({ label: q.label || "QB", pos: "QB", job: qbJob });
+    // M3: the RPO's tagged-route receiver — same pick the card draws.
+    let routeMan = null;
+    if (p.route && wides.length) {
+      routeMan = p.route === "bubble"
+        ? wides.slice().sort((a, b) => Math.abs(b.x - 0.5) - Math.abs(a.x - 0.5))[0]
+        : wides.slice().sort((a, b) => Math.abs(a.x - 0.5) - Math.abs(b.x - 0.5))[0];
+    }
     for (const s of skill) {
       let job;
       if (s === carrier || !carrier && !p.qb && s === backs[0]) {
         job = p.delay ? `waits on the delay, then hits the ${gw}` : p.stretch ? `stretches the front and presses the ${gw}` : `presses the ${gw} and reads the first block`;
         if (jet) job = `comes in motion, takes the handoff at full speed for the ${gw}`;
-      } else if (BACKS.includes(s.pos)) job = p.lead ? "leads through the hole and takes on the first color" : p.pitch ? "keeps the pitch relationship off the QB's hip" : "blocks the first man off the edge";
+        if (p.keep || p.route) job = `takes the mesh if the read says give and presses the ${gw}`;
+      } else if (s === routeMan) job = p.route === "bubble" ? "swings flat for the bubble — the throw half of the option" : "runs the glance behind the conflict man — the throw half of the option";
+      else if (BACKS.includes(s.pos)) job = p.lead ? "leads through the hole and takes on the first color" : p.pitch ? "keeps the pitch relationship off the QB's hip" : "blocks the first man off the edge";
       else if (s.pos === "TE") job = "blocks down and seals the edge";
       else job = "stalk-blocks the man over him";
       rows.push({ label: s.label, pos: s.pos, job });

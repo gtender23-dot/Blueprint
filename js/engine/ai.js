@@ -52,6 +52,28 @@ function aiConceptWeights(bucket, qbArch, wrDeepBias, teStr, wrStr, isOptionTeam
     set(["PA Deep Cross"], 80);
     set(["Mesh", "Four Verts", "Dagger", "Shallow Cross"], 22);
   }
+  // ── M3 (D6, 2026-08-17): the authored RPO / QB-run family, keyed to the
+  // ARCHETYPE (ratified law §7.3). A scrambler's staff builds the offense on
+  // it; a dual QB features it; a pocket passer's staff still runs the RPO
+  // give/throw game at volume but shelves the designed QB runs.
+  if (qbArch === "QB-Scrambler") {
+    set(["Zone Read", "QB Draw"], 90);
+    set(["QB Counter"], 82);
+    set(["RPO Glance", "RPO Bubble"], 78);
+    set(["QB Power"], 68);
+  } else if (qbArch === "QB-Dual") {
+    set(["Zone Read"], 72);
+    set(["QB Draw"], 65);
+    set(["QB Counter"], 55);
+    set(["RPO Glance", "RPO Bubble"], 66);
+  } else {
+    set(["Zone Read", "QB Draw", "QB Counter"], 10);
+    set(["RPO Glance", "RPO Bubble"], 48);
+    // A statue's staff shelves QB Power too — the run-heavy bucket features
+    // it above, which is right only when the QB can carry (option teams
+    // keep theirs: the 'bone runs power off the same bodies regardless).
+    if (!isOptionTeam && w["QB Power"] != null) w["QB Power"] = Math.min(w["QB Power"], 25);
+  }
   return w;
 }
 // ── PASS 6: AI-authored formation sheets (the pass-2 "remaining half") ──────
@@ -182,11 +204,17 @@ function setAIGameplan(school) {
   if (!globalThis.__no335 && stackLean > 4) defBaseFront = "3-3-5";
   const primaryFormation = ((_a = offFormations[0]) == null ? void 0 : _a.id) || "Single Back";
   const isOptionTeam = primaryFormation === "Flexbone" || primaryFormation === "Wishbone";
+  // ── M3 (D6, 2026-08-17, ratified §7.3 — design law): the QB-run dial keys
+  // on the ARCHETYPE, never absolute speed. Three talent levels live in one
+  // game — a 63 SPD is fast in D3 and slow in D1 — and the derived archetype
+  // is tier-relative by construction, so the label means the same thing in
+  // every division. The dial now prices the AUTHORED family's call rate (the
+  // organic dice are dead, sim.js §7.1).
   let qbRunPct = 0;
-  if (isOptionTeam) qbRunPct = randInt3(5, 12);
-  else if (primaryFormation === "Pistol/RPO" && qbSPD > 78) qbRunPct = randInt3(15, 25);
-  else if (primaryFormation === "Spread" && qbSPD > 75) qbRunPct = randInt3(8, 18);
-  else if (qbSPD > 80) qbRunPct = randInt3(5, 12);
+  if (qbArch === "QB-Scrambler") qbRunPct = randInt3(18, 28);
+  else if (qbArch === "QB-Dual") qbRunPct = randInt3(10, 18);
+  else qbRunPct = randInt3(0, 2);
+  if (isOptionTeam) qbRunPct = Math.max(qbRunPct, randInt3(5, 12));
   let optionRate = null, optionMix = null, pitchAggr = null;
   if (isOptionTeam) {
     optionRate = randInt3(60, 85);
@@ -254,7 +282,17 @@ function setAIGameplan(school) {
     // formation the offense actually lives in (the dial multiplies C.RPO_FIT,
     // so under-center teams stay near zero either way); the gadget tier is an
     // aggression call — a river-boat staff runs ~2x the trick plays.
-    rpoRate: primaryFormation === "Pistol/RPO" ? randInt3(45, 60) : primaryFormation === "Spread" || primaryFormation === "Trips/Bunch" ? randInt3(35, 50) : randInt3(20, 40),
+    // M3: RPO volume follows the formation AND the archetype (audit gap #3 —
+    // 7.1% of snaps vs 21.8% real P4). The formation stays the floor of the
+    // identity; a mobile QB's staff leans into the mesh game harder.
+    rpoRate: clamp2(
+      (primaryFormation === "Pistol/RPO" ? randInt3(48, 62) : primaryFormation === "Spread" || primaryFormation === "Trips/Bunch" ? randInt3(38, 52) : randInt3(22, 42)) + (qbArch === "QB-Scrambler" ? 14 : qbArch === "QB-Dual" ? 8 : 0),
+      0,
+      78
+    ),
+    // M3 (§7.6): the keep share of RPO snaps, archetype-keyed (the engine
+    // mobility-scales it again, so a mislabeled statue still never keeps).
+    rpoKeepPct: qbArch === "QB-Scrambler" ? randInt3(10, 15) : qbArch === "QB-Dual" ? randInt3(6, 11) : 0,
     gadgetRate: agg > 0.7 ? randInt3(4, 8) : agg < 0.3 ? randInt3(0, 2) : randInt3(2, 5),
     blitzPct: 15 + Math.round(Math.random() * 20),
     // pressureSource retired (G11, Aug 2026) — normalizeDefGameplan deleted it on

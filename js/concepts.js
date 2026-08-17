@@ -421,6 +421,60 @@ RUN_CONCEPTS = {
     vsBox: { loaded: 0.02, light: 0.02 },
     exec: { OL: { STR: 0.6, TEC: 0.4 }, QB: { STR: 0.5, AGI: 0.5 } }
   },
+  // ── M3 (D6, 2026-08-17): the authored RPO / QB-run family (#45/#46) ────────
+  // Ratified in Ref/RPO_AUDIT_2026-08-16.md §7. These five are REAL plays with
+  // their own art, blurbs and resolution seams — never "any run becomes a QB
+  // run" (the QB_RUN_BASE dice are retired to a broken-play floor in sim.js).
+  //
+  // Zone Read — the RPO+QB-run type's designed keep (#46): inside-zone give
+  // with the backside edge read. `zoneRead` routes the snap through the edge-
+  // key read in simulateDrive: give = IZ to the back, keep = the QB out the
+  // backside where the crashing end vacated. edgePlay contain / optionKey=qb
+  // starve the keep; crash feeds it.
+  "Zone Read": {
+    type: "run_inside",
+    zoneRead: true,
+    vsBox: { loaded: -0.01, light: 0.04 },
+    exec: { OL: { TEC: 0.6, AGI: 0.4 }, QB: { AWR: 0.6, SPD: 0.4 }, RB: { AWR: 0.5, AGI: 0.5 } }
+  },
+  // RPO Glance / RPO Bubble — the authored versions of the old bolt-on tags,
+  // with their own cards/routes. `rpo.always` makes the CALL an RPO every
+  // snap (no volume dice); the conflict read prices give/throw, and the M3
+  // keep phase (gameplan.rpoKeepPct, mobility-scaled) prices the QB pull-and-
+  // run — the three-way read of #46.
+  "RPO Glance": {
+    type: "run_inside",
+    rpo: { tag: "glance", conflict: "STACKER", always: true, keep: true },
+    vsBox: { loaded: -0.01, light: 0.03 },
+    exec: { QB: { AWR: 0.6, TEC: 0.4 }, OL: { TEC: 0.6, AGI: 0.4 }, RB: { AWR: 0.5, AGI: 0.5 } }
+  },
+  "RPO Bubble": {
+    type: "run_outside",
+    rpo: { tag: "bubble", conflict: "OVERHANG", always: true, keep: true },
+    vsBox: { loaded: -0.02, light: 0.04 },
+    exec: { QB: { TEC: 0.6, AWR: 0.4 }, WR: { AGI: 0.6, SPD: 0.4 }, RB: { AWR: 0.5, SPD: 0.5 } }
+  },
+  // QB Draw — a designed QB run off a pass look: the line shows pass set and
+  // turns it into run blocking, the QB slips out late. `qbDraw` routes it
+  // through the draw sniff/caught-blitz machinery with the QB as the carrier.
+  "QB Draw": {
+    type: "run_inside",
+    qbCarry: true,
+    qbDraw: true,
+    vsBox: { loaded: -0.01, light: 0.04 },
+    exec: { OL: { TEC: 0.6, AGI: 0.4 }, QB: { SPD: 0.5, AGI: 0.5 } }
+  },
+  // QB Counter — the gap-scheme designed QB run (counter bash): backside
+  // guard pulls, the QB follows the kick-out off tackle. Rides the same
+  // qbCarry+pulls machinery QB Power proved.
+  "QB Counter": {
+    type: "run_outside",
+    pulls: true,
+    qbCarry: true,
+    punishes: "crash",
+    vsBox: { loaded: 0.02, light: 0.01 },
+    exec: { OL: { STR: 0.5, AGI: 0.5 }, QB: { AGI: 0.5, AWR: 0.5 } }
+  },
   // PASS 5: true trick plays (bespoke resolvers, gadget tier). Reverse is a
   // run gadget; Flea Flicker / HB Pass live in PASS_CONCEPTS below.
   "Reverse": { resolver: "reverse" },

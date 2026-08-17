@@ -549,7 +549,10 @@ ARCHETYPE_DERIVE = {
     const giLean = axisLean(p, ["AWR"], ["STR"]);
     const armLean = axisLean(p, ["STR"], ["TEC"]);
     if (legLean > -3) return "QB-Scrambler";
-    if (legLean > -9) return "QB-Dual";
+    // M3 (D6, 2026-08-17, ratified §7.4): the Dual band widened −9..−3 →
+    // −14..−3 — the old window held ~2.5% of generated QBs at every tier, so
+    // the middle class of the archetype-keyed AI run rates barely existed.
+    if (legLean > -14) return "QB-Dual";
     if (giLean > 5) return "QB-Game-Manager";
     if (armLean > 5) return "QB-Gunslinger";
     return "QB-Pocket";

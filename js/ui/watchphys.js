@@ -445,8 +445,13 @@ var CONCEPT_ROUTES = {
   "Levels": ["dig", "slant", "slant", "arrow"],
   "Spot": ["corner", "pivot", "flat", "cross"],
   // snag settles/pivots under the corner
-  "Sluggo Seam": ["sluggo", "seam", "outandup", "flat"]
+  "Sluggo Seam": ["sluggo", "seam", "outandup", "flat"],
   // the called double move: slant-and-go + seam, out-and-up backside
+  // ── M3 (D6): the RPO pulls — a run call whose throw half fired. The
+  // glance is the skinny slant behind the bitten backer; the bubble is the
+  // slot swinging flat. (Give/keep snaps script as runs, never here.)
+  "RPO Glance": ["slant", "hitch", "seam", "arrow"],
+  "RPO Bubble": ["go", "arrow", "slant", "flat"]
 };
 var DEPTH_ROUTES = {
   pass_short: ["slant", "quickout", "hitch", "cross"],
@@ -512,7 +517,18 @@ var RUN_SCHEMES = {
   // QB Power: backside guard pulls, QB follows him downhill.
   "QB Power": { gap: 7, pull: "lead", press: 2.2, wide: false },
   // QB Sneak: straight into the center's push — no lateral press at all.
-  "QB Sneak": { gap: 2, press: 3.5, wide: false }
+  "QB Sneak": { gap: 2, press: 3.5, wide: false },
+  // ── M3 (D6): the authored RPO / QB-run family (#45) ──
+  // Zone Read scripts off the give/keep the sim recorded (the carrier slot
+  // decides which body runs it); the give is inside zone, the keep bounces
+  // to the vacated backside — runDir carries which.
+  "Zone Read": { gap: 6, stretch: 0.35, press: 3, wide: false },
+  "RPO Glance": { gap: 6, stretch: 0.35, press: 3, wide: false },
+  "RPO Bubble": { gap: 16, stretch: 1, press: 2.6, wide: true },
+  // QB Draw: a beat of pass-set patience, then downhill through the middle.
+  "QB Draw": { gap: 4, press: 1.6, wide: false },
+  // QB Counter: the pulled kick-out, off tackle with a misdirection step.
+  "QB Counter": { gap: 11, pull: "lead", press: 2, wide: true, misdir: true }
 };
 var RUN_ALIAS = { "Wildcat Power": "Power", "Triple Option": "Inside Zone", "Speed Option": "Outside Zone", "Reverse": "Outside Zone" };
 function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {

@@ -1,19 +1,166 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-17 session (D8 · M5 GAME-PLAN HOME + SEASONS — the
-Plan Home tab, embedded editable playbooks with push-to-Workshop restamp,
-the defensive identity panel, collapsed look graphics (#3), season-setup
-book pickers (#27), recruiting settings stripped from Season Mode (#29) —
-BUILT + NODE-GATED, browser tier owed; the DIAL-REDISTRIBUTION MAP in the
-D8 entry AWAITS OWNER SIGN-OFF. Same window: D9 · M5 DEFBOOK CLOSE-OUT —
-bring-3 sim audit clean + probe-pinned, the 2026-08-15 defbook-v2 probe
-debt PAID; D6 (M3 RPO) is LIVE in this tree — see the shared-file notes in
-both entries.) Prior: 2026-08-16 session (D4 · M2 PRESENTATION HALF; M2 is
-BUILT END TO END (D3 engine + D4 presentation). Earlier this window: D3 ·
-M2 engine half; D7 · M4 watch/time controls; D2 · M1 bench; D5 · M3 audit
-RATIFIED.) Plan of record: BUILD ORDER v2 (2026-08-17), dispatch prompts
-in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+Last updated: **2026-08-17 session (D6 · M3 BUILD — the authored RPO /
+QB-run family per the RATIFIED audit: five authored plays with their own
+art (#45), the three-way give/keep/throw read (#46), THE DICE ARE DEAD,
+archetype-keyed AI rates at the audit's targets, clean-pocket scramble,
+widened Dual band, counters verified biting — BUILT + NODE-GATED,
+`rpo_probe` 60/0 ×3 in CORE, browser tier owed; new entry below. **M3 IS
+BUILT** — with D8/D9 this window, every milestone M0–M5 now has its build
+session in. Same window earlier: D8 · M5 plan home (dial map STILL awaits
+owner sign-off) · D9 · M5 defbook close-out — D9's card_lint blurb flag on
+D6's in-flight concepts is RESOLVED in this session, card_lint 21/0 ×3.)
+Prior: D4 · M2 presentation; D3 · M2 engine; D7 · M4; D2 · M1; D5 · M3
+audit RATIFIED. Plan of record: BUILD ORDER v2 (2026-08-17), dispatch
+prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+
+## 2026-08-17 — D6 · M3 BUILD (the authored RPO / QB-run family · the dice are dead · archetype-keyed rates · clean-pocket scramble)
+## BUILT + NODE-GATED — ⚠ BROWSER TIER OWED
+
+**OWNER CHECKLIST**
+- **Browser eyeball (the D6 browser-owed), all on the M1 bench + a live
+  game:** (1) Workshop → Playbook Builder → a Spread or Pistol book: the
+  five new cards — **Zone Read** (give path + the dashed QB keep out the
+  backside), **RPO Glance** / **RPO Bubble** (run picture + the blue tagged
+  route), **QB Draw** (delay path, QB carrying), **QB Counter** (pull +
+  counter step, QB carrying) — each ℹ big card lists all eleven jobs with
+  the mesh-read language, each has a blurb. (2) 🧪 each on the bench vs a
+  picked front/coverage/bring: Zone Read shows BOTH phases across reps
+  (keep ~4 in 10 vs a balanced edge), RPO shows give/pull(throw), the pre-
+  snap overlay draws the authored design. (3) A live game vs a scrambler-QB
+  opponent: their box score should show a real QB run game (~8–12 designed
+  + ~8–12% scrambles); your own pocket-QB teams should essentially never
+  keep organically any more. (4) Game Plan → the QB Run dial now prices the
+  FAMILY's call volume (dial 0 ⇒ the family nearly never comes up; dial it
+  up ⇒ featured) — sanity-feel it.
+- **Playwright tier locally** (chromium cannot download in this sandbox —
+  standing): `node tools/build.mjs` + `node tools/_boot_check.mjs
+  dist/index.html`, then the core gate — `rpo_probe` is now in CORE
+  (seedFlaky: unseeded full-game sims, ~65s).
+- **The audit's ledgered brain-research item stands** (D5 entry): the
+  target bands remain provisional (PFF/ESPN/FantasyPoints anchors,
+  college-higher inference). Two D6 notes for that research pass: (a) the
+  WIDENED Dual class (−14..−3) is physically slower than the audit's
+  "dual" archetype presumed — its scramble share lands ~3.5–4.5% vs the
+  5–8% band (probe bands padded accordingly, everything else in band);
+  (b) pocket "designed" ≈1.4/g includes the broken-play floor keeps +
+  Empty-formation keeps (~0.5), so true designed calls sit ≈0.9 vs the 0–1
+  target.
+- **stat_realism note (good news):** the standing "rush low" flag (140.2)
+  is HEALED by the QB run game — 151.0 this session, in range. Comp% 56.7
+  remains the one standing flag (NOTHING new).
+- Standing debt unchanged: act B/D local scrub + full local gate + a green
+  night run before the next deploy; M4 phone eyeball; M1 first bench
+  session; D4/D8 browser eyeballs; D8 dial map sign-off.
+
+**What shipped (js/ + style.css + tools/; the ratified §7 point by point):**
+- **THE AUTHORED FAMILY (#45, §7.7 — all five in v1).** concepts.js: `Zone
+  Read` (zoneRead, run_inside), `RPO Glance` (rpo glance/STACKER,
+  always+keep), `RPO Bubble` (rpo bubble/OVERHANG, always+keep, outside),
+  `QB Draw` (qbCarry+qbDraw), `QB Counter` (qbCarry+pulls+punishes crash).
+  vsBox grades all sit INSIDE the pre-M3 catalog band (probe-pinned band
+  clamp). FORMATION_PLAYBOOK carries them in Spread / Pistol / Trips (all
+  five) + Air Raid (the pass-first three); never in option/under-center
+  books. The shared fits-function speaks them (QB Draw/Counter need no
+  back — Empty QB Draw is real; Bubble needs two wides; reads need a back).
+- **THE THREE-WAY READ + THE DICE KILL (#46, §7.1/§7.6).** sim.js: an
+  authored call is NEVER hijacked by the organic option/jet/draw/gadget
+  dice (the call is the play). `Zone Read` runs a real backside-edge read
+  (keyed off the DE: crash ⇒ KEEP out the vacated edge, sit ⇒ give;
+  read-win vs the key's AWR/optionSound; wrong reads run into the crash) —
+  keep ≈37% vs balanced fronts, starved by contain/optionKey=qb. RPO snaps
+  gained the KEEP phase: on a clean give read, `gameplan.rpoKeepPct`
+  (archetype-keyed by AI, mobility-scaled in-engine so a statue never
+  keeps, answered by contain/spy/key) converts the give to a QB pull-and-
+  run through the option-keep run math. An authored RPO (`rpo.always`) IS
+  an RPO every snap — no volume dice. **QB_RUN_BASE retired to
+  C.QB_RUN_FLOOR (1.5% broken-play keeps), Empty's 1.0 exception stays;
+  the dial no longer feeds dice** — `__qbDiceLegacy` restores the whole
+  old block for the A/B (organic keeps 41% → 1.8% of handoffs, probe S3).
+  The qbRunPct dial now prices the FAMILY: unset sheet entries default off
+  the dial and every entry scales with it (weight-space, one knob for AI
+  archetype rates and the human Game Plan dial alike).
+- **ARCHETYPE-KEYED AI + THE WIDENED DUAL (§7.3/§7.4 — the design law).**
+  ai.js: qbRunPct 18–28 scrambler / 10–18 dual / 0–2 pocket (option teams
+  floor 5–12) — the SPD>75 absolute gate is dead; rpoRate keeps the
+  formation floor + an archetype bump; rpoKeepPct 10–15 / 6–11 / 0;
+  aiConceptWeights features the family by archetype (scrambler 90s, dual
+  60s–70s, pocket 10 + QB Power capped 25 for non-option statue teams).
+  player.js: Dual legLean −9..−3 → **−14..−3** (class ~2.5% → 3.4–5.4% of
+  QBs, alive at every tier, probe-pinned tier-stable).
+- **THE CLEAN-POCKET SCRAMBLE (§7.5, coverage-conditioned).** sim.js: a
+  4th scramble rung — pocket CLEAN, nobody open (its own looser
+  separation line, chance scaling with how covered the field is), the QB
+  takes off into the grass the droppers left: family grass factor
+  (Prevent 1.6 ×, two-high 1.25×, blitz looks 0.5×), spy/optionKey
+  tighten, mobility-scaled. `qbScrambleChance` re-anchored on the LEAN
+  with a soft knee (tier-relative — a D3 scrambler scrambles like a D1
+  scrambler, ratio probe-pinned ≤1.35 across tiers); `__noCleanScramble`
+  kills the rung. League scrambles stay ~80% pressure-coupled (PFF ~75%).
+- **CARDS / VIEWER / HELP (#45's "own routes").** routeart.js: five new
+  run signatures + params — Zone Read draws the dashed QB keep path,
+  RPO cards draw the tagged route (glance slant / bubble swing, new
+  `.run-card-keep`/`.run-card-route` CSS), QB Draw/Counter draw QB-carry
+  paths; `playAssignments` speaks the mesh reads for all eleven (no
+  digits). watchphys.js: RUN_SCHEMES entries for the five + pull-throw
+  routes for RPO Glance/Bubble (additive; byte-laws untouched — probe
+  FULLY GREEN). conceptblurbs.js: five digit-free blurbs (resolves D9's
+  observed card_lint C6 flag). Bench: all five run as THEMSELVES vs picked
+  front/coverage/bring, seeded-repeat byte-identical; Zone Read shows both
+  phases across seeds (41 keep / 66 give over 120).
+
+**BEFORE → AFTER (the dispatch's rate tables; BEFORE = the audit §2
+600-game table on the pre-M3 tree, AFTER = this tree, 500 games / 1,000
+team-games, same harness — `tools/rpo_audit_probe.mjs`, now family-aware):**
+
+| per team-game (starter bucket) | scrambler B→A | dual B→A | pocket B→A | target (§5C) |
+|---|---|---|---|---|
+| designed QB runs (no sneaks) | 4.2 → **8.2** | 5.6 → **7.2** | 3.3 → **1.5** | 8–12 / 5–8 / 0–1 |
+| — QB Power / Draw / Counter / ZR keep | .95/—/—/— → 2.4/1.9/2.7/0.9 | | 0.5/0.2/0.2/0.1 | authored, never dice |
+| — organic dice keeps | 2.85 → **0.17** | 3.54 → 0.19 | 2.22 → **0.32** | broken-play floor |
+| scrambles (% of dropbacks) | 3.4% → **12.1%** | 1.5% → 3.9% | 0.6% → **2.2%** | 8–12 / 5–8 / 1–3 |
+| — clean-pocket share of scrambles | 0 → ~20% (league) | | | ~25% (75% pressure-coupled, PFF) |
+| RPO share of snaps, RPO-FIT formations | ~13% → **20.2%** | → 17.3% | → **14.6%** | 20–30 / 15–25 / 8–15 |
+| RPO throw (pull) rate | 24.2% → 20–23% | | | ~25% — preserved, untouched |
+| RPO keep share of RPO snaps | 0 → **12.3%** | 0 → 4.2% | 0 → **0.0%** | 10–15 / 5–10 / ~0 |
+| QB rush yds/att · att/g | 6.5·7.9 → 6.8·15.2 | | 4.3·5.4 → 4.5·4.0 | ypc holds ~6, audit §5E |
+
+Archetype spread on designed runs: **1.3× before → 5.9× after** (real 5–10×
+— audit gap #1 dead). Zone Read keep share 37–41% balanced, 17% under
+contain. Dual's two under-band cells are the widened-class dilution —
+ledgered in the checklist for the brain-research pass.
+
+**Counters verified (§5D, probe S5, 80+80 games forced-defense A/B):**
+spy+key+contain: scrambles 5.1% → 1.9% of db · RPO keep share 4.8% → 1.3% ·
+Zone Read keep 31.9% → 17.1% · organic RPO volume 17.4% → 12.9% (fit-share);
+`rpoConflictRead` seenRPO rep-suppression accrues (biteP .390 → .270);
+weekly reaction answers oppQBRun≥15 with optionKey=qb + zone 12/12.
+
+**Gate (this sandbox, node):** new **`rpo_probe` 60/0 ×3** (registered in
+CORE, seedFlaky — S1 family statics/band clamp/gate/fits/blurbs/cards ·
+S2 archetype tier laws · S3 dice-dead A/B · S4 per-archetype bands ·
+S5 counters · S6 keep-dial law). Band battery ×3 green: `tendency_probe`
+monotonic ✅✅✅ · `play_fidelity_probe` ALL GREEN (18) ×3 ·
+`compile_league_probe` 26/0 ×3 · `integration_creator_probe` 19/0 ×3 ·
+`save_migration_check` ALL PASS ×3. **`stat_realism_harness` N=500 RAN
+HERE:** rush 151.0 (standing low flag HEALED), comp% 56.7 (the one
+standing flag), INT% 2.07 OK — NOTHING new. Re-proof ×3 on the new
+surfaces: `card_lint_probe` 21/0 (D9's blurb flag resolved) ·
+`bench_probe` 34/0 · `play_compose_probe` 33/0. Re-proof ×1: `defcall`
+32/0 · `live_book_call` PASS · `record_call` PASS · `watchphys_probe`
+FULLY GREEN · `draw_up` 21/0 · `look_sheet` 44/0 · `playbook_shape` 28/0.
+Clean esbuild build (all sanity checks PASS, 3726 KB — built in /tmp, the
+mount forbids dist/ deletion; outputs copied back) + bundle syntax parse
+(2 blocks) + CSS braces balanced. **PW tier owed** (chromium download
+blocked here): boot check + UI smokes.
+
+**Shared-file note (commit scoping, parallel D8/D9 this window):** D9
+committed its sim.js rush3DroppedIds hunk via single-hunk stage and left
+my M3 hunks in the working tree as agreed (its entry) — this commit
+carries them. `_gate_manifest.mjs` working diff at commit time was
+exclusively my rpo_probe entry. `tools/_build_inplace_tmp.mjs` +
+`tools/_gate_last.json` (runner state) left uncommitted — not mine.
 
 ## 2026-08-17 — D8 · M5 GAME-PLAN HOME + SEASONS (embedded editable books · push-to-Workshop restamp · def identity panel · dial map · season pickers)
 ## BUILT + NODE-GATED — ⚠ BROWSER TIER OWED · ⚠ DIAL MAP AWAITS SIGN-OFF

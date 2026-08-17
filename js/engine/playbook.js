@@ -79,7 +79,11 @@ function filterConceptsForPersonnel(list, pkg, { custom = false } = {}) {
     if (rc) {
       if (custom && (nm === "Wildcat Power" || nm === "Jet Sweep")) return false; // need slots/motion structure customs don't author
       if ((nm === "Triple Option" || nm === "Speed Option") && backs < 2) return false;
-      if (nm === "QB Sneak" || nm === "Draw" || nm === "QB Power") return true;
+      // M3: the authored family's personnel truths — the QB runs need no
+      // back (Empty QB Draw is real football), the bubble needs a second
+      // wide body to throw to, the reads need a back to option off.
+      if (nm === "QB Sneak" || nm === "Draw" || nm === "QB Power" || nm === "QB Draw" || nm === "QB Counter") return true;
+      if (nm === "RPO Bubble" && wide < 2) return false;
       return backs >= 1;
     }
     return false;

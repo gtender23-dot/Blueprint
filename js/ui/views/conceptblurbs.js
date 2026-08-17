@@ -69,6 +69,12 @@ var CONCEPT_BLURBS = {
   "QB Sneak": "The QB surges behind the center's wedge · short yardage by the shortest path · bodies on bodies — nothing is promised past a yard.",
   "QB Power": "Power blocking with the QB keeping it · the back's fake adds a hat the box never counted · your quarterback takes interior hits.",
   "Wildcat Power": "The back takes the snap himself and follows power · an extra blocker where the QB used to stand · with no pass threat, everyone plays the run.",
+  // ── the authored RPO / QB-run family (M3) ────────────────────────────────
+  "Zone Read": "Inside zone with the backside end left unblocked · the QB reads him — crash means keep out the space he left, sit means give · a disciplined edge makes it a plain handoff.",
+  "RPO Glance": "Inside zone tied to a quick slant behind the box backer · his first step answers it — bite means throw, hold means give, and a runner can pull it and go · a backer who sits honest takes the easy answer away.",
+  "RPO Bubble": "Wide zone tied to a bubble swinging off the slot · the overhang can't defend both the run and the throw · a corner squatting on the bubble turns it into a plain run.",
+  "QB Draw": "The line shows pass and the QB slips out late · the rush charges upfield past a runner they forgot · a spy or a patient backer is standing in the lane.",
+  "QB Counter": "Down blocks with a puller kicking out — and the QB carrying · the fake to the back holds the pursuit a step · your quarterback is the man taking the hits off tackle.",
   "Reverse": "The sweep hands off backward against the grain · the defense's pursuit becomes the blocking · if the backside stays home it's a huge loss.",
   "Jet Sweep": "A receiver at full sprint takes the snap-second handoff · the edge is attacked before the defense can set it · easy to chase down from behind if the seal slips.",
   "Triple Option": "Dive, keep, or pitch — read men, don't block them · the unblocked defenders are always wrong · every exchange is a fumble waiting on a mistake.",
