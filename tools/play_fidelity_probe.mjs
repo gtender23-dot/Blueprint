@@ -182,7 +182,12 @@ hdr('R1 — the routes that run are the routes you called');
     if (!Array.isArray(c.routes) || !c.routes.length || c.routes.some((r) => !SHAPES.has(r))) { badSpecs++; console.log(`    bad spec: ${nm} → ${JSON.stringify(c.routes)}`); }
   }
   check(badSpecs === 0, `every declared route spec is duel-valid (bad: ${badSpecs})`);
-  const { real } = forcedSnap('Spread', { concept: 'Spot' });
+  // Unseeded RNG: a pre-snap penalty on the lone forced snap leaves no real
+  // record (observed 2026-08-16 — fail/pass flipped on an identical tree).
+  // Retry the snap, the same trick viewer_act_b_probe uses.
+  let got = forcedSnap('Spread', { concept: 'Spot' });
+  for (let i = 0; i < 4 && !got.real.length; i++) got = forcedSnap('Spread', { concept: 'Spot' });
+  const { real } = got;
   check(real.length === 1 && real[0].concept === 'Spot', `the record carries the called name for the viewer to draw (${real[0] && real[0].concept})`);
 }
 

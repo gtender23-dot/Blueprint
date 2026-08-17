@@ -55,9 +55,20 @@ hdr('L1 — every layout: pointer resolves to a lawful authored row');
       const out = variationLayoutSlots(base.slots, vd.layout);
       if (!out) { unmoved++; console.log(`    NO-OP: ${vd.layout}`); continue; }
       if (JSON.stringify(base.slots) !== baseJson) drift++;
+      // Identity law, amended for the M0 card linter (2026-08-16): slot IDS,
+      // ORDER and CATCH eligibility are eternal (the record's carrier/target
+      // stamps resolve by id), but an authored move may RE-DRESS the body it
+      // moves (pos/label/role) so the look draws its pkg's personnel — the
+      // Diamond wing draws as an FB, Ace's tightened slot as a TE. OL and QB
+      // may never be re-dressed, and only slots the row actually MOVES may
+      // change dress.
       const same = out.length === base.slots.length && out.every((s, i) => {
         const b = base.slots[i];
-        return s.id === b.id && s.pos === b.pos && s.role === b.role && !!s.catch === !!b.catch && s.label === b.label;
+        if (s.id !== b.id || !!s.catch !== !!b.catch) return false;
+        const movedRow = (row.moves || {})[b.id];
+        if (!movedRow) return s.pos === b.pos && s.role === b.role && s.label === b.label;
+        if (b.pos === 'OL' || b.pos === 'QB') return s.pos === b.pos;
+        return true; // moved skill body: dress may change with the look
       });
       if (!same) { badSlot++; console.log(`    IDENTITY DRIFT: ${vd.layout}`); }
     }

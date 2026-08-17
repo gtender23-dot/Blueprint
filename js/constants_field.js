@@ -194,9 +194,12 @@ DEF_FIELD_LAYOUTS = {
       { id: "LB_I1", pos: "LB", label: "ILB", x: 0.4, y: 0.44, role: "LB-Thumper" },
       { id: "LB_I2", pos: "LB", label: "ILB", x: 0.6, y: 0.44, role: "LB-Cover" },
       { id: "OLB_R", pos: "OLB", label: "ROLB", x: 0.84, y: 0.52, role: "OLB-Rush" },
-      { id: "DE_L", pos: "DE", label: "DE", x: 0.34, y: 0.74, role: "DE-Power" },
+      // #31: end labels are side-explicit (LE/RE) on EVERY front — the 4-3
+      // family already was; the odd fronts said "DE"/"4i" and the Defensive
+      // Playbook diagrams read inconsistent card to card.
+      { id: "DE_L", pos: "DE", label: "LE", x: 0.34, y: 0.74, role: "DE-Power" },
       { id: "DT_N", pos: "DT", label: "NT", x: 0.5, y: 0.76, role: "DT-NT" },
-      { id: "DE_R", pos: "DE", label: "DE", x: 0.66, y: 0.74, role: "DE-Power" }
+      { id: "DE_R", pos: "DE", label: "RE", x: 0.66, y: 0.74, role: "DE-Power" }
     ]
   },
   // ── Sub packages + heavy fronts (Aug 2026, realistic-fronts wave) ─────────
@@ -249,10 +252,10 @@ DEF_FIELD_LAYOUTS = {
       { id: "OLB_J", pos: "OLB", label: "JACK", x: 0.16, y: 0.5, role: "OLB-Blitz", mesh: "OVERHANG" },
       { id: "LB_M", pos: "LB", label: "MIKE", x: 0.46, y: 0.42, role: "LB-Thumper", mesh: "STACKER" },
       { id: "OLB_C", pos: "OLB", label: "CHAR", x: 0.84, y: 0.55, role: "OLB-Blitz", mesh: "OVERHANG" },
-      { id: "DE_L", pos: "DE", label: "DE", x: 0.3, y: 0.73, role: "DE-Power" },
+      { id: "DE_L", pos: "DE", label: "LE", x: 0.3, y: 0.73, role: "DE-Power" },
       { id: "DT_N", pos: "DT", label: "NT", x: 0.5, y: 0.75, role: "DT-NT" },
       { id: "DT_3", pos: "DT", label: "DT", x: 0.6, y: 0.74, role: "DT-3tech" },
-      { id: "DE_R", pos: "DE", label: "DE", x: 0.72, y: 0.73, role: "DE-Power" }
+      { id: "DE_R", pos: "DE", label: "RE", x: 0.72, y: 0.73, role: "DE-Power" }
     ]
   },
   "5-2": {
@@ -264,11 +267,11 @@ DEF_FIELD_LAYOUTS = {
       { id: "CB_R", pos: "CB", label: "CB", x: 0.94, y: 0.2, role: "CB-Press" },
       { id: "LB_I1", pos: "LB", label: "ILB", x: 0.42, y: 0.46, role: "LB-Thumper", mesh: "STACKER" },
       { id: "LB_I2", pos: "LB", label: "ILB", x: 0.58, y: 0.46, role: "LB-Hybrid", mesh: "STACKER" },
-      { id: "DE_L", pos: "DE", label: "DE", x: 0.24, y: 0.72, role: "DE-Power" },
+      { id: "DE_L", pos: "DE", label: "LE", x: 0.24, y: 0.72, role: "DE-Power" },
       { id: "DT_L", pos: "DT", label: "DT", x: 0.4, y: 0.74, role: "DT-3tech" },
       { id: "DT_N", pos: "DT", label: "NT", x: 0.5, y: 0.755, role: "DT-NT" },
       { id: "DT_R", pos: "DT", label: "DT", x: 0.6, y: 0.74, role: "DT-3tech" },
-      { id: "DE_R", pos: "DE", label: "DE", x: 0.76, y: 0.72, role: "DE-Power" }
+      { id: "DE_R", pos: "DE", label: "RE", x: 0.76, y: 0.72, role: "DE-Power" }
     ]
   }
 ,
@@ -286,9 +289,9 @@ DEF_FIELD_LAYOUTS = {
       { id: "OLB_L", pos: "OLB", label: "STK", x: 0.32, y: 0.46, role: "OLB-Cover", mesh: "STACKER" },
       { id: "LB_M", pos: "LB", label: "MIKE", x: 0.5, y: 0.48, role: "LB-Thumper", mesh: "STACKER" },
       { id: "OLB_R", pos: "OLB", label: "STK", x: 0.68, y: 0.46, role: "OLB-Blitz", mesh: "STACKER" },
-      { id: "DE_L", pos: "DE", label: "DE", x: 0.34, y: 0.73, role: "DE-Power" },
+      { id: "DE_L", pos: "DE", label: "LE", x: 0.34, y: 0.73, role: "DE-Power" },
       { id: "DT_N", pos: "DT", label: "NT", x: 0.5, y: 0.755, role: "DT-NT" },
-      { id: "DE_R", pos: "DE", label: "DE", x: 0.66, y: 0.73, role: "DE-Power" }
+      { id: "DE_R", pos: "DE", label: "RE", x: 0.66, y: 0.73, role: "DE-Power" }
     ]
   }
 ,
@@ -304,9 +307,9 @@ DEF_FIELD_LAYOUTS = {
       { id: "LB_I1", pos: "LB", label: "MIKE", x: 0.42, y: 0.46, role: "LB-Thumper", mesh: "STACKER" },
       { id: "LB_I2", pos: "LB", label: "WILL", x: 0.58, y: 0.46, role: "LB-Cover", mesh: "STACKER" },
       { id: "OLB_K", pos: "OLB", label: "JACK", x: 0.84, y: 0.45, role: "OLB-Blitz", mesh: "OVERHANG" },
-      { id: "DE_L", pos: "DE", label: "4i", x: 0.4, y: 0.73, role: "DE-Power" },
+      { id: "DE_L", pos: "DE", label: "LE", x: 0.4, y: 0.73, role: "DE-Power" },
       { id: "DT_N", pos: "DT", label: "NT", x: 0.5, y: 0.755, role: "DT-NT" },
-      { id: "DE_R", pos: "DE", label: "4i", x: 0.6, y: 0.73, role: "DE-Power" }
+      { id: "DE_R", pos: "DE", label: "RE", x: 0.6, y: 0.73, role: "DE-Power" }
     ]
   },
   "4-4": {
@@ -320,10 +323,10 @@ DEF_FIELD_LAYOUTS = {
       { id: "LB_I1", pos: "LB", label: "MIKE", x: 0.42, y: 0.45, role: "LB-Thumper", mesh: "STACKER" },
       { id: "LB_I2", pos: "LB", label: "WILL", x: 0.58, y: 0.45, role: "LB-Hybrid", mesh: "STACKER" },
       { id: "OLB_B", pos: "OLB", label: "BNDT", x: 0.8, y: 0.48, role: "OLB-Cover", mesh: "OVERHANG" },
-      { id: "DE_L", pos: "DE", label: "DE", x: 0.24, y: 0.72, role: "DE-Speed" },
+      { id: "DE_L", pos: "DE", label: "LE", x: 0.24, y: 0.72, role: "DE-Speed" },
       { id: "DT_1", pos: "DT", label: "DT", x: 0.42, y: 0.74, role: "DT-3tech" },
       { id: "DT_2", pos: "DT", label: "NT", x: 0.58, y: 0.74, role: "DT-NT" },
-      { id: "DE_R", pos: "DE", label: "DE", x: 0.76, y: 0.72, role: "DE-Power" }
+      { id: "DE_R", pos: "DE", label: "RE", x: 0.76, y: 0.72, role: "DE-Power" }
     ]
   },
   "Big Nickel": {
@@ -355,9 +358,9 @@ DEF_FIELD_LAYOUTS = {
       { id: "LB_M", pos: "LB", label: "MIKE", x: 0.5, y: 0.46, role: "LB-Thumper", mesh: "STACKER" },
       { id: "OLB_L", pos: "OLB", label: "EDGE", x: 0.2, y: 0.68, role: "OLB-Rush", mesh: "OVERHANG" },
       { id: "OLB_R", pos: "OLB", label: "EDGE", x: 0.8, y: 0.68, role: "OLB-Rush", mesh: "OVERHANG" },
-      { id: "DE_L", pos: "DE", label: "DE", x: 0.36, y: 0.72, role: "DE-Power" },
+      { id: "DE_L", pos: "DE", label: "LE", x: 0.36, y: 0.72, role: "DE-Power" },
       { id: "DT_N", pos: "DT", label: "NT", x: 0.5, y: 0.755, role: "DT-NT" },
-      { id: "DE_R", pos: "DE", label: "DE", x: 0.64, y: 0.72, role: "DE-Power" }
+      { id: "DE_R", pos: "DE", label: "RE", x: 0.64, y: 0.72, role: "DE-Power" }
     ]
   }
 };
@@ -409,47 +412,74 @@ DEF_DROP_ELIGIBLE = {
 // (routeart.js). resolveOffField keeps reading the BASE table until the
 // engine-side personnel decision lands.
 var VARIATION_LAYOUTS = {
+  // M0 CARD LINTER (2026-08-16): a move may also RE-DRESS the body it moves —
+  // pos/label/role — so the drawn look matches the variation's personnel
+  // package (FORMATION_VARIATIONS pkg). The Diamond's left wing DRAWS as the
+  // FB he is in that look, not as a slot receiver squatting in the backfield
+  // (owner catch #20); Ace's tightened slot draws as the second TE its pkg
+  // names. Presentation-only: slot IDS never change (every recorded
+  // carrier/target stamp still resolves), catch eligibility never changes,
+  // OL/QB are never re-dressed, and resolveOffField still fields BASE
+  // personnel until the M2 pkg-consumption decision. tools/card_lint_probe.mjs
+  // walks every row against the pkg; draw_up_probe pins the id law.
   // Power-I — Big: the split man tightens onto the 3-TE surface (wing right).
-  power_big: { moves: { WR_X: { x: 0.86, y: 0.56 } } },
+  power_big: { moves: { WR_X: { x: 0.86, y: 0.56, pos: "TE", label: "W", role: "TE-Blocking" } } },
   // Power-I — Twins: U flexes out; twins surface right (U slot, X split end).
-  power_twins: { moves: { TE_U: { x: 0.84, y: 0.56 }, WR_X: { x: 0.94, y: 0.5 } } },
+  power_twins: { moves: { TE_U: { x: 0.84, y: 0.56, pos: "SLOT", label: "SL", role: "WR-Slot" }, WR_X: { x: 0.94, y: 0.5 } } },
   // Spread — Trips: the slot crosses the formation; three-man surface right.
   spread_trips: { moves: { WR_S: { x: 0.72, y: 0.56 } } },
-  // Spread — Ace: the slot tightens to a second inline tight surface left,
-  // the back squares up behind the QB.
-  spread_ace: { moves: { WR_S: { x: 0.26, y: 0.5 }, RB_H: { x: 0.5, y: 0.82 } } },
+  // Spread — Ace: 12 personnel, one back — the slot tightens to a second
+  // inline tight surface left, the QB goes UNDER CENTER and the back squares
+  // up at tailback depth. (Was #18: the old row kept the gun QB with the back
+  // stacked directly behind him — a pistol alignment wearing an Ace label.)
+  spread_ace: { moves: { WR_S: { x: 0.26, y: 0.5, pos: "TE", label: "U", role: "TE-Blocking" }, QB: { x: 0.5, y: 0.62 }, RB_H: { x: 0.5, y: 0.84 } } },
   // Air Raid — Empty: the back splits out; five across.
   air_empty: { moves: { RB_H: { x: 0.68, y: 0.58 } } },
   // Air Raid — Tight: condensed splits, everyone inside the numbers.
   air_tight: { moves: { WR_X: { x: 0.16, y: 0.5 }, WR_S: { x: 0.3, y: 0.56 }, WR_F: { x: 0.7, y: 0.56 }, WR_Z: { x: 0.84, y: 0.5 } } },
-  // Pistol — Diamond: the slot folds in as the left wing of a diamond backfield.
-  pistol_diamond: { moves: { WR_S: { x: 0.42, y: 0.76 }, RB_H: { x: 0.5, y: 0.84 } } },
-  // Pistol — Trips: the TE flexes; trips surface right.
-  pistol_trips: { moves: { WR_S: { x: 0.72, y: 0.56 }, TE_Y: { x: 0.83, y: 0.62 } } },
-  // Trips/Bunch — Closed: the bunch condenses onto the tackle.
-  trips_closed: { moves: { WR_S: { x: 0.85, y: 0.56 }, WR_Z: { x: 0.9, y: 0.62 } } },
+  // Pistol — Diamond: a REAL diamond (pkg: FB + TE wings, HB deep) — the slot
+  // folds in as the left wing and draws as the FB the pkg names, the TE is
+  // the right wing (an H-back, football-legal), the back is the deep point,
+  // and Z steps ONTO the line so the formation keeps its lawful 7. (Was #20:
+  // a body drawn as a slot WR squatting in the FB spot, and only 6 on the
+  // line once the TE left it.)
+  pistol_diamond: { moves: { WR_S: { x: 0.42, y: 0.74, pos: "RB", label: "FB", role: "FB-Lead" }, TE_Y: { x: 0.58, y: 0.74 }, WR_Z: { x: 0.94, y: 0.5 }, RB_H: { x: 0.5, y: 0.84 } } },
+  // Pistol — Trips: 10 personnel per its pkg — the TE flexes out as the third
+  // receiver in the trips surface and DRAWS as one; Z holds the line so the
+  // look keeps 7 on it.
+  pistol_trips: { moves: { WR_S: { x: 0.72, y: 0.56 }, TE_Y: { x: 0.83, y: 0.62, pos: "SLOT", label: "FL", role: "WR-Slot" }, WR_Z: { x: 0.94, y: 0.5 } } },
+  // Trips/Bunch — Closed: the bunch condenses onto the tackle; per the pkg
+  // (12 personnel) the point man of the bunch is a second TE wing.
+  trips_closed: { moves: { WR_S: { x: 0.85, y: 0.56, pos: "TE", label: "U", role: "TE-Receiving" }, WR_Z: { x: 0.9, y: 0.62 } } },
   // Trips/Bunch — Open: max splits, the bunch spreads.
   trips_open: { moves: { WR_X: { x: 0.03, y: 0.5 }, WR_S: { x: 0.89, y: 0.56 }, WR_Z: { x: 0.97, y: 0.62 } } },
-  // Single Back — Twins: U flexes wide left, twins with X.
-  sb_twins: { moves: { TE_U: { x: 0.16, y: 0.56 } } },
-  // Single Back — Heavy: U tightens inline, Z tightens to the wing.
-  sb_heavy: { moves: { TE_U: { x: 0.24, y: 0.5 }, WR_Z: { x: 0.86, y: 0.56 } } },
+  // Single Back — Twins: U flexes wide left as a true slot (pkg 11 personnel),
+  // twins with X.
+  sb_twins: { moves: { TE_U: { x: 0.16, y: 0.56, pos: "SLOT", label: "SL", role: "WR-Slot" } } },
+  // Single Back — Heavy: U tightens inline; Z tightens to the wing as the
+  // third TE the pkg names (13 personnel).
+  sb_heavy: { moves: { TE_U: { x: 0.24, y: 0.5 }, WR_Z: { x: 0.86, y: 0.56, pos: "TE", label: "W", role: "TE-Receiving" } } },
   // Empty — Trey: the third slot crosses; TE-anchored three-man surface right.
   empty_trey: { moves: { WR_F: { x: 0.7, y: 0.56 } } },
   // Empty — Wide: everyone stretched to the numbers.
   empty_wide: { moves: { WR_X: { x: 0.03, y: 0.5 }, WR_S: { x: 0.13, y: 0.56 }, WR_F: { x: 0.3, y: 0.56 }, WR_Z: { x: 0.97, y: 0.56 } } },
-  // Wishbone — Heavy: the split end tightens to a wing (2-TE surface).
-  bone_heavy: { moves: { WR_X: { x: 0.14, y: 0.56 } } },
-  // Wishbone — Split: the TE splits out wide right; two true receivers.
-  bone_split: { moves: { TE_Y: { x: 0.92, y: 0.5 }, WR_X: { x: 0.06, y: 0.5 } } },
+  // Wishbone — Heavy: the split end tightens INLINE as the second TE the pkg
+  // names (a wing off the line left the look with only 6 on it).
+  bone_heavy: { moves: { WR_X: { x: 0.21, y: 0.5, pos: "TE", label: "U", role: "TE-Blocking" } } },
+  // Wishbone — Split: the TE splits out wide right as a true receiver (pkg
+  // WR:2 TE:0) and draws as one.
+  bone_split: { moves: { TE_Y: { x: 0.92, y: 0.5, pos: "WR", label: "Z", role: "WR-Deep" }, WR_X: { x: 0.06, y: 0.5 } } },
   // Flexbone — Twirl: the A-backs cheat wide for the twirl motion look.
   flex_twirl: { moves: { RB_H: { x: 0.18, y: 0.6 }, RB_2: { x: 0.82, y: 0.6 } } },
-  // Flexbone — Trips: the left A-back flexes to the slot; trips right.
-  flex_trips: { moves: { RB_H: { x: 0.7, y: 0.56 }, RB_2: { x: 0.84, y: 0.6 } } },
+  // Flexbone — Trips: the left A-back flexes to the slot (pkg RB:1 WR:3) and
+  // draws as the slot receiver he is in that look; trips right.
+  flex_trips: { moves: { RB_H: { x: 0.7, y: 0.56, pos: "SLOT", label: "SL", role: "WR-Slot" }, RB_2: { x: 0.84, y: 0.6 } } },
   // Wildcat — Unbalanced: both tight ends onto the right side.
   wc_unbal: { moves: { TE_U: { x: 0.86, y: 0.5 } } },
-  // Wildcat — Slash: a TE flexes away left; the slash threat spreads the field.
-  wc_slash: { moves: { TE_U: { x: 0.14, y: 0.56 } } },
+  // Wildcat — Slash: the U flexes away left as a split end (pkg TE:1 WR:1),
+  // ON the line so the look keeps its lawful 7; the slash threat spreads the
+  // field.
+  wc_slash: { moves: { TE_U: { x: 0.14, y: 0.5, pos: "WR", label: "X", role: "WR-Deep" } } },
   // Jumbo — Goal Line: everything condenses onto the ball.
   jumbo_gl: { moves: { TE_Y: { x: 0.26, y: 0.5 }, TE_U: { x: 0.74, y: 0.5 }, TE_W: { x: 0.82, y: 0.56 }, FB: { x: 0.5, y: 0.72 }, RB_H: { x: 0.5, y: 0.84 } } },
   // Jumbo — Tackle Over: the strength (Y + wing) shifts over to the right.
@@ -468,7 +498,14 @@ function variationLayoutSlots(baseSlots, layoutKey) {
     const m = row.moves[s.id];
     if (!m) return s;
     moved = true;
-    return { ...s, x: m.x != null ? m.x : s.x, y: m.y != null ? m.y : s.y };
+    const next = { ...s, x: m.x != null ? m.x : s.x, y: m.y != null ? m.y : s.y };
+    // M0 card linter: an authored move may re-dress the body it moves (pos/
+    // label/role) so the look draws its pkg's personnel. IDs and catch
+    // eligibility never change; OL/QB are never re-dressed (probe-pinned).
+    if (m.pos && s.pos !== "OL" && s.pos !== "QB") next.pos = m.pos;
+    if (m.label) next.label = m.label;
+    if (m.role) next.role = m.role;
+    return next;
   });
   return moved ? out : null;
 }

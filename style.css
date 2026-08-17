@@ -5080,9 +5080,33 @@ body.theme-school .data-table tr:hover td {
 }
 .tc-bar .tc-coach:hover, .broadcast-bar .tc-coach:hover { filter: brightness(1.08); }
 
+/* M4 — the 3-level involvement toggle (watch · big moments · every play).
+   A segmented control that leads the transport row everywhere the tc-bar
+   renders (call sheet, def panel, 4th-down panel, live watch strip). */
+.tc-invo-group {
+  display: inline-flex; flex: 1 1 100%; gap: 0; border: 1px solid var(--border, rgba(255,255,255,0.18));
+  border-radius: 8px; overflow: hidden;
+}
+.tc-invo-btn {
+  flex: 1 1 0; min-height: 36px; padding: 7px 6px; font-size: 0.8em; cursor: pointer;
+  background: rgba(0,0,0,0.25); color: var(--text-2, #cfd6df); border: none;
+  border-right: 1px solid var(--border, rgba(255,255,255,0.14));
+}
+.tc-invo-btn:last-child { border-right: none; }
+.tc-invo-btn.active {
+  background: var(--team-1, #ffd54a); color: #12161c; font-weight: 700;
+}
+.tc-invo-btn:not(.active):hover { background: rgba(255,255,255,0.08); color: var(--text-1, #fff); }
+.broadcast-bar .tc-invo-group { flex: 1 1 100%; order: 5; }
+
+/* M4 — drive-summary feed lines for skipped stretches (never silence). */
+.cs-feed-item.cs-feed-sum { font-style: italic; opacity: 0.75; }
+.cs-feed-item.cs-feed-sum.big { opacity: 1; }
+
 /* Mobile: bigger touch targets, two-up, labels wrap instead of overflowing. */
 @media (max-width: 560px) {
   .tc-bar { gap: 8px; }
+  .tc-invo-btn { min-height: 44px; font-size: 0.82em; }
   .tc-bar .bc-btn, .broadcast-bar .tc-bar .bc-btn {
     flex: 1 1 calc(50% - 8px); min-height: 46px; font-size: 0.86em;
     white-space: normal; line-height: 1.15; letter-spacing: 0.01em;
@@ -9249,8 +9273,15 @@ body *::after {
 .dv-confs { display: flex; flex-direction: column; gap: 6px; }
 .dv-conf { border-radius: 9px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02); overflow: hidden; }
 .dv-conf.open { border-color: rgba(120,170,255,0.3); }
-.dv-conf-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
-.dv-conf-name { flex: 1; font-weight: 700; background: transparent; border: 1px solid transparent; }
+/* M0 #5 (mobile): the conference header must FIT the phone. The name input is
+   a .form-input (base width 320px) whose flex min-width:auto kept its
+   intrinsic size, so name + tier stars + toggle overflowed the screen and the
+   header ran off the right edge. min-width:0 lets it shrink; wrap catches the
+   rest on the narrowest screens. */
+.dv-conf-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; flex-wrap: wrap; }
+.dv-conf-name { flex: 1 1 120px; width: auto; min-width: 0; font-weight: 700; background: transparent; border: 1px solid transparent; }
+.dv-conf-tier { flex: none; }
+.dv-conf-toggle { margin-left: auto; }
 .dv-conf-name:focus { border-color: rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); }
 .dv-conf-tier { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; opacity: 0.6; text-transform: uppercase; }
 .dv-conf-toggle { padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: inherit; cursor: pointer; font-size: 11px; white-space: nowrap; }
@@ -9713,8 +9744,13 @@ body *::after {
   color: var(--text-1); cursor:pointer; font-size:12px; font-weight:700; transition: border-color .12s, background .12s; }
 .def-pick:hover { background: var(--bg-hover); border-color: var(--border-str); }
 .def-pick.on { border-color: var(--gold); color: var(--text-0); background: color-mix(in srgb, var(--gold) 14%, var(--bg-input)); box-shadow: 0 0 0 1px var(--gold) inset; }
-.def-source { display:flex; gap:8px; }
-.def-src-field { flex:1; display:flex; flex-direction:column; gap:4px; }
+/* M0 #32 (mobile): the three pressure-source number inputs are .form-input
+   (base width 320px each); with flex min-width:auto they refused to shrink
+   below their intrinsic size and drifted off the phone. width:100% +
+   min-width:0 makes each field share the row instead. */
+.def-source { display:flex; gap:8px; max-width: 440px; }
+.def-src-field { flex:1; display:flex; flex-direction:column; gap:4px; min-width:0; }
+.def-src-field input { width:100%; min-width:0; }
 .def-src-field > span { font-size:11px; font-weight:700; opacity:.7; text-transform:uppercase; letter-spacing:.3px; }
 .def-src-field input { text-align:center; }
 .def-toggles { display:flex; flex-direction:column; gap:8px; margin-top:12px; }

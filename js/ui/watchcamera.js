@@ -34,15 +34,25 @@ function projectWatchPoint(mode, worldX, worldY, opts = {}) {
   const fieldHeight = Number.isFinite(opts.fieldHeight) ? opts.fieldHeight : 42;
   const longitudinal = Number.isFinite(opts.longitudinal) ? opts.longitudinal : 1.35;
   const z = Math.max(0, Number(opts.z) || 0);
+  // #49 (M0 card linter): the LATERAL axis mirrors with the drive direction.
+  // The world is always built offense-up — worldX runs across the formation
+  // with the offense's LEFT at 0 (the same convention every play card draws).
+  // A left-driving projection that keeps worldX unmirrored is a rotation PLUS
+  // a reflection, so every look played out flipped against its card (trips
+  // drawn to the strength fielded on the wrong sideline). Mirroring latX with
+  // the direction preserves handedness in every camera; card_lint_probe pins
+  // the invariant (facing the on-screen drive vector, the offense's left is
+  // always to the left hand).
+  const latX = direction < 0 ? 100 - worldX : worldX;
   const sideX = 31 + direction * (31 - worldY) * longitudinal;
-  const sideY = fieldTop + worldX * fieldHeight / 100;
+  const sideY = fieldTop + latX * fieldHeight / 100;
 
   if (camera === "coach") {
     // The original coach-film orientation: offense at the bottom, attacking
     // toward the top. It rotates with possession while field/world positions
     // remain untouched. Height is deliberately subtle from overhead.
     const downfield = direction * (31 - worldY);
-    return [8 + worldX * 0.84, 31 - downfield * 0.72 - z * 0.14];
+    return [8 + (direction < 0 ? 100 - worldX : worldX) * 0.84, 31 - downfield * 0.72 - z * 0.14];
   }
   if (camera === "endzone") {
     // A low end-zone lens: the field narrows with distance and bodies shrink
@@ -51,9 +61,9 @@ function projectWatchPoint(mode, worldX, worldY, opts = {}) {
     const downfield = direction * (31 - worldY);
     const depth = Math.max(-28, Math.min(48, downfield));
     const perspective = Math.max(0.6, Math.min(1.22, 1 - depth * 0.0105));
-    return [50 + (worldX - 50) * 0.84 * perspective, 43 - downfield * 0.62 - z * 0.46];
+    return [50 + (latX - 50) * 0.84 * perspective, 43 - downfield * 0.62 - z * 0.46];
   }
-  if (camera === "reverse") return [sideX, fieldTop + fieldHeight - worldX * fieldHeight / 100 - z];
+  if (camera === "reverse") return [sideX, fieldTop + fieldHeight - latX * fieldHeight / 100 - z];
   return [sideX, sideY - z];
 }
 

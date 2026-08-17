@@ -1,4 +1,4 @@
-import { OFF_FIELD_LAYOUTS, DEF_FIELD_LAYOUTS, variationLayoutSlots } from '../../constants_field.js';
+import { OFF_FIELD_LAYOUTS, DEF_FIELD_LAYOUTS, DEF_BLITZ_ELIGIBLE, variationLayoutSlots } from '../../constants_field.js';
 import { aliasFormation, FORMATION_VARIATIONS, FORMATION_PACKAGES } from '../../constants.js';
 
 // ── Route art — the reusable play-graphics primitive ───────────────────────
@@ -39,30 +39,45 @@ var ROUTE_ART = {
   // comeback/deepout: the deep-stem sideline breaks — drawn shallow before
   // (a comeback is an 18-yard stop off a go stem, not a curl).
   comeback:  { color: "#4dd2ff", pts: [[0, 0], [0, -30], [7, -24]] },
-  deepout:   { color: "#4dd2ff", pts: [[0, 0], [0, -30], [14, -30]] }
+  deepout:   { color: "#4dd2ff", pts: [[0, 0], [0, -30], [14, -30]] },
+  // fade: the back-shoulder jump ball (#19) — an OUTSIDE release up the
+  // boundary that settles short-medium, per the concept spec ("a SHORT–MEDIUM
+  // back-shoulder jump ball to an OUTSIDE receiver", concepts.js). Drawn as a
+  // straight go before, which read as a deep shot and nothing like a fade.
+  fade:      { color: "#ff9d5c", pts: [[0, 0], [6, -7], [9, -20], [8, -25]] }
 };
 
 function _fmt(n) { return (Math.round(n * 10) / 10).toString(); }
 
+// M0 card linter: an optional clamp box keeps every drawn point inside the
+// card. A boundary receiver's outward break (corner/out/wheel from the widest
+// split) used to draw off the edge of the SVG; clamped, it hugs the sideline
+// the way a boundary route really does. box = { x0, x1, y0?, y1? }.
+function _clampPt(x, y, box) {
+  if (!box) return [x, y];
+  const cx = Math.min(Math.max(x, box.x0 != null ? box.x0 : -Infinity), box.x1 != null ? box.x1 : Infinity);
+  const cy = Math.min(Math.max(y, box.y0 != null ? box.y0 : -Infinity), box.y1 != null ? box.y1 : Infinity);
+  return [cx, cy];
+}
+
 // The primitive: an SVG path `d` for a route drawn from (ox,oy), mirrored by
 // side, at scale. worldX = ox + side*outward*scale; worldY = oy + downfield*scale.
-function routePathD(id, ox, oy, side, scale) {
+function routePathD(id, ox, oy, side, scale, box) {
   const art = ROUTE_ART[id];
   if (!art) return "";
   const s = side < 0 ? -1 : 1;
   const k = scale || 1;
   return art.pts.map((p, i) => {
-    const x = ox + s * p[0] * k;
-    const y = oy + p[1] * k;
+    const [x, y] = _clampPt(ox + s * p[0] * k, oy + p[1] * k, box);
     return `${i === 0 ? "M" : "L"}${_fmt(x)} ${_fmt(y)}`;
   }).join(" ");
 }
-function routeEnd(id, ox, oy, side, scale) {
+function routeEnd(id, ox, oy, side, scale, box) {
   const art = ROUTE_ART[id];
   if (!art) return [ox, oy];
   const s = side < 0 ? -1 : 1, k = scale || 1;
   const last = art.pts[art.pts.length - 1];
-  return [ox + s * last[0] * k, oy + last[1] * k];
+  return _clampPt(ox + s * last[0] * k, oy + last[1] * k, box);
 }
 function routeColor(id) { return (ROUTE_ART[id] || {}).color || "#9fb3c8"; }
 
@@ -219,9 +234,12 @@ function renderPlayCard(parts, opts) {
     qb = `<rect x="${_fmt(W / 2 - 4)}" y="${_fmt(losY + 12)}" width="8" height="8" rx="1.5" class="play-card-qb"/>`;
     yard = _fieldLines(W, H, losY);
   }
+  // Card linter: every route point stays inside the card (boundary breaks
+  // clamp to the sideline instead of drawing off the SVG).
+  const box = { x0: 4, x1: W - 4, y0: 5, y1: H - 5 };
   const routes = receivers.map((r) => {
-    const d = routePathD(r.id, r.x, r.y, r.side, r.scale);
-    const end = routeEnd(r.id, r.x, r.y, r.side, r.scale);
+    const d = routePathD(r.id, r.x, r.y, r.side, r.scale, box);
+    const end = routeEnd(r.id, r.x, r.y, r.side, r.scale, box);
     const c = routeColor(r.id);
     if (r.fill) return `<path d="${d}" class="play-card-route play-card-route-fill"/>`;
     return `<path d="${d}" class="play-card-route" style="stroke:${c}"/>
@@ -327,16 +345,33 @@ function renderDefCallCard(call, opts) {
     const ex = x1 + ux * (L - 9), ey = y1 + uy * (L - 9);
     return `<line x1="${_fmt(x1)}" y1="${_fmt(y1)}" x2="${_fmt(ex)}" y2="${_fmt(ey)}" class="${cls}"/><polygon points="${_fmt(ex + uy * 3.6 - ux * 2)},${_fmt(ey - ux * 3.6 - uy * 2)} ${_fmt(ex - uy * 3.6 - ux * 2)},${_fmt(ey + ux * 3.6 - uy * 2)} ${_fmt(ex + ux * 5.5)},${_fmt(ey + uy * 5.5)}" class="${cls}-head"/>`;
   };
+  // #33 (graphic half): the arrow count IS the bring. Rushers resolve in
+  // football order — the down linemen first, then the natural edge rushers
+  // (the odd front's OLBs, the Penny's EDGEs — role Rush/Blitz), then the
+  // second-level dogs — until exactly `bring` arrows are drawn. A bring BELOW
+  // the line count bends the extra linemen back into coverage (the fire-zone
+  // drop), one squiggle per dropped body. Before this, bring 4 on a 3-man
+  // line drew 3 arrows and bring 5 drew dl+1 whatever the front — the card
+  // and the call disagreed on every odd front.
   const dl = layout.slots.filter((s) => _DPOS_CLASS[s.pos] === "fd-dl");
   const lbs = layout.slots.filter((s) => _DPOS_CLASS[s.pos] === "fd-lb");
-  const bring = String(call.bring || "4");
-  let rushers = dl.slice();
-  let dropper = null;
-  if (bring === "3" && dl.length > 3) { dropper = dl[dl.length - 1]; rushers = dl.slice(0, dl.length - 1); }
+  const bring = Math.max(3, Math.min(6, parseInt(call.bring, 10) || 4));
+  const edges = lbs.filter((s) => /Rush|Blitz/.test(String(s.role || "")));
+  const dogs = lbs.filter((s) => edges.indexOf(s) === -1);
+  // A light box can owe more arrows than it has backers (Dime bring 6): the
+  // blitz-eligible DBs closest to the box fill out the pressure, same as the
+  // sim's blitz-eligibility table says they do.
+  const blitzIds = DEF_BLITZ_ELIGIBLE[front] || [];
+  const dbs = layout.slots.filter((s) => _DPOS_CLASS[s.pos] === "fd-db" && blitzIds.indexOf(s.id) !== -1).sort((a, b) => b.y - a.y);
+  const rushers = dl.slice(0, bring);
+  const droppers = dl.slice(bring);
+  const extra = rushers.length < bring ? edges.concat(dogs, dbs).slice(0, bring - rushers.length) : [];
   rushers.forEach((s) => { svg += arrow(sx(s.x), sy(s.y) + 6, "dc-rush"); });
-  if (bring === "5" && lbs[0]) svg += arrow(sx(lbs[0].x), sy(lbs[0].y) + 6, "dc-dog");
-  if (bring === "6") lbs.slice(0, 2).forEach((s) => { svg += arrow(sx(s.x), sy(s.y) + 6, "dc-dog"); });
-  if (dropper) svg += `<path d="M${_fmt(sx(dropper.x))} ${_fmt(sy(dropper.y) - 6)} C ${_fmt(sx(dropper.x) + 8)} ${_fmt(sy(dropper.y) - 24)}, ${_fmt(sx(dropper.x) + 20)} ${_fmt(sy(dropper.y) - 30)}, ${_fmt(sx(dropper.x) + 26)} ${_fmt(sy(dropper.y) - 38)}" class="dc-drop"/><circle cx="${_fmt(sx(dropper.x) + 28)}" cy="${_fmt(sy(dropper.y) - 40)}" r="2.8" class="dc-drop-dot"/>`;
+  extra.forEach((s) => { svg += arrow(sx(s.x), sy(s.y) + 6, "dc-dog"); });
+  droppers.forEach((dropper, di) => {
+    const dSide = dropper.x >= 0.5 ? 1 : -1; // bend toward his own hook, in bounds
+    svg += `<path d="M${_fmt(sx(dropper.x))} ${_fmt(sy(dropper.y) - 6)} C ${_fmt(sx(dropper.x) + dSide * 8)} ${_fmt(sy(dropper.y) - 24)}, ${_fmt(sx(dropper.x) + dSide * 20)} ${_fmt(sy(dropper.y) - 30)}, ${_fmt(sx(dropper.x) + dSide * 26)} ${_fmt(sy(dropper.y) - 38)}" class="dc-drop"/><circle cx="${_fmt(sx(dropper.x) + dSide * 28)}" cy="${_fmt(sy(dropper.y) - 40)}" r="2.8" class="dc-drop-dot"/>`;
+  });
   if (call.runCommit != null && call.runCommit > 0) svg += `<text x="${_fmt(W / 2)}" y="${_fmt(losY - 4)}" text-anchor="middle" class="dc-box-lbl">▼ +${call.runCommit} IN THE BOX</text>`;
   // defenders on top
   for (const s of layout.slots) {
@@ -463,7 +498,11 @@ var CONCEPT_ROUTES = {
   "Deep Over": ["drag", "post"], "Skinny Post": ["post", "checkdown"],
   "Whip": ["slant", "flat"], "Follow": ["drag", "dig"], "Y-Option": ["curl", "flat"],
   "Stick-Nod": ["corner", "flat"], "Sluggo Seam": ["go", "go"],
-  "Red-Zone Fade": ["go", "slant"], "Bubble Screen": ["bubble", "go"],
+  // Red-Zone Fade (#19, hand-reviewed vs concepts.js): ONE isolated
+  // back-shoulder fade to the outside man — the concept is a single jump-ball
+  // route, so nothing else is authored (the faint auto-fill keeps the picture
+  // honest). Was ["go","slant"], which read as a deep shot + slant combo.
+  "Red-Zone Fade": ["fade"], "Bubble Screen": ["bubble", "go"],
   "Tunnel Screen": ["tunnel", "go"], "Slip Screen": ["screen"],
   "RB Screen": ["screen"], "Boot": ["drag", "corner", "flat"],
   "PA Deep Cross": ["drag", "post"], "HB Pass": ["go", "post"], "Flea Flicker": ["go", "post"]

@@ -34,7 +34,13 @@ check(JSON.stringify(broadcast) === JSON.stringify(all22), 'All-22 changes frami
 check(Math.abs((broadcast[1] + reverse[1]) - 58) < 1e-9 && broadcast[0] === reverse[0], 'Reverse camera mirrors only the sideline projection');
 check(coach[0] !== broadcast[0] && coach[1] !== broadcast[1], 'Coach camera genuinely re-projects the world');
 const coachAway = projectWatchPoint('coach', ...world, { ...opts, direction: -1 });
-check(coach[0] === coachAway[0] && Math.abs((coach[1] + coachAway[1]) - 62) < 1e-9, 'Coach view rotates with possession while preserving lateral position');
+// Amended for #49 (M0 card linter, 2026-08-16): a 180° possession rotation
+// that PRESERVES screen-lateral position is a reflection — every look played
+// out mirror-flipped against its card whenever the drive direction was left.
+// The lateral axis now mirrors WITH the direction (x sums to 100 across the
+// two directions, i.e. 16 + 84 at 0.84 scale), so handedness survives the
+// rotation. card_lint_probe C4 pins the chirality invariant for every camera.
+check(Math.abs(coach[0] + coachAway[0] - 100) < 1e-9 && Math.abs(coach[1] + coachAway[1] - 62) < 1e-9, 'Coach view rotates with possession, mirroring the lateral axis with it (#49)');
 check(watchProjectionScale('coach', ...world, opts) < watchProjectionScale('broadcast', ...world, opts), 'high coach view uses a presentation-only player scale');
 
 const target = process.argv[2];

@@ -1,0 +1,240 @@
+// card_lint_probe.mjs — THE CARD LINTER (M0 sweep, 2026-08-16).
+// Run: node tools/card_lint_probe.mjs
+//
+// The owner's trust anchor: "the coach trusts us to show him every man's job
+// on these play cards." This probe walks EVERY (formation × variation ×
+// concept) card render and asserts FOOTBALL LEGALITY, so an authored-layout
+// regression can never ship silently again. In CORE.
+//
+// Pins:
+//   C1  LAYOUT LAWS — every look (base + every authored variation) fields a
+//       lawful 11: exactly 5 OL / 1 QB / 5 skill; nobody offsides (y ≥ 0.5)
+//       or out of bounds; at least 7 on the line of scrimmage; no receiver
+//       body in the backfield (a WR/SLOT never deeper than flanker depth —
+//       the #20 "slot WR in the FB spot" bug class; a TE may wing to H-back
+//       depth, which is legal football); a back stacked directly behind the
+//       QB requires under-center or pistol depth — a GUN quarterback never
+//       draws with a back stacked behind him (the #18 Spread-Ace bug class);
+//       no two bodies drawn on top of each other.
+//   C2  PERSONNEL MATCHES THE PKG — the look's fielded WR/TE/RB/FB counts
+//       equal FORMATION_PACKAGES merged with the variation's pkg override
+//       (the re-dress capability variationLayoutSlots grew for this).
+//   C3  CARD RENDERS IN BOUNDS — renderConceptThumb for every concept in
+//       every formation's book, at the Builder size and the call-sheet size,
+//       against every look: no NaN, every drawn coordinate inside the SVG,
+//       one bold route per authored part, one dot per skill body.
+//   C4  VIEWER HANDEDNESS (#49) — for every camera in BOTH drive directions,
+//       facing the on-screen drive vector the offense's left is to the left
+//       hand (cross(D,L) < 0) — except the reverse angle, which is a
+//       DELIBERATE mirror and must be consistently mirrored both ways. This
+//       is the invariant whose violation had plays fielded flipped vs their
+//       cards whenever the drive direction was left.
+//   C5  DEF CARDS — every front's end labels are side-explicit (LE/RE, #31);
+//       renderDefCallCard draws EXACTLY `bring` rush arrows for bring 3–6 on
+//       every front (#33 graphic half), with one fire-zone drop squiggle per
+//       lineman over the bring, and everything in bounds.
+import { FORMATION_VARIATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, aliasFormation } from '../js/constants.js';
+import { OFF_FIELD_LAYOUTS, DEF_FIELD_LAYOUTS, variationLayoutSlots } from '../js/constants_field.js';
+import { renderConceptThumb, renderFormationDiagram, renderFrontDiagram, renderDefCallCard, conceptKind, CONCEPT_ROUTES } from '../js/ui/views/routeart.js';
+import { projectWatchPoint } from '../js/ui/watchcamera.js';
+
+let pass = 0, fail = 0;
+const check = (ok, msg) => { console.log(`  ${ok ? 'OK  ' : 'FAIL'}  ${msg}`); ok ? pass++ : fail++; };
+const hdr = (s) => console.log(`\n${s}`);
+
+// ── the walk: every real formation × every look ────────────────────────────
+const FIDS = Object.keys(FORMATION_PACKAGES).filter((f) => aliasFormation(f) === f);
+const looksOf = (fid) => {
+  const base = OFF_FIELD_LAYOUTS[fid];
+  const out = [{ vk: null, slots: base.slots, pkg: { ...FORMATION_PACKAGES[fid] } }];
+  for (const [vk, vd] of Object.entries(FORMATION_VARIATIONS[fid] || {})) {
+    const slots = variationLayoutSlots(base.slots, vd.layout) || base.slots;
+    out.push({ vk, slots, pkg: { ...FORMATION_PACKAGES[fid], ...(vd.pkg || {}) } });
+  }
+  return out;
+};
+const lookName = (fid, vk) => `${fid}${vk ? ' · ' + vk : ''}`;
+
+hdr('C1 — layout laws: every look fields a lawful 11');
+{
+  let looks = 0; const bad = [];
+  const flag = (fid, vk, why) => bad.push(`${lookName(fid, vk)}: ${why}`);
+  for (const fid of FIDS) {
+    for (const { vk, slots } of looksOf(fid)) {
+      looks++;
+      const ol = slots.filter((s) => s.pos === 'OL');
+      const qb = slots.filter((s) => s.pos === 'QB');
+      const skill = slots.filter((s) => s.pos !== 'OL' && s.pos !== 'QB');
+      if (ol.length !== 5 || qb.length !== 1 || skill.length !== 5) flag(fid, vk, `not 5 OL/1 QB/5 skill (${ol.length}/${qb.length}/${skill.length})`);
+      for (const s of slots) {
+        if (s.y < 0.5) flag(fid, vk, `${s.id} OFFSIDES (y=${s.y})`);
+        if (s.x < 0.01 || s.x > 0.99 || s.y > 0.95) flag(fid, vk, `${s.id} out of bounds (${s.x},${s.y})`);
+      }
+      const online = slots.filter((s) => s.y <= 0.505).length;
+      if (online < 7) flag(fid, vk, `only ${online} on the line (needs 7)`);
+      for (const s of skill) {
+        if ((s.pos === 'WR' || s.pos === 'SLOT') && s.y > 0.62) flag(fid, vk, `${s.id} is a receiver drawn in the backfield (y=${s.y})`);
+        if (s.pos === 'TE' && s.y > 0.78) flag(fid, vk, `${s.id} TE deeper than H-back depth (y=${s.y})`);
+      }
+      const q = qb[0];
+      if (q && Math.abs(q.x - 0.5) <= 0.1) {
+        if (q.y < 0.56 || q.y > 0.78) flag(fid, vk, `QB depth unrecognizable (y=${q.y})`);
+        const stacked = skill.some((s) => Math.abs(s.x - q.x) < 0.06 && s.y > q.y);
+        if (stacked && q.y > 0.69) flag(fid, vk, `GUN QB with a back stacked directly behind (the #18 bug class)`);
+      }
+      for (let i = 0; i < slots.length; i++) for (let j = i + 1; j < slots.length; j++) {
+        const a = slots[i], b = slots[j];
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (d < 0.028) flag(fid, vk, `${a.id} and ${b.id} draw on top of each other (${d.toFixed(3)})`);
+      }
+    }
+  }
+  bad.forEach((w) => console.log(`    FLAG: ${w}`));
+  check(looks >= 33, `walked every look (${looks})`);
+  check(bad.length === 0, `every look is lawful football (${bad.length} flags)`);
+}
+
+hdr('C2 — personnel: the drawn look matches its pkg');
+{
+  const bad = [];
+  const isFB = (s) => String(s.role || '').startsWith('FB');
+  const BACK_POS = ['RB', 'WING', 'ABACK', 'WILDCAT', 'JETMAN'];
+  for (const fid of FIDS) {
+    for (const { vk, slots, pkg } of looksOf(fid)) {
+      const skill = slots.filter((s) => s.pos !== 'OL' && s.pos !== 'QB');
+      const got = {
+        WR: skill.filter((s) => s.pos === 'WR' || s.pos === 'SLOT').length,
+        TE: skill.filter((s) => s.pos === 'TE').length,
+        FB: skill.filter((s) => BACK_POS.includes(s.pos) && isFB(s)).length,
+        RB: skill.filter((s) => BACK_POS.includes(s.pos) && !isFB(s)).length
+      };
+      for (const k of ['WR', 'TE', 'RB', 'FB']) {
+        const want = pkg[k] || 0;
+        if (got[k] !== want) bad.push(`${lookName(fid, vk)}: ${k} drawn ${got[k]}, pkg says ${want}`);
+      }
+    }
+  }
+  bad.forEach((w) => console.log(`    FLAG: ${w}`));
+  check(bad.length === 0, `every look draws the personnel its pkg names (${bad.length} flags)`);
+}
+
+// ── SVG coordinate audit ───────────────────────────────────────────────────
+function svgInBounds(svg, W, H, tol = 1.2) {
+  if (/NaN/.test(svg)) return 'NaN coordinate';
+  let m;
+  const attrX = /\s(?:x|x1|x2|cx)="(-?[\d.]+)"/g;
+  while ((m = attrX.exec(svg))) { const v = +m[1]; if (v < -tol || v > W + tol) return `x attr ${v} outside 0..${W}`; }
+  const attrY = /\s(?:y|y1|y2|cy)="(-?[\d.]+)"/g;
+  while ((m = attrY.exec(svg))) { const v = +m[1]; if (v < -tol || v > H + tol) return `y attr ${v} outside 0..${H}`; }
+  const dRe = /\s(?:d|points)="([^"]+)"/g;
+  while ((m = dRe.exec(svg))) {
+    const nums = (m[1].match(/-?[\d.]+/g) || []).map(Number);
+    for (let i = 0; i + 1 < nums.length; i += 2) {
+      const x = nums[i], y = nums[i + 1];
+      if (x < -tol || x > W + tol) return `path x ${x} outside 0..${W}`;
+      if (y < -tol || y > H + tol) return `path y ${y} outside 0..${H}`;
+    }
+  }
+  return null;
+}
+
+hdr('C3 — every (formation × variation × concept) card renders lawfully');
+{
+  const SIZES = [{ w: 120, h: 72, scale: 0.72 }, { w: 260, h: 170 }];
+  let renders = 0; const bad = [];
+  for (const fid of FIDS) {
+    const book = FORMATION_PLAYBOOK[fid] || [];
+    const vks = [null, ...Object.keys(FORMATION_VARIATIONS[fid] || {})];
+    for (const vk of vks) {
+      // the formation diagram itself
+      const fd = renderFormationDiagram(fid, { variation: vk || undefined, w: 150, h: 96 });
+      const fdErr = svgInBounds(fd, 150, 96);
+      if (fdErr) bad.push(`${lookName(fid, vk)} formation diagram: ${fdErr}`);
+      for (const concept of book) {
+        for (const size of SIZES) {
+          renders++;
+          const svg = renderConceptThumb(concept, { ...size, formation: fid, variation: vk || undefined });
+          if (!svg || !svg.includes('<svg')) { bad.push(`${lookName(fid, vk)} · ${concept}: empty render`); continue; }
+          const err = svgInBounds(svg, size.w, size.h);
+          if (err) bad.push(`${lookName(fid, vk)} · ${concept} @${size.w}×${size.h}: ${err}`);
+          const kind = conceptKind(concept);
+          if (kind.kind === 'pass') {
+            const bold = (svg.match(/class="play-card-route"/g) || []).length;
+            if (bold !== kind.parts.length) bad.push(`${lookName(fid, vk)} · ${concept}: ${bold} bold routes for ${kind.parts.length} parts`);
+            const dots = (svg.match(/class="play-card-rec"/g) || []).length;
+            if (dots !== 5) bad.push(`${lookName(fid, vk)} · ${concept}: ${dots} skill dots (want 5)`);
+          }
+        }
+      }
+    }
+  }
+  const shown = bad.slice(0, 25);
+  shown.forEach((w) => console.log(`    FLAG: ${w}`));
+  if (bad.length > shown.length) console.log(`    …and ${bad.length - shown.length} more`);
+  check(renders > 2500, `walked every card (${renders} renders)`);
+  check(bad.length === 0, `every card render is lawful and in bounds (${bad.length} flags)`);
+  check(!!CONCEPT_ROUTES['Red-Zone Fade'] && CONCEPT_ROUTES['Red-Zone Fade'][0] === 'fade', 'Red-Zone Fade draws the back-shoulder fade (#19), not a go');
+}
+
+hdr('C4 — viewer handedness (#49): the fielded look keeps the card’s chirality');
+{
+  const opts = (direction) => ({ direction, fieldTop: 8, fieldHeight: 42, longitudinal: 1.35 });
+  const cross = (camera, direction) => {
+    const P = (wx, wy) => projectWatchPoint(camera, wx, wy, opts(direction));
+    const a = P(50, 26), b = P(50, 36); // 10 world-yds downfield
+    const D = [a[0] - b[0], a[1] - b[1]];
+    const l0 = P(0, 31), l1 = P(100, 31); // toward the offense's LEFT
+    const L = [l0[0] - l1[0], l0[1] - l1[1]];
+    return D[0] * L[1] - D[1] * L[0];
+  };
+  for (const cam of ['broadcast', 'all22', 'coach', 'endzone']) {
+    const r = cross(cam, 1), l = cross(cam, -1);
+    check(r < 0 && l < 0, `${cam}: offense's left stays the left hand, both directions (${r.toFixed(0)}, ${l.toFixed(0)})`);
+  }
+  const rr = cross('reverse', 1), rl = cross('reverse', -1);
+  check(rr > 0 && rl > 0, `reverse: a deliberate mirror, consistent both directions (${rr.toFixed(0)}, ${rl.toFixed(0)})`);
+}
+
+hdr('C5 — defensive graphics: side-explicit end labels (#31), the arrow count IS the bring (#33)');
+{
+  const fronts = Object.keys(DEF_FIELD_LAYOUTS);
+  let labBad = 0;
+  for (const f of fronts) {
+    for (const s of DEF_FIELD_LAYOUTS[f].slots) {
+      if (s.pos !== 'DE') continue;
+      const want = s.x < 0.5 ? 'LE' : 'RE';
+      if (s.label !== want) { labBad++; console.log(`    FLAG: ${f} ${s.id} labeled ${s.label}, wants ${want}`); }
+    }
+    const fdErr = svgInBounds(renderFrontDiagram(f, { w: 150, h: 96 }), 150, 96);
+    if (fdErr) { labBad++; console.log(`    FLAG: ${f} front diagram ${fdErr}`); }
+  }
+  check(labBad === 0, `every front labels its ends LE/RE and draws in bounds (${labBad} flags)`);
+
+  const ARTS = [{ deep: 'thirds' }, { deep: 'halves' }, { deep: 'mof', man: true }, { deep: 'quarters' }];
+  let cards = 0; const bad = [];
+  for (const f of fronts) {
+    const dlCount = DEF_FIELD_LAYOUTS[f].slots.filter((s) => ['DE', 'DT', 'NT', 'DL', 'EDGE'].includes(s.pos)).length;
+    for (let bring = 3; bring <= 6; bring++) {
+      for (const art of ARTS) {
+        for (const size of [{ w: 250, h: 170 }, { w: 220, h: 150 }]) {
+          cards++;
+          const svg = renderDefCallCard({ name: 'probe', front: f, bring: String(bring), coverage: 'x' }, { ...size, art });
+          const arrows = (svg.match(/class="dc-rush"\/>/g) || []).length + (svg.match(/class="dc-dog"\/>/g) || []).length;
+          if (arrows !== bring) bad.push(`${f} bring ${bring}: ${arrows} arrows`);
+          const drops = (svg.match(/class="dc-drop"\/>/g) || []).length;
+          if (drops !== Math.max(0, dlCount - bring)) bad.push(`${f} bring ${bring}: ${drops} drop squiggles for ${dlCount}-man line`);
+          const err = svgInBounds(svg, size.w, size.h, 2.5);
+          if (err) bad.push(`${f} bring ${bring} @${size.w}×${size.h}: ${err}`);
+        }
+      }
+    }
+  }
+  bad.slice(0, 20).forEach((w) => console.log(`    FLAG: ${w}`));
+  if (bad.length > 20) console.log(`    …and ${bad.length - 20} more`);
+  check(cards === fronts.length * 4 * 4 * 2, `walked every (front × bring × shell) call card (${cards})`);
+  check(bad.length === 0, `every call card arrows its bring and stays in bounds (${bad.length} flags)`);
+}
+
+console.log(`\nCARD LINT PROBE — ${pass} pass, ${fail} fail`);
+console.log(fail ? 'CARD LINT PROBE FAIL' : 'CARD LINT PROBE PASS');
+process.exit(fail ? 1 : 0);
