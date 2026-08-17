@@ -1,7 +1,23 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-17 DELETE RE-HOME — the two product gaps the PW
+Last updated: **2026-08-17 LIVE-TEST BUGFIX (D7/D4) — all four owner-reported
+bugs from the first real-browser M4/M2 session FIXED at source: (1) sim-to-half
+ghost prompt + FINAL scoreboard (two causes: the skipUntil clock-0 boundary
+re-opened the headset on a 0:00 fourth-down edge, and every straight-to-locker-
+room/box-score path left the stale stage-"call" overlay up); (2) Play Art dead
+forever (per-board `art` field re-initialized OFF on every snap's board rebuild
+— now state.settings.watchArt, read at render, default ON); (3) WATCH mode
+stopped on a manual Continue every snap (the board-end gate excluded autoRun
+from auto-advance); (4) EVERY-PLAY switch waited out the backlog (now collapses
+the board like Take Control). timecontrol_probe grew §7–§9 (next-snap switch ×
+both directions, sim-to-half-with-pending lands the halftime seam never final,
+UI-fix source tripwires — §9 CAUGHT a live red before the sim.js fix); ×3 green
++ watchphys/midgame_save/record_call re-proofs + clean build. Owner's live
+re-test of all four is BROWSER-OWED (entry below). Also answered (report only,
+no build): defensive-side timeout — no reachable door on defense; engine+AI
+support exists (details in the entry). Prior same day:
+DELETE RE-HOME — the two product gaps the PW
 rewrite surfaced (saved-team DELETE, instant-classic DELETE) now have LIVE
 doors per the owner decision: [data-pn-saved-del] on Play Now's fielded
 snapshot row, [data-mm-tree-classic-del] on tree classic rows (world-save +
@@ -82,6 +98,126 @@ D6's in-flight concepts is RESOLVED in this session, card_lint 21/0 ×3.)
 Prior: D4 · M2 presentation; D3 · M2 engine; D7 · M4; D2 · M1; D5 · M3
 audit RATIFIED. Plan of record: BUILD ORDER v2 (2026-08-17), dispatch
 prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+
+## 2026-08-17 — LIVE-TEST BUGFIX (this sandbox) — the four D7/D4 bugs from the owner's first real-browser session
+## NODE-GATED ×3 — ⚠ THE OWNER'S LIVE RE-TEST OF ALL FOUR IS BROWSER-OWED
+
+The owner live-tested the M4 involvement toggle + transport row (D7) and the
+M2 play-art overlay (D4) in a real browser game and found four bugs. All four
+are diagnosed to root cause and fixed at source (`js/` only; no style.css
+change needed). Engine RNG untouched; the one engine edit (`skipHolds`) runs
+only under skip flags that only the coached UI ever sets — sim-neutral for AI
+games by construction.
+
+**OWNER CHECKLIST (browser, one live game — the re-test of all four):**
+- [ ] **Sim to half, with the sheet asking:** press ⏭⏭ Sim to half from an
+  open call prompt → NO further prompt, straight to the locker room, the
+  half's drives as feed summaries, and the locker-room scoreboard reads a
+  HALFTIME phase (never FINAL). Then ⏭⏭ Sim to end in H2 → straight to the
+  box score, no ghost call sheet.
+- [ ] **Play Art:** the watch-bar button reads "Play Art: On" and STAYS on
+  snap after snap and across halftime; the D4 pre-snap overlay actually
+  draws (routes/blocks/run path fading through the snap) — the owner has
+  never seen it, so this is also the D4 overlay's first live look. Toggle
+  Off → sticks Off across snaps too (it's a real setting now, saved with
+  the game). Settings → Presentation → "Pre-Snap Play Art" still gates the
+  overlay independently.
+- [ ] **👁 Watch every play:** auto-plays snap after snap with NO Continue
+  button and no "your call" label — the ticker reads "Rolling — the sheet
+  calls the next one." 🎧 Take control still cuts in instantly.
+- [ ] **🎧 Coach every play, switched mid-game:** flipping the toggle to
+  Every Play while the board is rolling cuts the animation short (like Take
+  Control) and hands you the sheet on the OPEN snap — no backlog re-run,
+  no un-prompted plays. Watch ↔ Moments ↔ Every in both directions
+  mid-game.
+
+**The four root causes (all found, none guessed):**
+1. **Sim-to-half (bug 1) — two stacked causes.** ENGINE: `skipHolds`'s
+   skipUntil boundary cleared the flag when `sit.clock <= 0` and let that
+   very ask fire — and a 0:00 fourth-down edge asks BEFORE the drive loop's
+   clock-break, so a skipped half could re-open the headset on its boundary
+   snap (probe §4 caught this live: 1 leak in 3×N=6 runs). A clock-0 target
+   now mutes THROUGH the break; the fresh half / final gun / OT entry clear
+   the flag (all three clears already existed). UI: `handleGamePendingEvents`'
+   halftime branch and both straight-to-box-score paths (`processEvents`,
+   `exhibitionFinal`) never dropped `state.ui.liveWatch` — a stale
+   stage-"call" overlay survived into the break, rendering a call sheet with
+   NO pending (the ghost prompt whose answer fell into the void) over a
+   board whose empty-state bug reads "FINAL". All such paths now null the
+   overlay. D7's law held throughout: resolution still runs through
+   resumeFromCall/resumeFromDecision; no new save path; `gamePauseIsLive`
+   untouched.
+2. **Play Art (bug 2).** `initWatchMode` created a fresh `_watch` per board
+   key — and the LIVE board's key changes EVERY SNAP — with an
+   off-by-default `art` field, so the toggle re-disabled itself before every
+   play (and across halftime, and in every replay). The owner has literally
+   never had the layer enabled. Now `state.settings.watchArt` (default ON),
+   read at render time and written by the button — the exact pattern the
+   Replays button already used. Persists with settings; loadFromSlot's
+   settings spread carries it.
+3. **Watch every play (bug 3).** The board-end gate in `watchTick` was
+   `stage === "call" && !state.ui.autoRun` for auto-advance — WATCH mode
+   (autoRun) fell into the manual "Continue →" branch with the "The headset
+   crackles — your call." label: every snap stopped dead on a tap. Stage
+   "call" now ALWAYS auto-advances; `liveWatchFinish` reads autoRun live at
+   fire time, so a mid-hold toggle switch is honored on that snap; the
+   autoRun ticker label no longer claims "your call".
+4. **Every play, switched mid-game (bug 4).** Engine honored the switch
+   (token.callMode reads live — probe §7 proves next-snap in both
+   directions); the UI waited for the board backlog to finish animating
+   before showing the sheet, which reads as un-prompted plays. The toggle's
+   EVERY handler now collapses an in-flight stage-"call" board exactly like
+   🎧 Take control (watchStop → boardDone → sheet on the open snap).
+
+**What shipped:**
+- **`js/engine/sim.js`** — `skipHolds`: clock-0 skipUntil target mutes
+  through the break (mid-half targets, clock > 0, keep clear-and-ask).
+- **`js/state.js`** — `handleGamePendingEvents` halftime `_skipAnim` path +
+  non-liveWatch path, `processEvents` game-result else path, and
+  `exhibitionFinal` else path all drop `state.ui.liveWatch`.
+- **`js/ui/app.js`** — Play Art button backed by `state.settings.watchArt`
+  (per-board `art` field deleted); `watchTick` end-of-board call stage
+  auto-advances regardless of autoRun + honest autoRun label in
+  `mountLiveWatch`; `[data-tc-invo]` handler collapses the board on a
+  mid-game switch to EVERY with a pending open.
+- **`tools/timecontrol_probe.mjs`** — §7 next-snap switch (audits three
+  consecutive ask-to-ask windows after keydowns→all: zero 1st–3rd-down
+  snaps pass un-asked; first ask after all→keydowns already on-spec), §8
+  sim-to-half WITH a pending call (zero strays, stage 2 + stopAfterHalf at
+  the seam — never 'done'/final, all plays half 1, `_skipAnim` untouched by
+  the engine), §9 source tripwires for the UI half node can't click
+  (settings-backed play-art read at render, no per-board reset, call stage
+  auto-advance, both stale-overlay drops). §9 EARNED ITS KEEP immediately:
+  the pre-fix §4 red (the boundary leak) appeared on run 3 of the first
+  gate — the sim.js fix, then ×3 clean.
+
+**Gate (this sandbox, node):** `timecontrol_probe` **exit 0 ×3** on the
+final tree (all 41 checks; N=6 default). Re-proof: `watchphys_probe` FULLY
+GREEN (byte-laws hold — the play-art fix touches only the class toggle, not
+the script) · `midgame_save_probe` PASS · `record_call_probe` 12/0. Clean
+esbuild build in /tmp (standing workaround): ALL sanity checks PASS,
+3729 KB, cache `cfb-dynasty-1bed8fa3be`, bundle syntax parse (2 script
+blocks), CSS braces balanced (5692/5692), watchArt + the new label + the
+skipUntil edit all verified IN the bundle; all 7 dist files copied back
+byte-identical (sha256 MATCH). `node --check` clean on all four changed
+files. PW tier unrunnable here (standing) — the owner checklist above is
+the browser half.
+
+**Answered same session (owner mid-session question — report only, NO code):
+defensive-side timeout.** (a) UI door: NONE reachable. The ⏱️ Timeout
+button (`[data-cs-timeout]`) renders only in the OFFENSIVE call sheet
+(`callSheetPanelHtml`); `defCallPanelHtml` has dials + transport + SEND
+only. On defense there is no way to call one. (b) Engine: the mechanic is
+side-agnostic and would support it — `forcedCall.timeout` burns
+`gameState.playerSide`'s timeout whichever side of the ball that is
+(sim.js ~5756) and `token.timeouts` tracks both sides per half — BUT the
+defcall resume path carries a `defCall` object, not `call`, so a timeout
+flag on a defensive answer has no seam to the burn today (small seam if
+ever built). (c) AI/auto already calls defensive timeouts in three places:
+the under-2:00 trailing-side clock-stopper on run plays (either side,
+~5763), the kneel-down defense burning TOs vs victory formation (~4019),
+and icing the kicker on clutch FGs (~4237) — all visible in the feed.
+Owner decides if a defensive door is wanted; nothing was built.
 
 ## 2026-08-17 — DELETE RE-HOME (this sandbox) — saved-team + classic DELETE get live doors (owner decision)
 ## NODE-GATED — ⚠ the two live delete click-throughs + the smokes' first PW runs are BROWSER-OWED

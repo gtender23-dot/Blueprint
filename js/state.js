@@ -623,11 +623,18 @@ function handleGamePendingEvents(events) {
       skipTok._watchedPlays = tokenAllPlays(skipTok).length;
       skipTok._feedSeen = tokenFeedItems(skipTok).length;
       skipTok._skipAnim = null;
+      // Owner live-test fix (2026-08-17): a stage-"call" overlay from the snap
+      // that launched the skip must NOT survive into the locker room — it kept
+      // rendering a call sheet with NO pending (a ghost prompt whose answer
+      // fell into the void) over a board whose bug read FINAL. Every straight-
+      // to-locker-room / straight-to-box-score path now drops the overlay.
+      state.ui.liveWatch = null;
       state.ui.showHalftime = true;
     } else if (liveWatchOn()) {
       state.ui.showHalftime = false;
       state.ui.liveWatch = { stage: "halftime" };
     } else {
+      state.ui.liveWatch = null;
       state.ui.showHalftime = true;
     }
     rerender();
@@ -946,6 +953,9 @@ function exhibitionFinal(token) {
     state.ui.showGameResult = false;
     state.ui.autoRun = false;
   } else {
+    // Owner live-test fix (2026-08-17): same stale-overlay drop as the season
+    // path — a skipped exhibition finish goes straight to the box score.
+    state.ui.liveWatch = null;
     state.ui.showGameResult = true;
   }
   state.ui._skipFinalBoard = false;
@@ -1077,6 +1087,10 @@ function processEvents(events, { suppressModal = false } = {}) {
             state.ui.showGameResult = false;
             state.ui.autoRun = false;
           } else {
+            // Owner live-test fix (2026-08-17): sim-to-end goes straight to the
+            // box score — kill any lingering stage-"call" overlay (see the
+            // halftime twin of this fix in handleGamePendingEvents).
+            state.ui.liveWatch = null;
             state.ui.showGameResult = true;
           }
           state.ui._skipFinalBoard = false;

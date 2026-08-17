@@ -6108,8 +6108,18 @@ function playHalf(token, half, resume = null) {
         return false;
       }
       if (half === sk.half && ((_a2 = sit == null ? void 0 : sit.clock) != null ? _a2 : clock) <= sk.clock) {
-        token.skipUntil = null;
-        return false;
+        // Owner live-test fix (2026-08-17): a clock-0 target means THROUGH the
+        // break. The old clear-and-ask here re-opened the headset on the
+        // boundary snap itself (a 0:00 fourth-down edge fires its ask before
+        // the drive loop's clock-break) — the stray "call a play" prompt at the
+        // end of a skipped half. The fresh half (above) or the final gun
+        // (runToken) clears the flag; only a real mid-half target (clock > 0)
+        // clears and asks right here.
+        if (sk.clock > 0) {
+          token.skipUntil = null;
+          return false;
+        }
+        return true;
       }
       return true;
     };

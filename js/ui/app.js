@@ -2718,11 +2718,23 @@ function setupGlobalListeners() {
 // (Game Plan → Tempo & Motion, and the timeout modal's Rest of Game tab).
 function wireTimeControls() {
   var _a, _b, _c;
-  document.querySelectorAll("[data-tc-invo]").forEach((b) => b.addEventListener("click", () => {
+  document.querySelectorAll("[data-tc-invo]").forEach((b) => b.addEventListener("click", async () => {
+    var _a2, _b2;
     if (!callTapOk()) return;
     const level = b.dataset.tcInvo;
     if (level === involvementLevel()) return;
-    setInvolvement(level);
+    await setInvolvement(level);
+    // Owner live-test fix (2026-08-17): EVERY PLAY is honored on the OPEN
+    // snap — if a stage-"call" board is still animating (or parked at its
+    // end), cut it short exactly like Take Control instead of letting the
+    // backlog re-animate before the sheet appears. The plays it would have
+    // shown are already in the feed; the pending snap is the coach's now.
+    if (level === "every" && ((_a2 = state.pendingHalftime) == null ? void 0 : _a2.token) && state.pendingHalftime.token.pending && ((_b2 = state.ui.liveWatch) == null ? void 0 : _b2.stage) === "call" && !state.ui.liveWatch.boardDone) {
+      watchStop();
+      _watch = null;
+      state.ui.liveWatch.boardDone = true;
+      renderApp();
+    }
   }));
   (_a = document.getElementById("tc-simposs")) == null ? void 0 : _a.addEventListener("click", () => {
     if (callTapOk()) simToPossessionEnd();
@@ -3868,7 +3880,7 @@ function mountLiveWatch() {
     return;
   }
   initWatchMode(gameLike, isHome, { key: watchKey, onFinish: liveWatchFinish });
-  if (_watch) _watch.liveLabel = lw.stage === "halftime" ? "End of the first half \u2014 the locker room is waiting." : lw.stage === "call" ? "The headset crackles \u2014 your call." : "That\u2019s the ballgame.";
+  if (_watch) _watch.liveLabel = lw.stage === "halftime" ? "End of the first half \u2014 the locker room is waiting." : lw.stage === "call" ? state.ui.autoRun ? "Rolling \u2014 the sheet calls the next one." : "The headset crackles \u2014 your call." : "That\u2019s the ballgame.";
   (_h = document.getElementById("watch-live-skip")) == null ? void 0 : _h.addEventListener("click", () => {
     var _a2;
     watchStop();
@@ -3973,7 +3985,6 @@ function initWatchMode(r, isHome, opts = {}) {
       paused: clipMode && !opts.clip.reel,
       timer: null,
       replayTimer: null,
-      art: false,
       onFinish: opts.onFinish || null,
       clip: opts.clip || null,
       activePlay: null,
@@ -4108,13 +4119,24 @@ function initWatchMode(r, isHome, opts = {}) {
       }
     } catch (e) {}
   });
+  // Owner live-test fix (2026-08-17): the Play Art toggle used to live on the
+  // per-board `_watch` object with an off-by-default `art` field — and the LIVE board
+  // is rebuilt with a fresh key on every snap, so the toggle re-disabled itself
+  // before every play (and across halftime) and the D4 overlay never rendered.
+  // It now reads state.settings.watchArt AT RENDER TIME (default ON), the same
+  // pattern as the Replays button below — one persistent dial, every board.
   const artBtn = document.getElementById("watch-art");
+  const watchArtOn = () => {
+    var _s = state.settings || {};
+    return _s.watchArt !== false;
+  };
   const syncArt = () => {
-    root.classList.toggle("watch-art-off", w.art === false);
-    if (artBtn) artBtn.textContent = `Play Art: ${w.art === false ? "Off" : "On"}`;
+    root.classList.toggle("watch-art-off", !watchArtOn());
+    if (artBtn) artBtn.textContent = `Play Art: ${watchArtOn() ? "On" : "Off"}`;
   };
   artBtn == null ? void 0 : artBtn.addEventListener("click", () => {
-    w.art = w.art === false;
+    if (!state.settings) state.settings = {};
+    state.settings.watchArt = !watchArtOn();
     syncArt();
   });
   syncArt();
@@ -7465,7 +7487,13 @@ function watchTickBody(w, immediate = false) {
     watchBoard(null);
     if (w.onFinish) {
       var _lw = state.ui.liveWatch;
-      const isCallStage = (_lw == null ? void 0 : _lw.stage) === "call" && !state.ui.autoRun;
+      // Owner live-test fix (2026-08-17): stage "call" ALWAYS auto-advances.
+      // The old `&& !state.ui.autoRun` sent WATCH mode into the manual
+      // Continue-button branch below — every snap stopped dead on a "your
+      // call" label until a tap, which is the exact opposite of watching.
+      // onFinish (liveWatchFinish) reads state.ui.autoRun live at fire time,
+      // so a mid-hold involvement switch is still honored on this snap.
+      const isCallStage = (_lw == null ? void 0 : _lw.stage) === "call";
       if (isCallStage) {
         ticker.innerHTML = `<span class="wt-final">${w.liveLabel || ""}</span>`;
         const fn = w.onFinish;

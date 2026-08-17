@@ -20,8 +20,22 @@
 //     gates it — the ONLY serialization gate); skip state (skipPoss/skipUntil/
 //     _skipAnim) is engine-transient and gone by the final gun, so no new
 //     save path and nothing skip-related to serialize.
+//  7. OWNER LIVE-TEST 2026-08-17 (bugs #3/#4): a mid-game level switch is
+//     honored on the VERY NEXT SNAP, each direction — after keydowns→all,
+//     no 1st–3rd-down snap is ever recorded without an ask between two asks;
+//     after all→keydowns, the first ask back is on-spec.
+//  8. OWNER LIVE-TEST 2026-08-17 (bug #1): sim-to-half pressed WITH a call
+//     prompt open lands the HALFTIME seam — zero stray prompts, stage 2 (not
+//     'done'/final), stopAfterHalf intact, all plays half 1, _skipAnim (the
+//     UI's straight-to-locker-room key) untouched by the engine.
+//  9. OWNER LIVE-TEST 2026-08-17 (bugs #1/#2/#3, UI half): source tripwires
+//     for the parts node can't click — play-art backed by settings (read at
+//     render, survives every per-play board rebuild + halftime), the watch
+//     board's call stage auto-advancing, the locker-room path dropping the
+//     stale call overlay. The live click-through remains browser-owed.
 //
 // Run from repo root: node tools/timecontrol_probe.mjs [gamesPerCell]
+import { readFileSync } from 'node:fs';
 import { createPlayer } from '../js/engine/player.js';
 import { buildDepthChart } from '../js/engine/world.js';
 import { simulateFirstHalf, stepSecondHalf, resumeFromCall, resumeFromDecision,
@@ -252,6 +266,114 @@ console.log('== M4 TIME CONTROLS PROBE ==');
   g('after the final gun nothing skip-related lingers on the token (no new save surface)',
     clean, `skipPoss=${String(t.skipPoss)} pending=${!!t.pending}`);
   g('a finished game is NOT a live pause', !gamePauseIsLive({ pendingHalftime: null }));
+}
+
+// ── 7. Owner live-test (bugs #3/#4): the switch bites on the VERY NEXT snap ─
+{
+  const M = Math.max(3, Math.floor(N / 2));
+  const flatPlays = (t) => {
+    const out = [];
+    for (const d of t.drives || []) for (const p of d.plays || []) out.push(p);
+    if (t.pending?.drive?.plays) out.push(...t.pending.drive.plays);
+    return out;
+  };
+  let flips = 0, slipped = 0, windows = 0, backFlips = 0, backOffSpec = 0, done = 0;
+  for (let i = 0; i < M; i++) {
+    const t = newToken('keydowns');
+    let mode = 'key';    // key → all (windows audited) → back (first ask audited)
+    let prev = null;     // play count at the last audited answer
+    let winsLeft = 3;    // audit three consecutive ask-to-ask windows in 'all'
+    const ok = drain(t, (tok) => {
+      const p = tok.pending;
+      if (mode === 'key') {
+        if (p.kind !== 'playcall' || p.half !== 1) return;
+        tok.callMode = 'all';           // exactly what setInvolvement writes
+        prev = tokenPlayCount(tok);
+        mode = 'all';
+        flips++;
+        return;
+      }
+      if (mode === 'all') {
+        // Between the last answered snap and THIS ask, every scrimmage snap
+        // must itself have asked — i.e. nothing at down 1–3 slips through.
+        // (Index `prev` is the answered snap; kickoff rows ride at down 0;
+        // an un-asked 4th-down resolution rides at down 4.)
+        const cur = tokenPlayCount(tok);
+        const between = flatPlays(tok).slice(prev + 1, cur);
+        if (between.some((pl) => pl.down >= 1 && pl.down <= 3)) slipped++;
+        windows++;
+        prev = cur;
+        if (--winsLeft <= 0) { tok.callMode = 'keydowns'; mode = 'back'; backFlips++; }
+        return;
+      }
+      if (mode === 'back') {
+        // the FIRST ask after switching back must already be on-spec
+        const sit = askSit(p);
+        if (p.kind === 'fourth') { if (!fourthDownIsMoment(sit)) backOffSpec++; }
+        else if (!isKeyDownSituation(sit)) backOffSpec++;
+        mode = 'quiet';
+      }
+    });
+    if (ok) done++;
+  }
+  g('switch → EVERY: no 1st–3rd-down snap ever passes un-asked (next-snap honored)',
+    flips === M && slipped === 0, `${slipped} slips over ${windows} ask windows, ${flips}/${M} flips`);
+  g('switch back → MOMENTS: the first ask back is already on-spec',
+    backFlips === M && backOffSpec === 0, `${backOffSpec} off-spec of ${backFlips} first-asks`);
+  g('next-snap games complete', done === M, `${done}/${M}`);
+}
+
+// ── 8. Owner live-test (bug #1): sim-to-half WITH a call prompt open ───────
+{
+  const M = Math.max(3, Math.floor(N / 2));
+  let armed = 0, strays = 0, seamOk = 0, h1Only = 0, keyIntact = 0, done = 0;
+  for (let i = 0; i < M; i++) {
+    const t = newToken('all');
+    let guard = 0;
+    while (guard++ < 400 && t.pending && !(t.pending.kind === 'playcall' && t.pending.half === 1)) answer(t);
+    if (!(t.pending && t.pending.kind === 'playcall' && t.pending.half === 1)) continue;
+    armed++;
+    // the owner's repro: the ⏭⏭ button pressed while the sheet is asking —
+    // exactly what simToBreak arms before answering with the plan.
+    t.skipUntil = { half: 1, clock: 0 };
+    t._skipAnim = { fromPlays: tokenPlayCount(t) };
+    answer(t);
+    guard = 0;
+    while (t.pending && guard++ < 400) { strays++; answer(t); }
+    // the HALFTIME seam, not final: stage 2, stop-after-half intact, no pending
+    if (t.stage === 2 && t.stopAfterHalf === 1 && !t.pending) seamOk++;
+    // the record at the seam is a FIRST HALF — the "scoreboard phase" truth
+    if ((t.drives || []).every((d) => (d.plays || []).every((pl) => pl.half == null || pl.half === 1))) h1Only++;
+    // the UI's straight-to-locker-room routing key is untouched by the engine
+    if (t._skipAnim) keyIntact++;
+    t._skipAnim = null;
+    stepSecondHalf(t);
+    if (drain(t)) done++;
+  }
+  g('sim-to-half with a pending call: ZERO stray prompts before the break', armed === M && strays === 0, `${strays} strays, ${armed}/${M} armed`);
+  g('…lands the halftime seam (stage 2, stopAfterHalf) — never final', seamOk === M, `${seamOk}/${M}`);
+  g('…the record at the seam is all first-half plays', h1Only === M, `${h1Only}/${M}`);
+  g('…the locker-room routing key (_skipAnim) survives to the seam', keyIntact === M, `${keyIntact}/${M}`);
+  g('…and the game still completes after the break', done === M, `${done}/${M}`);
+}
+
+// ── 9. Owner live-test (UI half): source tripwires for what node can't click ─
+// These pin the FIX SHAPE in js/ source; the live click-through is browser-owed.
+{
+  const app = readFileSync(new URL('../js/ui/app.js', import.meta.url), 'utf8');
+  const st = readFileSync(new URL('../js/state.js', import.meta.url), 'utf8');
+  g('play-art: the per-board `art: false` reset is GONE from the watch initializer',
+    !/\bart:\s*false\b/.test(app));
+  g('play-art: the watch-bar button is backed by state.settings.watchArt (read at render — survives every per-play rebuild + halftime)',
+    app.includes('state.settings.watchArt'));
+  g('play-art: the pre-snap overlay plan reads state.settings at render (presnapArt)',
+    app.includes('presnapArt'));
+  g('watch gate: the call stage auto-advances regardless of autoRun (no Continue trap)',
+    !app.includes('=== "call" && !state.ui.autoRun'));
+  g('sim-to-half: the straight-to-locker-room path drops the stale call overlay',
+    /skipTok\._skipAnim = null;[\s\S]{0,900}state\.ui\.liveWatch = null;[\s\S]{0,100}state\.ui\.showHalftime = true;/.test(st));
+  g('sim-to-end: the straight-to-box-score paths drop the stale call overlay',
+    (st.match(/state\.ui\.liveWatch = null;\s*(?:\/\/[^\n]*\n\s*)*state\.ui\.showGameResult = true;/g) || []).length >= 2);
 }
 
 console.log(fail ? `\n❌ ${fail} TIME-CONTROL FAILURES` : '\n✅ M4 TIME CONTROLS PASS');
