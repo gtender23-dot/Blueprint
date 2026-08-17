@@ -29,7 +29,7 @@ designed QB runs/team-game (ESPN) → pocket ≈0; PFF's 75% pressure-coupled
 verified verbatim; X&O Labs coach survey: 34.4% of coaches run RPOs on
 25–50% of offense, and a give-heavy exemplar pull rate ~15% at 82% comp.
 
-### THE PICK-LIST — (a)–(d) RATIFIED (owner, 2026-08-17); (e)/(f) still open
+### THE PICK-LIST — (a)–(d) RATIFIED; (e)/(f) DEFERRED (owner, 2026-08-17 — parked, not declined; don't re-raise unprompted)
 
 - [x] **(a) RATIFY B1, B3, B5, B6 as source-pinned at current values.** Zero
   code/probe change — the ledger note "provisional, NFL-floor inference"
@@ -50,13 +50,17 @@ verified verbatim; X&O Labs coach survey: 34.4% of coaches run RPOs on
   exists (only PFF Premium would pin it); the coached three-phase keep is
   confirmed, direction right. Keep the probe band as shipped.
   **RATIFIED 2026-08-17.**
-- **(e) OPTIONAL — option-team floor:** raise the option floor target
+- **(e) DEFERRED (owner, 2026-08-17 — parked, not declined; re-raise only
+  when the owner brings it up or an option-team realism item is in scope)
+  — option-team floor:** raise the option floor target
   (currently 5–12 designed/g) toward **12–20 total QB designed carries** to
   match service-academy reality (18–23 gross att/g, minimal sacks). NEEDS a
   probe measurement first: the option CHAIN already produces QB keeps
   outside the qbRunPct family pricing, so measure total option-team QB
   carries before touching any dial. Not sized this session.
-- **(f) OPTIONAL — B2 college league average:** the only route to a real
+- **(f) DEFERRED (owner, 2026-08-17 — parked, not declined; re-raise only
+  when the owner brings it up or a stats-research pass needs the CFBD
+  distribution) — B2 college league average:** the only route to a real
   college scramble-per-dropback number is the CFBD play-text mine (source
   #1), blocked in this sandbox. Approve a local keyed CFBD run if wanted;
   otherwise B2's "college > NFL 4%" direction stands unpinned at league

@@ -3,7 +3,8 @@
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
 Last updated: **2026-08-17 QBRUN PICKS (a)–(d) RATIFIED (owner) — F1 re-spec
 applied to rpo_probe S4 (dual scramble spec 3.5–8%, asserted 3.0–9 w/ noise
-pad), rpo_probe 60/0 ×3; picks (e)/(f) still open (entry below). Prior same
+pad), rpo_probe 60/0 ×3; picks (e)/(f) since DEFERRED by owner — parked, not
+declined, do NOT re-raise unprompted (entry below). Prior same
 day: FULL-GATE S-TIER FIXES (owner-ratified triage
 plan, steps 1–3 EXECUTED): the ONE product bug FIXED (timeout Rest-of-Game
 chips wired — live browser proof owed), commit_rate's day-3 posReviewed
@@ -156,8 +157,10 @@ noise pad — an unpadded 3.5 floor was tried first and flaked on run 2
 (observed values across final runs: 5.1 / 3.3 / 4.1%db), so the pad matches
 the sibling cells' convention. No engine change; RNG untouched.
 **Gate: `rpo_probe` 60/0 ×3 on the final probe.** Pick-list marked in the
-assessment ((e) option-floor raise, (f) local keyed CFBD run still OPEN —
-owner deciding). Committed: probe + assessment + this entry. NOT pushed.
+assessment. **(e) option-floor raise and (f) local keyed CFBD run: DEFERRED
+(owner, 2026-08-17) — parked, NOT declined. Do not re-raise unprompted;
+they live in the assessment's pick-list for whenever the owner returns to
+them.** Committed: probe + assessment + this entry. NOT pushed.
 
 ## 2026-08-17 — QB-RUN/RPO RESEARCH PASS (all 8 sources owner-APPROVED · fetched · assessed — NO outcome code changed)
 
@@ -328,9 +331,10 @@ you have everything owed.
   shipped; F1 = band fix (dual scramble 3.5–8%); F2 in band; B4 stays
   provisional (nothing public pins keep share). **→ One decision still
   owed: the pick-list (a)–(f) atop
-  `Ref/QBRUN_RATES_ASSESSMENT_2026-08-17.md`** — (a)–(d) are
-  ratifications/no-ops, (e) option-floor raise and (f) local keyed CFBD
-  run are optional follow-ups.
+  `Ref/QBRUN_RATES_ASSESSMENT_2026-08-17.md`** — since RESOLVED: (a)–(d)
+  RATIFIED + F1 re-spec applied (rpo_probe 60/0 ×3); (e)/(f) DEFERRED
+  (owner, 2026-08-17 — parked, not declined; don't re-raise unprompted).
+  Nothing owed on this item.
 
 **Browser / device eyeballs (one `node tools/build.mjs` + `npx serve dist`
 covers all of these; details in each entry's OWNER CHECKLIST):**
