@@ -1,11 +1,214 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-16 (playtest 8-16 backlog + build order folded in;
-session reconcile: Act F committed + built; Run/Pass-tab + landscape fixes;
-functional browser playtest of Stages 3–7 PASSED — visual eyeball still owed)**.
+Last updated: **2026-08-16 session (D5 · M3 audit — report-only — delivered:
+`Ref/RPO_AUDIT_2026-08-16.md` + `tools/rpo_audit_probe.mjs`; STOPPED for
+owner ratification, D6 blocked on it). Plan of record: BUILD ORDER v2
+(2026-08-17), dispatch prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`. Prior:
+Act F reconcile; functional playtest of Stages 3–7 PASSED — visual eyeball
+still owed, now scheduled to ride the first M1 bench session.**
+
+## 2026-08-16 — D5 · M3 RPO/QB-RUN AUDIT (report-only) — STOPPED FOR OWNER
+
+**OWNER CHECKLIST**
+- **Ratify `Ref/RPO_AUDIT_2026-08-16.md`** — D6 (M3 build) is blocked on it.
+  The report ends with **7 open design decisions** formatted for a phone
+  read (kill the QB_RUN_BASE dice? target rate bands, archetype as the AI
+  key, widen the Dual band, clean-pocket scramble rung, RPO keep share,
+  v1 family size).
+- No browser verification owed from this session (no `js/`/`style.css`
+  change — tools/ + Ref/ only).
+- Residual data gap, ledgered in the report §3: per-archetype COLLEGE
+  scramble rates and college RPO give/throw splits are behind PFF's
+  paywall; the target bands are NFL-floor + college-higher inference.
+
+**What shipped:** `tools/rpo_audit_probe.mjs` (new measurement harness —
+deliberately NOT registered in the gate manifest: it prints rates, asserts
+nothing; D6's `rpo_probe` will be the gating probe) +
+`Ref/RPO_AUDIT_2026-08-16.md` (the deliverable). **No outcome code touched.**
+
+**Headline findings** (600 AI-vs-AI games / 1,200 team-games; stable on a
+150-game re-run): the sim never reads the QB archetype — everything keys on
+attributes, and the AI's `qbRunPct` dial keys on absolute SPD>75 that
+derived Scramblers (mean SPD 63) rarely clear, so the archetype spread is
+compressed to 1.3× (real: 5–10×). Pocket starters get **3.58 designed QB
+runs/game** off the QB_RUN_BASE formation dice (real ≈ 0–1); scramblers
+scramble only **3.4% of dropbacks** (real mobile QBs 8–12%+) because
+scrambles are pressure-gated — a clean-pocket scramble cannot happen; RPO
+is **7.1% of snaps vs 21.8% real Power-Four** (PFF), though the 75/25
+give/throw split already matches reality; the RPO **keep phase does not
+exist** (#46 confirmed at engine level); only QB Sneak + QB Power are
+authored (#45 confirmed). Option chain + defensive counter vocabulary
+(spyQB / optionKey / edgePlay / weekly reaction) are healthy — D6 verifies,
+not invents.
+
+**Gates:** no source changes → no build/gate owed. Probe run ×2 (600- and
+150-game samples, headline rates reproduce).
+
+## 2026-08-17 — BUILD ORDER v2 (review + commercial-pattern merge — RUN THIS)
+
+Supersedes the 2026-08-16 order below (its note→milestone mapping still
+holds; keep it for the record). What changed: the plan was reviewed for gaps,
+then checked against how shipped commercial games (Madden / FM / 2K / Retro
+Bowl) solve the same problems; owner ratified the merge 2026-08-17 with one
+hard boundary: **the M1 bench is a PLAY-DESIGN instrument, period — no
+scouting hooks, no opponent practice, no lesson layer. Scouting stays in
+scout/film room.** Dispatch-ready prompts, one block per unattended session:
+**`Ref/DISPATCH_PLAN_2026-08-17.md`** (D1–D9 map to the milestones here).
+
+**M0 — fast sweep, pulled FORWARD (no design calls; land anytime, parallel).**
+- **Wake lock while watching (#7):** `navigator.wakeLock('screen')` on viewer
+  open, re-acquire on visibilitychange, release when the watch ends;
+  feature-detected (commercial norm: the screen never sleeps in gameplay).
+- **Replay toggle ships now (#9)** and grows into M4's Presentation settings
+  group (frequency Off/Low/High, 2K-style) later.
+- **The CARD LINTER (new — the commercial pipeline fix for #18/#20/#49).** A
+  probe walks EVERY (formation × variation × concept) card and asserts
+  football legality: no slot body in the FB spot, QB depth matches the look
+  (no shotgun in under-center looks), personnel matches the pkg,
+  strength/flip convention matches the fielded slots (the #49 orientation
+  bug), everything in bounds. Fix every authored row it flags (known: Spread
+  Ace #18, Pistol Diamond #20, flipped draws #49; hand-review Red-Zone Fade
+  #19 vs its concept), then the linter pins them forever. Goes in CORE.
+- Mobile overflow: custom-division conference header (#5), pressure controls
+  (#32).
+- Def no-design fixes pulled out of M5: DE/RE/LE label consistency (#31);
+  bring 3/4/5/6 changes the card's rush-arrow count (#33 graphic half —
+  `renderDefCallCard` already draws from bring). The bring-3-on-a-4-man-line
+  sim AUDIT half stays in M5.
+
+**M1 — the test bench (the instrument, build FIRST).** One shared live
+viewer: even-matched scratch teams, run this play, retry freely — this is
+Madden's Practice mode shape. Revisions from review:
+- **Generic API** — bench(formation, variation, play/concept, defensive
+  LOOK) — with THREE entrances: the Play Composer, the Formation Designer
+  (on save → auto-install every fitting concept → test), and **the Playbook
+  Builder's cards**. The third is required: M2's bug list is all BUILT-IN
+  content, and without it the instrument can't verify the very thing it was
+  built to measure.
+- **The defense picker is a full LOOK** — front + coverage + bring count, not
+  just a front (#1 says front, but pass-concept trust is a coverage
+  question). Reuse the defCall card vocabulary / starter defensive books.
+- **Retry semantics, both kinds:** "run again" (fresh RNG — see the spread)
+  and "same roll again" (pinned PRNG, the probes' trick). One result line
+  per rep: the call, the coverage rolled, the outcome.
+- **ONE shared "fits this look" function.** Expose Stage 7's
+  `compileFormation` filter rulebook (minWR, backfield structure,
+  options-need-two-backs) and have Designer auto-install, Builder
+  auto-select (#23), and the bench's play list ALL call it — three surfaces
+  that can't disagree. Per-look personnel-aware once M2 lands (Empty never
+  offers two-back plays). Auto-select seeds the formation's shipped sheet
+  weights, NOT flat ones (everything-at-equal-weight is a diluted game-day
+  book).
+- Owner boundary above applies: play design only.
+
+**M2 — per-LOOK play fidelity (the trust anchor) — RE-SCOPED: part engine,
+band-gated.** The 8-16 order framed this as presentation; two pieces move
+outcomes and must ride the band machinery (tendency + playcall +
+stat_realism A/B):
+- **Per-look sheets change the sim** (which concepts get called from each
+  look). Model: **INHERIT-WITH-OVERRIDE** — a look without its own sheet
+  inherits the formation sheet byte-identically; editing forks it. This is
+  the commercial model (a play belongs to the LOOK — Gun Trips Mesh ≠ Gun
+  Bunch Mesh), materialized from concepts instead of hand-authoring
+  thousands. Solves #43 (edit one look without echoing to the others) and
+  keeps every existing book / AI plan / starter byte-identical until
+  touched.
+- **"Own personnel" = CREATOR_FIDELITY engine items 1–2, un-parked.** Both
+  owner decisions are **CONFIRMED (2026-08-17: "easy yes to both")**:
+  (a) variation pkg ALWAYS wins when fielding personnel; (b) Empty gets a
+  REAL pkg (backs genuinely off the field). Build to these; no further ask.
+- **Migration sweep (the 8-16 order was silent here):** per-look sheets
+  re-key `TeamBook.sheets` → `repairCreation` maps old books losslessly
+  (trivial under inheritance: old book = base sheets only); sweep
+  `playbook_shape_probe`, overlay `PLAN_BOOK_STRUCT_FIELDS` concept weights,
+  quick-slots, `aiFormationSheets`, the FORMATION_PLAYBOOK gate. Old SAVES
+  may die (root-architecture §5b); the CREATOR LIBRARY may not.
+- Cards: every graphic drawn for the specific look (#12/#14); nested/
+  expandable card screens so OL jobs fit (#16). **The Composer grows RUNS +
+  BLOCKING authoring HERE** — the previously unassigned rest of #37 (M2
+  needs OL jobs drawn; M3 needs run-side authoring) — through the proven
+  band-clamped grader.
+- **Pre-snap play-art overlay in the watch viewer (new — the Madden trust
+  device):** the SAME card art draws over the fielded players before the
+  snap. Stage 6 unified the rows, so this is mostly a draw call — card↔field
+  agreement becomes self-evident every snap instead of asserted.
+- Verify the concrete bugs on the BENCH + the linter (#18/#19/#20/#49).
+  Answer #21 with reps AND words: a one-line purpose blurb on every concept
+  card ("what it is · what it does · what it risks" — the def-card subtitle
+  grammar; help-language rules, no numbers) + the missing manual chapters
+  (standing gaps-audit item).
+- The Stages 3–7 **visual-eyeball debt rides the first bench session** (same
+  screens).
+
+**M3 — RPO / QB-run realism (audit-GATED, outcome-bearing).** Audit first
+(#47): instrument designed-QB-run vs scramble vs RPO give/keep/throw rates
+by QB archetype, compare against real college rates, set targets — then
+STOP for the design call. Then build the commercial shape (Madden's): a
+**hand-AUTHORED RPO / QB-run play family** with its own routes (#45) + an
+RPO+QB-run type (#46) — never "any run can be a QB run" — with **AI call
+rates keyed to QB archetype** (scrambler ≫ pocket). Defensive counters
+already exist (spyQB, edge discipline) — verify they answer it; balance
+through the band harness; testable on the M1 bench. Depends on M2's
+composer run primitives.
+
+**M4 — watch/time controls (independent — #7/#9 already shipped in M0).**
+The redesign IS Madden "Play the Moments" + FM highlight levels:
+- **3-level involvement toggle** — watch every play / coach big moments /
+  coach every play — changeable MID-GAME (FM's law), replacing the two
+  Ride-the-Plan buttons (#51).
+- **Big moments DEFINED** (spec, not vibes): 4th downs, red-zone trips,
+  inside 2:00, one-score 4th quarter → interrupt PRE-SNAP with the call
+  sheet open (that's where the value is); turnovers + scores surface as
+  watch moments, no interrupt.
+- **Transport row (commercial standard):** skip play · sim possession
+  skipping the animation (#54 — the Retro Bowl "skip playing defense" loop)
+  · sim to half / end (#55) · take control next snap. Fix the dead FF
+  button; TEMPO leaves the row — it's hurry-up/chew-clock strategy and
+  lives with the game plan (#51).
+- Skipped stretches leave **drive-summary lines** in the feed, not silence.
+- **LAW:** sim-to-half/end resolves the halftime token through the EXISTING
+  pause path — `gamePauseIsLive` stays the only serialization gate; no new
+  save path mid-skip.
+- Landscape button → camera views when the camera acts land (#25).
+
+**M5 — game-plan home + dial redistribution + Seasons + Def playbook
+(design-heavy, LAST).** The organizing principle is FM's tactic-vs-touchline
+split — which is already our ratified architecture: the BOOK is the
+persistent object, the game plan is overlays on it.
+- **Embedded editable playbooks** in dynasty/season, saved to the LEAGUE
+  save, with "push to Workshop" (#39). Push MUST **restamp the source
+  identity** (`sourceSaved`/`_bookSourceSaved`) or the Stage-3 banner
+  instantly fires about your own push; embedded editors force re-synthesis
+  on save (the Stage-3 seam exists). Move offensive identity here + add the
+  defensive version; formation-usage dials live here (collapsed graphics
+  #3); better simple game-planning look (#41).
+- **Dial-home redistribution (#39 brainstorm) driven by the split:** BOOK
+  properties (formation usage, sheets) live with the book; WEEK properties
+  (tempo, aggression, situations) stay in the controller.
+- Seasons: playbook selection + starting options (#27) **including the
+  defensive book** (parity with new-game); strip recruiting settings (#29).
+- Def playbook: the bring-3-on-a-4-man-line AUDIT (#33 — does the sim
+  genuinely drop a lineman; `rush3` behavior); **the defbook v2 probe debt
+  lands here at the latest** (defbook_probe v2 asserts + defsheet_probe).
+
+**Standing debt folded in (so it can't rot):** Stages 3–7 visual eyeball →
+M1's first bench session; defbook v2 probes → M5 or sooner; act B/D local
+scrub re-run + full local gate + a green night run before the next deploy.
+
+**Cross-cutting (#35) unchanged:** "what's wired cheap that deserves more
+attention?" — keep working the intricate-gaps ledger method.
+
+**Explicitly NOT adopted (owner call, 2026-08-17):** opponent-scouted-look
+practice and any lesson layer on the bench — the bench designs plays;
+scouting lives in scout/film room. FM-style "tactic familiarity" (install %)
+is NOT scheduled either — noted only as the reference model if the
+gaps-audit practice↔books design call is ever taken.
 
 ## 2026-08-16 — PLAYTEST 8-16 BACKLOG + THE BUILD ORDER
+
+**SUPERSEDED 2026-08-17 — BUILD ORDER v2 above is the runnable plan.** The
+note→milestone mapping below still holds; kept for the record.
 
 Source: `test_notes_8-16.txt` (owner playtest). Two owner clarifications baked in:
 (a) the Formation Designer **auto-installs every concept that fits the formation's
