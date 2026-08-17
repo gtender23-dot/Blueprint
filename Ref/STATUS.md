@@ -1,10 +1,24 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-17 QB-RUN READING LIST drafted (research prep, NO
-fetches) — the D5/D6 brain-research ledger item now has its owner-approval
-list at `Ref/READING_LIST_QBRUN_2026-08-17.md`; answer with source numbers
-("approve 1,2,5") to start the fetch pass (entry below). Prior same day:
+Last updated: **2026-08-17 FULL-GATE S-TIER FIXES (owner-ratified triage
+plan, steps 1–3 EXECUTED): the ONE product bug FIXED (timeout Rest-of-Game
+chips wired — live browser proof owed), commit_rate's day-3 posReviewed
+hang FIXED (3× full season ~104 s exit 0), the manifest-correction batch
+landed (dna_cards pw→node · gaplist + pass5_band_ab seedFlaky · tipdrill
+seedFlaky dropped + args 6→12 · the "(cloud)" mislabels rewritten), and the
+S-sized probe edits in (formation_playbook Mesh bar 0.15→0.10 ·
+tipdrill staging bar 0.5→0.4 · new_world staff step · nav_back group map ·
+dna_cards argv guard) — every node-reachable gate ×3 GREEN here; the
+M-sized retired-menu-family PW rewrites (triage items 7–10) NOT attempted,
+still owed (entry below). Prior same day: QB-RUN RESEARCH PASS DONE (owner approved all 8
+sources; fetch/extract complete, NO outcome code touched) — assessment at
+`Ref/QBRUN_RATES_ASSESSMENT_2026-08-17.md`: B1/B3/B5/B6 source-pinned as
+shipped, B2 pinned except the dual cell (F1 → band fix), B4 unpinned (keep
+provisional), F2 in band; owner pick-list (a)–(f) at the top of that file
+awaits answer (entry below). Prior same day: QB-RUN READING LIST drafted —
+the D5/D6 brain-research ledger item's owner-approval list at
+`Ref/READING_LIST_QBRUN_2026-08-17.md` (now consumed by the research pass). Prior same day:
 FULL-GATE TRIAGE (diagnosis only, no code) — all
 18 `_night_full_log.txt` reds classified in
 `Ref/FULLGATE_TRIAGE_2026-08-17.md`: ONE real product bug (dead
@@ -32,7 +46,35 @@ Prior: D4 · M2 presentation; D3 · M2 engine; D7 · M4; D2 · M1; D5 · M3
 audit RATIFIED. Plan of record: BUILD ORDER v2 (2026-08-17), dispatch
 prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
 
-## 2026-08-17 — QB-RUN/RPO READING LIST (research prep — NO fetches, owner approval owed)
+## 2026-08-17 — QB-RUN/RPO RESEARCH PASS (all 8 sources owner-APPROVED · fetched · assessed — NO outcome code changed)
+
+The D5/D6 "needs brain research" ledger item is now RESEARCHED. Owner
+approved all eight reading-list sources (including #4); the fetch/extract
+pass ran per the standing method caveat (NCAA sacks-as-rushes; public att/g
+merges designed+scramble+sneak — only claim what a source supports).
+
+**Read `Ref/QBRUN_RATES_ASSESSMENT_2026-08-17.md`** — per-band findings,
+recommended bands, diffs vs the D6 ship, and the phone-readable **owner
+pick-list (a)–(f)** at the top. The shape: **B1, B3, B5, B6 are now
+source-pinned at their shipped values** (zero change); **B2** is pinned top
+and bottom with the dual cell re-specced 3.5–8% (F1 resolved as a band fix,
+probe-comment-level, no engine change); **B4 stays provisional** (no public
+keep-share number exists anywhere — only PFF Premium would pin it; the keep
+as a coached third phase is confirmed); **F2 judged in band** (real statues:
+~3 gross att/g, nearly all sacks). One surprise: real option QBs carry
+18–23 gross att/g — the audit's option floor (5–12) is low; sized as
+optional pick (e), measure the option chain's contribution first.
+
+**Every claim is cited in `Ref/SOURCE_LIBRARY.md` §R (#57–#64)** + the fetch
+ledger there: CFBD API **blocked by the sandbox allowlist** (HTTP 000 on
+api.collegefootballdata.com and every mirror route; NOT worked around — a
+keyed local run is future item 1), Sports-Reference unreachable by WebFetch
+(Cloudflare) but read via the browser, statrankings' table client-rendered
+(NFL control NOT refreshed; seeded 2024 numbers stand), one FantasyPoints
+prospect claim recorded UNVERIFIED. Committed: assessment + SOURCE_LIBRARY
+§R + this entry, nothing else. NOT pushed.
+
+## 2026-08-17 — QB-RUN/RPO READING LIST (research prep — NO fetches; since APPROVED-ALL and consumed by the research pass above)
 
 The D5/D6 "needs brain research" ledger item (provisional §5C bands,
 PFF/ESPN/FantasyPoints NFL-floor anchors) now has its reading list:
@@ -168,12 +210,14 @@ you have everything owed.
   tab's identity dials stay (tab = week, editor = book). Zero code change.
   The organizing doctrine was ratified alongside — recorded at the dial map
   in the D8 entry.
-- [ ] **D5/D6 — brain-research ledger stands:** the RPO/QB-run target bands
-  are provisional (PFF/ESPN/FantasyPoints anchors). Two D6 notes for that
-  pass: the widened Dual's scramble share ~3.5–4.5% vs the 5–8% band;
-  pocket "designed" ≈1.4/g includes ~0.5 broken-play/Empty floor keeps.
-  **→ Reading list DRAFTED 2026-08-17** (`Ref/READING_LIST_QBRUN_2026-08-17.md`,
-  entry above) — approve sources by number to start the fetch pass.
+- [x] **D5/D6 — brain research DONE (2026-08-17):** owner approved all 8
+  sources; fetched, extracted, assessed. B1/B3/B5/B6 source-pinned as
+  shipped; F1 = band fix (dual scramble 3.5–8%); F2 in band; B4 stays
+  provisional (nothing public pins keep share). **→ One decision still
+  owed: the pick-list (a)–(f) atop
+  `Ref/QBRUN_RATES_ASSESSMENT_2026-08-17.md`** — (a)–(d) are
+  ratifications/no-ops, (e) option-floor raise and (f) local keyed CFBD
+  run are optional follow-ups.
 
 **Browser / device eyeballs (one `node tools/build.mjs` + `npx serve dist`
 covers all of these; details in each entry's OWNER CHECKLIST):**

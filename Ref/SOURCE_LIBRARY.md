@@ -385,6 +385,114 @@ with many labels, *different label URLs frequently resolve to the same article.*
     IN/OUT declaration, motion adjustment, vise the lead block. (Found via the 4 Minute Defense
     label sweep — it was in the sidebar, not the label; a genuinely new post.)
 
+### R. QB-run / RPO rate research (added 2026-08-17 — the QBRUN fetch pass, owner-approved all 8 list items)
+
+Assessment these feed: `Ref/QBRUN_RATES_ASSESSMENT_2026-08-17.md` (bands B1–B6, flags F1/F2).
+Standing method caveat applies to #57: NCAA counts sacks as negative rushing attempts, and
+public att/g merges designed + scramble + sneak — official tables are a JOINT upper bound, not a split.
+
+57. **Sports-Reference CFB — 2025 season leaderboards + player pages** — sports-reference.com/cfb
+    (`/cfb/years/2025-rushing.html`, `/cfb/years/2025-passing.html`, player pages: julian-sayin-1,
+    garrett-nussmeier-1, cade-klubnik-1, john-mateer-1, lanorris-sellers-1). Read via browser —
+    WebFetch times out on this domain (Cloudflare); the browser passes the check.
+    ✅ **Numeric anchor — the B1 exemplar ladder (gross NCAA att/g, sacks INCLUDED as rushes):**
+    option/service-academy: Hellums (Army) 304 att/13 g = **23.4**, Szarka (AF) **19.0**, Horvath
+    (Navy) **18.7**. Elite scramblers: Haynes King (GT) **15.4** (+15 rush TD), Mateer (OU) **12.4**
+    (WSU 2024: **14.8**), Byrum Brown (USF) **14.6**, Sellers (SC) **12.4** (2024: 13.8), Pavia
+    (Vandy) **12.8**, Dampier (Utah) **12.2**, Navarro (Ohio) 12.3, Joseph (ODU) 13.2, Green (Ark)
+    11.6. Mid/dual: Klubnik (Clemson) **6.9** (2024: 8.5, +463 net yds). Pocket statues: Sayin (OSU)
+    **3.0 gross att/g at −44 net yds**; Nussmeier (LSU) **3.2 gross, −57 net** (2024: 2.6, −38) —
+    strongly negative Y/A means these "attempts" are nearly all sacks; true pocket carries ≈ 0.5–1.5/g
+    INCLUDING sneaks + scrambles. **CFB passing tables carry NO sack column** — the sack add-back
+    cannot be computed from SR; the ladder is bounded, not split. Concepts: att/g ladder, option
+    floor reality (18–23 gross), pocket carry floor (F2), mid-class volume (F1).
+
+58. **PFF — "Components of Quarterback Play: Scrambling" (Judah Fortgang, Sep 2023)** —
+    pff.com/news/nfl-data-study-components-quarterback-play-scrambling
+    ✅ **Numeric anchor for B6, verified verbatim (NFL charting):** "Nearly 75% of scrambles are
+    also charted as pressures", and many of the other 25% are anticipatory-pressure scrambles.
+    "True scrambles" (PFF process definition: any begun scramble — run, throw, or sack) are ~15%
+    of all passing plays. Scramble EPA −0.15 vs −0.32 under pressure; true-scramble EPA twice as
+    stable YoY (r .40 vs .19). NFL-only; no college version of the 75% figure is published free.
+    Concepts: pressure-coupled scrambles, clean-pocket share ~25%, scramble-as-stable-trait.
+
+59. **PFF — "Top 10 running QBs in college football" (Jeff Dooley, Jul 2016)** —
+    pff.com/news/college-football-top-10-running-qbs-ward-barrett-watson
+    Qualitative but useful: elite college runners SPLIT differently — designed-run-dominant (Ward:
+    19 of 21 rush TD on designed; Barrett, Flowers, Russell) vs scramble-dominant (Mahomes: 383 of
+    576 rush yds on scrambles; Mayfield: 386 of 598). Supports modeling designed volume and
+    scramble rate as INDEPENDENT archetype axes, not one dial. Concepts: designed vs scramble
+    style split, scramble y/att >10 for elites.
+
+60. **Fantasy Points — "Statistically Significant: Scrambles/QB Runs" (Ryan Heath, Jun 2025)** —
+    fantasypoints.com/nfl/articles/2025/statistically-significant-scrambles-and-qb-runs
+    (client-rendered — body readable only via browser).
+    ✅ **Numeric anchor — the NFL floor under B1/B2:** 2024 designed rush att/g: Richardson **5.2**,
+    D. Jones **4.4** (4th-best in the league), Murray 1.8 (3.0 in 2023), C. Williams <2.0 — i.e.
+    the NFL's TOP designed-run QBs sit ~4–5/g, right under our college scrambler band's floor.
+    Scrambles/g 2024: Daniels **4.2**, Maye 3.5, Nix 2.9; D. Jones' pre-injury **9.5%** scramble
+    rate "would have ranked behind only Daniels and Maye" in 2024 (NFL leader band ~9.5–12%).
+    Scrambles only weakly correlate with pressure RATE (r = .357 since 2021) — frequency is a QB
+    trait, not a situation artifact (feeds F1: rate should scale with mobility as a gradient).
+    Designed-attempt stats exclude kneels. Concepts: NFL designed/scramble floors, scramble-rate
+    leaders, trait stability.
+
+61. **X&O Labs — "The Run/Pass Option Concept Study" (Mike Kuchar; full text mirrored at
+    sites.psu.edu/hefcoach14/why-use-rpos — "RPO Case Study & Research", Triangle-O)** —
+    the library's home turf (#45's genre), and **the only public line on B3/B4/B5 from the
+    coaching side.** ✅ **Numeric anchors:** survey — **34.4% of coaches run RPOs on 25–50% of
+    their offense** (majority response; 41% carry 4–5 concepts; 43.3% adopted in the last 2–3
+    seasons; 65.6% of no-huddle coaches use RPOs); named-coach shares of offense: Rampy (Pittsburg
+    St) 25%, Flinn (Villanova) 30%, Owens (W. Conn St) 50%, Coleman (Itawamba CC) 65%, Neal
+    (Hendrix) 30%, extremes 5%–80% of the run game. **Pull-rate exemplar** (Schneider, Bixby HS):
+    71% of calls were runs and "of those run calls just over 15% became pass plays," completed at
+    **82%** — a give-heavy pull rate consistent with PFF's NFL ~75/25. **B4 (keep share): NO
+    numeric anywhere**, but the keep as a COACHED third phase is confirmed repeatedly (Bouch's
+    zone-read-bubble "Triple Drill" give→pull→run-or-throw chain; Collins' mesh drill "he then
+    reads... if he gives or pulls. Then if he pulls the QB's eyes go to the LB to see if he keeps
+    it and runs or throws"; Neal's triple-option RPOs with a run/pull read plus a pass option;
+    Russell's Empty QB-run/screen RPO where the QB keeps if the LB sits). Hypothesis-grade by the
+    project rule, but B4 rested on nothing at all — this is strictly better than inference.
+    Concepts: RPO share of offense, give-first pull rates, keep-as-third-phase, QB-mobility
+    dependence ("depends on who they have playing quarterback").
+
+62. **ESPN — Bill Barnwell, "How running QBs have changed the NFL" (Sep 2024)** —
+    espn.com/nfl/story/_/id/41217438 (client-rendered — browser).
+    ✅ **Numeric anchor (the B1 seed, now verified verbatim + more):** "Forty-seven FBS
+    quarterbacks carried the ball on at least 50 designed runs (without sneaks or scrambles) a
+    year ago" [2023]. NFL context that pins the pocket floor: league-wide designed QB runs (ex
+    sneak/scramble/kneel) **590 total in 2023 ≈ 1.1 per team-game** — and that's WITH the running
+    QBs in it, so true NFL pocket passers sit ~0. NFL scrambles = **3% of all offensive plays**
+    (1.7% in 2007); 7.2 yds/scramble, 38.7% first-down rate; QB share of rush TDs 24%. Concepts:
+    designed-run prevalence, pocket designed ≈0 floor, scramble volume growth.
+
+63. **CBS Sports — "College football's 10 most elusive QBs" (2026 preseason; charting-derived,
+    67 P4 QBs w/ 100+ career dropbacks & 50+ rushes)** — cbssports.com/college-football/news/
+    college-footballs-elusive-qbs-arch-manning-sam-leavitt/
+    Best free college-charting texture found for B2: college elites average **7.8–12.7 yds per
+    scramble** (vs NFL 7.2 — college scrambles run longer); Kamario Taylor (Miss St) scrambled on
+    **18.9% of PRESSURED dropbacks** (pressured 46.2% of db — 2nd-highest FBS); Dampier sacked 16
+    times on 873 career dropbacks (**92.5% sack avoidance**, 1.8% sack rate). No league-wide
+    college scramble-per-dropback average is published. Concepts: college scramble efficiency >
+    NFL, pressure-scramble linkage, sack-avoidance spread.
+
+64. **statrankings.com NFL scramble-rate boards — control NOT refreshed.** Page reachable but the
+    table is client-rendered/virtualized (no rows in DOM text). The §3-seeded 2024 control stands:
+    NFL league avg ~4% of dropbacks, 2024 leaders 7.4–12.0 (Daniels 12.0, Maye 10.8, Hurts 8.9).
+
+**Fetch ledger (this pass):** (1) **CFBD API blocked by the sandbox network allowlist** —
+api.collegefootballdata.com, raw.githubusercontent.com, codeload.github.com, api.github.com all
+unreachable (HTTP 000); github.com HTML reachable but release assets unlistable. Not worked
+around, per rule. A keyed run on an open machine would produce: the per-QB FBS rushing att/g
+distribution (sack-corrected via game logs) → B1 all cells + F2 directly, and the play-text
+scramble mine → a real college B2. (2) PFF's two seeded RPO anchors (21.8% of P4 plays;
+~75/25 give/throw NFL) — re-fetch of the draft article timed out; the §3/`RPO_AUDIT` citations
+stand as-is. (3) A Fantasy Points prospect claim surfaced in search ("Daniels: highest scramble
+rate, 31.7%, of any college QB's final season, 250+ db, last decade" + 4.8 scrambles/g per PFF)
+could not be source-verified and its denominator is implausible as %-of-dropbacks — recorded as
+UNVERIFIED, do not band off it. (4) No published CFBD-based college scramble-rate study found
+(source 6 came up empty; #1's mine remains the only route to a college B2 number).
+
 > Minimal / dead: **`Tackling`** resolved to just a dead/relocated video link (Seahawks tackling
 > tape) — no usable text. Not counted as a source.
 
