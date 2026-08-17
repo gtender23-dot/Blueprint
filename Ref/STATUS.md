@@ -1,7 +1,11 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-17 session (D6 · M3 BUILD — the authored RPO /
+Last updated: **2026-08-17 NIGHT GATE session — both night giants GREEN on
+the D1–D9 tree, no reds, no flakes; the nine sessions' owner checklists are
+consolidated into ONE list in the NIGHT GATE entry below. Prior same day:
+D6 · M3 BUILD** (that entry follows the night-gate one). Original D6 header
+kept verbatim: **(D6 · M3 BUILD — the authored RPO /
 QB-run family per the RATIFIED audit: five authored plays with their own
 art (#45), the three-way give/keep/throw read (#46), THE DICE ARE DEAD,
 archetype-keyed AI rates at the audit's targets, clean-pocket scramble,
@@ -14,6 +18,143 @@ D6's in-flight concepts is RESOLVED in this session, card_lint 21/0 ×3.)
 Prior: D4 · M2 presentation; D3 · M2 engine; D7 · M4; D2 · M1; D5 · M3
 audit RATIFIED. Plan of record: BUILD ORDER v2 (2026-08-17), dispatch
 prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+
+## 2026-08-17 — NIGHT GATE (this sandbox, node) — BOTH GIANTS GREEN, NO REDS, NO FLAKES
+
+Run on the tree with all nine Build Order v2 dispatch blocks (D1–D9)
+committed (`HEAD c90d671`). The night tier is exactly two node probes
+(`h2_shadow_probe`, `recruit_calendar_probe` — manifest `night: true`) plus
+the gate's build floor. Both probes are measurement harnesses (they print
+distributions and assert nothing — green = clean completion, exit 0). Both
+completed exit 0 at full default volume. **Nothing red → nothing to trace
+to any D-block.**
+
+**Build floor:** clean esbuild build (ALL sanity checks PASS, 3726 KB,
+cache `cfb-dynasty-4cc274537e` — byte-size matches the D6 entry), built in
+a /tmp copy per the standing workaround (the mount forbids `dist/`
+deletion), outputs copied back to `dist/`. Bundle syntax parse (2 script
+blocks) + CSS braces balanced. **`_boot_check` UNRUNNABLE here** (standing:
+`.pw-browsers` is a Windows chrome-win64 build; chromium downloads
+blocked) — boot check + the whole PW tier remain OWED-LOCAL, unchanged.
+
+**How it ran (sandbox mechanics — ledgered so nobody re-diagnoses):** this
+sandbox KILLS background processes the moment a tool call returns (nohup/
+setsid do not survive) AND caps every call at ~178 s wall, so the giants
+cannot run in one piece. Faithful chunking used instead:
+- `h2_shadow_probe` — 8 calls of `node tools/h2_shadow_probe.mjs 750 <eff>`
+  (each = control-750 + one eff-750; arms are unseeded and independent, so
+  two pooled 750-runs ≡ one 1500 run). Pooled totals: **N=1500/arm for all
+  four ladder effs, control N=6000** — the default invocation's volume.
+- `recruit_calendar_probe` — a /tmp shim (verbatim copy + argv scenario
+  select + stderr heartbeat; probe logic byte-untouched, `js/` symlinked to
+  this tree) ran ONE scenario per call, ~90 s each, **4/4 exit 0**, 1 world
+  per scenario (the default).
+
+**h2_shadow pooled result** (whole-game shadow — halve for the H2-only
+live hit; sizing window per the probe: ~30–45% whole-game):
+
+| arm | tgt/g | rec/g | yds/g | TD/g | yds drop |
+|---|---|---|---|---|---|
+| control (N=6000) | 4.25 | 2.39 | 28.9 | .219 | — |
+| eff .07 | 3.16 | 1.71 | 19.8 | .139 | **−31%** |
+| eff .05 | 3.57 | 1.97 | 23.9 | .185 | −17% |
+| eff .035 | 3.69 | 2.04 | 24.1 | .185 | −17% |
+| eff .025 | 3.85 | 2.12 | 24.9 | .204 | −14% |
+
+Reading: **eff 0.07 is the only rung inside the probe's own sizing window**;
+the 0.025–0.05 rungs cluster at −14…−17%, well short of it.
+
+**recruit_calendar result** (real `advanceDay` pipeline, lock d19, 1 world
+per scenario): current 5886 signings, **74.8% battle-decided** / 25.2%
+deadline-dumped · proposed (open d4, floor d6) 6210, **76.4% / 23.6%** ·
+half-step 5994, 76.4% / 23.6% · floor-only 5886, 75.4% / 24.6%. Reading:
+compressing the calendar does NOT shift mass onto the day-19 lock — the
+battle-decided share actually rises slightly in every compressed scenario.
+The deadline-lottery failure mode the July overhaul removed does not
+reappear.
+
+**Anomalies, classified (none are probe failures):** (1) the first
+backgrounded `recruit_calendar` launch died instantly (exit 1, zero
+output) — the sandbox background-process kill, not the probe; 4/4 clean
+scenario re-runs prove it. (2) the first no-arg `h2_shadow` attempt hit the
+178 s wall mid-ladder — host wall, not the probe; its two completed arms
+match the pooled numbers above.
+
+**Observed in the working tree, NOT tonight's tier:** `_night_full_log.txt`
+(untracked, UTF-16, 2026-08-16 15:13 — an owner-machine FULL-tier run, 225
+probes) carries reds: the pw/UI-smoke family (defcall_ui, nav_back,
+timeout_screen, letter_logo, saved_team_library, instant_classic,
+table_button_phone, calendar_display, dna_cards, new_world TIMEOUT,
+position_gallery) plus covfam 16/1, gaplist, formation_playbook,
+size_fit 14/1 (the standing boundary flake), tipdrill 3/78 (standing
+seedFlaky), pass5_band_ab, commit_rate TIMEOUT. That is the standing "full
+local gate" debt mid-window — it is not the night tier and predates/
+straddles tonight's commits; triage it with the pre-deploy FULL run, not
+against tonight's blocks.
+
+**Night-debt accounting:** the standing "green night run before the next
+deploy" is PAID on this tree at full volume (chunked as above). Re-run
+locally only if the tree changes before the deploy, or if you want one
+contiguous `node tools/_gate.mjs night` on the working machine for the
+record.
+
+### THE ONE OWNER CHECKLIST (consolidated — tonight's nine sessions, D1–D9)
+
+Every per-session checklist below in this file is collected here; the
+per-entry versions keep the step-by-step detail. Read this list once and
+you have everything owed.
+
+**Decisions (no machine needed):**
+- [ ] **D8 — SIGN OFF THE DIAL-REDISTRIBUTION MAP** (the D8 entry, item 4:
+  only the dispatch-mandated move was made; both PROPOSED moves await your
+  (a)/(b) call — recommendation (a) on both).
+- [ ] **D5/D6 — brain-research ledger stands:** the RPO/QB-run target bands
+  are provisional (PFF/ESPN/FantasyPoints anchors). Two D6 notes for that
+  pass: the widened Dual's scramble share ~3.5–4.5% vs the 5–8% band;
+  pocket "designed" ≈1.4/g includes ~0.5 broken-play/Empty floor keeps.
+
+**Browser / device eyeballs (one `node tools/build.mjs` + `npx serve dist`
+covers all of these; details in each entry's OWNER CHECKLIST):**
+- [ ] **D1 · M0 device checks:** wake lock on a real phone (#7); replay
+  toggle survives save/reload (#9); phone overflow #5/#32; the re-authored
+  looks (Spread Ace #18, Pistol Diamond #20, Red-Zone Fade #19, def-card
+  arrows #33, LE/RE #31); the #49 handedness fix live + replay cameras.
+- [ ] **D2 · M1 first bench session** — Composer/Designer/Builder
+  entrances, SAME ROLL AGAIN byte-repeat, #23 auto-select. DOUBLES as the
+  standing Stages 3–7 visual eyeball.
+- [ ] **D3 · M2 per-look editors:** Builder per-look "Plays" + fork/inherit
+  pills; Game Plan look tabs fork-on-slide; call sheet honors a pinned
+  look's sheet; Air Raid Empty fields five wides, no back.
+- [ ] **D4 · M2 presentation:** bench-verify #18/#19/#20/#49; the pre-snap
+  play-art overlay live + replay cameras + its Settings toggle; the big
+  card (INFO drill-down + Builder ℹ); composer RUN half end-to-end; Film
+  Room rows show the call's card.
+- [ ] **D6 · M3 RPO family:** the five new cards + blurbs + 🧪 both phases
+  on the bench; a live scrambler-QB opponent shows a real QB run game
+  (~8–12 designed, ~8–12% scrambles) while pocket QBs essentially never
+  keep; the QB Run dial prices the family.
+- [ ] **D7 · M4 phone eyeball:** 3-level involvement toggle everywhere +
+  mid-game switch; transport row (⏭ / sim possession / sim to half/end)
+  with feed summaries, straight to box score; tempo chips gone;
+  Presentation settings group.
+- [ ] **D8 · M5 game-plan home:** in-dynasty edit → Save to My Season →
+  survives reload; ⤴ Push to Workshop with NO self-banner; Plan Home
+  (both book cards, def identity panel, collapsed usage art, simple-mode
+  one-liner); season setup book pickers (#27); season Settings hides the
+  four recruiting rows (#29).
+- [ ] **D9 · M5 defbook click-through** (unchanged 2026-08-15 v2 ledger):
+  Workshop → Defensive Playbook open/edit/save; Builder starter row; Game
+  Plan "Starter books" optgroups; new-game Starting Defense.
+
+**Local machine (gate):**
+- [ ] **Playwright tier** (owed by every session; unrunnable in this
+  sandbox): `node tools/build.mjs` + `node tools/_boot_check.mjs
+  dist/index.html`, then the core gate — the PW smokes were UPDATED by D7
+  (dc-ride → dc-send, kickoff "off" → "watch") but never run.
+- [ ] **Viewer act B/D local scrub + FULL local gate before the next
+  deploy** — and triage the `_night_full_log.txt` reds (above) with it.
+- [x] **Night giants** — GREEN this run, full volume, this tree (entry
+  above). Re-run only if the tree moves before deploy.
 
 ## 2026-08-17 — D6 · M3 BUILD (the authored RPO / QB-run family · the dice are dead · archetype-keyed rates · clean-pocket scramble)
 ## BUILT + NODE-GATED — ⚠ BROWSER TIER OWED
