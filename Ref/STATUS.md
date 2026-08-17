@@ -1,13 +1,111 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-16 session (D2 · M1 THE TEST BENCH — BUILT +
-NODE-GATED, browser playtest owed — see the entry below. Parallel this
-window: D5 · M3 audit delivered report-only, STOPPED for owner
-ratification, D6 blocked on it). Plan of record: BUILD ORDER v2
-(2026-08-17), dispatch prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`. Prior:
-Act F reconcile; functional playtest of Stages 3–7 PASSED — visual eyeball
-still owed, now scheduled to ride the first M1 bench session.**
+Last updated: **2026-08-16 session (D7 · M4 WATCH/TIME CONTROLS — BUILT +
+NODE-GATED, phone eyeball owed — see the entry below. Same window: D2 · M1
+THE TEST BENCH built + node-gated (browser playtest owed); D5 · M3 audit
+delivered report-only, STOPPED for owner ratification, D6 blocked on it;
+an M0 sweep and a #49-orientation viewer session also ran this window —
+see the shared-file note in the D7 entry). Plan of record: BUILD ORDER v2
+(2026-08-17), dispatch prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+
+## 2026-08-16 — D7 · M4 WATCH / TIME CONTROLS (involvement toggle + transport row)
+## BUILT + NODE-GATED — ⚠ PHONE EYEBALL + PW TIER OWED
+
+**OWNER CHECKLIST**
+- **Phone eyeball of the new controls in a LIVE game** (the M4 browser-owed):
+  kick off a game — the pregame asks 👁 Watch Every Play / 🎯 Coach the Big
+  Moments / 🎧 Coach Every Play; the same 3-segment toggle sits on the call
+  sheet, the defensive panel, the 4th-down panel and the watch bar, and
+  switching it MID-GAME takes effect immediately (Watch auto-plays every
+  snap with a 🎧 Take control button; Moments interrupts pre-snap with the
+  sheet open only on 4th downs / red zone / inside 2:00 / one-score Q4).
+  Drive the transport row: ⏭ skip-play (the fixed FF button, on the watch
+  bar), ⏭ Sim possession, ⏭⏭ Sim to half / end — skipped stretches must land
+  as "⏩ ABC drive: N plays, X yds — RESULT" lines in the feed, no animation
+  replay of the skipped stretch, and sim-to-end goes straight to the box
+  score. Tempo chips are GONE from the time controls (they live in Game
+  Plan → Tempo & Motion and the timeout modal's Rest of Game tab). Check
+  Settings → Game tab: new PRESENTATION group (Instant Replays Off/Low/High
+  — the watch bar's Replays button cycles the same dial; 8-Bit Players moved
+  in). If the deep look feels wrong on the phone, thumbs at the tc-bar CSS.
+- **Playwright tier locally** (chromium cannot download in this sandbox):
+  `node tools/build.mjs` + `node tools/_boot_check.mjs dist/index.html`,
+  then at least `playnow_smoke` + `ui_playcall_smoke` (both updated for the
+  new controls: `#dc-ride` → `#dc-send`, kickoff `off` → `watch`), ideally
+  the core gate — `timecontrol_probe` is now in CORE.
+- Standing debt unchanged: act B/D local scrub re-run + full local gate + a
+  green night run before the next deploy.
+
+**What shipped (js/ + style.css; sim-neutral for AI games — callMode-gated
+paths only):**
+- **The 3-level involvement toggle (#51), changeable mid-game (FM's law).**
+  Engine keeps its callMode vocabulary; WATCH = callMode "all" + ui.autoRun
+  (a pending every snap, UI auto-answers — so the headset is one tap away
+  all game), MOMENTS = "keydowns", EVERY = "all". New `setInvolvement` /
+  `involvementLevel` (state.js); the kickoff modal offers the three levels
+  ("Headset Off" folded into WATCH; legacy `lastCallMode:"off"` maps over;
+  engine mode "off" kept for Coach-Mode-off sims). Replaces BOTH
+  Ride-the-Plan buttons (dc-ride removed — dc-send with no pins IS ride
+  the plan), the tc-keydowns/tc-headset/tc-jumpin trio, and the dead
+  cs-skip-quarter / cs-mode-* / cs-autorun* listeners.
+- **The BIG-MOMENT spec (owner-ratified, sim.js `isKeyDownSituation`):**
+  4th downs, red-zone trips, inside 2:00 (either half), every snap of a
+  one-score 4th quarter, and overtime. Ordinary 3rd downs came OFF the
+  list. Turnovers + scores stay watch moments — they end drives, so no
+  pre-snap ask can fire on them (asks are pre-snap by construction).
+- **The transport row (#54/#55), one component everywhere** (`timeControlBar`
+  → involvement toggle + ⏭ Sim possession + ⏭⏭ Sim to half/end + 🎧 Take
+  control [watch level only]; `wireTimeControls` is the single wiring
+  point). NEW engine skip: `token.skipPoss` mutes asks while that side
+  keeps the ball, clears itself on the change of possession / fresh half /
+  OT / final gun (skipUntil now also cleared at "done"). The dead FF
+  button is a real ⏭ skip-play on the watch bar (kills the in-flight
+  animation, board keeps rolling). TEMPO REMOVED from the row (strategy,
+  not a time control — lives with the game plan; `_liveTempo` engine reads
+  kept, chips retired).
+- **Skipped stretches are NEVER silent:** new pure `driveSummariesFrom`
+  (sim.js, exported) — one row per touched drive; `_skipAnim` bookkeeping in
+  the skip verbs; `handleGamePendingEvents` turns the skipped range into
+  feed summary lines, advances `_watchedPlays` so the board never animates
+  it, sends skip-to-half straight to the locker room, and skip-to-end
+  straight to the box score (`_skipFinalBoard`).
+- **LAW HELD:** sim-to-half/end resolves through the EXISTING pause path
+  (`resumeFromCall`/`resumeFromDecision` → the same pending machinery);
+  `gamePauseIsLive` remains the ONLY serialization gate; NO new save path;
+  skip state is engine-transient and provably gone by the final gun.
+- **PRESENTATION settings group** (Settings → Game): Instant Replays
+  Off/Low/High (absorbs M0's #9 toggle — `replayFreq`, legacy
+  `watchReplays:false` reads as Off; Low = scores + turnovers only; the
+  watch-bar button cycles the same value), 8-Bit Players moved in — the
+  home for future presentation options. **Landscape→camera-views (#25)
+  stays stubbed** until the camera acts land — noted, not built.
+
+**Gate (this sandbox, node):** new **`timecontrol_probe`** (26/0 ×3, added
+to CORE): the big-moment spec point by point (3rd downs off the list
+asserted), 'all'/'keydowns' cadence honored + mid-game switches in BOTH
+directions take effect immediately, possession skip 0 leaked asks over 36
+skips + self-clear, sim-to-half/end 0 leaked asks with real records,
+drive summaries lawful and never empty, mid-skip pending IS a live pause
+(gamePauseIsLive 36/36) and nothing skip-related survives to serialization.
+Re-proof green: `midgame_save_probe` PASS · `season_persist_probe` 15/0 ·
+`save_migration_check` ALL PASS · `multicoach_week_probe` 16/0 ·
+`record_call_probe` 12/0 · `live_book_call_probe` 13/0 ·
+`play_fidelity_probe` ALL GREEN (18). Clean esbuild bundle + parse; CSS
+braces balanced. **PW tier owed** (chromium download blocked here):
+playnow_smoke, ui_playcall_smoke, formation_sheet_ui_smoke,
+calendar_display_probe were UPDATED for the new controls (dc-ride →
+dc-send; kickoff "off" → "watch") but not run.
+
+**Shared-file note (parallel sessions this window):** the M0 sweep commit
+(`176b6b6`) landed mid-session and carried this pass's style.css (tc-invo
+toggle CSS) with it, and explicitly left its #7 wake-lock + #9
+replay-toggle app.js hunks uncommitted for whoever committed app.js next —
+that's this commit (my Presentation work builds directly on #9, and the
+whole tree state was gated together). This app.js commit also carries the
+M0 sweep's two remaining #49 lateral-mirror hunks
+(watchSideX/watchCoachFieldBase), which pair with its committed
+watchcamera/constants_field work.
 
 ## 2026-08-16 — D2 · M1 THE TEST BENCH (the instrument)
 ## BUILT + NODE-GATED — ⚠ BROWSER PLAYTEST OWED (the first bench session)
@@ -93,19 +191,33 @@ FULLY GREEN (1338 snaps scripted) · `playbook_build_probe` PASS ·
 and prior uncommitted work are present); my change-set is the 10 files in
 this entry's commit only.
 
-## 2026-08-16 — D5 · M3 RPO/QB-RUN AUDIT (report-only) — STOPPED FOR OWNER
+## 2026-08-16 — D5 · M3 RPO/QB-RUN AUDIT — **RATIFIED same session** (§7 of the report)
 
 **OWNER CHECKLIST**
-- **Ratify `Ref/RPO_AUDIT_2026-08-16.md`** — D6 (M3 build) is blocked on it.
-  The report ends with **7 open design decisions** formatted for a phone
-  read (kill the QB_RUN_BASE dice? target rate bands, archetype as the AI
-  key, widen the Dual band, clean-pocket scramble rung, RPO keep share,
-  v1 family size).
+- ~~Ratify the report~~ **DONE 2026-08-16** — all 7 decisions taken; the
+  ratified build directions live in `Ref/RPO_AUDIT_2026-08-16.md` §7.
+  **D6 is unblocked by ratification** (still needs D4 per the dispatch
+  dependency table).
+- **NEEDS BRAIN RESEARCH (standing ledger item, owner-directed):** the
+  compiled coach-brain library (SOURCE_LIBRARY + MASTER_INDEX, swept end to
+  end this session) contains NO numeric rate data — it's all scheme/
+  mechanics material. The audit's target bands rest on this session's
+  PFF/ESPN/FantasyPoints anchors (NFL-floor + college-higher inference;
+  college per-archetype splits are paywalled). A dedicated stats-research
+  pass should firm the bands; D6 builds to the provisional ones meanwhile.
 - No browser verification owed from this session (no `js/`/`style.css`
   change — tools/ + Ref/ only).
-- Residual data gap, ledgered in the report §3: per-archetype COLLEGE
-  scramble rates and college RPO give/throw splits are behind PFF's
-  paywall; the target bands are NFL-floor + college-higher inference.
+
+**Ratification highlights** (full text in the report §7): kill the
+QB_RUN_BASE dice (floor ~1–2%, Empty stays); bands provisionally approved;
+**AI keys on ARCHETYPE — owner law: three talent levels live in one game,
+a 63 SPD is fast in D3 and slow in D1, absolute thresholds can't work.**
+Archetypes verified working across tiers this session (distribution stable
+~19% Scrambler / ~2.5% Dual at tiers 1/2/3 while Scrambler mean SPD swings
+64→94 — tier-relative by construction, the right key); widen the Dual band;
+clean-pocket scramble added, coverage-conditioned ("a mobile QB looks for
+where the extra coverage left a gap"); RPO keep phase in, both surfaces;
+all five authored plays in v1.
 
 **What shipped:** `tools/rpo_audit_probe.mjs` (new measurement harness —
 deliberately NOT registered in the gate manifest: it prints rates, asserts
@@ -129,6 +241,122 @@ not invents.
 
 **Gates:** no source changes → no build/gate owed. Probe run ×2 (600- and
 150-game samples, headline rates reproduce).
+
+## 2026-08-16 — D1 · M0 SWEEP SHIPPED (wake lock · replay toggle · THE CARD LINTER · #49 flip fix · mobile overflow · def graphics)
+
+The pulled-forward M0 sweep from BUILD ORDER v2 (below) is BUILT + NODE-GATED
+in this session. No design calls taken; no engine outcome files touched
+(presentation + CSS + probes only — sim.js untouched by THIS session).
+
+### OWNER CHECKLIST (browser/device — everything owed)
+
+- [ ] **Wake lock on a real phone (#7):** watch a game — the screen must not
+  dim mid-drive. Background the app and come back: the lock re-acquires
+  (visibilitychange). Chrome/Android and iOS Safari 16.4+; it's a feature-
+  detected no-op elsewhere.
+- [ ] **Replay toggle in a live game (#9):** "Replays: On/Off" button in the
+  watch controls — turn it off, confirm no instant replays the rest of the
+  game, and that the setting survives a save/reload (rides state.settings).
+- [ ] **Phone eyeball #5:** new-game / Season-setup custom-division editor —
+  the conference header (name + tier stars + teams toggle) now fits the
+  screen.  **Phone eyeball #32:** Defensive Playbook → "Where pressure comes
+  from" — the three inputs now share the row instead of drifting off.
+- [ ] **The re-authored looks (Builder + call sheet):** Spread Ace now draws
+  UNDER CENTER with the back deep (#18); Pistol Diamond is a real diamond —
+  FB left wing, TE right wing, HB deep, no slot-WR body in the backfield
+  (#20); Red-Zone Fade draws a back-shoulder fade, not a go (#19). Def call
+  cards: bring 3/4/5/6 changes the arrow count on every front (#33), ends
+  read LE/RE everywhere (#31).
+- [ ] **The #49 flip fix, live:** watch a stretch where the AWAY team drives
+  (screen-left): the fielded pre-snap look must match the card's strength —
+  trips drawn right = trips fielded on the correct side. Flip through the
+  replay cameras (coach / end zone / reverse) — reverse is still a deliberate
+  mirror, everything else keeps the card's handedness.
+- [ ] **Local gate:** `node tools/_gate.mjs` — `card_lint_probe` is now in
+  CORE; the Playwright halves of viewer_act_c/d and the browser tier could
+  not run in this sandbox.
+- [ ] **Commit sweep-up:** `js/ui/app.js` and this STATUS file are left
+  UNCOMMITTED — both carry a parallel session's live uncommitted work
+  (bench/M1 + involvement/M4 hunks in app.js). My app.js hunks: the wake-lock
+  block + acquire in initWatchMode + release in syncOverlayInert, the
+  Replays button/handler/gate, and the watchSideY/watchSideWorldPoint lateral
+  mirror pair. Everything else this session touched IS committed (see below).
+
+**What shipped:**
+- **Wake lock (#7)** — `navigator.wakeLock.request('screen')` acquired when
+  the watch viewer mounts (initWatchMode), re-acquired on visibilitychange
+  while a viewer is up, released by the render path whenever no watch-root is
+  on screen (syncOverlayInert — every render passes through it, so no close
+  site can be missed). Feature-detected + try/caught throughout.
+- **Replay toggle (#9)** — watch-controls button; `state.settings.watchReplays
+  === false` disables the instant-replay re-run (default on; same settings
+  convention as the Settings screen, persists with the save). Grows into M4's
+  Presentation group later.
+- **THE CARD LINTER — `tools/card_lint_probe.mjs`, registered in CORE.** Walks
+  every (formation × variation × concept) render and asserts football
+  legality: 5 OL/1 QB/5 skill, ≥7 on the line, nobody offsides/OOB, no
+  WR/SLOT body in the backfield (#20 class), no gun QB with a back stacked
+  directly behind (#18 class), no overlapping bodies, personnel counts ===
+  the pkg (C2), every drawn SVG coordinate in bounds at Builder and
+  call-sheet sizes (C3), viewer handedness in BOTH drive directions for every
+  camera (#49, C4), def call-card arrows === bring 3–6 on every front with
+  fire-zone drop squiggles for dropped linemen + LE/RE labels (C5).
+  **Proven against the pre-fix tree:** flags Spread Ace (#18), Pistol Diamond
+  (#20), three 6-man-line looks, 24 personnel drifts, and a family of
+  off-card route draws. 14/0 ×3 on the fixed tree.
+- **Authored-row fixes (`VARIATION_LAYOUTS`, constants_field.js).** Moves may
+  now RE-DRESS the body they move (pos/label/role) so a look draws its pkg's
+  personnel — ids/order/catch are eternal, OL/QB never re-dress
+  (`variationLayoutSlots`; draw_up_probe's identity law amended to match).
+  Fixed rows: spread_ace (QB under center, back deep, slot→2nd TE),
+  pistol_diamond (FB wing + TE wing + HB deep, Z steps onto the line),
+  pistol_trips / bone_heavy / wc_slash (kept their lawful 7 on the line),
+  and pkg re-dresses across power_big/twins, trips_closed, sb_twins/heavy,
+  bone_split, flex_trips.
+- **#49 — plays drawn flipped vs the viewer: a real projection bug, fixed.**
+  The side-view family projected a left-driving offense as a rotation PLUS a
+  reflection (lateral axis never mirrored), so every look played out flipped
+  against its card whenever the drive went left. `projectWatchPoint`
+  (watchcamera.js) now mirrors the lateral axis with the direction for
+  broadcast/all22/coach/endzone (reverse stays a deliberate, now-consistent
+  mirror), and app.js's local `watchSideY`/`watchSideWorldPoint` pair mirrors
+  identically. `viewer_act_c_probe`'s node check pinned the OLD reflection
+  ("preserving lateral position" under rotation) — amended, documented for
+  Codex in the probe itself.
+- **Red-Zone Fade (#19, hand-reviewed vs concepts.js):** new `fade` art route
+  (outside release, short-medium back-shoulder settle); the concept card is
+  the single isolated jump-ball route the sim spec describes. Route drawing
+  also gained a clamp box — boundary breaks hug the sideline instead of
+  drawing off the card (the C3 bounds fixes).
+- **Def call card (#33 graphic):** the arrow count IS the bring — down linemen
+  first, then edge rushers (role Rush/Blitz), then dogs, then blitz-eligible
+  DBs (Dime bring 6 needs them, per DEF_BLITZ_ELIGIBLE); linemen over the
+  bring bend back with one fire-zone squiggle each, toward their own hook.
+  Before: bring 4 on a 3-man line drew 3 arrows, bring 5 drew dl+1 anywhere.
+- **End labels (#31):** every front's DE row is side-explicit LE/RE
+  (3-4/46/5-2/3-3-5/Tite/4-4/Penny said "DE"/"4i"; the 4-3 family already
+  did). Label-only — ids/roles/sim untouched.
+- **Mobile overflow (#5/#32, style.css):** `.dv-conf-head` wraps + the name
+  input sheds its 320px intrinsic width; `.def-src-field` inputs share the
+  row (`min-width:0` + `width:100%`).
+- **play_fidelity R1 hardened:** the lone forced snap retries through pre-snap
+  penalties (unseeded RNG — observed fail/pass flips on an identical tree
+  this session; same trick as viewer_act_b).
+
+**Gate (this sandbox, node):** `card_lint_probe` 14/0 ×3 · `draw_up_probe`
+PASS (amended identity law) · `defbook_probe` PASS · `formation_compose_probe`
+PASS · `play_fidelity_probe` 18/18 · `record_call_probe` 12/0 ·
+`watchphys_probe` FULLY GREEN · viewer_act_c/d node halves PASS · clean
+esbuild bundle (0 warnings) + bundle syntax parse · CSS parses.
+
+**Committed: `176b6b6`** (scoped to this session's exclusive files):
+js/constants_field.js · js/ui/views/routeart.js · js/ui/watchcamera.js ·
+style.css · tools/card_lint_probe.mjs · tools/_gate_manifest.mjs ·
+tools/draw_up_probe.mjs · tools/play_fidelity_probe.mjs ·
+tools/viewer_act_c_probe.mjs. The manifest was committed as HEAD + only the
+card_lint entry (the M4 session's in-flight timecontrol entry stays in the
+working file for that session to commit with its probe). app.js + STATUS
+left for the sweep-up above. Stranded git locks moved to `_to_delete/`.
 
 ## 2026-08-17 — BUILD ORDER v2 (review + commercial-pattern merge — RUN THIS)
 
