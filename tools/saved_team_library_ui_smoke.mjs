@@ -1,4 +1,16 @@
-// Dynasty Game Plan save action + coach-home saved-team library UI smoke.
+// Dynasty Game Plan save action + saved-team library UI smoke.
+//
+// [2026-08-17, FULLGATE_TRIAGE item 8] Rewritten off the retired coach door. W9 §12 made
+// the tree the only main-menu path, so the coach home this smoke used to open via
+// [data-mm-coach] — with its SAVED TEAMS · PLAY NOW list and [data-mm-team-del] — is
+// unreachable UI. Where a saved team SURFACES today is Play Now's "Saved dynasty teams"
+// source picker (playnow.js sourcePicker → instantiateSavedTeam), so the library half of
+// this smoke asserts the same substance there: the snapshot is listed, it stays attached
+// to its coach, and picking it actually fields the saved roster.
+// NOTE (ledgered in STATUS 2026-08-17): saved-team DELETE currently has no reachable
+// door anywhere — deleteSavedTeam is wired only in the unreachable coach home. That is a
+// product gap for the owner, not something this smoke can drive; when a delete door
+// lands, drive it here.
 import { chromium } from 'playwright-core';
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -33,13 +45,24 @@ try {
   await saveButton.click(); await page.waitForTimeout(200);
   const saved=await page.evaluate(async()=>{const cp=await import('./js/engine/coachprofile.js');return cp.listSavedTeams().map(t=>({name:t.name,roster:t.school.roster.length,hasGP:!!t.school.gameplan}));});
   check(saved.length===1 && saved[0].roster>0 && saved[0].hasGP,'Game Plan action saves roster and gameplan',saved[0]?.name||'');
-  await page.evaluate(async()=>{const api=await import('./js/state.js');api.navigate('mainmenu');}); await page.waitForTimeout(150);
-  const coachButton=page.locator('[data-mm-coach]'); check(await coachButton.count()===1,'saved team remains attached to its coach profile'); await coachButton.click(); await page.waitForTimeout(150);
-  check(await page.locator('[data-mm-team-del]').count()===1,'coach home lists the saved Play Now team');
-  const rowText=await page.locator('[data-mm-team-del]').locator('..').innerText(); check(rowText.includes('UI Snapshot'),'coach library shows the snapshot name',rowText);
-  const menuPhoneOverflow=await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1); check(!menuPhoneOverflow,'coach saved-team library fits phone');
+  await page.evaluate(async()=>{const api=await import('./js/state.js');api.navigate('playnow');}); await page.waitForTimeout(250);
+  const pick=await page.evaluate(async()=>{
+    const cp=await import('./js/engine/coachprofile.js');
+    const team=cp.listSavedTeams()[0]; const sel=document.getElementById('pn-source-home');
+    if(!team||!sel) return null;
+    const key=`${team.coachId}|${team.id}`;
+    const opt=[...sel.options].find(o=>o.value===key);
+    return {key,coachId:team.coachId,coachName:team.coachName||'',label:opt?.textContent?.trim()||'',group:opt?.closest('optgroup')?.label||''};
+  });
+  check(!!pick&&pick.group==='Saved dynasty teams'&&pick.label.includes('UI Snapshot'),'Play Now lists the snapshot under Saved dynasty teams',pick?pick.label:'no option');
+  check(!!pick&&pick.coachId===fixture.coachId&&!!pick.coachName&&pick.label.includes(pick.coachName),'saved team remains attached to its coach profile',pick?`${pick.coachName} / ${pick.label}`:'');
+  await page.selectOption('#pn-source-home',pick?.key??''); await page.waitForTimeout(250);
+  const loaded=await page.evaluate(()=>({meta:(document.querySelector('.pn-saved-meta')?.textContent||'').trim(),name:(document.querySelector('.pn-panel .pn-name')?.textContent||'').trim()}));
+  check(loaded.meta.includes('SAVED SNAPSHOT'),'picking the snapshot swaps Team 1 to the saved team',loaded.meta);
+  check(loaded.name===fixture.school,'the fielded team is the saved school, roster and all',loaded.name);
+  const menuPhoneOverflow=await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1); check(!menuPhoneOverflow,'Play Now saved-team picker fits phone');
   await page.setViewportSize({width:1280,height:900}); await page.waitForTimeout(100);
-  const desktopOverflow=await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1); check(!desktopOverflow,'coach saved-team library fits desktop');
+  const desktopOverflow=await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1); check(!desktopOverflow,'Play Now saved-team picker fits desktop');
   check(errors.length===0,'zero page errors',errors.slice(0,2).join(' | '));
 } finally { await browser.close(); await new Promise(resolve=>server.close(resolve)); }
 console.log(fails?`\nFAIL — ${fails} saved-team library UI check(s)`:'\nSAVED-TEAM LIBRARY UI SMOKE PASS'); process.exit(fails?1:0);

@@ -18,14 +18,16 @@ import { calendarWeek } from '../js/engine/season.js';
 const target = process.argv[2] || 'dist/index.html';
 const path   = target.startsWith('/') ? target : process.cwd() + '/' + target;
 
-const WIZARD = [
-  ['click', '#btn-mm-newcoach'], ['fill', '#mm-nc-first', 'Garrett'], ['fill', '#mm-nc-last', 'Tender'],
-  ['click', '#mm-nc-create'], ['click', '.btn-mm-new >> nth=0'], ['click', '#ob-next-0'],
-  ['click', '.ob-pick-card >> nth=0'], ['click', '#ob-next-1'], ['click', '.ob-chip >> nth=0'],
-  ['click', '.ob-pick-card >> nth=0'], ['click', '.ob-school-row >> nth=0'], ['click', '#ob-next-2'],
-  ['click', '.ob-pick-card >> nth=0'], ['click', '.ob-pick-card >> nth=4'], ['click', '#ob-next-3'],
-  ['click', '.ob-pick-card >> nth=0'], ['click', '.ob-pick-card >> nth=4'], ['click', '#ob-next-4'],
-  ['click', '#ob-start'],
+// [2026-08-17, FULLGATE_TRIAGE item 10] Entry rewritten off the retired coach door
+// (#btn-mm-newcoach — W9 §12 made the tree the ONLY start path). The tree door mints the
+// coach and goes straight into the wizard; a tree run locks take-the-job/D3 and skips the
+// Situation step. The wizard itself is then WALKED generically (new_world_probe's
+// advanceWizard pattern) instead of by a hardcoded click list — the old list had already
+// drifted once when the Staff step landed, and a hardcoded list fails silently the next
+// time a step is added or renumbered.
+const ENTRY = [
+  ['click', '#btn-mm-newtree'], ['fill', '#mm-nt-first', 'Garrett'], ['fill', '#mm-nt-last', 'Tender'],
+  ['click', '#mm-nt-create'],
 ];
 
 const b = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || undefined });
@@ -41,12 +43,54 @@ try {
   await p.goto('file://' + path, { waitUntil: 'load' });
   await p.waitForTimeout(1200);
 
-  for (const [kind, sel, arg] of WIZARD) {
+  for (const [kind, sel, arg] of ENTRY) {
     const loc = p.locator(sel);
     if (!(await loc.count())) { console.log(`wizard stalled at ${sel}`); process.exit(1); }
     if (kind === 'fill') await loc.first().fill(arg); else await loc.first().click({ timeout: 8000 });
     await p.waitForTimeout(400);
   }
+
+  // Walk the wizard by satisfying whatever is on screen (new_world_probe's pattern).
+  // An enabled forward button always wins; otherwise answer the first unanswered option
+  // group, LAST group first so cascading steps (state → level → school) fill bottom-up.
+  // The Staff step's OC and DC card sets share [data-ob-staff], so they get one
+  // prefix-matched selector EACH — a single shared selector would stop after the OC pick
+  // (the same dead-end that stalled new_world_probe; FULLGATE_TRIAGE 2026-08-17 item 3).
+  const advanceWizard = () => p.evaluate((OPTIONS) => {
+    for (const id of ['ob-next-0', 'ob-next-1', 'ob-next-2', 'ob-next-3', 'ob-next-4', 'ob-start']) {
+      const el = document.getElementById(id);
+      if (el && !el.disabled && el.offsetParent !== null) { el.click(); return '#' + id; }
+    }
+    for (const sel of [...OPTIONS].reverse()) {
+      const all = [...document.querySelectorAll(sel)]
+        .filter(e => e.offsetParent !== null && e.dataset.obSchool !== '__found__');
+      if (!all.length) continue;
+      if (all.some(e => e.classList.contains('active'))) continue;
+      all[0].click();
+      return sel;
+    }
+    return null;
+  }, ['[data-ob-challenge]', '[data-ob-state]', '[data-ob-div]', '[data-ob-school]',
+      '[data-ob-staff^="OC:"]', '[data-ob-staff^="DC:"]', '[data-ob-qb]', '[data-ob-front]']);
+  let started = false;
+  let idle = 0;
+  const trace = [];
+  for (let i = 0; i < 60 && !started; i++) {
+    const did = await advanceWizard();
+    if (!did) {
+      // Nothing actionable can be legitimate for a beat — stepReveal renders a
+      // "FOUNDING…" spinner with no button while the world generates. Be patient
+      // before calling it a stall.
+      if (++idle >= 8) break;
+      await p.waitForTimeout(800);
+      continue;
+    }
+    idle = 0;
+    trace.push(did);
+    if (did === '#ob-start') { started = true; break; }
+    await p.waitForTimeout(did.startsWith('#') ? 450 : 250);
+  }
+  if (!started) { console.log(`wizard stalled after: ${trace.join(' → ') || '(nothing actionable)'}`); process.exit(1); }
   await p.waitForTimeout(2500);
 
   // Games must not stop to be watched, or the walk deadlocks on the chalkboard.

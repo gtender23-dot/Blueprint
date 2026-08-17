@@ -1,4 +1,17 @@
-// Coach/world Instant Classics list + fixed-scale replay smoke on phone and desktop.
+// Tree-home Instant Classics list + fixed-scale replay smoke on phone and desktop.
+//
+// [2026-08-17, FULLGATE_TRIAGE item 9] Rewritten off the retired coach door. W9 §12 made
+// the tree the only main-menu path, so the coach/world screen this smoke used to open via
+// [data-mm-coach] is unreachable UI. Classics now live on the TREE home:
+// renderTreeClassics (mainmenu.js) reads t.meta.classics and each row's
+// [data-mm-tree-classic] keys the tree's ONE world save (treeWorldKey). The replay half
+// (watch viewer ids, INSTANT CLASSIC header, Back to Coach Select) is unchanged.
+// Two deliberate differences from the old coach-path assertions, both real moves:
+// - the row prints "Season N · week", NOT "World N" — a tree has exactly one world.
+// - there is NO delete control on a tree classic row. [data-mm-classic-del] only ever
+//   rendered on the unreachable coach home, so classic DELETE currently has no door.
+//   Product gap ledgered in STATUS 2026-08-17 — when a delete door lands, drive it here
+//   (the old checks also proved the payload leaves the world save; restore that too).
 import { chromium } from 'playwright-core';
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -15,19 +28,20 @@ try {
   await page.goto(`http://127.0.0.1:${server.address().port}/index.html`); await page.waitForTimeout(300);
   const seeded=await page.evaluate(async()=>{
     const cp=await import('./js/engine/coachprofile.js'); const persist=await import('./js/engine/persistence.js'); const api=await import('./js/state.js');
-    const coach=cp.createCoach('Classic','Coach'); const home={id:'classic-home',name:'Home State',nick:'Owls',abbr:'HST',colors:['#184a8b','#f2c94c']}; const away={id:'classic-away',name:'Away Tech',nick:'Foxes',abbr:'AT',colors:['#a52a2a','#f3f3f3']};
+    const tree=cp.createTree('Classic'); cp.createCoach('Classic','Coach',{treeId:tree.id}); const home={id:'classic-home',name:'Home State',nick:'Owls',abbr:'HST',colors:['#184a8b','#f2c94c']}; const away={id:'classic-away',name:'Away Tech',nick:'Foxes',abbr:'AT',colors:['#a52a2a','#f3f3f3']};
     const plays=[{half:2,clock:80,scoreOff:24,scoreDef:27,type:'run',yards:6,fieldPos:55,down:1,distance:10,offFormation:'Spread',defFront:'4-3',concept:'Inside Zone',rusherId:'rb'}];
     const result={homeScore:31,awayScore:30,winner:home.id,homeSchool:home,awaySchool:away,homeStats:{rushYds:180,passYds:220,totalYds:400},awayStats:{rushYds:150,passYds:235,totalYds:385},homePlayerStats:{},awayPlayerStats:{},playerNames:{rb:{name:'Ray Back',pos:'RB'}},drives:[{possession:'home',plays,result:'td',points:7}],log:[]};
     const entry={id:'ic-ui',score:76,saved:Date.now(),season:3,day:9,week:'Week 5',playerSchoolId:home.id,homeId:home.id,awayId:away.id,homeName:home.name,awayName:away.name,homeScore:31,awayScore:30,result};
-    cp.noteWorldMeta(coach.id,1,{school:home.name,season:3,record:{wins:7,losses:1},division:'D1',prestige:4.5,classics:[{...entry,result:undefined}]});
-    await persist.saveGame({initialized:true,world:null,instantClassics:[entry],ui:{},settings:{}},cp.worldSlotKey(coach.id,1));
-    api.navigate('mainmenu'); return coach.id;
+    cp.noteTreeMeta(tree.id,{season:3,classics:[{...entry,result:undefined}]});
+    await persist.saveGame({initialized:true,world:null,instantClassics:[entry],ui:{},settings:{}},cp.treeWorldKey(tree.id));
+    api.navigate('mainmenu'); return tree.id;
   });
-  await page.waitForTimeout(250); await page.locator(`[data-mm-coach="${seeded}"]`).click(); await page.waitForTimeout(200);
-  check(await page.locator('[data-mm-classic="ic-ui"]').count()===1,'coach world screen lists the Instant Classic');
-  const row=await page.locator('[data-mm-classic="ic-ui"]').innerText(); check(row.includes('Home State 31–30 Away Tech')&&row.includes('World 1'),'classic row shows matchup, score, and world',row.replace(/\n/g,' | '));
+  await page.waitForTimeout(250); await page.locator(`[data-mm-tree="${seeded}"]`).click(); await page.waitForTimeout(200);
+  check(await page.locator('[data-mm-tree-classic="ic-ui"]').count()===1,'tree home lists the Instant Classic');
+  const row=await page.locator('[data-mm-tree-classic="ic-ui"]').innerText(); check(row.includes('Home State 31–30 Away Tech')&&row.includes('Season 3'),'classic row shows matchup, score, and season (a tree has one world — no World tag)',row.replace(/\n/g,' | '));
+  check(await page.locator('[data-mm-classic-del="ic-ui"]').count()===0,'tree classic rows expose no delete door yet (product gap, STATUS 2026-08-17 — flip this check into a real delete drive when the door lands)');
   check(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1),'classic list fits a 390px phone');
-  await page.locator('[data-mm-classic="ic-ui"]').click(); await page.waitForTimeout(250);
+  await page.locator('[data-mm-tree-classic="ic-ui"]').click(); await page.waitForTimeout(250);
   check(await page.locator('#watch-root').count()===1,'replay opens directly in Watch');
   check((await page.locator('.game-result-modal .modal-header h2').innerText()).includes('INSTANT CLASSIC'),'replay modal identifies the archived classic');
   check(await page.locator('#watch-live-toggle').count()===0,'archived replay does not show the live-game preference');
@@ -40,11 +54,12 @@ try {
   check(await page.locator('#watch-board').count()===1,'replay remains mounted on desktop');
   check(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1),'replay viewer fits desktop');
   await page.locator('#close-game-result-btn').click(); await page.waitForTimeout(200);
-  check(await page.locator('[data-mm-classic="ic-ui"]').count()===1,'Back to Coach Select returns to the same coach/world screen');
-  page.once('dialog',dialog=>dialog.accept()); await page.locator('[data-mm-classic-del="ic-ui"]').click(); await page.waitForTimeout(220);
-  check(await page.locator('[data-mm-classic="ic-ui"]').count()===0,'replay delete removes the coach-screen entry');
-  const replayGone=await page.evaluate(async()=>{const cp=await import('./js/engine/coachprofile.js');const p=await import('./js/engine/persistence.js');const coach=cp.listCoaches()[0];const saved=await p.loadGame(cp.worldSlotKey(coach.id,1));return (saved.instantClassics||[]).length===0;});
-  check(replayGone,'replay delete also removes the full payload from the world save');
+  check(await page.locator('[data-mm-tree-classic="ic-ui"]').count()===1,'Back to Coach Select returns to the tree home with the classic still listed');
+  // The old delete drive ([data-mm-classic-del] click → row gone → payload gone from the
+  // world save) is NOT ported: no delete control renders on the tree path (see header).
+  // The payload half is still asserted directly against the tree's world save:
+  const replayIntact=await page.evaluate(async()=>{const cp=await import('./js/engine/coachprofile.js');const p=await import('./js/engine/persistence.js');const tree=cp.listTrees()[0];const saved=await p.loadGame(cp.treeWorldKey(tree.id));return (saved?.instantClassics||[]).some(item=>item.id==='ic-ui'&&!!item.result);});
+  check(replayIntact,'the full replay payload survives in the tree\'s world save after watching');
   check(errors.length===0,'zero page errors',errors.slice(0,3).join(' | '));
 } finally { await browser.close(); await new Promise(resolve=>server.close(resolve)); }
 console.log(fails?`\nFAIL — ${fails} Instant Classic UI check(s)`:'\nINSTANT CLASSIC UI SMOKE PASS'); process.exit(fails?1:0);

@@ -1,7 +1,17 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-17 QBRUN PICKS (a)–(d) RATIFIED (owner) — F1 re-spec
+Last updated: **2026-08-17 RETIRED-DOOR PW REWRITES (the triage's M batch,
+items 7–10): letter_logo / saved_team_library / instant_classic /
+calendar_display all enter through the TREE door now, asserting the same
+substance where it lives today (two real moves asserted as moves: tree
+classic rows print Season not World; saved teams surface in Play Now's
+picker). TWO PRODUCT GAPS surfaced — saved-team DELETE and classic DELETE
+have no reachable door anywhere — plus a heads-up: new_world's N7b–e will
+red for REAL reasons once its staff fix lets the walk finish (tree-home
+shelf it asserts never existed in js/; manifest note carries it). PW
+unrunnable in this sandbox — everything static verified, first local run
+owed (entry below). Prior same day: QBRUN PICKS (a)–(d) RATIFIED (owner) — F1 re-spec
 applied to rpo_probe S4 (dual scramble spec 3.5–8%, asserted 3.0–9 w/ noise
 pad), rpo_probe 60/0 ×3; picks (e)/(f) since DEFERRED by owner — parked, not
 declined, do NOT re-raise unprompted (entry below). Prior same
@@ -49,6 +59,103 @@ D6's in-flight concepts is RESOLVED in this session, card_lint 21/0 ×3.)
 Prior: D4 · M2 presentation; D3 · M2 engine; D7 · M4; D2 · M1; D5 · M3
 audit RATIFIED. Plan of record: BUILD ORDER v2 (2026-08-17), dispatch
 prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+
+## 2026-08-17 — RETIRED-DOOR PW REWRITES (this sandbox) — the triage M batch (items 7–10) DONE
+## STATIC-VERIFIED ONLY — ⚠ PLAYWRIGHT UNRUNNABLE HERE; FIRST LOCAL RUN IS THE PROOF
+
+The four PW smokes that still entered through the coach main-menu door W9
+§12 retired (`#btn-mm-newcoach` / `[data-mm-coach]` — tree-only menu since
+the 08-12 import) are REWRITTEN onto the current door. Per the standing
+rule, nothing was weakened: every assertion either survives verbatim or is
+re-pointed at where the feature genuinely lives now, with the move named.
+
+**What shipped (tools/ only — zero js/ or style.css changes):**
+- **`letter_logo_ui_smoke.mjs` (item 7):** ONLY the wizard section changed —
+  enters `#btn-mm-newtree` → `#mm-nt-first`/`#mm-nt-last` → `#mm-nt-create`
+  (one form; goes straight into the wizard). The old
+  `[data-mm-world-new="1"]` "dynasty entry exists" check became "the tree
+  door opens the wizard" (`.ob-kicker`); tree runs lock take-the-job/D3 and
+  skip the Situation step, so `#ob-next-0` lands on THE JOB. Every
+  letter-mark assertion (school-row marks = row count, no mascot emoji,
+  overflow, screenshots) unchanged.
+- **`saved_team_library_ui_smoke.mjs` (item 8):** save-action half
+  unchanged (`#btn-gp-save-team`, engine roster+gameplan check). The
+  library half retargeted from the unreachable coach home to **Play Now's
+  "Saved dynasty teams" source picker** — the one place saved teams surface
+  today: listed under the optgroup, label carries the coach's name AND
+  `coachId` matches the fixture's coach (attachment), `selectOption` →
+  `.pn-saved-meta` SAVED SNAPSHOT + the fielded `.pn-name` equals the saved
+  school (instantiateSavedTeam actually fields the roster). Phone/desktop
+  overflow now checked on the Play Now screen.
+- **`instant_classic_ui_smoke.mjs` (item 9):** classics re-seeded onto a
+  TREE (`createTree` + `createCoach({treeId})` + `noteTreeMeta(classics)` +
+  the world save at `treeWorldKey`), driven via `[data-mm-tree]` →
+  `[data-mm-tree-classic="ic-ui"]`. The whole replay half is untouched
+  (#watch-root/board/stepfwd/bug, INSTANT CLASSIC header, no live toggle,
+  "Back to Coach Select", both viewports); close returns to the TREE home
+  with the row still listed, and the full payload is asserted to survive in
+  the tree's world save. Two REAL MOVES asserted as such: rows print
+  "Season N" not "World N" (a tree has one world), and there is NO delete
+  control on the tree path (tripwire check: `[data-mm-classic-del]` count
+  0 — flips loudly into a real delete drive when a door lands).
+- **`calendar_display_probe.mjs` (item 10):** entry replaced with the tree
+  door, and the drifted hardcoded wizard click-list replaced with
+  new_world_probe's PROVEN generic walker (enabled forward button wins;
+  otherwise answer the last unanswered option group; OC/DC prefix-split
+  `[data-ob-staff]` selectors per the d229394 fix; patient on the
+  "FOUNDING…" no-button reveal phase, 8×800 ms before declaring a stall).
+  The calendar walk itself — including D7's `[data-kickoff="watch"]` — is
+  byte-untouched.
+- **`_gate_manifest.mjs` (data only):** the four entries' TEST-STALE notes
+  rewritten to REWRITTEN + first-local-run-owed, `envKnown` dropped on all
+  four (the d229394 pattern for fixed mislabels). `new_world`'s note gained
+  the N7 heads-up below.
+
+**TWO PRODUCT GAPS + ONE PROBE HEADS-UP (owner decisions owed — found by
+the rewrite, NOT fixed here, no code invented to hide them):**
+1. **Saved-team DELETE has no door.** `deleteSavedTeam` is wired only in
+   the unreachable coach home (`[data-mm-team-del]`, renderCoachHome).
+   Saved teams can be created (Game Plan) and used (Play Now) but never
+   deleted from any reachable screen (8-team cap will eventually bite).
+2. **Instant-classic DELETE has no door.** `[data-mm-classic-del]` +
+   `removeWorldClassicMeta` likewise live only on the unreachable coach
+   home; tree classic rows render no delete control.
+3. **`new_world_probe` N7b–e will red once the d229394 staff fix lets the
+   walk reach them** — they assert a tree-home shelf (PLAYBOOK LIBRARY /
+   SAVED TEAMS text, per-chair `[data-mm-view-coach]` DNA + record-book
+   buttons) that has NEVER rendered in js/ (`data-mm-view-coach` appears
+   nowhere in the source; renderTreeHome carries chairs/tree-DNA/classics
+   only). Coach DNA lives in-world (Coach's Office), saved teams in Play
+   Now — but the record book and plan-library management are doorless like
+   the deletes above. Owner call: build the tree-home shelf N7 demands, or
+   re-point N7 at the moved surfaces. The manifest note says: do NOT wave
+   those four reds off as env. (Deliberately NOT rewritten here — N7 is
+   Garrett's tripwire for exactly this "screens quietly dropped" failure,
+   and softening it to green would be weakening an assertion.)
+
+**PROVEN HERE (static, this sandbox) vs OWED LOCAL:**
+- Proven: `node --check` clean on all five changed files; every selector /
+  engine symbol the rewrites drive verified present in current js/ source
+  (grep table run this session: btn-mm-newtree, mm-nt-*, ob-kicker,
+  ob-next-0/2/3/4, ob-start, all eight data-ob-* groups, ob-school-row/
+  found/mark/list, pn-source-/pn-saved-meta/pn-name, data-mm-tree=,
+  data-mm-tree-classic=, all watch ids, close-game-result-btn,
+  noteTreeMeta/treeWorldKey/createTree/listTrees/listSavedTeams/
+  instantiateSavedTeam — ALL FOUND); the manifest parses and lists
+  (`node tools/_gate.mjs --list`); the walker logic is byte-mirrored from
+  the already-landed new_world pattern. Sim/UI behavior unchanged by
+  construction (no js/ edits).
+- **OWED LOCAL (the first PW sitting):** the four rewritten smokes
+  end-to-end; `nav_back_smoke` + `new_world_probe` first post-d229394 runs
+  (expect new_world N2–N5 green and N7b–e red per the heads-up);
+  `timeout_screen_smoke` + the live chip click (d229394's browser half);
+  then the pre-deploy FULL re-run per the triage. Everything else in the
+  standing owed-local list is unchanged.
+
+**Commit scoped to:** tools/letter_logo_ui_smoke.mjs ·
+tools/saved_team_library_ui_smoke.mjs · tools/instant_classic_ui_smoke.mjs ·
+tools/calendar_display_probe.mjs · tools/_gate_manifest.mjs · Ref/STATUS.md.
+NOT pushed.
 
 ## 2026-08-17 — FULL-GATE S-TIER FIXES (this sandbox, node) — triage steps 1–3 EXECUTED
 ## NODE-GATED ×3 — ⚠ the timeout-chip fix's LIVE proof is browser-owed
