@@ -2671,8 +2671,14 @@ function setupGlobalListeners() {
     if (!callTapOk()) return;
     state.ui.defCallName = null;
     const sel = state.ui.defCall || {};
-    if (!Object.keys(sel).length) { answerPlayCall({ concept: "sheet" }); return; }
+    // Owner build 2026-08-17: the defensive ⏱️ rides the answer — with pins
+    // or on a bare RIDE THE PLAN (resumeFromCall keeps the flag either way).
+    if (!Object.keys(sel).length) {
+      answerPlayCall(state.ui.callTimeout ? { concept: "sheet", timeout: true } : { concept: "sheet" });
+      return;
+    }
     const call = __spreadProps(__spreadValues({}, sel), { _def: true });
+    if (state.ui.callTimeout) call.timeout = true;
     if (call.runCommit != null) {
       // BOX chips are a one-snap shove relative to the standing plan, not an
       // absolute box count — applyDefCall clamps the sum to the same ±25 law.
@@ -3041,7 +3047,12 @@ function _liveGPMine() {
   const tk = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
   if (!tk) return null;
   const ps = getPlayerSchool();
-  const side = ((_b = tk.pending) == null ? void 0 : _b.possession) || tk.playerSide || (((_c = tk.homeSchool) == null ? void 0 : _c.id) === (ps == null ? void 0 : ps.id) ? "home" : "away");
+  // Owner build 2026-08-17: on a DEFCALL pending the possession is the
+  // OPPONENT's — the coach's live plan is the other side of the ball. The old
+  // possession-first read was offense-only-correct (and would have pointed
+  // the defensive timeout's adjustments at the opponent's gameplan).
+  const pk = tk.pending || null;
+  const side = pk ? (pk.kind === "defcall" ? (pk.possession === "home" ? "away" : "home") : pk.possession) || tk.playerSide : tk.playerSide || (((_c = tk.homeSchool) == null ? void 0 : _c.id) === (ps == null ? void 0 : ps.id) ? "home" : "away");
   return side === "home" ? tk.homeGP : tk.awayGP;
 }
 function renderTimeoutAdjustOverlay() {
@@ -3050,7 +3061,9 @@ function renderTimeoutAdjustOverlay() {
   const token = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
   if (!(token == null ? void 0 : token.pending)) return "";
   const playerSchool = getPlayerSchool();
-  const mySide = ((_b = token.pending) == null ? void 0 : _b.possession) || token.playerSide || (((_c = token.homeSchool) == null ? void 0 : _c.id) === (playerSchool == null ? void 0 : playerSchool.id) ? "home" : "away");
+  // Owner build 2026-08-17: defcall-aware side (see _liveGPMine) — the modal
+  // shows the COACH's timeouts and edits the COACH's plan on defense too.
+  const mySide = (token.pending.kind === "defcall" ? token.pending.possession === "home" ? "away" : "home" : token.pending.possession) || token.playerSide || (((_c = token.homeSchool) == null ? void 0 : _c.id) === (playerSchool == null ? void 0 : playerSchool.id) ? "home" : "away");
   const school = mySide === "home" ? token.homeSchool : token.awaySchool;
   const gp = token[`${mySide}GP`] || {};
   const _to = token.timeouts || {};
@@ -3358,6 +3371,16 @@ function defCallPanelHtml() {
     ${rows}
     ${timeControlBar()}
     <div class="cs-footer dc-footer">
+      ${(() => {
+    // Owner build 2026-08-17: the defensive timeout door — same ⏱️ chip as
+    // the offensive sheet ([data-cs-timeout] wires it), burning THIS side's
+    // pool. Real football's defensive timeout: stop the clock, reset the call.
+    const _dcMySide = p.possession === "home" ? "away" : "home";
+    const _dcTO = token.timeouts || {};
+    const _dcLeft = _dcTO[_dcMySide] != null ? _dcTO[_dcMySide] : C.TIMEOUTS_PER_HALF;
+    const _dcOn = !!state.ui.callTimeout;
+    return `<button class="cs-tag-btn dc-timeout${_dcOn ? " active" : ""}" data-cs-timeout="1" ${_dcLeft <= 0 ? "disabled" : ""} title="Call timeout — stops the clock this snap (saves the run-off). ${_dcLeft} left this half.">⏱️ Timeout (${_dcLeft})</button>`;
+  })()}
       <button class="btn primary dc-send" id="dc-send">${nSel ? `\u{1F6E1} SEND IT (${nSel} call${nSel > 1 ? "s" : ""})` : "\u{1F6E1} RIDE THE PLAN →"}</button>
     </div>
   </div>`;

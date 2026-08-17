@@ -4007,6 +4007,16 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
   const offFormIQ = coordPackageIQ(offSchool, offPlan);
   const pen = R ? R.pen : { offCount: 0, offYds: 0, defCount: 0, defYds: 0 };
   while (gameState.clock > 0 || down === 4 && !fourthDecided && gameState.half >= 2) {
+    // Owner build 2026-08-17 (defensive timeout door + the latent burn bug):
+    // capture the coach's timeout intent at the TOP of the snap, while the
+    // forced call still exists — every downstream branch (special teams,
+    // audibles, the coachCall stamp) nulls forcedCall/forcedDefCall before
+    // the clock-runoff block, so the old burn check down there read null and
+    // a player-called timeout NEVER actually burned (proved by probe §10's
+    // pre-fix run). The flag names the side that spends the timeout: the
+    // offensive sheet's chip burns the offense's, the defensive panel's
+    // burns the defense's.
+    const _toFlagSide = forcedCall && forcedCall.timeout ? gameState.offSide : forcedDefCall && forcedDefCall.timeout ? gameState.defSide : null;
     {
       const _lead = gameState.score.off - gameState.score.def;
       // Subsystem 5 (situational, Aug 2026): timeout-aware victory formation. A kneel
@@ -4550,6 +4560,12 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
             scoreDef: gameState.score.def
           });
           forcedCall = null;
+          // Owner build 2026-08-17 (found by probe §7's next-snap audit): the
+          // defensive forced call must clear on a penalty no-play exactly like
+          // the offensive one — the stale call otherwise rides the replayed
+          // down and the next snap resolves WITHOUT the every-snap ask that
+          // callMode 'all' promises (a real snap slipping past the headset).
+          forcedDefCall = null;
           continue;
         } else if (!onOffense) {
           const rawPos = fieldPos + yds;
@@ -4591,6 +4607,7 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
             scoreDef: gameState.score.def
           });
           forcedCall = null;
+          forcedDefCall = null; // symmetric clear — see the offense branch above
           continue;
         }
       }
@@ -5753,11 +5770,11 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     )));
     const _toState = gameState.timeouts;
     let _playerBurned = false;
-    if (_toState && forcedCall && forcedCall.timeout && gameState.playerSide && (_toState[gameState.playerSide] || 0) > 0 && !playResult.scored) {
-      _toState[gameState.playerSide] = Math.max(0, (_toState[gameState.playerSide] || 0) - 1);
+    if (_toState && _toFlagSide && (_toState[_toFlagSide] || 0) > 0 && !playResult.scored) {
+      _toState[_toFlagSide] = Math.max(0, (_toState[_toFlagSide] || 0) - 1);
       elapsed = Math.max(4, elapsed - C.TIMEOUT_RUNOFF_SAVED);
-      const _toSchool = gameState.playerSide === gameState.offSide ? offSchool : defSchool;
-      log.push(`\u23F1\uFE0F Timeout \u2014 ${(_toSchool == null ? void 0 : _toSchool.name) || "You"} (${_toState[gameState.playerSide]} left)`);
+      const _toSchool = _toFlagSide === gameState.offSide ? offSchool : defSchool;
+      log.push(`\u23F1\uFE0F Timeout \u2014 ${(_toSchool == null ? void 0 : _toSchool.name) || "You"} (${_toState[_toFlagSide]} left)`);
       _playerBurned = true;
     }
     if (!_playerBurned && _toState && gameState.half >= 2 && gameState.clock <= 120 && !playResult.turnover && !playResult.scored && playType.startsWith("run")) {
@@ -6757,8 +6774,11 @@ function resumeFromCall(token, call) {
   token.pending = null;
   // F1: a defcall resumes with a defensive override (null = ride the plan —
   // any non-defensive call object, e.g. the generic {concept:"sheet"} that the
-  // skip/mode paths send, means exactly that).
-  token._resume = p.kind === "defcall" ? __spreadProps(__spreadValues({}, p), { defCall: call && call._def ? call : { _ride: true } }) : __spreadProps(__spreadValues({}, p), { call: call || { concept: "sheet" } });
+  // skip/mode paths send, means exactly that). Owner build 2026-08-17: a
+  // ride-the-plan answer keeps the coach's TIMEOUT flag — the defensive ⏱️
+  // with no dial pins is "stop the clock, ride the plan", and the old bare
+  // {_ride:true} wrapper silently dropped it.
+  token._resume = p.kind === "defcall" ? __spreadProps(__spreadValues({}, p), { defCall: call && call._def ? call : call && call.timeout ? { _ride: true, timeout: true } : { _ride: true } }) : __spreadProps(__spreadValues({}, p), { call: call || { concept: "sheet" } });
   token.stage = p.half === 3 ? "ot" : p.half;
   return runToken(token);
 }

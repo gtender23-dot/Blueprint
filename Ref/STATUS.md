@@ -1,7 +1,24 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-17 LIVE-TEST BUGFIX (D7/D4) — all four owner-reported
+Last updated: **2026-08-17 DEFENSIVE TIMEOUT DOOR (owner-ratified same
+session) — the coach can now call ⏱️ from the DEFENSIVE call panel (new chip,
+`[data-cs-timeout]`, burns HIS pool, works with pins or on RIDE THE PLAN), and
+building it surfaced + fixed TWO latent engine bugs: (1) NO player timeout has
+EVER burned — offense included — the forced calls were nulled at the coachCall
+stamp before the burn check read them (probe §10 proved 0/5 pre-fix; intent is
+now captured at the top of the snap); (2) after a penalty no-play, the stale
+DEFENSIVE forced call rode the replayed down and the next opponent snap ran
+without the every-snap ask (probe §7's next-snap audit caught it; forcedDefCall
+now clears symmetrically with forcedCall). Side-resolution fixed defcall-aware
+in _liveGPMine + the timeout modal (they pointed at the OPPONENT's plan/pool on
+a defcall pending). timecontrol_probe grew §10 ×3 green; record_call R1 gained
+its own documented no-play retry; all re-proofs green; clean build. Owner's
+live click of the defensive ⏱️ is BROWSER-OWED (entry below). ⚠ A PARALLEL
+SESSION is live on this tree (newgame.js Situation-step retirement +
+new_world/letter_logo/calendar_display/_gate_manifest edits, uncommitted) —
+this commit is partial-staged around it; gates ran on the tree as found.
+Prior same day: LIVE-TEST BUGFIX (D7/D4) — all four owner-reported
 bugs from the first real-browser M4/M2 session FIXED at source: (1) sim-to-half
 ghost prompt + FINAL scoreboard (two causes: the skipUntil clock-0 boundary
 re-opened the headset on a 0:00 fourth-down edge, and every straight-to-locker-
@@ -98,6 +115,90 @@ D6's in-flight concepts is RESOLVED in this session, card_lint 21/0 ×3.)
 Prior: D4 · M2 presentation; D3 · M2 engine; D7 · M4; D2 · M1; D5 · M3
 audit RATIFIED. Plan of record: BUILD ORDER v2 (2026-08-17), dispatch
 prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+
+## 2026-08-17 — DEFENSIVE TIMEOUT DOOR (this sandbox) — owner-ratified build + TWO latent engine bugs found and fixed
+## NODE-GATED ×3 — ⚠ THE LIVE DEFENSIVE-⏱️ CLICK IS BROWSER-OWED
+
+The owner ratified the same-session report ("yes we need to give the player
+the same ability") — the defensive-side timeout is BUILT. Building its probe
+exposed two latent engine bugs that shipped fixed with it.
+
+**OWNER CHECKLIST (browser, one live game — joins the standing list):**
+- [ ] **Defensive ⏱️, live:** on a defensive call panel (your team on D), the
+  footer now carries "⏱️ Timeout (N)" — arm it, SEND IT (or RIDE THE PLAN):
+  the feed prints "⏱️ Timeout — ‹your school› (N left)", the panel's count
+  drops, and at 0 the chip is disabled. The timeout adjust screen (Next Play /
+  Rest of Game) shows YOUR plan and YOUR timeouts-left on defense.
+- [ ] **Offensive ⏱️ now actually burns (latent bug):** call one on offense —
+  the counter must DROP and the feed line print. It never did before (see
+  below) — worth one deliberate look.
+
+**The two latent engine bugs (both probe-caught, both fixed):**
+1. **No player timeout ever burned — offense included.** The burn check sat
+   in the clock-runoff block and read `forcedCall.timeout` — but every path
+   nulls `forcedCall`/`forcedDefCall` at the coachCall stamp (and the
+   special-teams/penalty branches even earlier), all BEFORE the runoff block.
+   Probe §10's pre-fix run: 0 burns in 5 tries. The W4 timeout screen's
+   adjustments applied, but the pool never decremented and the run-off was
+   never saved — free timeouts since W4. Fix: the timeout intent is captured
+   at the TOP of the snap iteration (`_toFlagSide` = the side whose call
+   carries the flag), and the burn block reads that. Offense burns the
+   offense's pool, defense the defense's, never the opponent's, never below
+   zero, scored snaps exempt (unchanged semantics). One modeling quirk noted:
+   a penalty no-play on the snap still eats the timeout intent (the flag dies
+   with the wiped call) — rare, visible, acceptable v1; probe §10 retries it.
+2. **After a penalty, the defense's forced call rode the replayed down and
+   the next opponent snap ran WITHOUT the every-snap ask** — the penalty
+   branches null `forcedCall` (offense re-asks) but never `forcedDefCall`.
+   Probe §7's next-snap audit caught it (~1 game in 13: a real down-1–3 snap
+   between two asks in callMode 'all'). Both penalty branches now clear both.
+   Coached-game-only variables — AI-only sims byte-identical by construction.
+
+**What shipped:**
+- **`js/engine/sim.js`** — `_toFlagSide` capture at snap top + the rewritten
+  burn block (side-exact, same log line/format); `resumeFromCall` keeps the
+  timeout flag on a ride-the-plan defcall answer (`{_ride:true,timeout:true}`
+  — the old bare wrapper dropped it); both penalty branches clear
+  `forcedDefCall` symmetrically.
+- **`js/ui/app.js`** — `defCallPanelHtml` footer grew the ⏱️ chip (same
+  `[data-cs-timeout]` the existing listener wires; count + disabled-at-0,
+  reads THIS side's pool); `dc-send` carries `timeout: true` on both branches
+  (pinned call and bare RIDE THE PLAN); `_liveGPMine` and the timeout-adjust
+  overlay resolve the COACH's side on a defcall pending (both used
+  possession-first reads that pointed at the OPPONENT's gameplan/pool —
+  live-plan edits from a defensive timeout would have edited the other team).
+- **`tools/timecontrol_probe.mjs`** — §10: defensive-pinned, offensive, and
+  defensive-ride burns each ×M games (pool −1, opponent pool untouched, empty
+  pool never negative, H1-only windows so no AI auto-timeout path can
+  contaminate; scored/penalty snaps retry per the file's own convention);
+  §7 hardened while catching bug 2 (flip accepts defcall asks, penalty rows
+  excluded from the slip audit, windows close at the half boundary — kneel/
+  spike are lawful un-asked snaps, both half≥2-gated).
+- **`tools/record_call_probe.mjs`** — R1 gained the retry its own line-91
+  comment prescribes (a pre-snap penalty can consume the unseeded resume
+  with 0 real snaps; observed once mid-gate, 4/4 green on re-run — flake
+  class, not a regression).
+
+**Gate (this sandbox, node):** `timecontrol_probe` **exit 0 ×3** on the final
+tree (all 47 checks). `record_call_probe` **PASS ×3** · `live_book_call_probe`
+PASS · `midgame_save_probe` PASS · `watchphys_probe` FULLY GREEN. Clean
+esbuild build in /tmp: ALL sanity checks PASS, 3716 KB, cache
+`cfb-dynasty-17fa133e80`, bundle syntax parse (2 blocks), CSS balanced
+(5692/5692), dc-timeout/data-cs-timeout/watchArt in the bundle; all 7 dist
+files copied back byte-identical. **Size note:** the −13 KB vs the morning
+build is the PARALLEL SESSION's uncommitted newgame.js retirement (below),
+not this change-set.
+
+**⚠ Parallel-session note (tree as found):** an uncommitted Situation-step
+retirement is live in the working tree (`js/ui/views/newgame.js` ~644-line
+diff + new_world_probe/letter_logo_ui_smoke/calendar_display_probe/
+_gate_manifest edits). None of it is this session's work; this commit is
+partial-staged to the five files below, and the gates/build above ran on the
+tree as found (the D2 precedent).
+
+**Commit scoped to:** js/engine/sim.js · js/ui/app.js ·
+tools/timecontrol_probe.mjs · tools/record_call_probe.mjs · Ref/STATUS.md.
+NOT pushed.
 
 ## 2026-08-17 — LIVE-TEST BUGFIX (this sandbox) — the four D7/D4 bugs from the owner's first real-browser session
 ## NODE-GATED ×3 — ⚠ THE OWNER'S LIVE RE-TEST OF ALL FOUR IS BROWSER-OWED

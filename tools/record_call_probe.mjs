@@ -81,8 +81,13 @@ function pinRandom(seed) {
 
 hdr('R1 — every real scrimmage record carries the stamps');
 {
-  const plays = sheetDrive();
-  const real = plays.filter((p) => p && (p.concept || (p.type && /^(run|pass)/.test(p.type))));
+  // 2026-08-17: retry like the probe's own realOf() below — a pre-snap
+  // penalty can consume the unseeded resume with no real snap (this red
+  // appeared once in a gate run; the same class the line-91 comment names).
+  let plays = sheetDrive();
+  const isReal = (p) => p && (p.concept || (p.type && /^(run|pass)/.test(p.type)));
+  for (let i = 0; i < 8 && !plays.some(isReal); i++) plays = sheetDrive();
+  const real = plays.filter(isReal);
   const hasKeys = real.every((p) => 'bookName' in p && 'variation' in p && 'customPlayId' in p && 'offFormation' in p);
   check(real.length > 0, `drive produced real snaps (${real.length})`);
   check(hasKeys, 'every real snap carries bookName/variation/customPlayId (+offFormation)');

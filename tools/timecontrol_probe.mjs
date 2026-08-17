@@ -28,11 +28,18 @@
 //     prompt open lands the HALFTIME seam — zero stray prompts, stage 2 (not
 //     'done'/final), stopAfterHalf intact, all plays half 1, _skipAnim (the
 //     UI's straight-to-locker-room key) untouched by the engine.
-//  9. OWNER LIVE-TEST 2026-08-17 (bugs #1/#2/#3, UI half): source tripwires
-//     for the parts node can't click — play-art backed by settings (read at
-//     render, survives every per-play board rebuild + halftime), the watch
-//     board's call stage auto-advancing, the locker-room path dropping the
-//     stale call overlay. The live click-through remains browser-owed.
+//  9. (renumbered below) OWNER LIVE-TEST 2026-08-17 (bugs #1/#2/#3, UI half):
+//     source tripwires for the parts node can't click — play-art backed by
+//     settings (read at render, survives every per-play board rebuild +
+//     halftime), the watch board's call stage auto-advancing, the locker-room
+//     path dropping the stale call overlay. Live click-through browser-owed.
+// 10. OWNER BUILD 2026-08-17: the TIMEOUT doors, both sides of the ball. The
+//     coach's ⏱️ actually BURNS — offense (the latent bug: forcedCall was
+//     nulled at the coachCall stamp before the old burn check read it, so no
+//     player timeout ever decremented), defense pinned, defense ride-the-plan
+//     (the flag survives the {_ride} wrapper) — always from the COACH's own
+//     pool, never the opponent's, never below zero. H1-only windows so no AI
+//     auto-timeout path (stopper/kneel/icing, all half>=2) can contaminate.
 //
 // Run from repo root: node tools/timecontrol_probe.mjs [gamesPerCell]
 import { readFileSync } from 'node:fs';
@@ -286,7 +293,10 @@ console.log('== M4 TIME CONTROLS PROBE ==');
     const ok = drain(t, (tok) => {
       const p = tok.pending;
       if (mode === 'key') {
-        if (p.kind !== 'playcall' || p.half !== 1) return;
+        // any H1 headset ask will do — a defcall answer drives callMode the
+        // same way (a keydowns H1 can pass without an OFFENSIVE key ask, but
+        // between the two sides an ask always comes before the break).
+        if (p.half !== 1 || (p.kind !== 'playcall' && p.kind !== 'defcall')) return;
         tok.callMode = 'all';           // exactly what setInvolvement writes
         prev = tokenPlayCount(tok);
         mode = 'all';
@@ -294,13 +304,17 @@ console.log('== M4 TIME CONTROLS PROBE ==');
         return;
       }
       if (mode === 'all') {
+        // H1 windows only — H2 adds lawful un-asked snaps (kneel/spike, both
+        // gated half>=2). Reaching the break just ends the audit early.
+        if (p.half !== 1) { tok.callMode = 'keydowns'; mode = 'back'; backFlips++; return; }
         // Between the last answered snap and THIS ask, every scrimmage snap
         // must itself have asked — i.e. nothing at down 1–3 slips through.
         // (Index `prev` is the answered snap; kickoff rows ride at down 0;
-        // an un-asked 4th-down resolution rides at down 4.)
+        // an un-asked 4th-down resolution rides at down 4; a PENALTY row
+        // carries the down but is a no-play, never an ask.)
         const cur = tokenPlayCount(tok);
         const between = flatPlays(tok).slice(prev + 1, cur);
-        if (between.some((pl) => pl.down >= 1 && pl.down <= 3)) slipped++;
+        if (between.some((pl) => pl.type !== 'penalty' && pl.down >= 1 && pl.down <= 3)) slipped++;
         windows++;
         prev = cur;
         if (--winsLeft <= 0) { tok.callMode = 'keydowns'; mode = 'back'; backFlips++; }
@@ -374,6 +388,83 @@ console.log('== M4 TIME CONTROLS PROBE ==');
     /skipTok\._skipAnim = null;[\s\S]{0,900}state\.ui\.liveWatch = null;[\s\S]{0,100}state\.ui\.showHalftime = true;/.test(st));
   g('sim-to-end: the straight-to-box-score paths drop the stale call overlay',
     (st.match(/state\.ui\.liveWatch = null;\s*(?:\/\/[^\n]*\n\s*)*state\.ui\.showGameResult = true;/g) || []).length >= 2);
+}
+
+// ── 10. The timeout doors, both sides (owner build 2026-08-17) ─────────────
+{
+  const M = Math.max(2, Math.floor(N / 3));
+  let defPin = 0, defPinTried = 0, offBurn = 0, offTried = 0, defRide = 0, defRideTried = 0,
+    zeroOk = 0, zeroTried = 0, oppTouched = 0, done = 0;
+  const flatPlays = (t) => {
+    const out = [];
+    for (const d of t.drives || []) for (const p of d.plays || []) out.push(p);
+    if (t.pending?.drive?.plays) out.push(...t.pending.drive.plays);
+    return out;
+  };
+  // like drain(), but onPending may answer ITSELF (return true = answered)
+  const drive = (t, onPending) => {
+    let guard = 0;
+    while (guard++ < 2500) {
+      if (t.pending) { if (!onPending || !onPending(t)) answer(t); continue; }
+      if (t.stage === 'done') return true;
+      if (t.stage === 2 || t.stopAfterHalf === 1) { stepSecondHalf(t); continue; }
+      return false;
+    }
+    return false;
+  };
+  for (let i = 0; i < M; i++) {
+    const t = newToken('all');
+    let stage = 0; // 0 def-pinned · 1 offense · 2 def-ride · 3 zero-pool · 4 quiet
+    // burn one case: answer with the call, expect MY pool −1. Lawful
+    // exceptions: a SCORED snap never burns, and a PENALTY on the snap wipes
+    // the down and eats the flag with the forced call (engine quirk, noted in
+    // STATUS) — retry those, same convention as record_call's no-play retry.
+    const doCase = (tok, call) => {
+      const before = tok.timeouts.home, oppBefore = tok.timeouts.away;
+      const cnt = tokenPlayCount(tok);
+      resumeFromCall(tok, call);
+      const play = flatPlays(tok)[cnt] || {};
+      if (tok.timeouts.away !== oppBefore) oppTouched++;
+      if (tok.timeouts.home === before - 1) return 'ok';
+      if ((play.scored || play.type === 'penalty') && tok.timeouts.home === before) return 'retry';
+      return 'bad';
+    };
+    const ok = drive(t, (tok) => {
+      const p = tok.pending;
+      if (p.half !== 1 || (p.clock != null ? p.clock : 0) <= 200) return false;
+      if (stage === 0 && p.kind === 'defcall') {
+        const r = doCase(tok, { _def: true, aggression: 'attacking', timeout: true });
+        if (r !== 'retry') { defPinTried++; if (r === 'ok') defPin++; stage = 1; }
+        return true;
+      }
+      if (stage === 1 && p.kind === 'playcall' && p.possession === 'home') {
+        const r = doCase(tok, { concept: 'sheet', timeout: true });
+        if (r !== 'retry') { offTried++; if (r === 'ok') offBurn++; stage = 2; }
+        return true;
+      }
+      if (stage === 2 && p.kind === 'defcall') {
+        const r = doCase(tok, { concept: 'sheet', timeout: true });
+        if (r !== 'retry') { defRideTried++; if (r === 'ok') defRide++; stage = 3; }
+        return true;
+      }
+      if (stage === 3 && p.kind === 'defcall') {
+        zeroTried++;
+        tok.timeouts.home = 0;
+        resumeFromCall(tok, { _def: true, timeout: true });
+        if (tok.timeouts.home === 0) zeroOk++;
+        stage = 4;
+        return true;
+      }
+      return false;
+    });
+    if (ok) done++;
+  }
+  g('defensive ⏱️ with pins burns MY pool (the new door)', defPinTried === M && defPin === M, `${defPin}/${defPinTried} of ${M}`);
+  g('offensive ⏱️ burns (the latent never-burned bug is fixed)', offTried === M && offBurn === M, `${offBurn}/${offTried}`);
+  g('defensive ⏱️ on RIDE THE PLAN burns (flag survives the _ride wrapper)', defRideTried === M && defRide === M, `${defRide}/${defRideTried}`);
+  g('an empty pool never goes negative and never burns', zeroTried === M && zeroOk === M, `${zeroOk}/${zeroTried}`);
+  g("the opponent's pool is never touched by my timeout", oppTouched === 0, `${oppTouched} touches`);
+  g('timeout games complete', done === M, `${done}/${M}`);
 }
 
 console.log(fail ? `\n❌ ${fail} TIME-CONTROL FAILURES` : '\n✅ M4 TIME CONTROLS PASS');
