@@ -1,5 +1,5 @@
-import { DEF_DROP_ELIGIBLE, DEF_FIELD_LAYOUTS, OFF_FIELD_LAYOUTS } from '../constants_field.js';
-import { FORMATIONS, SLOT_ELIGIBILITY } from '../constants.js';
+import { DEF_DROP_ELIGIBLE, DEF_FIELD_LAYOUTS, OFF_FIELD_LAYOUTS, variationLayoutSlots } from '../constants_field.js';
+import { FORMATIONS, FORMATION_VARIATIONS, SLOT_ELIGIBILITY, aliasFormation } from '../constants.js';
 import { bridgeCoversSlot, sizeFitForSlot } from './traits.js';
 
 // playerById (identity stage 2, optional): id → player OBJECT, so bridge
@@ -142,13 +142,23 @@ function resolveSlots(slots, assignments, activeDepth, ratingById = null, player
   }
   return { bySlot, byPos };
 }
-function resolveOffField(formationId, assignments, shares, activeDepth, ratingById = null, playerPos = null, playerById = null) {
+function resolveOffField(formationId, assignments, shares, activeDepth, ratingById = null, playerPos = null, playerById = null, variation = null) {
   const layout = OFF_FIELD_LAYOUTS[formationId];
   if (!layout) return null;
-  const { bySlot, byPos } = resolveSlots(layout.slots, assignments, activeDepth, ratingById, playerPos, playerById);
-  const fbSlotIds = new Set(layout.slots.filter((s) => s.role === "FB-Lead").map((s) => s.id));
+  // M2 personnel truth (owner decision a, 2026-08-17): the variation pkg ALWAYS
+  // wins when fielding personnel. The look's authored VARIATION_LAYOUTS row —
+  // the same row the cards draw and the card linter pins to the pkg — supplies
+  // the slots, so the re-dressed bodies (Big's third TE, the Diamond's real FB,
+  // Empty's fifth receiver) are fielded from the rooms the pkg names. Slot IDS
+  // never change, so hand-picked pins and target shares ride across looks.
+  // variation null (every base look, every AI plan) = the base slots exactly
+  // as before. __noVarPkg restores the old base-personnel fielding for A/Bs.
+  const vd = variation && !globalThis.__noVarPkg ? (FORMATION_VARIATIONS[aliasFormation(formationId)] || {})[variation] : null;
+  const slots = (vd && variationLayoutSlots(layout.slots, vd.layout)) || layout.slots;
+  const { bySlot, byPos } = resolveSlots(slots, assignments, activeDepth, ratingById, playerPos, playerById);
+  const fbSlotIds = new Set(slots.filter((s) => s.role === "FB-Lead").map((s) => s.id));
   const fbFromSlots = [];
-  for (const s of layout.slots) {
+  for (const s of slots) {
     if (fbSlotIds.has(s.id) && bySlot[s.id]) fbFromSlots.push(bySlot[s.id]);
   }
   const personnel = {
@@ -170,7 +180,7 @@ function resolveOffField(formationId, assignments, shares, activeDepth, ratingBy
     }
   }
   const shareByPlayerId = {};
-  for (const s of layout.slots) {
+  for (const s of slots) {
     if (!s.catch) continue;
     const pid = bySlot[s.id];
     if (!pid) continue;
@@ -178,7 +188,7 @@ function resolveOffField(formationId, assignments, shares, activeDepth, ratingBy
     if (w != null) shareByPlayerId[pid] = w;
   }
   const roleBySlotPlayer = {};
-  for (const s of layout.slots) {
+  for (const s of slots) {
     const pid = bySlot[s.id];
     if (pid && s.role) roleBySlotPlayer[pid] = s.role;
   }
@@ -190,7 +200,7 @@ function resolveOffField(formationId, assignments, shares, activeDepth, ratingBy
   // earnable-bridge mapping (stage 4a) decides which keys mean anything.
   const oopByPlayer = {};
   if (playerPos) {
-    for (const s of layout.slots) {
+    for (const s of slots) {
       const pid = bySlot[s.id];
       if (!pid) continue;
       const nat = playerPos(pid);

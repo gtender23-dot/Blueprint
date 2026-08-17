@@ -2583,7 +2583,11 @@ FORMATION_VARIATIONS = {
     "ace": { label: "Ace", pkg: { TE: 2, WR: 2 }, lean: { passLean: -0.05, runIn: 0.05 }, matchup: { "46/Bear": -0.02, "5-2": -0.02, "Nickel": 0.02 }, situational: { shortYardage: 0.03, redZone: 0.03 }, layout: "spread_ace" }
   },
   "Air Raid": {
-    "empty": { label: "Empty", lean: { passLean: 0.05 }, matchup: { "Nickel": -0.02, "Dime": -0.03, "46/Bear": 0.03 }, situational: { thirdLong: 0.03, twoMinute: 0.03, shortYardage: -0.04 }, layout: "air_empty" },
+    // M2 (owner decision b, 2026-08-17): Empty gets a REAL empty pkg — the
+    // back genuinely leaves the field for a fifth receiver. Before this the
+    // look had no pkg, so the engine fielded 1 RB in "Empty" (CREATOR_FIDELITY
+    // engine item 2, "the Empty that isn't").
+    "empty": { label: "Empty", pkg: { RB: 0, WR: 5 }, lean: { passLean: 0.05 }, matchup: { "Nickel": -0.02, "Dime": -0.03, "46/Bear": 0.03 }, situational: { thirdLong: 0.03, twoMinute: 0.03, shortYardage: -0.04 }, layout: "air_empty" },
     "tight": { label: "Tight", lean: { passLean: -0.03 }, matchup: { "5-2": -0.03, "46/Bear": -0.03 }, situational: { shortYardage: 0.02 }, layout: "air_tight" }
   },
   "Pistol/RPO": {

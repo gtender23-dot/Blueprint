@@ -10,7 +10,7 @@ import { defaultGameplan } from '../../engine/world.js';
 import { getCreation, listCreations, loadCreationData } from '../../engine/creator.js';
 import { repairCreation } from '../../engine/creatorrepair.js';
 import { DEFAULT_OFF_BOOKS, DEFAULT_DEF_BOOKS, defaultOffBook, defaultDefBook } from '../../engine/defaultbooks.js';
-import { applyPlaybookToGameplan } from '../../engine/playbook.js';
+import { applyPlaybookToGameplan, lookSheetKey, splitSheetKey, resolveLookSheet } from '../../engine/playbook.js';
 import { applyDefBookToGameplan } from '../../engine/defbook.js';
 import { applyControllerOverlay, controllerOverlayOf, synthesizeTeamPlan } from '../../engine/teamplan.js';
 import { tipTerm } from '../manual/tips.js';
@@ -877,15 +877,25 @@ function renderOffenseDefaults(gp) {
           <summary class="gp-section-hdr">THE PLAYBOOK <span class="gp-section-sub">your play mix \u2014 the call sheet</span></summary>
           <div class="gp-tip tip-info">\u25B8 Every snap the sim now calls a real CONCEPT \u2014 this is where you weight them. 50 is a balanced call sheet; crank what your roster executes, bench what it can't (0 = never called, and your QB can't audible into it). Each concept beats some coverages and dies against others \u2014 the drive log shows you which you're meeting. Fair warning: the defense keeps film. Ride one concept hard enough and it starts getting jumped, so a lopsided sheet pays a tax. Weights ride with your saved plans, so different opponents can get different books.</div>
           ${(() => {
-    const carried = [...new Set((gp.offFormations || []).filter((f) => f && f.id && (f.weight || 0) > 0).map((f) => f.id).filter((id) => FORMATION_PLAYBOOK[id]))];
-    if (pbFormTab && !carried.includes(pbFormTab)) pbFormTab = null;
-    const authoredIn = (fid) => { var _b; return Object.keys(((_b = gp.formationPlaybooks) == null ? void 0 : _b[fid]) || {}).length; };
+    // M2 per-LOOK sheets: one tab per carried LOOK (formation + variation),
+    // not one per formation — an edit lands on that look alone (#43). A look
+    // without its own sheet inherits the formation's base sheet.
+    const seenLooks = new Set();
+    const carried = (gp.offFormations || []).filter((f) => f && f.id && (f.weight || 0) > 0 && FORMATION_PLAYBOOK[f.id]).map((f) => {
+      const vk = f.variation || null;
+      const key = lookSheetKey(f.id, vk);
+      const vset = FORMATION_VARIATIONS[f.id];
+      const label = vk ? `${f.id} · ${(vset && vset[vk] && vset[vk].label) || vk}` : f.id;
+      return { key, fid: f.id, vk, label };
+    }).filter((l) => seenLooks.has(l.key) ? false : (seenLooks.add(l.key), true));
+    if (pbFormTab && !carried.some((l) => l.key === pbFormTab)) pbFormTab = null;
+    const authoredIn = (key) => { var _b; return Object.keys(((_b = gp.formationPlaybooks) == null ? void 0 : _b[key]) || {}).length; };
     const strip = carried.length ? `
           <div class="gp-row"><div class="gp-options">
             <button class="gp-option gp-option-sm${!pbFormTab ? " active" : ""}" data-pbform="">BASE PLAYBOOK</button>
-            ${carried.map((id) => `<button class="gp-option gp-option-sm${pbFormTab === id ? " active" : ""}" data-pbform="${escapeHtml(id)}">${escapeHtml(id)}${authoredIn(id) ? ` (${authoredIn(id)})` : ""}</button>`).join("")}
+            ${carried.map((l) => `<button class="gp-option gp-option-sm${pbFormTab === l.key ? " active" : ""}" data-pbform="${escapeHtml(l.key)}">${escapeHtml(l.label)}${authoredIn(l.key) ? ` (${authoredIn(l.key)})` : ""}</button>`).join("")}
           </div></div>
-          <div class="gp-hint">Per-formation playbooks: pick a formation to set its own play mix. Changes apply only to snaps from that formation; untouched plays use your base playbook.</div>` : "";
+          <div class="gp-hint">Per-look playbooks: pick a look to set its own play mix. Changes apply only to snaps from that look; a look you haven't touched inherits its formation's sheet, and anything unset there uses your base playbook.</div>` : "";
     return strip + (pbFormTab ? renderFormationPlaybook(gp, pbFormTab) : renderPlaybookGroups(gp));
   })()}
           </details>`}
@@ -1610,9 +1620,14 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
   });
   root.querySelectorAll("input[data-fpb]").forEach((sl) => {
     sl.addEventListener("input", (e) => {
-      const fid = sl.dataset.fpbform, nm = sl.dataset.fpb;
+      // M2 per-look: data-fpbform is a LOOK key ("fid" or "fid|variation").
+      // FORK ON FIRST WRITE — a look still inheriting copies the base sheet
+      // byte-for-byte, then the slide edits the copy (#43: no echo).
+      const key = sl.dataset.fpbform, nm = sl.dataset.fpb;
       const all = gp.formationPlaybooks || (gp.formationPlaybooks = {});
-      const sheet = all[fid] || (all[fid] = {});
+      const { id: _fid, variation: _vk } = splitSheetKey(key);
+      if (_vk && !(all[key] && Object.keys(all[key]).length)) all[key] = { ...(all[_fid] || {}) };
+      const sheet = all[key] || (all[key] = {});
       sheet[nm] = parseInt(e.target.value);
       const grp = root.querySelectorAll(`input[data-fpbgrp="${sl.dataset.fpbgrp}"]`);
       let tot = 0;
@@ -1631,11 +1646,11 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
   root.querySelectorAll("[data-fpbclear]").forEach((btn) => {
     btn.addEventListener("click", () => {
       var _b;
-      const fid = btn.dataset.fpbform, nm = btn.dataset.fpbclear;
-      const sheet = (_b = gp.formationPlaybooks) == null ? void 0 : _b[fid];
+      const key = btn.dataset.fpbform, nm = btn.dataset.fpbclear;
+      const sheet = (_b = gp.formationPlaybooks) == null ? void 0 : _b[key];
       if (sheet) {
         delete sheet[nm];
-        if (!Object.keys(sheet).length) delete gp.formationPlaybooks[fid];
+        if (!Object.keys(sheet).length) delete gp.formationPlaybooks[key];
         if (!Object.keys(gp.formationPlaybooks || {}).length) delete gp.formationPlaybooks;
       }
       rerender();
@@ -1643,9 +1658,11 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
   });
   (_k = root.querySelector("#fpb-reset")) == null ? void 0 : _k.addEventListener("click", () => {
     var _b;
-    const fid = (_b = root.querySelector("#fpb-reset")) == null ? void 0 : _b.dataset.fpbform;
-    if (fid && gp.formationPlaybooks) {
-      delete gp.formationPlaybooks[fid];
+    // M2: resetting a LOOK key drops its fork (it inherits the base sheet
+    // again); resetting a base key drops the formation's base sheet.
+    const key = (_b = root.querySelector("#fpb-reset")) == null ? void 0 : _b.dataset.fpbform;
+    if (key && gp.formationPlaybooks) {
+      delete gp.formationPlaybooks[key];
       if (!Object.keys(gp.formationPlaybooks).length) delete gp.formationPlaybooks;
     }
     rerender();
@@ -3016,12 +3033,25 @@ function conceptHint(name, c) {
 // playbook concept-by-concept for snaps run from that formation. Untouched
 // concepts inherit the global weight (the pill shows which is which); an empty
 // sheet means the formation just runs the global book, exactly as before.
-function renderFormationPlaybook(gp, fid) {
-  var _a;
+function renderFormationPlaybook(gp, key) {
+  var _a, _b;
+  // M2 per-look sheets: `key` is a LOOK key — "fid" (the base sheet) or
+  // "fid|variation" (that look's own sheet). A look that hasn't forked
+  // INHERITS the formation's base sheet; sliding anything here forks it.
+  const { id: fid, variation: vk } = splitSheetKey(key);
+  const vset = FORMATION_VARIATIONS[fid];
+  const lookLabel = vk ? `${fid} ${(vset && vset[vk] && vset[vk].label) || vk}` : fid;
   const carry = FORMATION_PLAYBOOK[fid] || [];
   const global = gp.conceptWeights || {};
-  const sheet = ((_a = gp.formationPlaybooks) == null ? void 0 : _a[fid]) || {};
-  const nAuthored = Object.keys(sheet).length;
+  const own = ((_a = gp.formationPlaybooks) == null ? void 0 : _a[key]) || {};
+  const base = vk ? ((_b = gp.formationPlaybooks) == null ? void 0 : _b[fid]) || {} : own;
+  const forked = !vk || Object.keys(own).length > 0;
+  // effective sheet the sim resolves for this look: own fork, else base
+  const sheet = forked ? own : base;
+  const nAuthored = Object.keys(own).length;
+  const inheritNote = vk && !forked && Object.keys(base).length
+    ? `<b>Inheriting the ${escapeHtml(fid)} base sheet</b> (${Object.keys(base).length} play${Object.keys(base).length === 1 ? "" : "s"} set there) — slide anything to give this look its own sheet.`
+    : null;
   const groups = [
     ["QUICK GAME", Object.entries(PASS_CONCEPTS).filter(([nm, c]) => c.depth === "short" && carry.includes(nm))],
     ["DROPBACK", Object.entries(PASS_CONCEPTS).filter(([nm, c]) => c.depth === "medium" && carry.includes(nm))],
@@ -3030,29 +3060,29 @@ function renderFormationPlaybook(gp, fid) {
     ["PERIMETER RUN GAME", Object.entries(RUN_CONCEPTS).filter(([nm, c]) => c.type === "run_outside" && carry.includes(nm))]
   ].filter(([, list]) => list.length);
   return `
-  <div class="cw-explain">This is <b>${escapeHtml(fid)}'s own call sheet</b> — ${carry.length} plays it actually runs.
-  Slide a play here and the change applies only to snaps out of ${escapeHtml(fid)}; anything you don't touch
-  <b>uses your base playbook</b>. 0 is still a cut — benched here means never called from this formation.
-  ${nAuthored ? `<b>${nAuthored} play${nAuthored === 1 ? "" : "s"} set here.</b>` : "Nothing set yet — this formation runs your base playbook."}</div>
-  ${nAuthored ? `<div class="gp-row"><button class="gp-option gp-option-sm" id="fpb-reset" data-fpbform="${escapeHtml(fid)}">Reset ${escapeHtml(fid)} to your base playbook</button></div>` : ""}
+  <div class="cw-explain">This is <b>${escapeHtml(lookLabel)}'s own call sheet</b> — ${carry.length} plays it actually runs.
+  Slide a play here and the change applies only to snaps out of this look; anything you don't touch
+  <b>uses your base playbook</b>. 0 is still a cut — benched here means never called from this look.
+  ${inheritNote ? inheritNote : nAuthored ? `<b>${nAuthored} play${nAuthored === 1 ? "" : "s"} set here.</b>` : "Nothing set yet — this look runs your base playbook."}</div>
+  ${nAuthored ? `<div class="gp-row"><button class="gp-option gp-option-sm" id="fpb-reset" data-fpbform="${escapeHtml(key)}">${vk ? `Reset — inherit the ${escapeHtml(fid)} sheet again` : `Reset ${escapeHtml(fid)} to your base playbook`}</button></div>` : ""}
   ${groups.map(([title, list], gi) => {
-    const eff = (nm) => { var _b; return (_b = sheet[nm] != null ? sheet[nm] : global[nm]) != null ? _b : 50; };
+    const eff = (nm) => { var _c; return (_c = sheet[nm] != null ? sheet[nm] : global[nm]) != null ? _c : 50; };
     const gTot = list.reduce((t, [nm]) => t + eff(nm), 0) || 1;
     return `
     <div class="cw-group">
       <div class="cw-group-hdr">${title}</div>
       ${list.map(([name, c]) => {
-        const authored = sheet[name] != null;
+        const authored = own[name] != null;
         const w = eff(name);
         const shr = Math.round(100 * w / gTot);
         return `
         <div class="cw-row">
           <div class="cw-name">${escapeHtml(name)} <span class="cw-hint">${conceptHint(name, c)}</span>
-            ${authored ? `<button class="cw-offsheet" data-fpbclear="${escapeHtml(name)}" data-fpbform="${escapeHtml(fid)}" title="Set for ${escapeHtml(fid)} — tap to go back to your base playbook">set here · tap to reset</button>` : ""}
+            ${authored ? `<button class="cw-offsheet" data-fpbclear="${escapeHtml(name)}" data-fpbform="${escapeHtml(key)}" title="Set for ${escapeHtml(lookLabel)} — tap to go back to your base playbook">set here · tap to reset</button>` : vk && !forked && base[name] != null ? `<span class="cw-offsheet cw-inherited" title="Inherited from the ${escapeHtml(fid)} base sheet">from base sheet</span>` : ""}
           </div>
           <div class="gp-slider-wrap">
             <span class="gp-slider-lo">bench</span>
-            <input class="gp-slider" type="range" min="0" max="100" step="5" value="${w}" data-fpb="${escapeHtml(name)}" data-fpbform="${escapeHtml(fid)}" data-fpbgrp="${gi}" />
+            <input class="gp-slider" type="range" min="0" max="100" step="5" value="${w}" data-fpb="${escapeHtml(name)}" data-fpbform="${escapeHtml(key)}" data-fpbgrp="${gi}" />
             <span class="gp-slider-hi">feature</span>
             <span class="gp-slider-val cw-val${w === 0 ? " cw-benched" : ""}" data-fpbval="${escapeHtml(name)}">${w === 0 ? "benched" : `\u2248${shr}%`}</span>
           </div>

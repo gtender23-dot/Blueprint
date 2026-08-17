@@ -10,6 +10,7 @@ import { runFit } from './run2geo.js';
 import { resolvePocket } from './rushgeo.js';
 import { routeDuel } from './sepgeo.js';
 import { compilePlay } from './playcompose.js';
+import { resolveLookSheet } from './playbook.js';
 import { getEffectivePlan, resolveSituation } from './situations.js';
 import { coordPackageIQ, formationIqMod } from './staff.js';
 import { bridgeWaivesBucket, flawLv, flawMult, traitLv, traitMult } from './traits.js';
@@ -4829,7 +4830,14 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
       const live = named.filter((id) => offRoster.some((p) => p.id === id && p.injuryGamesOut === 0));
       if (live.length) offDepthWithSlot = __spreadProps(__spreadValues({}, offDepthWithSlot), { [key]: live });
     }
-    const offField = resolveOffField(offFormationId, offFA == null ? void 0 : offFA.slots, offFA == null ? void 0 : offFA.shares, offDepthWithSlot, null, offPosOf, offById);
+    // M2 personnel truth (owner decisions a+b, 2026-08-17): the VARIATION rides
+    // into the field resolver, so the fielded eleven IS the look's pkg — the
+    // authored VARIATION_LAYOUTS row re-dresses the moved bodies (Power-I Big
+    // fields 3 TE, the Diamond fields a real FB, Air Raid Empty fields no
+    // back). Base looks (offVar null) and every AI plan (AI never sets a
+    // variation) resolve byte-identically to the pre-M2 read. Kill-switch
+    // __noVarPkg restores base-personnel fielding for the A/B.
+    const offField = resolveOffField(offFormationId, offFA == null ? void 0 : offFA.slots, offFA == null ? void 0 : offFA.shares, offDepthWithSlot, null, offPosOf, offById, offVar);
     const defHasPins = !!defFA && (Object.keys(defFA.slots || {}).length > 0 || Object.values(defFA.blitzShares || {}).some((v) => v > 0) || defFA.heat != null);
     const defBaseField = defFrontId === baseFront || defHasPins ? resolveDefField(defFrontId, defFA == null ? void 0 : defFA.slots, defFA == null ? void 0 : defFA.blitzShares, activeDefDepth, null, defPosOf, defById) : null;
     // BLITZ PIE (Ref/BLITZ_PIE_PLAN.md): the front's HEAT dial rides to the
@@ -4927,7 +4935,12 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     // PASS 6: AI staffs now author their own per-formation sheets (stamped
     // _aiAuthoredSheets by setAIGameplan). __noAIFormSheets ignores exactly
     // those — player-authored sheets are untouched — for a clean in-game A/B.
-    const _fpbSheet = offPlan.formationPlaybooks && !(globalThis.__noAIFormSheets && offPlan._aiAuthoredSheets) ? offPlan.formationPlaybooks[offFormationId] : null;
+    // M2 (per-look sheets, 2026-08-17): the lookup goes through THE resolver —
+    // this look's own forked sheet if it has one, else the formation's base
+    // sheet byte-identically (inherit-with-override). Every pre-M2 plan is
+    // base-keys-only, so this line resolves exactly as the old
+    // formationPlaybooks[offFormationId] read did.
+    const _fpbSheet = offPlan.formationPlaybooks && !(globalThis.__noAIFormSheets && offPlan._aiAuthoredSheets) ? resolveLookSheet(offPlan.formationPlaybooks, offFormationId, offVar) : null;
     const _cwEff = _fpbSheet && Object.keys(_fpbSheet).length ? { ...offPlanEff.conceptWeights || {}, ..._fpbSheet } : offPlanEff.conceptWeights || null;
     if (composedCall) {
       // The composed call IS the play — same shape the forced-name branch of

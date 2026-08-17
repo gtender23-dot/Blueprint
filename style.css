@@ -4961,6 +4961,8 @@ body.theme-school .data-table tr:hover td {
 .cw-val.cw-benched { color: #c0392b; font-weight: 700; }
 .cw-explain { font-size: 0.85em; line-height: 1.45; opacity: 0.72; padding: 6px 2px 8px; border-bottom: 1px solid rgba(128,128,128,0.12); margin-bottom: 4px; }
 .cw-offsheet { display: inline-block; font-size: 0.72em; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #c0392b; border: 1px solid rgba(192,57,43,0.55); border-radius: 3px; padding: 0 4px; margin-left: 6px; vertical-align: 1px; }
+/* M2 per-look sheets: an entry a look inherits from its formation's base sheet */
+.cw-offsheet.cw-inherited { color: #8092aa; border-color: rgba(128,146,170,0.5); }
 
 /* ── Watch Mode (Rung 2.5): the chalkboard broadcast ── */
 .watch-root { display: flex; flex-direction: column; gap: 8px; padding: 4px 2px 10px; }
@@ -9436,6 +9438,15 @@ body *::after {
 /* Builder cards: the bench test affordances */
 .fb-look-test { align-self:flex-start; margin-top:2px; padding:2px 8px; font-size:10px; font-weight:800; color:inherit; background:rgba(255,255,255,.06); border:1px solid rgba(128,146,170,.45); border-radius:6px; cursor:pointer; }
 .fb-look-test:hover { border-color:var(--px-yellow,#ffd54a); }
+/* M2 per-look sheets: each look's own Plays button + the fork/inherit pill */
+.fb-look-plays { align-self:flex-start; margin-top:2px; padding:2px 8px; font-size:10px; font-weight:800; color:inherit; background:rgba(255,255,255,.06); border:1px solid rgba(128,146,170,.45); border-radius:6px; cursor:pointer; }
+.fb-look-plays:hover { border-color:var(--px-yellow,#ffd54a); }
+.pb-sheet-head { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:8px 0 4px; font-size:12px; }
+.pb-sheet-pill { display:inline-flex; align-items:center; gap:6px; padding:2px 8px; font-size:10px; border:1px solid rgba(128,146,170,.45); border-radius:999px; background:rgba(255,255,255,.05); }
+.pb-unfork { padding:1px 6px; font-size:10px; font-weight:800; color:inherit; background:rgba(255,255,255,.08); border:1px solid rgba(128,146,170,.45); border-radius:6px; cursor:pointer; }
+.pb-unfork:hover { border-color:var(--px-yellow,#ffd54a); }
+.concept-card.misfit { opacity:.55; }
+.concept-card.misfit .concept-card-name { color:var(--px-yellow,#ffd54a); }
 .concept-card { position:relative; }
 .concept-card-test { position:absolute; top:2px; right:2px; padding:1px 4px; font-size:11px; line-height:1; border-radius:5px; background:rgba(5,10,18,.55); cursor:pointer; }
 .concept-card-test:hover { background:var(--px-yellow,#ffd54a); }

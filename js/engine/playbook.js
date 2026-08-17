@@ -22,6 +22,39 @@ var PLAYBOOK_SCHEMA_VERSION = 1;
 function legalConceptsForFormation(formationId) {
   return FORMATION_PLAYBOOK[aliasFormation(formationId)] || [];
 }
+// ── Per-LOOK sheets, inherit-with-override (M2 engine half, 2026-08-17) ─────
+// A sheet key is either a formation id ("Air Raid" — the BASE sheet) or a look
+// key ("Air Raid|empty" — that look's OWN sheet). The law: a (formation,
+// variation) look WITHOUT its own sheet inherits the formation sheet
+// BYTE-IDENTICALLY (resolveLookSheet returns the very same object); editing a
+// look forks it (the editors copy-then-write, never mutate the base through
+// the fallback). Every existing book is base-keys-only, so it resolves exactly
+// as before — the zero-migration law. "|" is already the UI's look-key
+// separator and can't appear in a formation id.
+function lookSheetKey(formationId, variation) {
+  const fid = aliasFormation(formationId);
+  return variation ? `${fid}|${variation}` : fid;
+}
+function splitSheetKey(key) {
+  const s = String(key == null ? "" : key);
+  const i = s.indexOf("|");
+  if (i < 0) return { id: aliasFormation(s), variation: null };
+  return { id: aliasFormation(s.slice(0, i)), variation: s.slice(i + 1) || null };
+}
+// THE resolver — the ONE inheritance fallback every consumer goes through:
+// the sim's _fpbSheet overlay, the call sheet's pinned-look browse, the Game
+// Plan editor and the Builder. Returns the look's own sheet when it has one
+// (non-empty), else the formation's base sheet, else null. Returns the LIVE
+// object on purpose: inheritance must be byte-identity, not a copy.
+function resolveLookSheet(sheets, formationId, variation) {
+  if (!sheets) return null;
+  const fid = aliasFormation(formationId);
+  if (variation) {
+    const own = sheets[`${fid}|${variation}`];
+    if (own && typeof own === "object" && Object.keys(own).length) return own;
+  }
+  return sheets[fid] || null;
+}
 // ── The ONE shared fits-function (M1, 2026-08-17) ───────────────────────────
 // Stage 7's compileFormation call-list filter, extracted so every surface that
 // asks "which plays FIT this look?" gives the same answer: the Formation
@@ -101,14 +134,24 @@ function validatePlaybook(pb) {
   if (!formations.length) warnings.push("playbook carries no formations");
   const sheets = pb.sheets && typeof pb.sheets === "object" ? pb.sheets : {};
   if (pb.sheets != null && typeof pb.sheets !== "object") errors.push("sheets must be an object");
-  for (const [fid, sheet] of Object.entries(sheets)) {
+  for (const [key, sheet] of Object.entries(sheets)) {
+    // Per-look keys (M2): "fid" = the base sheet, "fid|variation" = that look's
+    // own forked sheet. Legality is the FORMATION's book either way — a look
+    // never runs a play its formation doesn't carry.
+    const { id: fid, variation: vk } = splitSheetKey(key);
     if (!isFormation(fid)) { errors.push(`sheet for unknown formation "${fid}"`); continue; }
-    if (!seen.has(aliasFormation(fid))) warnings.push(`sheet for "${fid}" but the playbook doesn't carry that formation`);
-    if (!sheet || typeof sheet !== "object") { errors.push(`sheet for "${fid}" must be an object`); continue; }
+    if (vk) {
+      const vset = FORMATION_VARIATIONS[fid];
+      if (!vset || !vset[vk]) { errors.push(`sheet for unknown look "${fid}|${vk}"`); continue; }
+      if (!seen.has(`${fid}|${vk}`)) warnings.push(`sheet for the "${fid}" ${vk} look but the playbook doesn't carry it`);
+    } else if (!seen.has(fid)) {
+      warnings.push(`sheet for "${fid}" but the playbook doesn't carry that formation`);
+    }
+    if (!sheet || typeof sheet !== "object") { errors.push(`sheet for "${key}" must be an object`); continue; }
     const legal = new Set(legalConceptsForFormation(fid));
     for (const [concept, weight] of Object.entries(sheet)) {
       if (!legal.has(concept)) errors.push(`formation "${fid}" cannot run "${concept}" (not in its playbook)`);
-      if (typeof weight !== "number" || weight < 0) errors.push(`"${fid}" → "${concept}": weight must be a number ≥ 0`);
+      if (typeof weight !== "number" || weight < 0) errors.push(`"${key}" → "${concept}": weight must be a number ≥ 0`);
     }
   }
   if (pb.tendency != null && !(pb.tendency in PASS_TENDENCY)) errors.push(`unknown tendency "${pb.tendency}"`);
@@ -173,16 +216,25 @@ function repairPlaybook(pb) {
     out.formations.push(e);
   }
   const sheets = src.sheets && typeof src.sheets === "object" ? src.sheets : {};
-  for (const [fid, sheet] of Object.entries(sheets)) {
+  for (const [key, sheet] of Object.entries(sheets)) {
+    // Per-look keys (M2): an old book is base-keys-only and maps LOSSLESSLY —
+    // the base branch below is byte-equivalent to the pre-M2 repair. A look
+    // sheet whose variation died folds away (the look inherits the base sheet
+    // again, which is the inheritance law's own answer to a dead fork).
+    const { id: fid, variation: vk } = splitSheetKey(key);
     if (!isFormation(fid)) { changes.push(`dropped play sheet for "${fid}" (formation no longer exists)`); continue; }
-    if (!sheet || typeof sheet !== "object") { changes.push(`dropped malformed sheet for "${fid}"`); continue; }
+    if (vk) {
+      const vset = FORMATION_VARIATIONS[fid];
+      if (!vset || !vset[vk]) { changes.push(`dropped the "${fid}" ${vk} look's sheet (look no longer exists — it inherits the ${fid} sheet)`); continue; }
+    }
+    if (!sheet || typeof sheet !== "object") { changes.push(`dropped malformed sheet for "${key}"`); continue; }
     const legal = new Set(legalConceptsForFormation(fid));
     const cleaned = {};
     for (const [concept, weight] of Object.entries(sheet)) {
       if (!legal.has(concept)) { changes.push(`${fid} no longer runs "${concept}" — removed`); continue; }
       cleaned[concept] = typeof weight === "number" && weight >= 0 ? weight : 0;
     }
-    if (Object.keys(cleaned).length) out.sheets[aliasFormation(fid)] = cleaned;
+    if (Object.keys(cleaned).length) out.sheets[lookSheetKey(fid, vk)] = cleaned;
   }
   if (src.tendency != null) {
     if (src.tendency in PASS_TENDENCY) out.tendency = src.tendency;
@@ -193,4 +245,4 @@ function repairPlaybook(pb) {
   return { pb: out, changes, ok: validatePlaybook(out).ok };
 }
 
-export { PLAYBOOK_SCHEMA_VERSION, legalConceptsForFormation, filterConceptsForPersonnel, fittingConceptsForFormation, emptyPlaybook, validatePlaybook, applyPlaybookToGameplan, playbookFromGameplan, repairPlaybook };
+export { PLAYBOOK_SCHEMA_VERSION, legalConceptsForFormation, filterConceptsForPersonnel, fittingConceptsForFormation, lookSheetKey, splitSheetKey, resolveLookSheet, emptyPlaybook, validatePlaybook, applyPlaybookToGameplan, playbookFromGameplan, repairPlaybook };

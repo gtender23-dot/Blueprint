@@ -402,26 +402,26 @@ DEF_DROP_ELIGIBLE = {
 // The FORMATION_VARIATIONS `layout:` pointers (constants.js) resolve HERE — the
 // dangling pointers CREATOR_FIDELITY called "the smoking gun" now name real
 // rows. Each row is a SPARSE moveset over the base formation's slots: the SAME
-// slot IDs (the sim fields base personnel and stamps base slot ids on the
-// record — the pkg-consumption question is CREATOR_FIDELITY item 2, an owner
-// balance call, deliberately NOT taken here), moved to the look's pre-snap
-// placement. x is 0..1 across the width; y 0.50 IS the line of scrimmage
-// (on-line), 0.56 is the flanker/wing depth, deeper is backfield — same
-// conventions as OFF_FIELD_LAYOUTS above. One table; presentation readers
-// today: the live watch board (app.js) and the play/formation diagrams
-// (routeart.js). resolveOffField keeps reading the BASE table until the
-// engine-side personnel decision lands.
+// slot IDs, moved to the look's pre-snap placement. x is 0..1 across the
+// width; y 0.50 IS the line of scrimmage (on-line), 0.56 is the flanker/wing
+// depth, deeper is backfield — same conventions as OFF_FIELD_LAYOUTS above.
+// One table, now read by BOTH sides of the house: the live watch board
+// (app.js) and the play/formation diagrams (routeart.js) draw it, and since
+// M2 (owner decisions a+b, 2026-08-17) resolveOffField FIELDS it — the
+// variation pkg always wins when fielding personnel, so the eleven the sim
+// plays is the eleven the card draws.
 var VARIATION_LAYOUTS = {
   // M0 CARD LINTER (2026-08-16): a move may also RE-DRESS the body it moves —
   // pos/label/role — so the drawn look matches the variation's personnel
   // package (FORMATION_VARIATIONS pkg). The Diamond's left wing DRAWS as the
   // FB he is in that look, not as a slot receiver squatting in the backfield
   // (owner catch #20); Ace's tightened slot draws as the second TE its pkg
-  // names. Presentation-only: slot IDS never change (every recorded
-  // carrier/target stamp still resolves), catch eligibility never changes,
-  // OL/QB are never re-dressed, and resolveOffField still fields BASE
-  // personnel until the M2 pkg-consumption decision. tools/card_lint_probe.mjs
-  // walks every row against the pkg; draw_up_probe pins the id law.
+  // names. Slot IDS never change (every recorded carrier/target stamp still
+  // resolves), catch eligibility never changes, OL/QB are never re-dressed —
+  // and since M2 the re-dress is ENGINE truth: resolveOffField fields these
+  // rows, so a re-dressed pos changes which room supplies the body.
+  // tools/card_lint_probe.mjs walks every row against the pkg; draw_up_probe
+  // pins the id law.
   // Power-I — Big: the split man tightens onto the 3-TE surface (wing right).
   power_big: { moves: { WR_X: { x: 0.86, y: 0.56, pos: "TE", label: "W", role: "TE-Blocking" } } },
   // Power-I — Twins: U flexes out; twins surface right (U slot, X split end).
@@ -433,8 +433,11 @@ var VARIATION_LAYOUTS = {
   // up at tailback depth. (Was #18: the old row kept the gun QB with the back
   // stacked directly behind him — a pistol alignment wearing an Ace label.)
   spread_ace: { moves: { WR_S: { x: 0.26, y: 0.5, pos: "TE", label: "U", role: "TE-Blocking" }, QB: { x: 0.5, y: 0.62 }, RB_H: { x: 0.5, y: 0.84 } } },
-  // Air Raid — Empty: the back splits out; five across.
-  air_empty: { moves: { RB_H: { x: 0.68, y: 0.58 } } },
+  // Air Raid — Empty: five across, and per the pkg (M2 owner decision b —
+  // RB: 0, WR: 5) the fifth man IS a receiver: the back's spot re-dresses as
+  // a third slot, so the engine fields a real empty backfield, not a back
+  // split wide.
+  air_empty: { moves: { RB_H: { x: 0.68, y: 0.58, pos: "SLOT", label: "SL", role: "WR-Slot" } } },
   // Air Raid — Tight: condensed splits, everyone inside the numbers.
   air_tight: { moves: { WR_X: { x: 0.16, y: 0.5 }, WR_S: { x: 0.3, y: 0.56 }, WR_F: { x: 0.7, y: 0.56 }, WR_Z: { x: 0.84, y: 0.5 } } },
   // Pistol — Diamond: a REAL diamond (pkg: FB + TE wings, HB deep) — the slot

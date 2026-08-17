@@ -1,13 +1,133 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-16 session (D7 · M4 WATCH/TIME CONTROLS — BUILT +
-NODE-GATED, phone eyeball owed — see the entry below. Same window: D2 · M1
-THE TEST BENCH built + node-gated (browser playtest owed); D5 · M3 audit
-delivered report-only, STOPPED for owner ratification, D6 blocked on it;
-an M0 sweep and a #49-orientation viewer session also ran this window —
-see the shared-file note in the D7 entry). Plan of record: BUILD ORDER v2
-(2026-08-17), dispatch prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+Last updated: **2026-08-16 session (D3 · M2 ENGINE HALF — per-look sheets +
+the pkg truth — BUILT + NODE-GATED, both dispatch proofs green, browser tier
+owed; see the new entry below. Also this window: D7 · M4 watch/time controls
+built + node-gated (phone eyeball owed); D2 · M1 THE TEST BENCH built +
+node-gated (browser playtest owed); D5 · M3 audit RATIFIED. D4 (M2 cards)
+is now UNBLOCKED by D3.) Plan of record: BUILD ORDER v2 (2026-08-17),
+dispatch prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+
+## 2026-08-16 — D3 · M2 ENGINE HALF (per-LOOK sheets, inherit-with-override + the pkg truth)
+## BUILT + NODE-GATED, BOTH DISPATCH PROOFS GREEN — ⚠ BROWSER TIER OWED
+
+**OWNER CHECKLIST**
+- **Browser eyeball of the per-look editors** (the M2-engine browser-owed):
+  (1) Playbook Builder — every carried look card now has its own "Plays" 
+  button; open a variation look's grid: it says "inherits the ‹formation›
+  base sheet", the first play you toggle FORKS it (pill flips to "its own
+  sheet · ↩ inherit base"), and the base look + sibling looks visibly keep
+  their own lists (#43 dead). Concepts that don't fit the look's personnel
+  draw dimmed with a ⚠. (2) Game Plan → Offense → Playbook: the tab strip
+  now lists LOOKS ("Air Raid · Empty"), a look tab shows "Inheriting the
+  ‹formation› base sheet" until you slide something, sliding forks JUST that
+  look, its Reset returns it to inheriting. (3) Call sheet in a live game:
+  pin a formation + look — the play list reflects that look's sheet (forked
+  or inherited). (4) Watch an Air Raid team field EMPTY: five receivers,
+  genuinely no back on the board.
+- **Playwright tier locally** (chromium cannot download in this sandbox):
+  `node tools/build.mjs` + `node tools/_boot_check.mjs dist/index.html`,
+  then `formation_sheet_ui_smoke`, `ui_playcall_smoke`, `playnow_smoke`,
+  ideally the core gate — `look_sheet_probe` is now in CORE.
+- Standing debt unchanged: act B/D local scrub re-run + full local gate + a
+  green night run before the next deploy; M4 phone eyeball; M1 first bench
+  session.
+
+**What shipped (js/ + style.css + tools/; owner decisions a+b built as
+confirmed 2026-08-17, no further ask):**
+- **PER-LOOK SHEETS, INHERIT-WITH-OVERRIDE (#43).** Sheet keys are now
+  per-LOOK: `"fid"` = the formation's BASE sheet, `"fid|variation"` = that
+  look's OWN forked sheet. THE resolver — `resolveLookSheet` (+
+  `lookSheetKey`/`splitSheetKey`, js/engine/playbook.js) — is the ONE
+  inheritance fallback: a look without its own non-empty sheet inherits the
+  base sheet BYTE-IDENTICALLY (the same object, not a copy); an empty fork
+  ≡ absent (matches the sim's overlay gate). Consumers all go through it:
+  the sim's `_fpbSheet` overlay (sim.js — `resolveLookSheet(…,
+  offFormationId, offVar)`), the live call sheet's pinned look (app.js),
+  the Game Plan per-look editor and the Builder. The FORMATION_PLAYBOOK
+  legality gate stays formation-level (a look never runs a play its
+  formation doesn't carry) — validate/repair resolve a look key's legality
+  through the formation half of the key.
+- **EDITORS FORK ON FIRST EDIT.** Builder (creatorplaybook.js): per-look
+  "Plays" grid; editing an inheriting look copies the base sheet byte-for-
+  byte then edits the copy; "↩ inherit base" un-forks; removing a look
+  removes its fork (last look out removes base + all forks); #23
+  auto-select is per-look-aware (base look seeds the base sheet; a
+  variation look added with no base sheet seeds its OWN fitting sheet;
+  added with one, it inherits — no fork until touched); misfitting concepts
+  drawn dimmed via the shared fits-function. Game Plan (gameplan.js): the
+  Playbook tab strip lists carried LOOKS; sliders fork-on-write; per-look
+  reset; "from base sheet" pills on inherited entries. Preview + bench
+  entrances resolve per look.
+- **THE PKG TRUTH (owner decision a): the variation pkg ALWAYS wins when
+  fielding personnel.** `resolveOffField` (fieldassign.js) gained a
+  `variation` param: the look's authored `VARIATION_LAYOUTS` row — the SAME
+  row the cards draw and the card linter pins to the pkg — supplies the
+  slots, so re-dressed bodies are fielded from the rooms the pkg names
+  (Power-I Big fields 3 TE; the Diamond a real FB). Slot IDS never change:
+  pins and target shares ride across looks. Base looks + every AI plan
+  (AI never authors variations — probe-pinned) resolve byte-identically.
+  Kill-switch `__noVarPkg` restores old fielding for A/Bs. The
+  `resolvePersonnel` fallback path already applied the pkg — the two paths
+  now AGREE (one truth, probe-proven 22/22).
+- **THE REAL EMPTY (owner decision b).** Air Raid "Empty" now carries
+  `pkg { RB: 0, WR: 5 }` (constants.js) and its `air_empty` layout row
+  re-dresses the back's slot as a third slot receiver (constants_field.js)
+  — the back genuinely leaves the field for a fifth receiver.
+- **MIGRATION, LOSSLESS.** Old books are base-keys-only and map onto the
+  new model AS-IS (base keys unchanged — the inheritance law's zero-
+  migration case). `validatePlaybook`/`repairPlaybook` speak look keys
+  (unknown look = error at validate; dead look's fork drops in repair with
+  a plain-English note — the look inherits the base again; base sheets
+  untouched); `repairCreation` (the CREATOR-LIBRARY door) preserves forks;
+  apply→extract round-trips look keys; quick-slots A/B/C (full-gameplan
+  snapshots) and `aiFormationSheets` (base-keyed) ride through opaquely;
+  `PLAN_BOOK_STRUCT_FIELDS` already owns `formationPlaybooks`, so
+  controller overlays never carry sheets (probe-pinned).
+
+**THE TWO PROOFS (dispatch item 4), both green:**
+- **(i) Sheets alone are BYTE-NEUTRAL** — `tools/_m2_neutral_walk.mjs`
+  (cross-tree harness, not gate-registered) run against the pre-M2 snapshot
+  and this tree under pinned PRNG: WORLD (every AI plan after worldgen),
+  LEAGUE (40 AI-vs-AI simulateGame results) and DRIVES (12 drives under a
+  NO-OVERRIDE player book) hash BYTE-IDENTICAL pre/post
+  (74260b67… / 98d67135… / a63b71f5… on both trees). En route it exposed
+  that module-LOAD-time RNG must be pinned before import — documented in
+  the harness.
+- **(ii) The pkg change is DELIBERATE, measured** —
+  `tools/_m2_pkg_ab.mjs` (before = `__noVarPkg`, after = pkg truth):
+  all 13 pkg looks now field EXACTLY their pkg (e.g. Power-I Big
+  2B/2TE/1WR → 2B/3TE/0WR; Pistol Diamond 1B/1TE/3WR → 2B/1TE/2WR; Air
+  Raid Empty 1B/0TE/4WR → 0B/0TE/5WR). Live drives (250/arm, Air Raid
+  base+empty book): **Empty-look back touches 46.2% → 1.0%** (the tail is
+  depth-emergency subs), base look unchanged (47.6% → 47.0%), yds/snap
+  comparable (empty 6.30 → 6.70; unseeded variance). Empty run share
+  38.7% → 31.0% (QB-only runs remain — that residue is M3's territory).
+
+**Gate (this sandbox, node):** new **`look_sheet_probe`** (44/0 ×3,
+registered in CORE): the resolver laws (identity inheritance across all 22
+looks, empty-fork fallback, alias round-trips), the sim consumes a fork
+(0-weight cuts never called from the look, unforked siblings inherit,
+variation stamped), the pkg truth (22/22 looks field exactly their pkg,
+lawful elevens, slot ids stable, `__noVarPkg`, fallback-path agreement),
+the real Empty (0 backs / 5 WR + pinned receiver rides the emptied slot),
+lossless migration (zero-change repair of old books; forks survive
+repair/creation door; look-key validate/repair laws; apply↔extract round
+trip), AI-blind (338-school sweep: zero look keys, zero variations),
+overlay law. `playbook_shape_probe` extended with the look-key shape
+grammar (28/0 ×3). Re-proof green: card_lint 14/0 · formation_variation
+394/0 · draw_up 21/0 · playbook_root 24/0 · plan_side 21/0 ·
+save_migration ALL PASS · compile_league 26/0 · integration_creator 19/0
+(24 games) · record_call 12/0 · live_book_call 13/0 · bench 34/0 ·
+formation_compose 39/0 · play_fidelity ALL GREEN (18) · defcall 32/0 ·
+formation_playbook PASS · tendency monotonic ✅ (62/72/81 vs 58/68/82
+targets — standing readings). **stat_realism_harness N=500 RAN HERE**
+(61s): the standing flags only (rush 140.2 low, comp% 57.0; INT% 2.07 OK
+this run), NOTHING new. Clean esbuild build (all sanity checks PASS,
+3625 KB) + bundle syntax parse + CSS braces balanced. **PW tier owed**
+(chromium download blocked in this sandbox): boot check,
+formation_sheet_ui_smoke, ui_playcall_smoke, playnow_smoke.
 
 ## 2026-08-16 — D7 · M4 WATCH / TIME CONTROLS (involvement toggle + transport row)
 ## BUILT + NODE-GATED — ⚠ PHONE EYEBALL + PW TIER OWED

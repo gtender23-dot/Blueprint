@@ -96,6 +96,25 @@ try {
 ok(!threw, 'a custom playbook drives simulateGame without error');
 ok(plays > 100, `plays happened under the custom book (${plays})`);
 
+// ── M2 per-look sheet keys ("fid|variation") ride the same shape laws ───────
+// (the deep coverage — inheritance, forking, repair, pkg truth — lives in
+// tools/look_sheet_probe.mjs; this pins the SHAPE grammar where the shape
+// lives)
+{
+  const spreadC = spreadLegal[0];
+  const lookPb = {
+    name: 'Look Keys',
+    formations: [{ id: 'Spread', weight: 60 }, { id: 'Spread', weight: 40, variation: 'trips' }],
+    sheets: { 'Spread': { [spreadC]: 60 }, 'Spread|trips': { [spreadC]: 90 } },
+  };
+  ok(validatePlaybook(lookPb).ok, 'M2: a per-look sheet key validates');
+  ok(!validatePlaybook({ ...lookPb, sheets: { 'Spread|nope': { [spreadC]: 50 } } }).ok, 'M2: an unknown look key is an error');
+  const lookGp = applyPlaybookToGameplan(lookPb, {});
+  ok(lookGp.formationPlaybooks && !!lookGp.formationPlaybooks['Spread|trips'], 'M2: apply carries the look key into the sim sheet store');
+  const lookRt = playbookFromGameplan(lookGp, 'Look Keys RT');
+  ok(JSON.stringify(lookRt.sheets) === JSON.stringify(lookPb.sheets), 'M2: extract ∘ apply round-trips look keys exactly');
+}
+
 console.log(`PLAYBOOK SHAPE PROBE — ${pass} pass, ${fail} fail`);
 if (fail) { console.log('  FAILURES:'); bad.forEach((m) => console.log('   -', m)); }
 console.log(fail ? 'PLAYBOOK SHAPE PROBE FAIL' : 'PLAYBOOK SHAPE PROBE PASS');

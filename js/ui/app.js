@@ -46,7 +46,7 @@ import { stadiumPause, stadiumReact, stadiumStart } from './sound.js';
 import { archetypeLabel, escapeHtml, fullName, ratingColor, renderCrest, renderPlayerPortrait } from '../utils.js';
 import { syncCustomFormations } from '../engine/formcompose.js';
 import { benchSnap, benchLookOptions, benchOutcome, benchGameShell } from '../engine/bench.js';
-import { fittingConceptsForFormation } from '../engine/playbook.js';
+import { fittingConceptsForFormation, resolveLookSheet } from '../engine/playbook.js';
 
 // Stage 7 (Playbook-Root): register the library's custom formations into the
 // live tables at boot — after this, every surface that lists or fields a
@@ -3344,8 +3344,11 @@ function callSheetPanelHtml() {
   const _weightsBase = (_f = (_e = ctx2.conceptWeights) != null ? _e : gp.conceptWeights) != null ? _f : null;
   // Madden pass 2: a pinned formation's authored sheet overlays the situation
   // weights — the panel shows the exact book the engine will pick from.
+  // M2 (per-look sheets): the pinned LOOK resolves through THE resolver, so a
+  // forked look shows its own sheet and an unforked one shows the inherited
+  // base sheet — exactly what the sim's _fpbSheet overlay will read.
   const _fpbAll = ctx2.formationPlaybooks || gp.formationPlaybooks || null;
-  const _fpbSel = state.ui.callFormation && _fpbAll ? _fpbAll[state.ui.callFormation] : null;
+  const _fpbSel = state.ui.callFormation && _fpbAll ? resolveLookSheet(_fpbAll, state.ui.callFormation, state.ui.callVariation || null) : null;
   const weights = _fpbSel && Object.keys(_fpbSel).length ? { ..._weightsBase || {}, ..._fpbSel } : _weightsBase;
   const qSecs = ctx2.half === 3 ? ctx2.clock : ctx2.clock > 900 ? ctx2.clock - 900 : ctx2.clock;
   const mm = Math.floor(qSecs / 60), ss = String(qSecs % 60).padStart(2, "0");
