@@ -1,4 +1,5 @@
-import { state, rerender, notify } from '../../state.js';
+import { state, rerender, notify, getPlayerSchool } from '../../state.js';
+import { applyEditedBookToSchool, pushBookToWorkshop } from '../../engine/bookpush.js';
 import { listCreations, loadCreationData, saveCreation, deleteCreation } from '../../engine/creator.js';
 import {
   emptyDefBook, emptyDefCard, validateDefBook, DEF_COVERAGE_SCHEMES,
@@ -17,6 +18,10 @@ import { C, DEF_FRONTS } from '../../constants.js';
 // through applyDefBookToGameplan into seams the engine already consumes.
 function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 function _d() { return state.ui.def; }
+// M5 embedded editing (#39): state.ui.defContext === "career" — the book being
+// edited is the defense the coach CARRIES; Save writes the league save, Push
+// copies to the Workshop + restamps (see creatorplaybook.js / bookpush.js).
+function _career() { return state.ui.defContext === "career"; }
 function _covArt(id) { const c = DEF_CALL_COVERAGES.find((x) => x.id === id); return c ? c.art : { deep: null }; }
 function _covLabel(id) { const c = DEF_CALL_COVERAGES.find((x) => x.id === id); return c ? c.label : id; }
 
@@ -136,15 +141,18 @@ function renderDefEditor() {
   const db = _d();
   const v = validateDefBook(db);
   const msg = v.errors.length ? `<div class="pb-msg err">${esc(v.errors[0])}</div>` : v.warnings.length ? `<div class="pb-msg warn">${esc(v.warnings[0])}</div>` : `<div class="pb-msg ok">Ready to save.</div>`;
+  const career = _career();
   return `<div class="creator-hub">
-    <div class="creator-hub-head"><div class="creator-title">Defensive Playbook</div></div>
+    <div class="creator-hub-head"><div class="creator-title">${career ? "Edit Your Defense" : "Defensive Playbook"}</div>
+      ${career ? `<div class="creator-sub">The defense you carry — Save keeps the edit in this ${state.seasonMode ? "season" : "dynasty"}'s save. Push it to the Workshop to keep a library copy.</div>` : ""}</div>
     <input class="form-input pb-name" id="def-name" type="text" maxlength="36" placeholder="Defense name" value="${esc(db.name || "")}"/>
     ${msg}
     ${renderIdentity(db)}
     ${renderShelves(db)}
     ${renderAnswers(db)}
     <div class="pb-actions">
-      <button class="btn-mm btn-mm-new" data-def-save="1"${v.errors.length ? " disabled" : ""}>Save Defense</button>
+      <button class="btn-mm btn-mm-new" data-def-save="1"${v.errors.length ? " disabled" : ""}>${career ? "Save to My Season" : "Save Defense"}</button>
+      ${career ? `<button class="btn-mm btn-mm-secondary" data-def-push="1"${v.errors.length ? " disabled" : ""}>⤴ Push to Workshop</button>` : ""}
       <button class="btn-mm btn-mm-secondary" data-def-cancel="1">Cancel</button>
     </div>
   </div>`;
@@ -297,10 +305,30 @@ function defListeners() {
     _syncName(); const db = _d();
     const v = validateDefBook(db);
     if (!v.ok) { notify(v.errors[0], "warning"); return; }
+    // M5 (#39): in-career save — the edit lands on the LEAGUE save.
+    if (_career()) {
+      const school = getPlayerSchool();
+      const r2 = applyEditedBookToSchool(school, "def", db);
+      if (r2.ok) { notify(`"${db.name}" saved — your ${state.seasonMode ? "season" : "dynasty"} carries the edit`, "success"); state.ui.def = null; state.ui.defId = null; state.ui.defCard = null; state.ui.defContext = null; }
+      else notify(r2.reason || "Could not save", "warning");
+      rerender();
+      return;
+    }
     const r = saveCreation("defbooks", db.name, db, state.ui.defId ? { id: state.ui.defId } : {});
     if (r.ok) { notify(`"${db.name}" saved`, "success"); state.ui.def = null; state.ui.defId = null; rerender(); }
     else notify(r.reason === "full" ? "Library is full" : "Could not save", "warning");
   });
-  document.querySelector("[data-def-cancel]")?.addEventListener("click", () => { state.ui.def = null; state.ui.defId = null; state.ui.defCard = null; rerender(); });
+  // M5 (#39): push the carried defense to the Workshop + restamp (no self-banner).
+  document.querySelector("[data-def-push]")?.addEventListener("click", () => {
+    _syncName(); const db = _d();
+    const v = validateDefBook(db);
+    if (!v.ok) { notify(v.errors[0], "warning"); return; }
+    const school = getPlayerSchool();
+    const r = pushBookToWorkshop(school, "def", db);
+    if (r.ok) notify(`"${db.name}" ${r.updated ? "updated in" : "pushed to"} the Workshop — the library copy now matches the defense you carry`, "success");
+    else notify(r.reason === "full" ? "Workshop library is full" : r.reason || "Could not push", "warning");
+    rerender();
+  });
+  document.querySelector("[data-def-cancel]")?.addEventListener("click", () => { state.ui.def = null; state.ui.defId = null; state.ui.defCard = null; state.ui.defContext = null; rerender(); });
 }
 export { renderDefTab, defListeners };

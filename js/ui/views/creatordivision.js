@@ -1,4 +1,5 @@
 import { state, rerender, notify, startSeasonRun } from '../../state.js';
+import { applyStartingChoices } from './gameplan.js';
 import { listCreations, loadCreationData, saveCreation, deleteCreation } from '../../engine/creator.js';
 import { assembleWorldSources, generateWorld, coinTeamIdentity, cityInState } from '../../engine/world.js';
 import { renderCrest, crestLetters } from '../../utils.js';
@@ -267,6 +268,13 @@ function divisionsListeners() {
       const assembled = assembleWorldSources({ [d.division]: { conferences: bp.conferences, teams: bp.teams } });
       const world = generateWorld({ schools: assembled.schools, conferences: assembled.conferences });
       const me = world.schools.find((s) => s.id === pickId) || world.schools.find((s) => s.division === d.division);
+      // M5 (#27): the setup's starting books (playbook + defensive book) apply
+      // BEFORE the run begins, so the season's very first save carries them —
+      // the same applier the new-game wizard's pickers use.
+      try {
+        const src = state.ui.seasonSrc || {};
+        if (me && (src.startPlan || src.startDef)) applyStartingChoices(me, src.startPlan || "", src.startDef || "");
+      } catch (e) {}
       state.ui.divContext = null; state.ui.div = null; state.ui.divId = null; state.ui.divPick = null; state.ui.divSearch = "";
       startSeasonRun(world, me);
     } catch (err) { notify("Could not start: " + err.message, "warning"); }

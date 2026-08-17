@@ -1,18 +1,162 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-17 session (D9 · M5 DEFBOOK CLOSE-OUT — bring-3 sim
-audit clean + probe-pinned, the 2026-08-15 defbook-v2 probe debt PAID; new
-entry below. Parallel this window: D6 (M3 RPO) and D8 (plan home + seasons)
-are LIVE in this tree — see D9's shared-file notes.) Prior: 2026-08-16
-session (D4 · M2 PRESENTATION HALF — look-true
-cards everywhere, the big card, composer RUNS + biting blocking, the
-pre-snap play-art overlay, blurbs + three manual chapters — BUILT +
-NODE-GATED, browser tier owed; new entry below. M2 is now BUILT END TO END
-(D3 engine + D4 presentation) and D6 (M3 build) is unblocked. Earlier this
-window: D3 · M2 engine half; D7 · M4 watch/time controls; D2 · M1 bench;
-D5 · M3 audit RATIFIED.) Plan of record: BUILD ORDER v2 (2026-08-17),
-dispatch prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+Last updated: **2026-08-17 session (D8 · M5 GAME-PLAN HOME + SEASONS — the
+Plan Home tab, embedded editable playbooks with push-to-Workshop restamp,
+the defensive identity panel, collapsed look graphics (#3), season-setup
+book pickers (#27), recruiting settings stripped from Season Mode (#29) —
+BUILT + NODE-GATED, browser tier owed; the DIAL-REDISTRIBUTION MAP in the
+D8 entry AWAITS OWNER SIGN-OFF. Same window: D9 · M5 DEFBOOK CLOSE-OUT —
+bring-3 sim audit clean + probe-pinned, the 2026-08-15 defbook-v2 probe
+debt PAID; D6 (M3 RPO) is LIVE in this tree — see the shared-file notes in
+both entries.) Prior: 2026-08-16 session (D4 · M2 PRESENTATION HALF; M2 is
+BUILT END TO END (D3 engine + D4 presentation). Earlier this window: D3 ·
+M2 engine half; D7 · M4 watch/time controls; D2 · M1 bench; D5 · M3 audit
+RATIFIED.) Plan of record: BUILD ORDER v2 (2026-08-17), dispatch prompts
+in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+
+## 2026-08-17 — D8 · M5 GAME-PLAN HOME + SEASONS (embedded editable books · push-to-Workshop restamp · def identity panel · dial map · season pickers)
+## BUILT + NODE-GATED — ⚠ BROWSER TIER OWED · ⚠ DIAL MAP AWAITS SIGN-OFF
+
+**OWNER CHECKLIST**
+- **SIGN OFF THE DIAL-REDISTRIBUTION MAP** (item 4, below in this entry) —
+  what moved is only the dispatch-mandated piece (formation usage → Plan
+  Home); everything marked PROPOSED stayed where it was pending your call.
+- **Browser eyeball (the D8 browser-owed):**
+  (1) **In-dynasty edit → push → Workshop shows it:** Game Plan → Plan Home
+  → ✏️ Edit playbook — the embedded Builder opens ON the book you carry
+  (looks, per-look sheets, the 🧪 bench corners all live); toggle a play,
+  "Save to My Season" → the call sheet reflects it and it survives a
+  save/reload. Reopen the editor, "⤴ Push to Workshop" → Main Menu →
+  Workshop → Playbook Builder lists it with your edit, AND no "newer
+  version" banner fires on the Game Plan about your own push (load the
+  same book fresh from the Workshop dropdown first if you want to see the
+  banner machinery alive as the control). Same drill on ✏️ Edit defense
+  (seeded from its Workshop source when it has one).
+  (2) **The Plan Home:** advanced mode opens on the new Plan Home tab —
+  two book cards (offense + defense) with the editors' doors, OFFENSIVE
+  IDENTITY and the new DEFENSIVE IDENTITY side by side (film-room words,
+  no numbers beyond your own dials), and the formation-usage card
+  COLLAPSED (#3) — "Show diagrams ▾" expands the art. Simple mode gets the
+  book cards + the identity one-liner on the TEAM IDENTITY header (#41).
+  (3) **Season setup pickers (#27):** Season Mode setup now offers Starting
+  playbook + Starting defense (same vocabulary as new-game: presets,
+  starter books, your Workshop creations) — start a run with a custom book
+  and confirm the Game Plan carries it from day one, update banner
+  included. (4) **#29:** in a season run, Settings shows NO Recruiting
+  Difficulty / Recruiting Assist / Rival Commit Alerts / Reveal All
+  Scouting rows; a dynasty still shows all four.
+- **Playwright tier locally** (unchanged sandbox limits: Windows-only
+  .pw-browsers, downloads blocked): `node tools/build.mjs` +
+  `node tools/_boot_check.mjs dist/index.html`, then the core gate.
+- Standing debt unchanged: act B/D local scrub re-run + full local gate + a
+  green night run before the next deploy; M4 phone eyeball; M1 first bench
+  session.
+
+**THE DIAL-REDISTRIBUTION MAP (item 4 — for owner sign-off).** The law
+(ratified): BOOK properties live with the book, WEEK properties with the
+controller. The manifest (`PLAN_FIELD_SIDE`, teamplan.js) already sides
+every field; this maps the SCREENS onto it:
+- **MOVED this session (dispatch-mandated, done):** formation USAGE dials
+  (offFormations weights) → the Plan Home's book panel, collapsed art (#3);
+  look/sheet AUTHORING → the embedded editors (was: Workshop-only). The
+  Offense → Package tab now holds only tendency + 4th-down nerve and points
+  home.
+- **PROPOSED, NOT MOVED (contentious — your call):** `tendency`, `passDepth`,
+  `rushInPct` are book fields in the manifest AND ride saved books, but
+  coaches turn them weekly — they SIT on the Offense tab today. Options:
+  (a) leave them (book seeds them, the week overrides them — current
+  behavior), or (b) move them into the embedded editor and make the Offense
+  tab read-only for them. Recommendation: (a) — FM's tactic-vs-touchline
+  keeps matchday overrides live.
+- **PROPOSED, NOT MOVED:** the Defense tab's identity dials (front /
+  coverage / pressure) duplicate what the embedded def editor authors. Same
+  (a)/(b) choice; same recommendation (a) — the tab is the week, the editor
+  is the book.
+- **STAYS IN THE CONTROLLER (week, untouched):** baseTempo + motion (Tempo &
+  Motion tab), fourthDown, maxFGDist, situations grid, defAggression/
+  blitzPct, target shares, run direction, per-look WEIGHT overrides
+  (Offense → Playbook tab), quick-slots A/B/C, halftime adjust.
+
+**What shipped (js/ + style.css + tools/; D8 dispatch items 1–5):**
+- **EMBEDDED EDITABLE PLAYBOOKS (#39).** New `js/engine/bookpush.js` — the
+  ONE seam the UI and the probe share: `applyEditedBookToSchool` (the
+  in-career Save: the edited book compiles onto the LEAGUE-saved gameplan
+  through the same one-side applier every book load uses — dials,
+  situations and the other side carry; source stamps kept; forced
+  re-synthesis, the Stage-3 seam) and `pushBookToWorkshop` (applies the
+  edit to the career, saves the Creator-library entry — updating the
+  source creation in place when the carried book has one — then RESTAMPS
+  `_bookSourceId`/`_bookSourceSaved` (def pair likewise) from the entry
+  just written, so `entry.saved > sourceSaved` is false by construction:
+  the Stage-3 banner cannot fire about your own push). The Workshop's OWN
+  Builder + Defensive Playbook editors open embedded (creatorplaybook.js /
+  creatordef.js grew a `pbContext`/`defContext === "career"` mode — same
+  screens, career verbs: "Save to My Season" / "⤴ Push to Workshop");
+  the Game Plan renders them in place of itself while open, in dynasty AND
+  season (same shell). The offense editor seeds from
+  `playbookFromGameplan` (lossless: looks, per-look sheets, tendency); the
+  defense seeds from its Workshop SOURCE creation when stamped (shelves/
+  answers ride in — a compiled gameplan can't reconstruct them), else the
+  identity extract, and an identity-only save leaves the carried named
+  calls alone (applyDefBookToGameplan only rewrites calls when the book
+  carries shelves). Bench entrances from the embedded editor return to the
+  Game Plan, not the Workshop (`state.ui.benchReturn`; app.js bench-back +
+  label, one hunk; Workshop entrances in creatorform/creatorplay reset it).
+- **THE PLAN HOME (items 2–3).** New first tab (advanced default): the two
+  book cards (name · looks · plays / base front · named calls · "from the
+  Workshop" lineage) with the editors' doors; OFFENSIVE IDENTITY moved in
+  from the Offense tab; new **DEFENSIVE IDENTITY** panel beside it
+  (renderDefIdentityCard — front + mix, shells/man-zone/leverage, pressure
+  stop + look + source lean, box/edge/tackling words, headset call count;
+  film-room words only, reads BOTH defFrontMix shapes: the UI's array and
+  a compiled book's object map). Formation-usage dials live on the home,
+  **COLLAPSED (#3)** — diagrams render only behind "Show diagrams ▾"
+  (state.ui.gpLookArt). Simple mode (#41): the same book shelf at the top
+  and the schemeIdentityLine on the TEAM IDENTITY header; dials unchanged.
+- **SEASONS (item 5).** Setup (#27) gained **Starting playbook + Starting
+  defense** pickers — the new-game vocabulary verbatim ("" staff default ·
+  builtin preset · `dpb:`/`ddb:` starter books · `pb:`/`dd:` Workshop
+  creations) through a new shared applier `applyStartingChoices`
+  (gameplan.js, exported): repair-on-load, never-silent failures, and —
+  one better than new-game today — `pb:`/`dd:` loads STAMP the source
+  identity, so the update banner works for a book you started the season
+  with. Applied to the picked team BEFORE `startSeasonRun`, so the run's
+  very first save carries it. (#29) Settings hides the four
+  recruiting-facing rows under `state.seasonMode`: Recruiting Difficulty,
+  Recruiting Assist, Rival Commit Alerts, Reveal All Scouting.
+- **NOT built (scope note):** reverse-mapping a career's `defCalls` back
+  into def-book SHELVES (the compile is one-way by design) — a defense
+  with no Workshop source pushes as identity + empty shelves. If the owner
+  wants shelf reconstruction, that's D9-adjacent design work.
+
+**Gate (this sandbox, node):** `book_update_probe` EXTENDED and **47/0 ×3**
+— new S5 (edit-in-career: faithful extraction, the league save carries the
+edit through a serialization round-trip, lineage stamps kept, invalid book
+refused), S6 (push restamp: banner fires on a newer library copy as the
+CONTROL, then push → entry data byte-equals the pushed book → banner
+condition FALSE — no self-banner — and the library copy loads back
+byte-identically), S7 (sourceless push gains stamps; the defense pair
+stamps independently; compile ≡ gameplan throughout; REAL Creator store
+under a polyfilled localStorage). `playbook_root_probe` PASS ×3 ·
+`plan_side_probe` PASS ×3 · `season_persist_probe` PASS ×3 ·
+`save_migration_check` ALL PASS ×3. Re-proof green: `playbook_shape_probe`
+· `look_sheet_probe` · `defbook_probe` · `creator_store_probe` ·
+`creator_resilience_probe`. Clean esbuild build (ALL sanity checks PASS,
+3718 KB — built in /tmp, the mount forbids `dist/` deletion; outputs
+copied back) + bundle syntax parse (2 script blocks) + CSS braces
+balanced. **PW tier owed** (standing sandbox limits): boot check + the
+UI smokes + the browser checklist above.
+
+**Scope note (parallel sessions):** the tree carries other sessions' live
+work (D6's sim.js/ai.js/concepts.js/constants.js hunks and more; D9
+committed mid-window; a stranded `.git/index.lock` from 04:19 was moved to
+`_to_delete/` — D9's own workaround pattern). Gates ran on the tree as
+found. My commit is scoped to THIS entry's files only: js/engine/
+bookpush.js · js/ui/views/gameplan.js · creatorplaybook.js ·
+creatordef.js · creatorform.js · creatorplay.js · creatordivision.js ·
+seasonmodeview.js · settings.js · js/ui/app.js (bench-back pair) ·
+style.css · tools/book_update_probe.mjs · Ref/STATUS.md.
 
 ## 2026-08-17 — D9 · M5 DEFBOOK CLOSE-OUT (bring-3 audit · the v2 probe debt PAID)
 ## NODE-GATED — the 2026-08-15 "DEFENSIVE PLAYBOOK V2 ⚠ VERIFICATION OWED" node items are CLOSED

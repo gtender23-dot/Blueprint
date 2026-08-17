@@ -1,5 +1,7 @@
 import { state, rerender, navigate, notify } from '../../state.js';
 import { listCreations, loadCreationData } from '../../engine/creator.js';
+import { BUILTIN_PLANS, builtinPlan } from './gameplan.js';
+import { DEFAULT_OFF_BOOKS, DEFAULT_DEF_BOOKS } from '../../engine/defaultbooks.js';
 import { renderDivisionEditor, divisionsListeners, loadStaticDivision, leagueToEditor } from './creatordivision.js';
 
 // ── Season Mode — setup ────────────────────────────────────────────────────
@@ -26,6 +28,26 @@ function renderSetup() {
       <button class="sm-pick${!src.leagueId ? " on" : ""}" data-sm-league="">The real ${esc(src.division)}</button>
       ${customForDiv.map((l) => `<button class="sm-pick${src.leagueId === l.id ? " on" : ""}" data-sm-league="${esc(l.id)}">${esc(l.name)}</button>`).join("")}
     </div></div>
+    ${(() => {
+    // M5 (#27): starting options — the same pickers the new-game wizard
+    // offers (playbook + DEFENSIVE book), same value vocabulary, applied to
+    // your team when the season kicks off. Nothing is locked in — the Game
+    // Plan screen can load a different book any week.
+    const pbs = listCreations("playbooks");
+    const dbs = listCreations("defbooks");
+    return `
+    <div class="sm-field"><span>Starting playbook</span><select class="form-select" id="sm-start-plan">
+      <option value=""${!src.startPlan ? " selected" : ""}>Team default — let the staff set it</option>
+      ${pbs.length ? `<optgroup label="Your custom playbooks">${pbs.map((pb) => `<option value="pb:${esc(pb.id)}"${src.startPlan === "pb:" + pb.id ? " selected" : ""}>${esc(pb.data.name || "Untitled")}</option>`).join("")}</optgroup>` : ""}
+      <optgroup label="Starter books">${DEFAULT_OFF_BOOKS.map((b) => `<option value="dpb:${esc(b.name)}"${src.startPlan === "dpb:" + b.name ? " selected" : ""}>${esc(b.name)}</option>`).join("")}</optgroup>
+      <optgroup label="Preset schemes">${BUILTIN_PLANS.map((p) => `<option value="${esc(p.name)}"${src.startPlan === p.name ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</optgroup>
+    </select>${src.startPlan && builtinPlan(src.startPlan) ? `<div class="sm-note muted">${esc(builtinPlan(src.startPlan).blurb)}</div>` : ""}</div>
+    <div class="sm-field"><span>Starting defense</span><select class="form-select" id="sm-start-def">
+      <option value=""${!src.startDef ? " selected" : ""}>Team default — let the staff set it</option>
+      ${dbs.length ? `<optgroup label="Your defenses">${dbs.map((db) => `<option value="dd:${esc(db.id)}"${src.startDef === "dd:" + db.id ? " selected" : ""}>${esc(db.data.name || "Untitled")}</option>`).join("")}</optgroup>` : ""}
+      <optgroup label="Starter books">${DEFAULT_DEF_BOOKS.map((b) => `<option value="ddb:${esc(b.name)}"${src.startDef === "ddb:" + b.name ? " selected" : ""}>${esc(b.name)}</option>`).join("")}</optgroup>
+    </select></div>`;
+  })()}
     <div class="sm-note muted">Next you'll customize the league (optional) and pick the team you want to play — great for taking a custom team for a spin.</div>
     <div class="pb-actions">
       <button class="btn-mm btn-mm-new" data-sm-choose="1">Customize & Pick Team →</button>
@@ -49,8 +71,12 @@ function seasonModeListeners() {
   // In the editor step, the reused Division Editor owns all the wiring
   // (Play as / Start Season / Save / Back).
   if (inEditor()) { divisionsListeners(); return; }
-  document.querySelectorAll("[data-sm-div]").forEach((b) => b.addEventListener("click", () => { state.ui.seasonSrc = { division: b.dataset.smDiv, leagueId: null }; rerender(); }));
-  document.querySelectorAll("[data-sm-league]").forEach((b) => b.addEventListener("click", () => { state.ui.seasonSrc = { division: (state.ui.seasonSrc || {}).division || "D1", leagueId: b.dataset.smLeague || null }; rerender(); }));
+  document.querySelectorAll("[data-sm-div]").forEach((b) => b.addEventListener("click", () => { state.ui.seasonSrc = { ...(state.ui.seasonSrc || {}), division: b.dataset.smDiv, leagueId: null }; rerender(); }));
+  document.querySelectorAll("[data-sm-league]").forEach((b) => b.addEventListener("click", () => { state.ui.seasonSrc = { ...(state.ui.seasonSrc || {}), division: (state.ui.seasonSrc || {}).division || "D1", leagueId: b.dataset.smLeague || null }; rerender(); }));
+  // M5 (#27): the starting-books pickers ride state.ui.seasonSrc and apply at
+  // Start Season (creatordivision.js → applyStartingChoices).
+  document.getElementById("sm-start-plan")?.addEventListener("change", (e) => { state.ui.seasonSrc = { ...(state.ui.seasonSrc || { division: "D1", leagueId: null }), startPlan: e.target.value || null }; rerender(); });
+  document.getElementById("sm-start-def")?.addEventListener("change", (e) => { state.ui.seasonSrc = { ...(state.ui.seasonSrc || { division: "D1", leagueId: null }), startDef: e.target.value || null }; rerender(); });
   document.querySelector("[data-sm-choose]")?.addEventListener("click", () => { notify("Loading the league…", "info"); enterEditor(); });
   document.querySelector("[data-sm-menu]")?.addEventListener("click", () => { state.ui.season = null; navigate("mainmenu"); });
 }

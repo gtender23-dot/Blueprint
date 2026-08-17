@@ -180,6 +180,7 @@ function formListeners() {
         formationId: c.id, variation: null, concept: c.playbook[0],
         defLook: { front: "4-3", coverage: "c3", bring: "4" }
       };
+      state.ui.benchReturn = null; // Workshop entrance — bench-back goes home
       navigate("bench");
       return;
     }

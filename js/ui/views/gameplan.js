@@ -10,9 +10,11 @@ import { defaultGameplan } from '../../engine/world.js';
 import { getCreation, listCreations, loadCreationData } from '../../engine/creator.js';
 import { repairCreation } from '../../engine/creatorrepair.js';
 import { DEFAULT_OFF_BOOKS, DEFAULT_DEF_BOOKS, defaultOffBook, defaultDefBook } from '../../engine/defaultbooks.js';
-import { applyPlaybookToGameplan, lookSheetKey, splitSheetKey, resolveLookSheet } from '../../engine/playbook.js';
-import { applyDefBookToGameplan } from '../../engine/defbook.js';
+import { applyPlaybookToGameplan, playbookFromGameplan, lookSheetKey, splitSheetKey, resolveLookSheet } from '../../engine/playbook.js';
+import { applyDefBookToGameplan, defBookFromGameplan, emptyDefBook } from '../../engine/defbook.js';
 import { applyControllerOverlay, controllerOverlayOf, synthesizeTeamPlan } from '../../engine/teamplan.js';
+import { renderPlaybooksTab, playbooksListeners } from './creatorplaybook.js';
+import { renderDefTab, defListeners } from './creatordef.js';
 import { tipTerm } from '../manual/tips.js';
 import { escapeHtml } from '../../utils.js';
 
@@ -36,9 +38,19 @@ function setAggr(gp, stop) {
 function renderGameplan() {
   const school = getPlayerSchool();
   const gp = (school == null ? void 0 : school.gameplan) || {};
+  // \u2500\u2500 M5 (#39): the embedded editors take the screen over while open \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // The SAME Builder / Defensive Playbook editors as the Workshop, opened on
+  // the book the coach carries (pbContext/defContext === "career"). Their own
+  // Save/Push/Cancel verbs return here.
+  if (state.ui.pb && state.ui.pbContext === "career") {
+    return `<div class="view-gameplan gp-embed">${renderPlaybooksTab()}</div>`;
+  }
+  if (state.ui.def && state.ui.defContext === "career") {
+    return `<div class="view-gameplan gp-embed">${renderDefTab()}</div>`;
+  }
   const simple = gameplanIsSimple();
   if (simple && gameplanSection !== "st") gameplanSection = "simple";
-  if (!simple && gameplanSection === "simple") gameplanSection = "offense";
+  if (!simple && gameplanSection === "simple") gameplanSection = "home";
   if (simple) {
     return `
   <div class="view-gameplan">
@@ -54,7 +66,7 @@ function renderGameplan() {
       <button class="rec-tab${gameplanSection === "st" ? " active" : ""}" data-gpsection="st">Special Teams</button>
     </div>
     <div class="gameplan-sections">
-      ${gameplanSection === "st" ? renderSTSection(gp) : renderSimpleDials(gp)}
+      ${gameplanSection === "st" ? renderSTSection(gp) : renderBookShelf(school, gp) + renderSimpleDials(gp)}
     </div>
   </div>`;
   }
@@ -63,21 +75,23 @@ function renderGameplan() {
     <div class="view-header">
       <div>
         <h1 class="view-title">Game Plan</h1>
-        <div class="view-subtitle">Plan by situation \u2014 anything left on AUTO inherits your defaults. Too many dials? Settings &rsaquo; Game &rsaquo; Game Plan Detail.</div>
+        <div class="view-subtitle">The book is what you ARE \u2014 the plan is this week. Anything left on AUTO inherits your defaults.</div>
       </div>
     </div>
     ${renderPlanSlots(school)}
     <div class="rec-tabs" style="margin-bottom:16px">
-      <button class="rec-tab${gameplanSection === "offense" ? " active" : ""}" data-gpsection="offense">Offense Defaults</button>
-      <button class="rec-tab${gameplanSection === "defense" ? " active" : ""}" data-gpsection="defense">Defense Defaults</button>
+      <button class="rec-tab${gameplanSection === "home" ? " active" : ""}" data-gpsection="home">Plan Home</button>
+      <button class="rec-tab${gameplanSection === "offense" ? " active" : ""}" data-gpsection="offense">Offense</button>
+      <button class="rec-tab${gameplanSection === "defense" ? " active" : ""}" data-gpsection="defense">Defense</button>
       <button class="rec-tab${gameplanSection === "situations" ? " active" : ""}" data-gpsection="situations">Situations</button>
       <button class="rec-tab${gameplanSection === "st" ? " active" : ""}" data-gpsection="st">Special Teams</button>
     </div>
 
     <div class="gameplan-sections">
 
+      ${gameplanSection === "home" ? renderPlanHome(school, gp) : ""}
       ${gameplanSection === "situations" ? renderSituationsSection(gp) : ""}
-      ${gameplanSection === "offense" ? renderIdentityCard(gp) + renderOffenseDefaults(gp) : ""}
+      ${gameplanSection === "offense" ? renderOffenseDefaults(gp) : ""}
       ${gameplanSection === "defense" ? renderDefenseDefaults(gp) : ""}
 
       <!-- SPECIAL TEAMS -->
@@ -86,6 +100,96 @@ function renderGameplan() {
     </div>
   </div>
 `;
+}
+// \u2500\u2500 M5: THE PLAN HOME (#39/#3/#41) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// The organizing principle (ratified): the BOOK is the persistent object; the
+// game plan is overlays on it. The home shows the two books you carry (with
+// the embedded editors' doors), both IDENTITY panels side by side, and the
+// BOOK-owned formation-usage dials. WEEK properties (tempo, aggression,
+// situations) stay in the controller tabs.
+function distinctSheetPlays(sheets) {
+  return new Set(Object.values(sheets || {}).flatMap((s) => Object.keys(s || {}))).size;
+}
+function renderBookShelf(school, gp) {
+  if (!school) return "";
+  const looks = normalizeFormations(gp.offFormations, gp.offFormation);
+  const nForm = new Set(looks.map((l) => l.id)).size;
+  const nPlays = distinctSheetPlays(gp.formationPlaybooks);
+  const offSrc = gp._bookSourceId ? getCreation("playbooks", gp._bookSourceId) : null;
+  const defSrc = gp._defbookSourceId ? getCreation("defbooks", gp._defbookSourceId) : null;
+  const nCalls = Object.keys(gp.defCalls || {}).length;
+  const nChecks = Object.keys(gp.formChecks || {}).length;
+  return `
+  <div class="gp-home-books">
+    <div class="card gp-book-card">
+      <div class="card-header"><span class="card-title">\u{1F4D5} OFFENSIVE BOOK</span></div>
+      <div class="gp-book-body">
+        <div class="gp-book-name">${escapeHtml(gp._playbookName || "Your staff's opening plan")}</div>
+        <div class="gp-book-meta muted">${nForm} formation${nForm === 1 ? "" : "s"} \xB7 ${looks.length} look${looks.length === 1 ? "" : "s"} \xB7 ${nPlays} play${nPlays === 1 ? "" : "s"}${offSrc ? ` \xB7 from the Workshop` : ""}</div>
+        <div class="gp-book-actions">
+          <button type="button" class="btn-ghost btn-sm" data-gp-editbook="off">\u270f\ufe0f Edit playbook</button>
+        </div>
+      </div>
+    </div>
+    <div class="card gp-book-card">
+      <div class="card-header"><span class="card-title">\u{1F6E1}\ufe0f DEFENSIVE BOOK</span></div>
+      <div class="gp-book-body">
+        <div class="gp-book-name">${escapeHtml(gp._defbookName || "Your staff's defense")}</div>
+        <div class="gp-book-meta muted">${escapeHtml(gp.defBaseFront || "4-3")} base \xB7 ${nCalls} named call${nCalls === 1 ? "" : "s"}${nChecks ? ` \xB7 ${nChecks} check${nChecks === 1 ? "" : "s"}` : ""}${defSrc ? ` \xB7 from the Workshop` : ""}</div>
+        <div class="gp-book-actions">
+          <button type="button" class="btn-ghost btn-sm" data-gp-editbook="def">\u270f\ufe0f Edit defense</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function renderPlanHome(school, gp) {
+  return `
+  ${renderBookShelf(school, gp)}
+  <div class="gp-ident-row">
+    ${renderIdentityCard(gp)}
+    ${renderDefIdentityCard(gp)}
+  </div>
+  ${renderFormationPackageCard(gp)}`;
+}
+// The DEFENSIVE IDENTITY panel (M5 item 2) \u2014 the mirror of the offensive card:
+// what an opposing OC's film room would say about your defense, in football
+// words. Everything here restates dials the coach can already see and turn \u2014
+// no sim coefficient is ever printed (help-language law).
+function renderDefIdentityCard(gp) {
+  var _a, _b;
+  const front = gp.defBaseFront || "4-3";
+  // defFrontMix rides in two shapes: the Game Plan writes an ARRAY of
+  // {id, weight}; a loaded defbook compiles an OBJECT map. Read both.
+  const mix = Array.isArray(gp.defFrontMix) ? gp.defFrontMix.filter((f) => f && f.id && (f.weight || 0) > 0) : gp.defFrontMix && typeof gp.defFrontMix === "object" ? Object.entries(gp.defFrontMix).filter(([, w]) => (w || 0) > 0).map(([id, weight]) => ({ id, weight })) : [];
+  const mixWord = mix.length > 1 ? `multiple (${mix.map((f) => f.id).join(", ")})` : `${front} nearly every standard down`;
+  const aggr = aggrOf(gp);
+  const aggrWord = ((_a = C.AGGRESSION.labels) == null ? void 0 : _a[aggr]) || aggr || "balanced";
+  const press = ((_b = C.PRESS_IDENTITY) == null ? void 0 : _b[gp.pressureIdentity]) ? C.PRESS_IDENTITY[gp.pressureIdentity].label : "honest looks";
+  const shellWord = gp.covShell === "single" ? "single-high" : gp.covShell === "two" ? "two-high" : "mixed shells";
+  const styleWord = gp.covStyle === "man" ? "man-heavy" : gp.covStyle === "zone" ? "zone-heavy" : "man/zone mix";
+  const pressWord = gp.pressLevel === "press" ? "press at the line" : gp.pressLevel === "off" ? "off coverage" : "mixed leverage";
+  const ps = gp.pressureSource || {};
+  const srcMax = Math.max(ps.edge || 0, ps.interior || 0, ps.secondary || 0);
+  const srcWord = !srcMax ? "everywhere" : srcMax === (ps.edge || 0) ? "off the edge" : srcMax === (ps.interior || 0) ? "up the middle" : "from the secondary";
+  const box = gp.runCommit || 0;
+  const boxWord = box >= 8 ? "loaded against the run" : box >= 3 ? "leaning run" : box <= -8 ? "sitting on the pass" : box <= -3 ? "leaning pass" : "honest";
+  const edgeWord = gp.edgePlay === "contain" ? "sets the edge" : gp.edgePlay === "crash" ? "pins its ears back" : "plays it straight";
+  const tackleWord = gp.tackleStyle === "strip" ? "hunts the ball" : gp.tackleStyle === "wrap" ? "wraps and finishes" : "tackles it straight";
+  const nCalls = Object.keys(gp.defCalls || {}).length;
+  const nChecks = Object.keys(gp.formChecks || {}).length;
+  const extras = [gp.spyQB ? "spies the QB" : null, gp.greenDog ? "green-dogs free blockers" : null].filter(Boolean).join(" \xB7 ");
+  return `
+  <div class="card identity-card def-identity-card">
+    <div class="card-header"><span class="card-title">DEFENSIVE IDENTITY</span>
+      <span class="muted" style="font-size:11px">what their film room sees</span></div>
+    <div class="id-row"><span class="id-lbl">\u{1F9F1} Front</span><span><b>${escapeHtml(front)}</b> base \xB7 ${escapeHtml(mixWord)}</span></div>
+    <div class="id-row"><span class="id-lbl">\u{1F441} Coverage</span><span>${escapeHtml(shellWord)}, ${escapeHtml(styleWord)} \xB7 ${escapeHtml(pressWord)}</span></div>
+    <div class="id-row"><span class="id-lbl">\u{1F525} Pressure</span><span><b>${escapeHtml(String(aggrWord))}</b> \xB7 ${escapeHtml(press)} \xB7 comes ${escapeHtml(srcWord)}</span></div>
+    <div class="id-row"><span class="id-lbl">\u{1F6E1} Run defense</span><span>box ${escapeHtml(boxWord)} \xB7 the edge ${escapeHtml(edgeWord)}</span></div>
+    <div class="id-row"><span class="id-lbl">\u{1F91C} Tackling</span><span>${escapeHtml(tackleWord)}${extras ? ` \xB7 ${escapeHtml(extras)}` : ""}</span></div>
+    ${nCalls ? `<div class="id-row"><span class="id-lbl">\u{1F4DE} Headset</span><span>${nCalls} named call${nCalls === 1 ? "" : "s"} ready${nChecks ? ` \xB7 ${nChecks} formation check${nChecks === 1 ? "" : "s"}` : ""}</span></div>` : ""}
+  </div>`;
 }
 function renderSTSection(gp) {
   return `<div class="card">
@@ -196,11 +300,14 @@ function renderPlaybookLooks(gp) {
   const offFormations = normalizeFormations(gp.offFormations, gp.offFormation);
   const uniq = new Set(offFormations.map((f) => f.id));
   const bookName = gp._playbookName || null;
+  // M5 (#3): the look art is COLLAPSED by default \u2014 the dials are the point of
+  // this card; the diagrams expand on demand (state.ui.gpLookArt).
+  const artOn = !!state.ui.gpLookArt;
   const cards = offFormations.map((entry, i) => {
     const m = lookMeta(entry);
     return `
-      <div class="formation-card selected pb-look-card">
-        <div class="pb-look-dia">${renderFormationDiagram(entry.id, { variation: entry.variation || void 0, w: 150, h: 96 })}</div>
+      <div class="formation-card selected pb-look-card${artOn ? "" : " pb-look-compact"}">
+        ${artOn ? `<div class="pb-look-dia">${renderFormationDiagram(entry.id, { variation: entry.variation || void 0, w: 150, h: 96 })}</div>` : ""}
         <div class="fc-header"><span class="fc-name">${escapeHtml(m.label)}</span></div>
         <div class="fc-personnel muted">${m.pers}</div>
         <div class="fw-row">
@@ -211,12 +318,13 @@ function renderPlaybookLooks(gp) {
   }).join("");
   return `
       <div class="gp-row">
-        <label class="gp-label">${tipTerm("formation", "Formation")} Looks <span class="gp-hint">from ${bookName ? `\u201C${escapeHtml(bookName)}\u201D` : "your staff's opening plan"}</span></label>
+        <label class="gp-label">${tipTerm("formation", "Formation")} Usage <span class="gp-hint">from ${bookName ? `\u201C${escapeHtml(bookName)}\u201D` : "your staff's opening plan"}</span>
+          <button type="button" class="btn-ghost btn-sm gp-lookart-toggle" data-gp-lookart="1">${artOn ? "Hide diagrams \u25B4" : "Show diagrams \u25BE"}</button></label>
         <div class="formation-grid pb-look-grid">${cards}</div>
         <div class="fw-bar">
           ${offFormations.map((e) => `<div class="fw-seg" style="width:${e.weight}%;background:var(--green);opacity:${0.5 + offFormations.indexOf(e) * 0.25}"></div>`).join("")}
         </div>
-        <div class="gp-tip tip-info">\u25B8 Your playbook decides WHICH formations you carry \u2014 the sliders decide how often you line up in each look this week. To change the formations themselves, load a different playbook from \u201CLoad a plan\u2026\u201D above, or build one in the Workshop.</div>
+        <div class="gp-tip tip-info">\u25B8 Your playbook decides WHICH formations you carry \u2014 the sliders decide how often you line up in each look this week. To change the looks themselves, hit \u270F\uFE0F Edit playbook on your book card above, load a different book from \u201CLoad a plan\u2026\u201D, or build one in the Workshop.</div>
         <button type="button" class="btn-ghost btn-sm" data-gp-workshop="1">\u{1F6E0}\uFE0F Open the Workshop \u2192</button>
       </div>`;
 }
@@ -238,7 +346,7 @@ function renderSimpleDials(gp) {
   return `
   ${renderFormationPackageCard(gp)}
   <div class="card">
-    <div class="card-header"><span class="card-title">TEAM IDENTITY</span><span class="card-sub">the sim handles the rest</span></div>
+    <div class="card-header"><span class="card-title">TEAM IDENTITY</span><span class="card-sub">${escapeHtml(schemeIdentityLine(gp))}</span></div>
     <div class="gameplan-group">
       ${SIMPLE_DIALS.map((d) => {
     const cur = currentSimpleDial(gp, d.key);
@@ -575,7 +683,7 @@ function renderOffenseDefaults(gp) {
         </div>
         <div class="gameplan-group">
 
-          <div class="gp-tip tip-info">\u25B8 Set your identity once \u2014 the sim runs it on every snap. The IDENTITY card above shows what your choices add up to. New here? Pick your formations and a tendency; every other dial has a sensible default.</div>
+          <div class="gp-tip tip-info">\u25B8 Set your identity once \u2014 the sim runs it on every snap. The Plan Home's IDENTITY cards show what your choices add up to. New here? Pick a tendency; every other dial has a sensible default.</div>
 
           <div class="rec-tabs gp-subtabs">
             ${[["package", "Package"], ["run", "Run Game"], ["pass", "Pass Game"], ["playbook", "Playbook"], ["tempo", "Tempo & Motion"]].map(([id, lbl]) => `
@@ -584,10 +692,9 @@ function renderOffenseDefaults(gp) {
 
           ${offSubTab !== "package" ? "" : `
           <details class="gp-section" open>
-          <summary class="gp-section-hdr">THE BASICS <span class="gp-section-sub">formations &amp; run/pass balance</span></summary>
+          <summary class="gp-section-hdr">THE BASICS <span class="gp-section-sub">run/pass balance &amp; nerve</span></summary>
 
-          ${renderPlaybookLooks(gp)}
-          <div class="gp-tip tip-info">\u25B8 Formations decide who's on the field AND your play-action, screen, RPO and motion rates \u2014 watch the identity card change as you re-weight. One formation = a strong identity. More formations = harder to scout, but a mushier identity.</div>
+          <div class="gp-tip tip-info">\u25B8 Your formations and their usage dials live on the <b>Plan Home</b> now \u2014 the book decides the looks, the home dials how often. Tendency and 4th-down nerve stay here: they're this week's call. <button type="button" class="btn-ghost btn-sm" data-gpsection="home">\u2190 Plan Home</button></div>
 
           <div class="gp-row">
             <label class="gp-label">Play ${tipTerm("tendency", "Tendency")}</label>
@@ -2761,6 +2868,58 @@ function applyPlanToSchool(school, gp) {
   // deep-equals school.gameplan.
   try { synthesizeTeamPlan(school, { force: true }); } catch (e) {}
 }
+// ── M5 (#27): the ONE starting-books applier ────────────────────────────────
+// New-game's Step-0 pickers and Season Mode's setup speak the same vocabulary:
+// "" = staff default · a builtin preset name · "dpb:"/"ddb:" starter books ·
+// "pb:"/"dd:" Workshop creations (repaired on load, never failing silently).
+// Workshop loads stamp the source identity (_bookSourceId/_bookSourceSaved and
+// the def pair), so the Stage-3 update banner works for a book you started
+// the run with, exactly like one loaded mid-career.
+function applyStartingChoices(school, startPlan, startDef) {
+  if (!school || !school.gameplan) return;
+  const assignGp = (merged) => { for (const k of Object.keys(school.gameplan)) { if (!k.startsWith("_")) delete school.gameplan[k]; } Object.assign(school.gameplan, merged); };
+  const startBuiltin = startPlan && !startPlan.startsWith("pb:") && !startPlan.startsWith("dpb:") ? builtinPlan(startPlan) : null;
+  if (startBuiltin) applyPlanToSchool(school, startBuiltin.gp);
+  else if (startPlan && startPlan.startsWith("dpb:")) {
+    const book = defaultOffBook(startPlan.slice(4));
+    if (book) { try { assignGp(applyPlaybookToGameplan(book, school.gameplan)); delete school.gameplan._bookSourceId; delete school.gameplan._bookSourceSaved; } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's plan`, "warning"); } }
+  } else if (startPlan && startPlan.startsWith("pb:")) {
+    const id = startPlan.slice(3);
+    const pbRaw = loadCreationData("playbooks", id);
+    if (pbRaw) {
+      const rep = repairCreation("playbooks", pbRaw);
+      if (rep.ok) {
+        try {
+          assignGp(applyPlaybookToGameplan(rep.data, school.gameplan));
+          const entry = getCreation("playbooks", id);
+          school.gameplan._bookSourceId = id;
+          school.gameplan._bookSourceSaved = (entry == null ? void 0 : entry.saved) || Date.now();
+          if (rep.changes.length) notify(`Playbook updated for this build: ${rep.changes[0]}`, "warning");
+        } catch (e) { notify(`Couldn't apply "${pbRaw.name || "playbook"}" — starting with the staff's plan`, "warning"); }
+      } else notify(`"${pbRaw.name || "Playbook"}" can't load in this build — starting with the staff's plan`, "warning");
+    }
+  }
+  if (startDef && startDef.startsWith("ddb:")) {
+    const book = defaultDefBook(startDef.slice(4));
+    if (book) { try { assignGp(applyDefBookToGameplan(book, school.gameplan)); delete school.gameplan._defbookSourceId; delete school.gameplan._defbookSourceSaved; } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's defense`, "warning"); } }
+  } else if (startDef && startDef.startsWith("dd:")) {
+    const id = startDef.slice(3);
+    const dbRaw = loadCreationData("defbooks", id);
+    if (dbRaw) {
+      const rep = repairCreation("defbooks", dbRaw);
+      if (rep.ok) {
+        try {
+          assignGp(applyDefBookToGameplan(rep.data, school.gameplan));
+          const entry = getCreation("defbooks", id);
+          school.gameplan._defbookSourceId = id;
+          school.gameplan._defbookSourceSaved = (entry == null ? void 0 : entry.saved) || Date.now();
+          if (rep.changes.length) notify(`Defense updated for this build: ${rep.changes[0]}`, "warning");
+        } catch (e) { notify(`Couldn't apply "${dbRaw.name || "defense"}" — starting with the staff's defense`, "warning"); }
+      } else notify(`"${dbRaw.name || "Defense"}" can't load in this build — starting with the staff's defense`, "warning");
+    }
+  }
+  try { synthesizeTeamPlan(school, { force: true }); } catch (e) {}
+}
 // Stage 3: the snapshot-vs-library UPDATE PROMPT. A book loaded from the
 // Workshop is a SNAPSHOT; when its source creation has a newer saved stamp,
 // offer a one-tap update. Overlays (dials/weights/situations/defense-when-
@@ -2808,6 +2967,44 @@ function renderPlanSlots(school) {
 }
 function setupListeners() {
   var _a, _b, _c, _d;
+  // M5 (#39): while an embedded editor is open it OWNS the screen — wire its
+  // own listeners and skip the plan wiring (none of that DOM exists).
+  if (state.ui.pb && state.ui.pbContext === "career") { playbooksListeners(); return; }
+  if (state.ui.def && state.ui.defContext === "career") { defListeners(); return; }
+  // M5 (#39): the embedded editors' doors — Edit playbook / Edit defense on
+  // the Plan Home book cards. The offense opens on playbookFromGameplan (the
+  // carried book extracts losslessly: looks, per-look sheets, tendency).
+  // The defense seeds from its Workshop SOURCE creation when it has one (the
+  // shelves/answers a compiled gameplan can't reconstruct ride in), else from
+  // the identity extract — saving an identity-only book leaves the carried
+  // named calls in place (applyDefBookToGameplan only rewrites them when the
+  // book carries shelves).
+  document.querySelectorAll("[data-gp-editbook]").forEach((btn) => btn.addEventListener("click", () => {
+    const school2 = getPlayerSchool();
+    if (!school2) return;
+    const gp2 = school2.gameplan;
+    if (btn.dataset.gpEditbook === "off") {
+      state.ui.pb = playbookFromGameplan(gp2, gp2._playbookName || `${school2.name} Offense`);
+      state.ui.pbId = null; state.ui.pbExpand = null; state.ui.pbInfo = null; state.ui.pbPreview = null;
+      state.ui.pbContext = "career";
+    } else {
+      let db = null;
+      if (gp2._defbookSourceId) {
+        const raw = loadCreationData("defbooks", gp2._defbookSourceId);
+        if (raw) { const rep = repairCreation("defbooks", raw); if (rep.ok) db = rep.data; }
+      }
+      if (!db) db = defBookFromGameplan(gp2, gp2._defbookName || `${school2.name} Defense`);
+      state.ui.def = { ...emptyDefBook(db.name), ...db, frontMix: { ...(db.frontMix || {}) }, pressureSource: { ...(db.pressureSource || {}) }, shelves: JSON.parse(JSON.stringify(db.shelves || {})), answers: { ...(db.answers || {}) } };
+      state.ui.defId = null; state.ui.defCard = null;
+      state.ui.defContext = "career";
+    }
+    rerender();
+  }));
+  // M5 (#3): expand/collapse the look diagrams on the usage card.
+  document.querySelectorAll("[data-gp-lookart]").forEach((btn) => btn.addEventListener("click", () => {
+    state.ui.gpLookArt = !state.ui.gpLookArt;
+    rerender();
+  }));
   document.querySelectorAll("[data-plan-slot]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const school2 = getPlayerSchool();
@@ -3148,7 +3345,7 @@ function renderPlaybookGroups(gp, opts = null) {
 }
 var gameplanSection, offSubTab, pbFormTab, defSubTab, sitSide, openSitKey, callSheetSit, callSheetPers, callEditName, SIT_DESCS, SIT_NUDGE, SIT_TIPS, PIN_FRONTS, COV_OPTIONS, ALL_FORMATIONS, DEF_FRONTS2, DEF_FRONT_DESCS, DEF_FRONT_NEEDS, SIMPLE_DIALS, SIMPLE_SITS;
 
-gameplanSection = "offense";
+gameplanSection = "home";
 offSubTab = "package";
 pbFormTab = null;
 defSubTab = "front";
@@ -3258,4 +3455,4 @@ SIMPLE_SITS = [
   { key: "four_min_lead", label: "When Leading Late", cells: ["four_min_lead"] }
 ];
 
-export { BUILTIN_PLANS, applyPlanToSchool, builtinPlan, gameplanIsSimple, renderGameplan, renderHalftimeAdjust, renderSituationsSection, setupListeners, wireDefaultsListeners, wireSituationListeners };
+export { BUILTIN_PLANS, applyPlanToSchool, applyStartingChoices, builtinPlan, gameplanIsSimple, renderGameplan, renderHalftimeAdjust, renderSituationsSection, setupListeners, wireDefaultsListeners, wireSituationListeners };

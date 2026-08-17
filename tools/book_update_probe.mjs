@@ -21,12 +21,32 @@
 //       loaded book keeps the BOOK byte-identical (looks, sheets, front,
 //       named calls), applies the saved controller, resets unnamed controller
 //       fields to defaults, and compile ≡ gameplan after re-synthesis.
+//   S5  EDIT-IN-CAREER (M5 #39, D8): playbookFromGameplan extracts the carried
+//       book faithfully; applyEditedBookToSchool writes the edit onto the
+//       LEAGUE-saved gameplan (the save carries it through serialization),
+//       keeps the Workshop lineage stamps, and compile ≡ gameplan holds.
+//   S6  PUSH RESTAMP (M5 #39, D8): pushBookToWorkshop copies the carried book
+//       into the Creator library (real store, polyfilled localStorage),
+//       updates the source creation in place, and RESTAMPS the source
+//       identity — the update banner's own condition (entry.saved >
+//       book.sourceSaved) is FALSE after a push: no self-banner. The library
+//       copy round-trips back onto a gameplan byte-identically.
+//   S7  PUSH WITHOUT A SOURCE + THE DEFENSE PAIR: a book with no Workshop
+//       lineage pushes as a fresh entry and gains stamps; a defense push
+//       stamps the def pair and leaves the offense stamp alone.
+// localStorage polyfill — S6/S7 exercise the REAL Creator store.
+globalThis.localStorage = (() => {
+  let m = new Map();
+  return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => void m.set(k, String(v)), removeItem: (k) => void m.delete(k), clear: () => void (m = new Map()) };
+})();
 import {
   synthesizeTeamPlan, compileTeamPlan, controllerOverlayOf, applyControllerOverlay,
   PLAN_BOOK_STRUCT_FIELDS
 } from '../js/engine/teamplan.js';
-import { emptyPlaybook, applyPlaybookToGameplan, legalConceptsForFormation } from '../js/engine/playbook.js';
+import { emptyPlaybook, applyPlaybookToGameplan, playbookFromGameplan, legalConceptsForFormation } from '../js/engine/playbook.js';
 import { emptyDefBook, applyDefBookToGameplan } from '../js/engine/defbook.js';
+import { applyEditedBookToSchool, pushBookToWorkshop } from '../js/engine/bookpush.js';
+import { saveCreation, getCreation } from '../js/engine/creator.js';
 import { defaultGameplan } from '../js/engine/world.js';
 
 let pass = 0, fail = 0;
@@ -146,6 +166,78 @@ hdr('S4 — applyControllerOverlay loads onto ANY book, book untouched');
   check(school.gameplan.passDepth && same(school.gameplan.passDepth, dflt.passDepth), 'an unnamed controller field reset to the default');
   check(school.book.sourceId === 'playbook-abc', 'the book kept its Workshop identity (stamps intact)');
   check(same(compileTeamPlan(school), school.gameplan), 'compile ≡ gameplan after the overlay load');
+}
+
+// the banner's own condition, verbatim from gameplan.js bookUpdateBanner
+function bannerFires(school, side) {
+  const bk = side === 'def' ? school.defbook : school.book;
+  if (!bk || !bk.sourceId) return false;
+  const entry = getCreation(side === 'def' ? 'defbooks' : 'playbooks', bk.sourceId);
+  return !!entry && ((entry.saved || 0) > (bk.sourceSaved || 0));
+}
+
+hdr('S5 — edit-in-career: the league save carries the edit, lineage kept');
+{
+  const school = mkSchool();
+  loadWorkshopBook(school, 'pb', pb, 'playbook-abc', 1000);
+  // extraction is faithful: the carried book re-extracts to what the plan holds
+  const edited = playbookFromGameplan(school.gameplan, school.gameplan._playbookName);
+  check(same(edited.formations.map((f) => f.id), school.gameplan.offFormations.map((f) => f.id)) && same(edited.sheets, school.gameplan.formationPlaybooks), 'playbookFromGameplan extracts the carried book faithfully');
+  // a real edit: a third concept onto the Spread sheet
+  edited.sheets.Spread = { ...edited.sheets.Spread, [legal[2]]: 55 };
+  const r = applyEditedBookToSchool(school, 'off', edited);
+  check(r.ok === true, 'applyEditedBookToSchool accepts the edited book');
+  check(school.gameplan.formationPlaybooks.Spread[legal[2]] === 55, 'the edit landed on the gameplan (the league save carries it)');
+  check(school.book.sourceId === 'playbook-abc' && school.book.sourceSaved === 1000, 'the Workshop lineage stamps survive an in-career edit');
+  check(same(compileTeamPlan(school), school.gameplan), 'compile ≡ gameplan after the in-career save');
+  const revived = { name: school.name, gameplan: JSON.parse(JSON.stringify(school.gameplan)) };
+  synthesizeTeamPlan(revived, { force: true });
+  check(revived.gameplan.formationPlaybooks.Spread[legal[2]] === 55 && revived.book.sourceId === 'playbook-abc', 'edit + stamps survive a save serialization round-trip');
+  check(applyEditedBookToSchool(school, 'off', { name: 'Broken', formations: [{ id: 'No Such Formation', weight: 50 }], sheets: {} }).ok === false, 'an invalid book is refused, the plan untouched');
+}
+
+hdr('S6 — push to Workshop: restamp means NO self-banner, library round-trips');
+{
+  const school = mkSchool();
+  loadWorkshopBook(school, 'pb', pb, 'playbook-abc', 1000);
+  // seed the REAL store with the source creation, newer than the carried stamp
+  const seeded = saveCreation('playbooks', 'Audit Book', pb, { id: 'playbook-abc' });
+  check(seeded.ok && seeded.id === 'playbook-abc', 'the source creation seeds the real store under its id');
+  check(bannerFires(school, 'off') === true, 'a newer library copy fires the banner before the push (the control)');
+  // the coach edits in-career, then pushes
+  const edited = playbookFromGameplan(school.gameplan, school.gameplan._playbookName);
+  edited.sheets.Spread = { ...edited.sheets.Spread, [legal[2]]: 40 };
+  const r = pushBookToWorkshop(school, 'off', edited);
+  check(r.ok === true && r.id === 'playbook-abc' && r.updated === true, 'the push updates the source creation in place');
+  const entry = getCreation('playbooks', 'playbook-abc');
+  check(same(entry.data, edited), 'the Workshop copy IS the pushed book (data byte-equal)');
+  check(school.gameplan.formationPlaybooks.Spread[legal[2]] === 40, 'the push also applied the edit to the career');
+  check(school.gameplan._bookSourceSaved === entry.saved && school.book.sourceSaved === entry.saved, 'the source identity RESTAMPED from the entry just written');
+  check(bannerFires(school, 'off') === false, 'push → no self-banner (entry.saved > sourceSaved is false by construction)');
+  check(same(compileTeamPlan(school), school.gameplan), 'compile ≡ gameplan after the push');
+  // round-trip: loading the library copy back reproduces the carried book
+  const other = mkSchool();
+  loadWorkshopBook(other, 'pb', entry.data, entry.id, entry.saved);
+  check(same(other.gameplan.offFormations, school.gameplan.offFormations) && same(other.gameplan.formationPlaybooks, school.gameplan.formationPlaybooks), 'the library copy loads back to the same carried book (round-trip)');
+}
+
+hdr('S7 — push without a source + the defense pair');
+{
+  const school = mkSchool();
+  check(!school.gameplan._bookSourceId, 'no offense lineage to start');
+  const fresh = JSON.parse(JSON.stringify(pb));
+  fresh.name = 'Garage Book';
+  const r = pushBookToWorkshop(school, 'off', fresh);
+  check(r.ok === true && !!r.id && r.updated === false, 'a book with no source pushes as a fresh Workshop entry');
+  check(school.gameplan._bookSourceId === r.id && school.book.sourceId === r.id, 'and GAINS the source stamps');
+  check(bannerFires(school, 'off') === false, 'no self-banner on a fresh push either');
+  // the defense pair: push stamps _defbook*, leaves the offense stamp alone
+  const db = emptyDefBook('Iron D 2');
+  const rd = pushBookToWorkshop(school, 'def', db);
+  check(rd.ok === true && school.gameplan._defbookSourceId === rd.id, 'a defense push stamps the DEF pair');
+  check(school.gameplan._bookSourceId === r.id, 'and leaves the offense stamp alone');
+  check(bannerFires(school, 'def') === false, 'no self-banner on the defense push');
+  check(same(compileTeamPlan(school), school.gameplan), 'compile ≡ gameplan after both pushes');
 }
 
 console.log(`\nBOOK UPDATE PROBE — ${pass} pass, ${fail} fail`);

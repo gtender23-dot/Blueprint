@@ -114,11 +114,12 @@ function renderSettings() {
       "AI Coaching IQ",
       "How sharp opposing STAFFS are against you \u2014 weekly game-planning and halftime counters. Freshman staffs sometimes don\u2019t game-plan at all and react at half strength. All-American reads your film harder and counters off a smaller sample. Legend staffs game-plan like pros: stronger keys, faster halftime adjustments. Only applies to teams playing YOU."
     ],
-    [
+    // M5 (#29): Season Mode runs no recruiting \u2014 its stray settings hide there.
+    ...state.seasonMode ? [] : [[
       "diffRecruiting",
       "Recruiting Difficulty",
       "How hard rival programs push in recruiting battles. Freshman rivals spend soft. Varsity is the pure market. All-American and Legend rivals push their boards harder and spend faster \u2014 you\u2019ll need real strategy (and budget) to win contested kids. The rules never change, only the pressure."
-    ]
+    ]]
   ].map(([key, label, desc]) => `
         <div class="setting-row">
           <div class="setting-info">
@@ -186,6 +187,7 @@ function renderSettings() {
           </div>
         </div>
 
+        ${state.seasonMode ? "" : `
         <div class="setting-row">
           <div class="setting-info">
             <div class="setting-label">Rival Commit Alerts</div>
@@ -202,7 +204,7 @@ function renderSettings() {
           <div class="gp-options" style="flex-wrap:nowrap">
             ${[["off", "Off"], ["full", "On"]].map(([v, l]) => `<button class="gp-option gp-option-sm${(s.recruitAssist || (s.autoRecruit ? "full" : "off")) === v ? " active" : ""}" data-assist-level="${v}">${l}</button>`).join("")}
           </div>
-        </div>
+        </div>`}
 
       </div>
     </div>
@@ -252,13 +254,14 @@ function renderSettings() {
       </div>
       <div class="settings-list">
 
+        ${state.seasonMode ? "" : `
         <div class="setting-row">
           <div class="setting-info">
             <div class="setting-label">Reveal All Scouting</div>
             <div class="setting-desc">Show true ratings and potential for all recruits without scouting them</div>
           </div>
           ${toggle("revealScouting", !!s.revealScouting, "Reveal scouting")}
-        </div>
+        </div>`}
 
       </div>
 

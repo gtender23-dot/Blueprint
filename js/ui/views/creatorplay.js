@@ -346,6 +346,7 @@ function playsListeners() {
       label: payload.name || "My Play",
       defLook: { front: "4-3", coverage: "c3", bring: "4" }
     };
+    state.ui.benchReturn = null; // Workshop entrance — bench-back goes home
     navigate("bench");
   });
 }

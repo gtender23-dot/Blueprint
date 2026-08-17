@@ -1,6 +1,7 @@
-import { state, rerender, notify, navigate } from '../../state.js';
+import { state, rerender, notify, navigate, getPlayerSchool } from '../../state.js';
 import { FORMATION_PACKAGES, FORMATION_PLAYBOOK, FORMATION_VARIATIONS, aliasFormation } from '../../constants.js';
 import { emptyPlaybook, validatePlaybook, legalConceptsForFormation, fittingConceptsForFormation, lookSheetKey, resolveLookSheet } from '../../engine/playbook.js';
+import { applyEditedBookToSchool, pushBookToWorkshop } from '../../engine/bookpush.js';
 import { listCreations, loadCreationData, saveCreation, deleteCreation } from '../../engine/creator.js';
 import { DEFAULT_OFF_BOOKS, autoSheetForFormation } from '../../engine/defaultbooks.js';
 import { renderFormationDiagram, renderConceptThumb, playAssignments } from './routeart.js';
@@ -31,6 +32,13 @@ function topFormation(book) {
 // the screen on top. Editor state lives in state.ui.pb.
 function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 function _pb() { return state.ui.pb; }
+// ── M5 embedded editing (#39): the SAME editor, opened from the Game Plan ───
+// state.ui.pbContext === "career" means the book being edited is the one the
+// coach CARRIES in his dynasty/season — Save writes it to the league save
+// (applyEditedBookToSchool), and "Push to Workshop" copies it to the library
+// and restamps the source identity so the update banner can't fire about your
+// own push. The Workshop path (pbContext unset) is unchanged.
+function _career() { return state.ui.pbContext === "career"; }
 
 // Distinct plays across every sheet (base + per-look forks) — a fork of the
 // same play never double-counts in the "N plays" meta line.
@@ -154,13 +162,16 @@ function renderPlaybookEditor() {
     </div>`;
   }).join("");
   const msg = v.errors.length ? `<div class="pb-msg err">${esc(v.errors[0])}</div>` : v.warnings.length ? `<div class="pb-msg warn">${esc(v.warnings[0])}</div>` : `<div class="pb-msg ok">Ready to save.</div>`;
+  const career = _career();
   return `<div class="creator-hub">
-    <div class="creator-hub-head"><div class="creator-title">Playbook Builder</div></div>
+    <div class="creator-hub-head"><div class="creator-title">${career ? "Edit Your Playbook" : "Playbook Builder"}</div>
+      ${career ? `<div class="creator-sub">The book you carry — Save keeps the edit in this ${state.seasonMode ? "season" : "dynasty"}'s save. Push it to the Workshop to keep a library copy you can load anywhere.</div>` : ""}</div>
     <input class="form-input pb-name" id="pb-name" type="text" maxlength="36" placeholder="Playbook name" value="${esc(pb.name || "")}"/>
     ${msg}
     <div class="pb-forms">${formRows}</div>
     <div class="pb-actions">
-      <button class="btn-mm btn-mm-new" data-pb-save="1"${v.errors.length ? " disabled" : ""}>Save Playbook</button>
+      <button class="btn-mm btn-mm-new" data-pb-save="1"${v.errors.length ? " disabled" : ""}>${career ? "Save to My Season" : "Save Playbook"}</button>
+      ${career ? `<button class="btn-mm btn-mm-secondary" data-pb-push="1"${v.errors.length ? " disabled" : ""}>⤴ Push to Workshop</button>` : ""}
       <button class="btn-mm btn-mm-secondary" data-pb-cancel="1">Cancel</button>
     </div>
   </div>`;
@@ -303,6 +314,7 @@ function playbooksListeners() {
     const concept = top || fittingConceptsForFormation(fid, vk || undefined)[0] || null;
     if (!concept) { notify("No play fits this look yet", "warning"); return; }
     state.ui.bench = { formationId: fid, variation: vk, concept, defLook: benchDefaults() };
+    state.ui.benchReturn = _career() ? "gameplan" : null;
     navigate("bench");
   }));
   document.querySelectorAll("[data-pb-testc]").forEach((el) => el.addEventListener("click", (e) => {
@@ -313,6 +325,7 @@ function playbooksListeners() {
     const pb = _pb();
     const entry = (pb && pb.formations || []).find((f) => aliasFormation(f.id) === fid);
     state.ui.bench = { formationId: fid, variation: (entry && entry.variation) || null, concept, defLook: benchDefaults() };
+    state.ui.benchReturn = _career() ? "gameplan" : null;
     navigate("bench");
   }));
   document.querySelectorAll("[data-pb-expand]").forEach((b) => b.addEventListener("click", () => {
@@ -372,12 +385,37 @@ function playbooksListeners() {
     const pb = _pb();
     const v = validatePlaybook(pb);
     if (!v.ok) { notify(v.errors[0], "warning"); return; }
+    // M5 (#39): in-career save — the edit lands on the LEAGUE save (the same
+    // one-side applier every book load uses; dials/situations/defense carry).
+    if (_career()) {
+      const school = getPlayerSchool();
+      const r2 = applyEditedBookToSchool(school, "off", pb);
+      if (r2.ok) { notify(`"${pb.name}" saved — your ${state.seasonMode ? "season" : "dynasty"} carries the edit`, "success"); state.ui.pb = null; state.ui.pbId = null; state.ui.pbContext = null; }
+      else notify(r2.reason || "Could not save", "warning");
+      rerender();
+      return;
+    }
     const r = saveCreation("playbooks", pb.name, pb, state.ui.pbId ? { id: state.ui.pbId } : {});
     if (r.ok) { notify(`"${pb.name}" saved`, "success"); state.ui.pb = null; state.ui.pbId = null; rerender(); }
     else notify(r.reason === "full" ? "Library is full" : "Could not save", "warning");
   });
+  // M5 (#39): push the carried book back to the Workshop. Applies the edit to
+  // the career first (so carried book ≡ library copy), then saves the library
+  // entry and RESTAMPS the source identity — the update banner cannot fire
+  // about your own push (bookpush.js is the one seam; probe-pinned).
+  document.querySelector("[data-pb-push]")?.addEventListener("click", () => {
+    _syncName();
+    const pb = _pb();
+    const v = validatePlaybook(pb);
+    if (!v.ok) { notify(v.errors[0], "warning"); return; }
+    const school = getPlayerSchool();
+    const r = pushBookToWorkshop(school, "off", pb);
+    if (r.ok) notify(`"${pb.name}" ${r.updated ? "updated in" : "pushed to"} the Workshop — the library copy now matches the book you carry`, "success");
+    else notify(r.reason === "full" ? "Workshop library is full" : r.reason || "Could not push", "warning");
+    rerender();
+  });
   document.querySelector("[data-pb-cancel]")?.addEventListener("click", () => {
-    state.ui.pb = null; state.ui.pbId = null; rerender();
+    state.ui.pb = null; state.ui.pbId = null; state.ui.pbContext = null; rerender();
   });
 }
 export { renderPlaybooksTab, playbooksListeners };

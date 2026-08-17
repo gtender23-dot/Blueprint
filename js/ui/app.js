@@ -722,7 +722,7 @@ function renderBenchScreen() {
     </div>`).join("") : `<div class="muted bench-line-empty">No reps yet — run the play.</div>`;
   return `<div class="replay-screen bench-screen">
     <div class="replay-screen-head">
-      <button class="btn-ghost" id="bench-back">← Workshop</button>
+      <button class="btn-ghost" id="bench-back">${state.ui.benchReturn === "gameplan" ? "← Game Plan" : "← Workshop"}</button>
       <div><div class="replay-screen-kicker">THE TEST BENCH</div><h1>${escapeHtml(fid)}${vLabel ? ` · ${escapeHtml(vLabel)}` : ""}</h1></div>
     </div>
     <div class="bench-controls">
@@ -742,7 +742,9 @@ function renderBenchScreen() {
 function setupBenchScreen() {
   var _a, _b, _c, _d, _e, _f, _g;
   const b = _benchState();
-  (_a = document.getElementById("bench-back")) == null ? void 0 : _a.addEventListener("click", () => navigate("creator"));
+  // M5 (#39): a bench opened from the in-career embedded editor returns to the
+  // Game Plan, not the Workshop (state.ui.benchReturn set by the entrances).
+  (_a = document.getElementById("bench-back")) == null ? void 0 : _a.addEventListener("click", () => navigate(state.ui.benchReturn || "creator"));
   if (!b) return;
   const cfg = b.cfg;
   (_b = document.getElementById("bench-play")) == null ? void 0 : _b.addEventListener("change", (e) => {

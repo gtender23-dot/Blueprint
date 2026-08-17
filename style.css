@@ -9952,6 +9952,25 @@ body *::after {
 .gp-book-update { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0 2px; padding: 7px 10px; border: 1px solid var(--gold, #eab308); background: rgba(234, 179, 8, 0.08); }
 .gp-book-update-msg { font-size: 12px; color: var(--text-0, #e5ecf5); }
 
+/* ── M5: THE PLAN HOME (#39/#3/#41) — book cards, twin identities ───────── */
+.gp-home-books { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.gp-book-card { margin-bottom: 0; }
+.gp-book-body { padding: 10px 16px 14px; }
+.gp-book-name { font-size: 15px; font-weight: 800; color: var(--text-0, #e5ecf5); margin-bottom: 3px; overflow-wrap: anywhere; }
+.gp-book-meta { font-size: 11px; margin-bottom: 10px; }
+.gp-book-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.gp-ident-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; align-items: start; }
+.gp-ident-row .identity-card { margin-bottom: 0; }
+@media (max-width: 720px) {
+  .gp-home-books, .gp-ident-row { grid-template-columns: 1fr; }
+}
+/* #3: the usage card ships COLLAPSED — dials without the big diagrams */
+.pb-look-card.pb-look-compact { padding: 8px 10px; }
+.gp-lookart-toggle { float: right; margin-left: auto; }
+.gp-label .gp-lookart-toggle { font-size: 11px; padding: 2px 8px; }
+/* the embedded editors ride the dynasty view shell */
+.gp-embed .creator-hub { max-width: none; }
+
 
 /* Viewer Act F: the director identifies the football reason for each shot. */
 .watch-director-bug {
