@@ -1,1 +1,1 @@
-// temporary in-place build helper (Act F session) — superseded; use tools/build.mjs
+// temporary in-place build helper — superseded; use tools/build.mjs

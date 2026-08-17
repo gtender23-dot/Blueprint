@@ -1,7 +1,7 @@
 {
   "tier": "core",
   "cloud": false,
-  "minutes": 18.5,
+  "minutes": 15.6,
   "results": [
     {
       "name": "stat_realism_harness.mjs",
@@ -70,6 +70,46 @@
       "tail": "ALL PASS ✅"
     },
     {
+      "name": "playbook_root_probe.mjs",
+      "status": "OK",
+      "tail": "PLAYBOOK ROOT PROBE PASS"
+    },
+    {
+      "name": "plan_side_probe.mjs",
+      "status": "OK",
+      "tail": "PLAN SIDE PROBE PASS"
+    },
+    {
+      "name": "ai_book_name_probe.mjs",
+      "status": "OK",
+      "tail": "AI BOOK NAME PROBE PASS"
+    },
+    {
+      "name": "live_book_call_probe.mjs",
+      "status": "OK",
+      "tail": "LIVE BOOK CALL PROBE PASS"
+    },
+    {
+      "name": "book_update_probe.mjs",
+      "status": "OK",
+      "tail": "BOOK UPDATE PROBE PASS"
+    },
+    {
+      "name": "formation_compose_probe.mjs",
+      "status": "OK",
+      "tail": "FORMATION COMPOSE PROBE PASS"
+    },
+    {
+      "name": "draw_up_probe.mjs",
+      "status": "OK",
+      "tail": "DRAW UP PROBE PASS"
+    },
+    {
+      "name": "record_call_probe.mjs",
+      "status": "OK",
+      "tail": "RECORD CALL PROBE PASS"
+    },
+    {
       "name": "contract_ladder_probe.mjs",
       "status": "OK",
       "tail": "ALL PASS ✅"
@@ -116,7 +156,8 @@
     },
     {
       "name": "viewer_act_a_finish_live_probe.mjs",
-      "status": "OK",
+      "status": "FAIL",
+      "code": 1,
       "tail": "shot: _act-a-finish-live.png"
     },
     {
@@ -139,6 +180,11 @@
       "name": "viewer_act_e_probe.mjs",
       "status": "OK",
       "tail": "VIEWER ACT E PROBE — 14 pass, 0 fail"
+    },
+    {
+      "name": "viewer_act_f_probe.mjs",
+      "status": "OK",
+      "tail": "VIEWER ACT F PROBE — 13 pass, 0 fail"
     },
     {
       "name": "pos_ovr_census_probe.mjs",
@@ -339,12 +385,12 @@
     {
       "name": "tipdrill_ab.mjs",
       "status": "OK",
-      "tail": "PASS plays/game flat inside noise (|Δ| ≤ 2.5)  [0.90]"
+      "tail": "PASS plays/game flat inside noise (|Δ| ≤ 2.5)  [0.08]"
     },
     {
       "name": "presentation_live_probe.mjs",
       "status": "OK",
-      "tail": "SIGHTINGS — turf spray frames: 122 · decor roar: true · lite mode: true"
+      "tail": "SIGHTINGS — turf spray frames: 149 · decor roar: false · lite mode: true"
     },
     {
       "name": "st_ui_smoke.mjs",
