@@ -19,7 +19,13 @@ import { buildDepthChart } from '../js/engine/world.js';
 import { simulateGame } from '../js/engine/sim.js';
 import { ROSTER_TARGETS, CLASS_YEARS, PENALTY_CATALOG } from '../js/constants.js';
 
-const N = parseInt(process.argv[2] || '1200', 10);
+// Defensive argv parsing (FULLGATE_TRIAGE 2026-08-17 item 4): the manifest once
+// misregistered this Node probe as kind:'pw', so the gate handed it the dist
+// path as argv[2] → parseInt → NaN → 0-game arms → deterministic double-FAIL.
+// A non-numeric games arg now falls back to the default instead of silently
+// gutting the arms.
+const _nArg = parseInt(process.argv[2] || '1200', 10);
+const N = Number.isFinite(_nArg) && _nArg > 0 ? _nArg : 1200;
 const RUN_PRESSURE = process.argv[3] === 'pressure';   // opt-in: adds 2 heavy-sim arms
 const PRESNAP = new Map(PENALTY_CATALOG.map(p => [p.name, p.preSnap]));
 

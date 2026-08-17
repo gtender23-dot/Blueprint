@@ -2523,6 +2523,16 @@ function setupGlobalListeners() {
       if (gpL) delete gpL._nextPlay;
       rerender();
     });
+    // The Rest-of-Game tab renders renderHalftimeAdjust into #to-adjust-root
+    // but nothing ever wired its chips (data-gp-set / data-gp-aggr /
+    // data-gp-boolset) — the kickoff modal and halftime screen both call
+    // wireDefaultsListeners on their roots; the timeout overlay never did
+    // (FULLGATE_TRIAGE_2026-08-17 item 1, the one real product bug).
+    {
+      const root = document.getElementById("to-adjust-root");
+      const gpL = _liveGPMine();
+      if (root && gpL) wireDefaultsListeners(gpL, { root });
+    }
   }
   document.querySelectorAll("[data-cs-st-toggle]").forEach((b) => b.addEventListener("click", () => {
     state.ui.callSTOpen = !state.ui.callSTOpen;

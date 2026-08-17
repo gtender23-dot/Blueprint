@@ -123,13 +123,16 @@ if (originView) {
   await page.click('#btn-back-top');
   await page.waitForTimeout(300);
   // Flat view ids became grouped pages with tabs (state.js LEGACY_VIEW_MAP):
-  // navigate('standings') lands on view 'program' with the Standings tab
-  // active. "Returns to where it was opened" therefore means the right GROUP
-  // view AND the right tab, not the old flat id.
-  const GROUP_OF = { standings: 'program', schedule: 'program', dashboard: 'dashboard' };
+  // navigate('standings') lands on view 'season' with the Standings tab
+  // active ([data-season-tab] — app.js renderSeasonGroup). "Returns to where
+  // it was opened" therefore means the right GROUP view AND the right tab,
+  // not the old flat id. (Updated 2026-08-17, FULLGATE_TRIAGE item 6: the old
+  // map here said 'program'/[data-program-tab] — stale since the
+  // season-group regrouping, which predates the 08-12 import.)
+  const GROUP_OF = { standings: 'season', schedule: 'season', dashboard: 'dashboard' };
   const expected = GROUP_OF[originView] || originView;
-  const tabOk = expected !== 'program'
-    || await page.locator(`.rec-tab.active[data-program-tab="${originView}"]`).count() === 1;
+  const tabOk = expected !== 'season'
+    || await page.locator(`.rec-tab.active[data-season-tab="${originView}"]`).count() === 1;
   g(`Back from a team page returns to where it was opened (${originView})`,
     await view() === expected && tabOk);
 } else {

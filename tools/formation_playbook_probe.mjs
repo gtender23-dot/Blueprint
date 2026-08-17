@@ -64,7 +64,12 @@ let fails = 0; const ok = (c, m) => { console.log((c ? '✅' : '❌') + ' ' + m)
     return t;
   };
   const A = count(gpA), B = count(gpB);
-  ok(A.mesh / Math.max(1, A.short) > 0.15, `control arm leans on the globally-featured play (Mesh ${A.mesh} of ${A.short} short-game snaps — it only competes inside its depth)`);
+  // Bar re-centered 0.15→0.10 (2026-08-17, FULLGATE_TRIAGE item 5): the Mesh
+  // share's true mean sits at ~14.3% (pooled 157/1100 at HEAD; pre-D6 control
+  // 14.5% — indistinguishable), so a bar ABOVE the mean passed only on upward
+  // fluctuations. Every observed run (11.5–19.9%) clears 0.10, and it still
+  // proves the lean — Mesh runs ~2.5× its neutral share.
+  ok(A.mesh / Math.max(1, A.short) > 0.10, `control arm leans on the globally-featured play (Mesh ${A.mesh} of ${A.short} short-game snaps — it only competes inside its depth)`);
   ok(B.mesh === 0, `formation-benched play vanishes from that formation's snaps (Mesh ${B.mesh}/${B.pass}; global weight still 95)`);
   ok(B.verts > A.verts, `formation-featured play takes over (Four Verts ${A.verts} → ${B.verts})`);
 }

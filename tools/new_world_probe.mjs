@@ -68,7 +68,13 @@ const settle = (ms = 350) => page.waitForTimeout(ms);
 
 // Click whatever the current screen needs, without knowing what it is. Returns
 // a label for the trace, or null when there is genuinely nothing to press.
+// The Staff step (step 4, newgame.js stepStaff) gates #ob-next-4 on an OC AND
+// a DC pick. Both card sets share [data-ob-staff], so they get one selector
+// EACH (prefix-matched) — a single shared selector would trip the "skip group
+// if any active" guard after the OC pick and dead-end the walk (the logged
+// "N3 … -1 node(s), 0 chars" — FULLGATE_TRIAGE 2026-08-17 item 3).
 const OPTIONS = ['[data-ob-challenge]', '[data-ob-state]', '[data-ob-div]', '[data-ob-school]',
+                 '[data-ob-staff^="OC:"]', '[data-ob-staff^="DC:"]',
                  '[data-ob-qb]', '[data-ob-front]'];
 async function advanceWizard() {
   return page.evaluate((OPTIONS) => {

@@ -46,6 +46,102 @@ Prior: D4 · M2 presentation; D3 · M2 engine; D7 · M4; D2 · M1; D5 · M3
 audit RATIFIED. Plan of record: BUILD ORDER v2 (2026-08-17), dispatch
 prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
 
+## 2026-08-17 — FULL-GATE S-TIER FIXES (this sandbox, node) — triage steps 1–3 EXECUTED
+## NODE-GATED ×3 — ⚠ the timeout-chip fix's LIVE proof is browser-owed
+
+The owner-ratified plan in `Ref/FULLGATE_TRIAGE_2026-08-17.md` (steps 1–3 of
+its order of operations), executed. The M-sized retired-main-menu PW
+rewrites (triage items 7–10) were explicitly OUT of scope and remain owed;
+size_fit's optional hardening (item 13) was not taken (metadata already
+right).
+
+**OWNER CHECKLIST (browser/local, all one sitting):**
+- [ ] **The timeout-chip fix, live:** in a game, call a timeout → Rest of
+  Game tab → press tempo/aggression chips — they must now write (the panel
+  re-renders, the setting sticks for the rest of the game). Then
+  `timeout_screen_smoke` on the local gate — expected green with NO smoke
+  changes (FULL run had FAIL (2)).
+- [ ] **First local PW run of the updated smokes:** `nav_back_smoke` (new
+  season-group map) and `new_world_probe` (staff-step walker) — both were
+  S-fixed here but PW is unrunnable in this sandbox; their runs are the
+  proof. `calendar_display` + letter_logo/saved_team_library/
+  instant_classic stay RED until the M rewrites land (notes now say so).
+- [ ] The pre-deploy FULL re-run on an idle machine (triage step 5) now
+  expects: covfam, tipdrill, gaplist, pass5, size_fit, defcall_ui,
+  table_button_phone, position_gallery green (or retried-green), the five
+  never-ran probes on the record, commit_rate ~100 s, dna_cards green as a
+  node probe. Anything still red after this session + the M batch is new
+  information.
+
+**What shipped:**
+- **THE product bug (triage item 1), js/ui/app.js:** `#to-adjust-root` is
+  now wired with `wireDefaultsListeners(gpL, {root})` in the global block
+  next to `#to-cancel` — same pattern as the kickoff modal's
+  `#kickoff-adjust` and the halftime screen, the only two places that ever
+  wired these chips. Verified in the built bundle (the wiring is in
+  dist/index.html); the live click is the browser-owed half.
+- **commit_rate_test.mjs (item 2):** acknowledges the day-3 `posReviewed`
+  camp gate (`devCtx(state).posReviewed = true` — the PLAYTEST 08-12
+  item-12 hard gate only the dashboard UI sets); stale 35/36-day comments
+  fixed to the 30-day calendar. **3× full season here: exit 0 at ~104 s
+  each** (funnel 80–81%, reconciliation PASS ×3). Manifest timeout restored
+  600→300, the "overload" note replaced with the real diagnosis.
+- **Manifest batch (tools/_gate_manifest.mjs, data only):** `dna_cards` →
+  `kind:'node'` (was pw — the gate fed the dist path into its games argv →
+  NaN → 0-game arms) + envKnown dropped; `gaplist` + `pass5_band_ab` →
+  `seedFlaky: true` with measured-rate notes; `tipdrill` seedFlaky DROPPED
+  (deterministic by construction — a retry can never clear its reds) + args
+  6→12; nav_back + new_world envKnown dropped (fixed here, they were never
+  cloud); letter_logo / saved_team_library / instant_classic /
+  calendar_display notes rewritten to TEST-STALE-everywhere (envKnown kept
+  for cloud reporting; local reds EXPECTED until the M rewrites);
+  timeout_screen note records the fix.
+- **Probe edits:** `formation_playbook_probe` Mesh bar 0.15→0.10 (true mean
+  ~14.3% sat BELOW the old bar; every observed run clears 0.10, lean still
+  proven); `tipdrill_probe` staging bar 0.5→0.4 (per-tree deterministic
+  values ranged 47–62% — the old bar sat inside the range); `new_world_probe`
+  walker learned the Staff step (per-side `[data-ob-staff^="OC:"]`/`"DC:"`
+  selectors — one shared selector would stop after the OC); `nav_back_smoke`
+  `GROUP_OF` → season group + `[data-season-tab]` (verified against
+  state.js LEGACY_VIEW_MAP + app.js renderSeasonGroup); `dna_cards_probe`
+  defensive argv (non-numeric → default 1200, never NaN).
+
+**Gate (this sandbox, node):** clean esbuild build — ALL sanity checks
+PASS, 3726 KB, cache `cfb-dynasty-1f9b0115ed` (built in /tmp per the
+standing workaround, outputs copied back to dist/) + bundle syntax parse
+(2 script blocks) + CSS braces balanced. `commit_rate_test` **exit 0 ×3**
+(~104 s). `tipdrill_probe 12` **0 fails ×3, byte-identical** (staging
+48/78 = 61.5% — matches the triage's N=12 measurement, confirming
+determinism). `card_lint_probe` **PASS ×3**. `formation_playbook_probe`
+**exit 0 ×3** (Mesh 18.6–20.8% short-share, new bar cleared with margin).
+`gaplist_probe` green/green/**red-then-retry-green** — the red was G8a
+iced-kicks-zero, the SAME rare-event class as G8b (its forced arm forces
+the clutch spot, not the icing roll); exactly the behavior the new
+seedFlaky flag models, and the manifest note now ledgers G8a too.
+`pass5_band_ab` at gate volume N=300: **red/green/green**, a DIFFERENT
+band over the line each red (pass 13.1 vs 10; rush 9.0 vs 8 in an earlier
+N=120 sighting) — the documented wander, now retried by its flag; note
+carries the measurements. `dna_cards_probe` at GATE VOLUME via faithful
+chunking (night-gate precedent — unseeded independent arms, 6 chunks
+pooled into **3× N=1200/arm** with the probe's own formulas): pre-snap
+drop 8.8% / 10.6% / 17.8% (bar >6), post-snap 2.4% / −0.3% / −6.5% (bar
+<7 and <0.7×pre) — **both checks pass all three**; NaN-guard verified
+(`parseInt(dist path)` → guard falls back to 1200). PW tier unrunnable
+here (standing): nav_back / new_world edits are `node --check` clean only.
+
+**What this clears from the triage's 18:** items 1 (code half), 2, 3, 4,
+5, 6 fixed; 12, 14, 15 (metadata) corrected; 11 (covfam) owed nothing; 13
+(size_fit) optional, not taken; 7–10 (M rewrites) still owed; 16–18
+(env-only) owed only the clean FULL re-run.
+
+**Commit scoped to:** js/ui/app.js (one wiring block) ·
+tools/commit_rate_test.mjs · tools/_gate_manifest.mjs ·
+tools/dna_cards_probe.mjs · tools/new_world_probe.mjs ·
+tools/nav_back_smoke.mjs · tools/formation_playbook_probe.mjs ·
+tools/tipdrill_probe.mjs · Ref/STATUS.md. NOT pushed. (Parallel session
+note: the QB-RUN research entries below landed mid-window; gates ran on
+the tree as found.)
+
 ## 2026-08-17 — QB-RUN/RPO RESEARCH PASS (all 8 sources owner-APPROVED · fetched · assessed — NO outcome code changed)
 
 The D5/D6 "needs brain research" ledger item is now RESEARCHED. Owner
