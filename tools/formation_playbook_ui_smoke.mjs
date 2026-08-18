@@ -79,40 +79,32 @@ const fpbSliders = page.locator('input[data-fpb]');
 const nSliders = await fpbSliders.count();
 check(nSliders >= 5, `${firstForm} sheet shows its carried plays (${nSliders} sliders)`);
 check(await page.locator('input[data-cw]').count() === 0, 'global sliders are replaced by the formation sheet');
-check(await page.locator('[data-fpbclear]').count() === 0, 'nothing authored yet — no override pills');
+// 2026-08-18 rework: a starting book is always applied, so a look opens with its
+// OWN full sheet — the inherit-base / "set here" override pills are retired, and
+// the Reset button is always present (the sheet is never "unset"). The screen is
+// now just: weight the mix, bench with 0, reset to the global default.
+check(await page.locator('[data-fpbclear]').count() === 0, 'no override pills — the inherit-base model is retired');
+check(await page.locator('#fpb-reset').count() === 1, "the look's Reset button is present (the book seeds its sheet)");
 
-// author an override by moving the first slider
+// bench a play by sliding it to 0
 const sl = fpbSliders.first();
 const name = await sl.getAttribute('data-fpb');
 await sl.evaluate((el) => {
   el.value = '0';
   el.dispatchEvent(new Event('input', { bubbles: true }));
-  el.dispatchEvent(new Event('change', { bubbles: true }));
 });
-await page.waitForTimeout(700);
-check(await page.locator('[data-fpbclear]').count() === 1, `moving a slider authors an override (${name} → benched)`);
-check(await page.locator('#fpb-reset').count() === 1, 'reset button appears once something is authored');
+await page.waitForTimeout(400);
 const benched = await page.locator('.cw-val.cw-benched').count();
-check(benched >= 1, 'benched state renders on the authored play');
+check(benched >= 1, `sliding a play to 0 benches it (${name} → benched)`);
 await page.screenshot({ path: '_formation_editor.png' });
 
-// the inherit pill clears the single override
-await page.locator('[data-fpbclear]').first().dispatchEvent('click'); await page.waitForTimeout(600);
-check(await page.locator('[data-fpbclear]').count() === 0, 'inherit pill clears the override');
-
-// author again, then whole-sheet reset
-await page.locator('input[data-fpb]').first().evaluate((el) => {
-  el.value = '100';
-  el.dispatchEvent(new Event('input', { bubbles: true }));
-  el.dispatchEvent(new Event('change', { bubbles: true }));
-});
-await page.waitForTimeout(600);
+// Reset drops this look's overrides → back to the global default mix
 if (await page.locator('#fpb-reset').count()) { await page.locator('#fpb-reset').dispatchEvent('click'); await page.waitForTimeout(600); }
-check(await page.locator('[data-fpbclear]').count() === 0, 'formation reset returns the sheet to the global book');
+check(await page.locator('input[data-fpb]').count() >= 5, 'after reset the look still shows its plays (from the global default)');
 
-// back to global
+// back to the "All Plays" global sheet
 await page.locator('[data-pbform=""]').first().dispatchEvent('click'); await page.waitForTimeout(600);
-check(await page.locator('input[data-cw]').count() > 5, 'GLOBAL SHEET chip restores the global sliders');
+check(await page.locator('input[data-cw]').count() > 5, 'All Plays chip restores the global sliders');
 
 check(errs.length === 0, `zero page errors${errs.length ? ' — got: ' + errs.slice(0, 3).join(' | ') : ''}`);
 console.log(fails ? `\n❌ ${fails} FAILED` : '\n✅ FORMATION PLAYBOOK EDITOR SMOKE PASS');

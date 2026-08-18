@@ -1,6 +1,5 @@
 import { state, rerender, navigate, notify } from '../../state.js';
 import { listCreations, loadCreationData } from '../../engine/creator.js';
-import { BUILTIN_PLANS, builtinPlan } from './gameplan.js';
 import { DEFAULT_OFF_BOOKS, DEFAULT_DEF_BOOKS } from '../../engine/defaultbooks.js';
 import { renderDivisionEditor, divisionsListeners, loadStaticDivision, leagueToEditor } from './creatordivision.js';
 
@@ -40,8 +39,7 @@ function renderSetup() {
       <option value=""${!src.startPlan ? " selected" : ""}>Team default — let the staff set it</option>
       ${pbs.length ? `<optgroup label="Your custom playbooks">${pbs.map((pb) => `<option value="pb:${esc(pb.id)}"${src.startPlan === "pb:" + pb.id ? " selected" : ""}>${esc(pb.data.name || "Untitled")}</option>`).join("")}</optgroup>` : ""}
       <optgroup label="Starter books">${DEFAULT_OFF_BOOKS.map((b) => `<option value="dpb:${esc(b.name)}"${src.startPlan === "dpb:" + b.name ? " selected" : ""}>${esc(b.name)}</option>`).join("")}</optgroup>
-      <optgroup label="Preset schemes">${BUILTIN_PLANS.map((p) => `<option value="${esc(p.name)}"${src.startPlan === p.name ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</optgroup>
-    </select>${src.startPlan && builtinPlan(src.startPlan) ? `<div class="sm-note muted">${esc(builtinPlan(src.startPlan).blurb)}</div>` : ""}</div>
+    </select></div>
     <div class="sm-field"><span>Starting defense</span><select class="form-select" id="sm-start-def">
       <option value=""${!src.startDef ? " selected" : ""}>Team default — let the staff set it</option>
       ${dbs.length ? `<optgroup label="Your defenses">${dbs.map((db) => `<option value="dd:${esc(db.id)}"${src.startDef === "dd:" + db.id ? " selected" : ""}>${esc(db.data.name || "Untitled")}</option>`).join("")}</optgroup>` : ""}

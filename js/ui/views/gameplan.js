@@ -984,9 +984,11 @@ function renderOffenseDefaults(gp) {
           <summary class="gp-section-hdr">THE PLAYBOOK <span class="gp-section-sub">your play mix \u2014 the call sheet</span></summary>
           <div class="gp-tip tip-info">\u25B8 Every snap the sim now calls a real CONCEPT \u2014 this is where you weight them. 50 is a balanced call sheet; crank what your roster executes, bench what it can't (0 = never called, and your QB can't audible into it). Each concept beats some coverages and dies against others \u2014 the drive log shows you which you're meeting. Fair warning: the defense keeps film. Ride one concept hard enough and it starts getting jumped, so a lopsided sheet pays a tax. Weights ride with your saved plans, so different opponents can get different books.</div>
           ${(() => {
-    // M2 per-LOOK sheets: one tab per carried LOOK (formation + variation),
-    // not one per formation — an edit lands on that look alone (#43). A look
-    // without its own sheet inherits the formation's base sheet.
+    // One tab per carried LOOK (formation + variation). Each look owns its full
+    // call sheet from the book (2026-08-18) — picking a look shows THAT look's
+    // plays; "All Plays" is the global default the sim falls back to for a
+    // concept a look doesn't weight. No authored-count badges, no inherit hint —
+    // the inherit-base model is retired.
     const seenLooks = new Set();
     const carried = (gp.offFormations || []).filter((f) => f && f.id && (f.weight || 0) > 0 && FORMATION_PLAYBOOK[f.id]).map((f) => {
       const vk = f.variation || null;
@@ -996,13 +998,12 @@ function renderOffenseDefaults(gp) {
       return { key, fid: f.id, vk, label };
     }).filter((l) => seenLooks.has(l.key) ? false : (seenLooks.add(l.key), true));
     if (pbFormTab && !carried.some((l) => l.key === pbFormTab)) pbFormTab = null;
-    const authoredIn = (key) => { var _b; return Object.keys(((_b = gp.formationPlaybooks) == null ? void 0 : _b[key]) || {}).length; };
     const strip = carried.length ? `
           <div class="gp-row"><div class="gp-options">
-            <button class="gp-option gp-option-sm${!pbFormTab ? " active" : ""}" data-pbform="">BASE PLAYBOOK</button>
-            ${carried.map((l) => `<button class="gp-option gp-option-sm${pbFormTab === l.key ? " active" : ""}" data-pbform="${escapeHtml(l.key)}">${escapeHtml(l.label)}${authoredIn(l.key) ? ` (${authoredIn(l.key)})` : ""}</button>`).join("")}
+            <button class="gp-option gp-option-sm${!pbFormTab ? " active" : ""}" data-pbform="">All Plays</button>
+            ${carried.map((l) => `<button class="gp-option gp-option-sm${pbFormTab === l.key ? " active" : ""}" data-pbform="${escapeHtml(l.key)}">${escapeHtml(l.label)}</button>`).join("")}
           </div></div>
-          <div class="gp-hint">Per-look playbooks: pick a look to set its own play mix. Changes apply only to snaps from that look; a look you haven't touched inherits its formation's sheet, and anything unset there uses your base playbook.</div>` : "";
+          <div class="gp-hint">Pick a look to weight the plays it runs. "All Plays" is your global default across every concept.</div>` : "";
     return strip + (pbFormTab ? renderFormationPlaybook(gp, pbFormTab) : renderPlaybookGroups(gp));
   })()}
           </details>`}
@@ -1727,13 +1728,11 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
   });
   root.querySelectorAll("input[data-fpb]").forEach((sl) => {
     sl.addEventListener("input", (e) => {
-      // M2 per-look: data-fpbform is a LOOK key ("fid" or "fid|variation").
-      // FORK ON FIRST WRITE — a look still inheriting copies the base sheet
-      // byte-for-byte, then the slide edits the copy (#43: no echo).
+      // data-fpbform is a LOOK key ("fid" or "fid|variation"). Each look owns its
+      // sheet outright now (the book seeds it), so a slide just writes the value
+      // — no fork-on-first-write copy, no inherit-base to protect (2026-08-18).
       const key = sl.dataset.fpbform, nm = sl.dataset.fpb;
       const all = gp.formationPlaybooks || (gp.formationPlaybooks = {});
-      const { id: _fid, variation: _vk } = splitSheetKey(key);
-      if (_vk && !(all[key] && Object.keys(all[key]).length)) all[key] = { ...(all[_fid] || {}) };
       const sheet = all[key] || (all[key] = {});
       sheet[nm] = parseInt(e.target.value);
       const grp = root.querySelectorAll(`input[data-fpbgrp="${sl.dataset.fpbgrp}"]`);
@@ -1747,26 +1746,13 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
         el.classList.toggle("cw-benched", w === 0);
       });
     });
-    // the inherit pill goes stale mid-drag — refresh once the drag ends
-    sl.addEventListener("change", () => rerender());
-  });
-  root.querySelectorAll("[data-fpbclear]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      var _b;
-      const key = btn.dataset.fpbform, nm = btn.dataset.fpbclear;
-      const sheet = (_b = gp.formationPlaybooks) == null ? void 0 : _b[key];
-      if (sheet) {
-        delete sheet[nm];
-        if (!Object.keys(sheet).length) delete gp.formationPlaybooks[key];
-        if (!Object.keys(gp.formationPlaybooks || {}).length) delete gp.formationPlaybooks;
-      }
-      rerender();
-    });
+    // No mid-drag rerender any more — there are no pills to refresh, and a
+    // rerender while dragging is jarring. The live % text above updates in place.
   });
   (_k = root.querySelector("#fpb-reset")) == null ? void 0 : _k.addEventListener("click", () => {
     var _b;
-    // M2: resetting a LOOK key drops its fork (it inherits the base sheet
-    // again); resetting a base key drops the formation's base sheet.
+    // Reset drops this look's overrides so it falls back to the global default
+    // mix (the "All Plays" sheet). The label says as much.
     const key = (_b = root.querySelector("#fpb-reset")) == null ? void 0 : _b.dataset.fpbform;
     if (key && gp.formationPlaybooks) {
       delete gp.formationPlaybooks[key];
@@ -2735,116 +2721,9 @@ function normalizeFormations(offFormations, offFormation) {
     { id: "Power-I", weight: 20 }
   ].filter((f, i, arr) => arr.findIndex((x) => x.id === f.id) === i);
 }
-var BUILTIN_PLANS = [
-  {
-    name: "Air Raid",
-    blurb: "Empty sets, quick game, and a nickel defense that trusts its rush. Throw it to win it.",
-    gp: {
-      offFormations: [{ id: "Air Raid", weight: 45 }, { id: "Empty", weight: 30 }, { id: "Spread", weight: 25 }],
-      defBaseFront: "Nickel",
-      tendency: "Heavy Pass",
-      rushInPct: 45,
-      passDepth: { short: 40, medium: 38, deep: 22 },
-      blitzPct: 25,
-      pressureSource: { edge: 45, interior: 20, secondary: 35 },
-      coverageScheme: "aggressive",
-      greenDog: false,
-      spyQB: false,
-      targetShares: { WR1: 26, WR2: 22, WR3: 20, TE1: 14, RB1: 18 },
-      fourthDown: "Aggressive",
-      maxFGDist: 42,
-      situations: {},
-      baseTempo: "Hurry"
-    }
-  },
-  {
-    name: "Spread Option",
-    blurb: "Pistol RPOs and option football on the ground, tempo to wear them down, four-down mindset.",
-    gp: {
-      offFormations: [{ id: "Pistol/RPO", weight: 45 }, { id: "Spread", weight: 30 }, { id: "Flexbone", weight: 25 }],
-      defBaseFront: "4-3",
-      tendency: "Run",
-      rushInPct: 65,
-      passDepth: { short: 45, medium: 38, deep: 17 },
-      blitzPct: 20,
-      pressureSource: { edge: 50, interior: 25, secondary: 25 },
-      coverageScheme: "balanced",
-      greenDog: false,
-      spyQB: false,
-      targetShares: { WR1: 22, WR2: 20, WR3: 16, TE1: 20, RB1: 22 },
-      fourthDown: "Aggressive",
-      maxFGDist: 42,
-      situations: {},
-      baseTempo: "Hurry"
-    }
-  },
-  {
-    name: "Pro Balanced",
-    blurb: "A little of everything. Run to set up the pass, a sound 4-3, no wasted risk. The safe start.",
-    gp: {
-      offFormations: [{ id: "Single Back", weight: 40 }, { id: "Power-I", weight: 30 }, { id: "Spread", weight: 30 }],
-      defBaseFront: "4-3",
-      tendency: "Balanced",
-      rushInPct: 60,
-      passDepth: { short: 40, medium: 40, deep: 20 },
-      blitzPct: 20,
-      pressureSource: { edge: 50, interior: 20, secondary: 30 },
-      coverageScheme: "balanced",
-      greenDog: false,
-      spyQB: false,
-      targetShares: { WR1: 22, WR2: 20, WR3: 16, TE1: 20, RB1: 14 },
-      fourthDown: "Moderate",
-      maxFGDist: 44,
-      situations: {},
-      baseTempo: "Normal"
-    }
-  },
-  {
-    name: "Bend-Don't-Break",
-    blurb: "Grind the clock, lean on the run, keep everything in front on defense. Win the field-position game.",
-    gp: {
-      offFormations: [{ id: "Power-I", weight: 40 }, { id: "Single Back", weight: 35 }, { id: "Jumbo", weight: 25 }],
-      defBaseFront: "4-3",
-      tendency: "Heavy Run",
-      rushInPct: 72,
-      passDepth: { short: 52, medium: 33, deep: 15 },
-      blitzPct: 10,
-      pressureSource: { edge: 45, interior: 30, secondary: 25 },
-      coverageScheme: "conservative",
-      greenDog: false,
-      spyQB: true,
-      targetShares: { WR1: 20, WR2: 18, WR3: 12, TE1: 24, RB1: 26 },
-      fourthDown: "Conservative",
-      maxFGDist: 40,
-      situations: {},
-      baseTempo: "Chew"
-    }
-  },
-  {
-    name: "Blitz Everything",
-    blurb: "Bring the house from a 3-4, dare them to beat man coverage, and take the ball away. High risk, high reward.",
-    gp: {
-      offFormations: [{ id: "Spread", weight: 40 }, { id: "Single Back", weight: 35 }, { id: "Trips/Bunch", weight: 25 }],
-      defBaseFront: "3-4",
-      tendency: "Balanced",
-      rushInPct: 58,
-      passDepth: { short: 42, medium: 38, deep: 20 },
-      blitzPct: 45,
-      pressureSource: { edge: 45, interior: 35, secondary: 20 },
-      coverageScheme: "aggressive",
-      greenDog: true,
-      spyQB: false,
-      targetShares: { WR1: 22, WR2: 20, WR3: 16, TE1: 20, RB1: 14 },
-      fourthDown: "Aggressive",
-      maxFGDist: 44,
-      situations: {},
-      baseTempo: "Normal"
-    }
-  }
-];
-function builtinPlan(name) {
-  return BUILTIN_PLANS.find((p) => p.name === name) || null;
-}
+// BUILTIN_PLANS / builtinPlan removed 2026-08-17 (owner): the five whole-game
+// presets predate the offense/defense book split and are gone from every
+// surface. Starter books + Workshop creations are the only shipped plans now.
 function applyPlanToSchool(school, gp) {
   // Loading a plan REPLACES the plan — it must not inherit hidden settings from
   // whatever was there before. A built-in preset is PARTIAL (it only names the
@@ -2878,11 +2757,11 @@ function applyPlanToSchool(school, gp) {
 function applyStartingChoices(school, startPlan, startDef) {
   if (!school || !school.gameplan) return;
   const assignGp = (merged) => { for (const k of Object.keys(school.gameplan)) { if (!k.startsWith("_")) delete school.gameplan[k]; } Object.assign(school.gameplan, merged); };
-  const startBuiltin = startPlan && !startPlan.startsWith("pb:") && !startPlan.startsWith("dpb:") ? builtinPlan(startPlan) : null;
-  if (startBuiltin) applyPlanToSchool(school, startBuiltin.gp);
-  else if (startPlan && startPlan.startsWith("dpb:")) {
+  // The whole-game presets are gone (owner, 2026-08-17): startPlan is only ""
+  // (team default), a starter book (dpb:), or a Workshop playbook (pb:).
+  if (startPlan && startPlan.startsWith("dpb:")) {
     const book = defaultOffBook(startPlan.slice(4));
-    if (book) { try { assignGp(applyPlaybookToGameplan(book, school.gameplan)); delete school.gameplan._bookSourceId; delete school.gameplan._bookSourceSaved; } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's plan`, "warning"); } }
+    if (book) { try { assignGp(applyPlaybookToGameplan(book, school.gameplan)); delete school.gameplan._bookSourceId; delete school.gameplan._bookSourceSaved; school.gameplan._bookStarter = book.name; } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's plan`, "warning"); } }
   } else if (startPlan && startPlan.startsWith("pb:")) {
     const id = startPlan.slice(3);
     const pbRaw = loadCreationData("playbooks", id);
@@ -2892,7 +2771,7 @@ function applyStartingChoices(school, startPlan, startDef) {
         try {
           assignGp(applyPlaybookToGameplan(rep.data, school.gameplan));
           const entry = getCreation("playbooks", id);
-          school.gameplan._bookSourceId = id;
+          school.gameplan._bookSourceId = id; delete school.gameplan._bookStarter;
           school.gameplan._bookSourceSaved = (entry == null ? void 0 : entry.saved) || Date.now();
           if (rep.changes.length) notify(`Playbook updated for this build: ${rep.changes[0]}`, "warning");
         } catch (e) { notify(`Couldn't apply "${pbRaw.name || "playbook"}" — starting with the staff's plan`, "warning"); }
@@ -2901,7 +2780,7 @@ function applyStartingChoices(school, startPlan, startDef) {
   }
   if (startDef && startDef.startsWith("ddb:")) {
     const book = defaultDefBook(startDef.slice(4));
-    if (book) { try { assignGp(applyDefBookToGameplan(book, school.gameplan)); delete school.gameplan._defbookSourceId; delete school.gameplan._defbookSourceSaved; } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's defense`, "warning"); } }
+    if (book) { try { assignGp(applyDefBookToGameplan(book, school.gameplan)); delete school.gameplan._defbookSourceId; delete school.gameplan._defbookSourceSaved; school.gameplan._defbookStarter = book.name; } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's defense`, "warning"); } }
   } else if (startDef && startDef.startsWith("dd:")) {
     const id = startDef.slice(3);
     const dbRaw = loadCreationData("defbooks", id);
@@ -2911,7 +2790,7 @@ function applyStartingChoices(school, startPlan, startDef) {
         try {
           assignGp(applyDefBookToGameplan(rep.data, school.gameplan));
           const entry = getCreation("defbooks", id);
-          school.gameplan._defbookSourceId = id;
+          school.gameplan._defbookSourceId = id; delete school.gameplan._defbookStarter;
           school.gameplan._defbookSourceSaved = (entry == null ? void 0 : entry.saved) || Date.now();
           if (rep.changes.length) notify(`Defense updated for this build: ${rep.changes[0]}`, "warning");
         } catch (e) { notify(`Couldn't apply "${dbRaw.name || "defense"}" — starting with the staff's defense`, "warning"); }
@@ -2952,9 +2831,6 @@ function renderPlanSlots(school) {
       <button class="btn-ghost btn-sm" id="btn-gp-to-library">Save Plan</button>` : ""}
     <select class="form-select plan-lib-select" id="gp-lib-load"${state._coachId ? "" : ` style="margin-left:auto"`}>
       <option value="">Load a plan\u2026</option>
-      <optgroup label="Preset plans">
-        ${BUILTIN_PLANS.map((p) => `<option value="builtin:${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join("")}
-      </optgroup>
       ${lib.length ? `<optgroup label="My plans">
         ${lib.map((p) => `<option value="lib:${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join("")}
       </optgroup>` : ""}
@@ -2984,15 +2860,29 @@ function setupListeners() {
     if (!school2) return;
     const gp2 = school2.gameplan;
     if (btn.dataset.gpEditbook === "off") {
-      state.ui.pb = playbookFromGameplan(gp2, gp2._playbookName || `${school2.name} Offense`);
-      state.ui.pbId = null; state.ui.pbExpand = null; state.ui.pbInfo = null; state.ui.pbPreview = null;
+      // Prefer the full STARTER book the coach opened with (re-opens the exact
+      // book); playbookFromGameplan extracts losslessly for offense as the
+      // fallback. 2026-08-18.
+      let pb = null;
+      if (gp2._bookStarter) { const b = defaultOffBook(gp2._bookStarter); if (b) pb = JSON.parse(JSON.stringify(b)); }
+      if (!pb) pb = playbookFromGameplan(gp2, gp2._playbookName || `${school2.name} Offense`);
+      state.ui.pb = pb;
+      state.ui.pbId = null; state.ui.pbPlays = null; state.ui.pbInfo = null; state.ui.pbPreview = null;
       state.ui.pbContext = "career";
     } else {
       let db = null;
+      // 1) a Workshop source creation, if the carried defense came from one.
       if (gp2._defbookSourceId) {
         const raw = loadCreationData("defbooks", gp2._defbookSourceId);
         if (raw) { const rep = repairCreation("defbooks", raw); if (rep.ok) db = rep.data; }
       }
+      // 2) the STARTER book the coach picked — re-opens the WHOLE book: front mix,
+      // shelves (the named calls) AND vs-personnel answers. Without this,
+      // defBookFromGameplan returned an identity-only extract and the call sheet
+      // came up EMPTY (owner, 2026-08-18). _defbookStarter is a dedicated marker
+      // ai.js never clobbers (unlike _defbookName).
+      if (!db && gp2._defbookStarter) { const b = defaultDefBook(gp2._defbookStarter); if (b) db = JSON.parse(JSON.stringify(b)); }
+      // 3) last resort: the identity extract (fronts/scheme only, no calls).
       if (!db) db = defBookFromGameplan(gp2, gp2._defbookName || `${school2.name} Defense`);
       state.ui.def = { ...emptyDefBook(db.name), ...db, frontMix: { ...(db.frontMix || {}) }, pressureSource: { ...(db.pressureSource || {}) }, shelves: JSON.parse(JSON.stringify(db.shelves || {})), answers: { ...(db.answers || {}) } };
       state.ui.defId = null; state.ui.defCard = null;
@@ -3049,14 +2939,7 @@ function setupListeners() {
     const sep = raw.indexOf(":");
     const kind = sep >= 0 ? raw.slice(0, sep) : "lib";
     const planName = sep >= 0 ? raw.slice(sep + 1) : raw;
-    if (kind === "builtin") {
-      const bp = builtinPlan(planName);
-      if (!bp) return;
-      applyPlanToSchool(school2, bp.gp);
-      notify(`"${bp.name}" preset loaded`, "success");
-      rerender();
-      return;
-    }
+    // The "builtin:" preset load path is gone (owner, 2026-08-17).
     // Starter books (defaultbooks.js): same one-side swap as Workshop loads.
     if (kind === "dpb" || kind === "ddb") {
       const book = kind === "dpb" ? defaultOffBook(planName) : defaultDefBook(planName);
@@ -3066,9 +2949,10 @@ function setupListeners() {
         for (const k of Object.keys(school2.gameplan)) { if (!k.startsWith("_")) delete school2.gameplan[k]; }
         Object.assign(school2.gameplan, merged);
         // Stage 3: a starter book replaces this side — its Workshop identity
-        // (if any) comes off.
-        if (kind === "dpb") { delete school2.gameplan._bookSourceId; delete school2.gameplan._bookSourceSaved; }
-        else { delete school2.gameplan._defbookSourceId; delete school2.gameplan._defbookSourceSaved; }
+        // (if any) comes off, and the STARTER marker goes on so "Edit book"
+        // re-opens the whole starter (shelves+answers included, 2026-08-18).
+        if (kind === "dpb") { delete school2.gameplan._bookSourceId; delete school2.gameplan._bookSourceSaved; school2.gameplan._bookStarter = book.name; }
+        else { delete school2.gameplan._defbookSourceId; delete school2.gameplan._defbookSourceSaved; school2.gameplan._defbookStarter = book.name; }
         try { synthesizeTeamPlan(school2, { force: true }); } catch (e) {}
         notify(`"${book.name}" ${kind === "dpb" ? "offense" : "defense"} loaded`, "success");
       } catch (err) { notify("Could not load that book", "warning"); }
@@ -3099,10 +2983,10 @@ function setupListeners() {
         {
           const _entry = getCreation(shelf, planName);
           if (kind === "pb") {
-            school2.gameplan._bookSourceId = planName;
+            school2.gameplan._bookSourceId = planName; delete school2.gameplan._bookStarter;
             school2.gameplan._bookSourceSaved = (_entry == null ? void 0 : _entry.saved) || Date.now();
           } else {
-            school2.gameplan._defbookSourceId = planName;
+            school2.gameplan._defbookSourceId = planName; delete school2.gameplan._defbookStarter;
             school2.gameplan._defbookSourceSaved = (_entry == null ? void 0 : _entry.saved) || Date.now();
           }
         }
@@ -3231,24 +3115,21 @@ function conceptHint(name, c) {
 // concepts inherit the global weight (the pill shows which is which); an empty
 // sheet means the formation just runs the global book, exactly as before.
 function renderFormationPlaybook(gp, key) {
-  var _a, _b;
-  // M2 per-look sheets: `key` is a LOOK key — "fid" (the base sheet) or
-  // "fid|variation" (that look's own sheet). A look that hasn't forked
-  // INHERITS the formation's base sheet; sliding anything here forks it.
+  var _a;
+  // `key` is a LOOK key — "fid" or "fid|variation". Reworked 2026-08-18 (owner):
+  // the inherit-base / fork model is GONE from this screen. A starting book is
+  // always applied, so every look already owns its full sheet — there is no
+  // "unset / inherits the base" state to explain, and the per-play "set here /
+  // from base sheet" pills that marked it were always-on clutter. Now it's just:
+  // this look's plays, weight the mix, bench with 0, reset to the book's mix.
   const { id: fid, variation: vk } = splitSheetKey(key);
   const vset = FORMATION_VARIATIONS[fid];
   const lookLabel = vk ? `${fid} ${(vset && vset[vk] && vset[vk].label) || vk}` : fid;
   const carry = FORMATION_PLAYBOOK[fid] || [];
   const global = gp.conceptWeights || {};
   const own = ((_a = gp.formationPlaybooks) == null ? void 0 : _a[key]) || {};
-  const base = vk ? ((_b = gp.formationPlaybooks) == null ? void 0 : _b[fid]) || {} : own;
-  const forked = !vk || Object.keys(own).length > 0;
-  // effective sheet the sim resolves for this look: own fork, else base
-  const sheet = forked ? own : base;
-  const nAuthored = Object.keys(own).length;
-  const inheritNote = vk && !forked && Object.keys(base).length
-    ? `<b>Inheriting the ${escapeHtml(fid)} base sheet</b> (${Object.keys(base).length} play${Object.keys(base).length === 1 ? "" : "s"} set there) — slide anything to give this look its own sheet.`
-    : null;
+  const effW = (nm) => { const v = own[nm] != null ? own[nm] : global[nm]; return v != null ? v : 50; };
+  const onN = carry.filter((nm) => effW(nm) > 0).length;
   const groups = [
     ["QUICK GAME", Object.entries(PASS_CONCEPTS).filter(([nm, c]) => c.depth === "short" && carry.includes(nm))],
     ["DROPBACK", Object.entries(PASS_CONCEPTS).filter(([nm, c]) => c.depth === "medium" && carry.includes(nm))],
@@ -3257,26 +3138,19 @@ function renderFormationPlaybook(gp, key) {
     ["PERIMETER RUN GAME", Object.entries(RUN_CONCEPTS).filter(([nm, c]) => c.type === "run_outside" && carry.includes(nm))]
   ].filter(([, list]) => list.length);
   return `
-  <div class="cw-explain">This is <b>${escapeHtml(lookLabel)}'s own call sheet</b> — ${carry.length} plays it actually runs.
-  Slide a play here and the change applies only to snaps out of this look; anything you don't touch
-  <b>uses your base playbook</b>. 0 is still a cut — benched here means never called from this look.
-  ${inheritNote ? inheritNote : nAuthored ? `<b>${nAuthored} play${nAuthored === 1 ? "" : "s"} set here.</b>` : "Nothing set yet — this look runs your base playbook."}</div>
-  ${nAuthored ? `<div class="gp-row"><button class="gp-option gp-option-sm" id="fpb-reset" data-fpbform="${escapeHtml(key)}">${vk ? `Reset — inherit the ${escapeHtml(fid)} sheet again` : `Reset ${escapeHtml(fid)} to your base playbook`}</button></div>` : ""}
+  <div class="cw-explain"><b>${escapeHtml(lookLabel)}'s call sheet</b> — ${onN} of ${carry.length} plays live. Slide to weight the mix; drop a play to <b>bench</b> it (0 = never called out of this look). Reset returns this look to the book's mix.</div>
+  <div class="gp-row"><button class="gp-option gp-option-sm" id="fpb-reset" data-fpbform="${escapeHtml(key)}">Reset ${escapeHtml(lookLabel)} to the book's mix</button></div>
   ${groups.map(([title, list], gi) => {
-    const eff = (nm) => { var _c; return (_c = sheet[nm] != null ? sheet[nm] : global[nm]) != null ? _c : 50; };
-    const gTot = list.reduce((t, [nm]) => t + eff(nm), 0) || 1;
+    const gTot = list.reduce((t, [nm]) => t + effW(nm), 0) || 1;
     return `
     <div class="cw-group">
       <div class="cw-group-hdr">${title}</div>
       ${list.map(([name, c]) => {
-        const authored = own[name] != null;
-        const w = eff(name);
+        const w = effW(name);
         const shr = Math.round(100 * w / gTot);
         return `
         <div class="cw-row">
-          <div class="cw-name">${escapeHtml(name)} <span class="cw-hint">${conceptHint(name, c)}</span>
-            ${authored ? `<button class="cw-offsheet" data-fpbclear="${escapeHtml(name)}" data-fpbform="${escapeHtml(key)}" title="Set for ${escapeHtml(lookLabel)} — tap to go back to your base playbook">set here · tap to reset</button>` : vk && !forked && base[name] != null ? `<span class="cw-offsheet cw-inherited" title="Inherited from the ${escapeHtml(fid)} base sheet">from base sheet</span>` : ""}
-          </div>
+          <div class="cw-name">${escapeHtml(name)} <span class="cw-hint">${conceptHint(name, c)}</span></div>
           <div class="gp-slider-wrap">
             <span class="gp-slider-lo">bench</span>
             <input class="gp-slider" type="range" min="0" max="100" step="5" value="${w}" data-fpb="${escapeHtml(name)}" data-fpbform="${escapeHtml(key)}" data-fpbgrp="${gi}" />
@@ -3455,4 +3329,4 @@ SIMPLE_SITS = [
   { key: "four_min_lead", label: "When Leading Late", cells: ["four_min_lead"] }
 ];
 
-export { BUILTIN_PLANS, applyPlanToSchool, applyStartingChoices, builtinPlan, gameplanIsSimple, renderGameplan, renderHalftimeAdjust, renderSituationsSection, setupListeners, wireDefaultsListeners, wireSituationListeners };
+export { applyPlanToSchool, applyStartingChoices, gameplanIsSimple, renderGameplan, renderHalftimeAdjust, renderSituationsSection, setupListeners, wireDefaultsListeners, wireSituationListeners };

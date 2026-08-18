@@ -1,9 +1,9 @@
 import { state, rerender, notify, navigate, getPlayerSchool } from '../../state.js';
 import { FORMATION_PACKAGES, FORMATION_PLAYBOOK, FORMATION_VARIATIONS, aliasFormation } from '../../constants.js';
-import { emptyPlaybook, validatePlaybook, legalConceptsForFormation, fittingConceptsForFormation, lookSheetKey, resolveLookSheet } from '../../engine/playbook.js';
+import { emptyPlaybook, validatePlaybook, fittingConceptsForFormation, lookSheetKey, resolveLookSheet } from '../../engine/playbook.js';
 import { applyEditedBookToSchool, pushBookToWorkshop } from '../../engine/bookpush.js';
 import { listCreations, loadCreationData, saveCreation, deleteCreation } from '../../engine/creator.js';
-import { DEFAULT_OFF_BOOKS, autoSheetForFormation } from '../../engine/defaultbooks.js';
+import { DEFAULT_OFF_BOOKS } from '../../engine/defaultbooks.js';
 import { renderFormationDiagram, renderConceptThumb, playAssignments } from './routeart.js';
 import { conceptBlurb } from './conceptblurbs.js';
 
@@ -32,6 +32,16 @@ function topFormation(book) {
 // the screen on top. Editor state lives in state.ui.pb.
 function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 function _pb() { return state.ui.pb; }
+// Every play that FITS a look's personnel, all selected, at a flat weight
+// (owner, 2026-08-18). A variation is its OWN formation: the empty look never
+// carries a handoff, because a back-needing play doesn't fit empty personnel
+// and is never added. fittingConceptsForFormation is variation-aware; passing
+// the variation is what makes a look independent of its base.
+function allFittingSheet(fid, vk) {
+  const sheet = {};
+  for (const c of fittingConceptsForFormation(fid, vk || undefined)) sheet[c] = 50;
+  return sheet;
+}
 // ── M5 embedded editing (#39): the SAME editor, opened from the Game Plan ───
 // state.ui.pbContext === "career" means the book being edited is the one the
 // coach CARRIES in his dynasty/season — Save writes it to the league save
@@ -71,75 +81,25 @@ function renderPlaybookList() {
 }
 function renderPlaybookEditor() {
   const pb = _pb();
-  const carried = new Map((pb.formations || []).map((f) => [aliasFormation(f.id), f]));
-  const expand = state.ui.pbExpand || null;
   const v = validatePlaybook(pb);
   const formRows = Object.keys(FORMATION_PACKAGES).map((fid) => {
-    const legal = legalConceptsForFormation(fid);
     const vset = FORMATION_VARIATIONS[fid];
-    // A formation can carry SEVERAL looks at once — Base + any variations — each a
-    // separate weighted entry in pb.formations (same id, different .variation).
+    // A formation can carry SEVERAL looks at once — Base + any variations — each
+    // a separate weighted entry in pb.formations (same id, different .variation).
     const entryFor = (vk) => (pb.formations || []).find((f) => aliasFormation(f.id) === fid && (f.variation || "") === vk);
     const looks = [{ key: "", label: "Base", pers: personnelStr(fid) }].concat(
       Object.entries(vset || {}).map(([vk, vd]) => ({ key: vk, label: vd.label, pers: variationPers(fid, vk) }))
     );
     const onLooks = looks.filter((l) => entryFor(l.key));
     const anyOn = onLooks.length > 0;
-    // ── M2 per-look sheets (#43): each LOOK edits its own plays ─────────────
-    // A look without its own sheet INHERITS the base sheet (shown as such);
-    // the first edit forks it. The expanded grid always belongs to ONE look.
-    const openLook = expand && expand.indexOf("|") >= 0 && expand.slice(0, expand.indexOf("|")) === fid ? expand.slice(expand.indexOf("|") + 1) : null;
-    const open = openLook != null && !!entryFor(openLook);
-    const sheetOf = (vk) => resolveLookSheet(pb.sheets, fid, vk || null) || {};
-    const ownSheet = (vk) => {
-      const s = pb.sheets && pb.sheets[lookSheetKey(fid, vk || null)];
-      return s && Object.keys(s).length ? s : null;
-    };
-    let concepts = "";
-    if (anyOn && open) {
-      const vk = openLook;
-      const sheet = sheetOf(vk);
-      const inherited = !!vk && !ownSheet(vk);
-      const fits = new Set(fittingConceptsForFormation(fid, vk || undefined));
-      const lookLabel = vk ? (vset && vset[vk] && vset[vk].label) || vk : "Base";
-      const pill = vk ? inherited
-        ? `<span class="pb-sheet-pill muted">inherits the ${esc(fid)} base sheet — first edit gives ${esc(lookLabel)} its own</span>`
-        : `<span class="pb-sheet-pill">its own sheet <button type="button" class="pb-unfork" data-pb-unfork="${esc(fid)}|${esc(vk)}" title="Drop this look's sheet and inherit the base sheet again">↩ inherit base</button></span>`
-        : `<span class="pb-sheet-pill muted">the ${esc(fid)} base sheet — looks without their own sheet inherit it</span>`;
-      // D4/M2 (#12/#14): the grid's cards draw THIS look's alignment, and an
-      // ℹ corner opens the big card — full-size art with the line's jobs
-      // drawn, the purpose blurb (#21), and EVERY MAN'S JOB (#16).
-      const info = state.ui.pbInfo && state.ui.pbInfo.fid === fid && (state.ui.pbInfo.vk || "") === (vk || "") ? state.ui.pbInfo : null;
-      let infoPanel = "";
-      if (info && legal.includes(info.concept)) {
-        const blurb = conceptBlurb(info.concept);
-        const jobs = playAssignments({ name: info.concept }, { formation: fid, variation: vk || undefined });
-        infoPanel = `<div class="pb-cinfo">
-          <div class="pb-cinfo-head"><span class="pb-cinfo-name">${esc(info.concept)}</span><button type="button" class="btn-mm-del" data-pb-infoclose="1" aria-label="Close play info">✕</button></div>
-          ${blurb ? `<div class="pb-cinfo-blurb">${esc(blurb)}</div>` : ""}
-          <span class="pb-cinfo-art">${renderConceptThumb(info.concept, { w: 340, h: 215, formation: fid, variation: vk || undefined, jobs: true })}</span>
-          <div class="cs-jobs-list">${jobs.rows.map((r) => `<div class="cs-job-row"><b>${esc(r.label)}</b><span class="cs-job-pos">${esc(r.pos)}</span><span class="cs-job-text">${esc(r.job)}</span></div>`).join("")}</div>
-        </div>`;
-      }
-      concepts = `<div class="pb-sheet-head"><b>${esc(fid)}${vk ? ` · ${esc(lookLabel)}` : ""}</b> ${pill}</div>
-      ${infoPanel}
-      <div class="concept-grid">${legal.map((c) => {
-        const sel = sheet[c] != null;
-        const misfit = !fits.has(c);
-        return `<button type="button" class="concept-card${sel ? " on" : ""}${misfit ? " misfit" : ""}" data-pb-concept="${esc(fid)}|${esc(vk)}|${esc(c)}" aria-pressed="${sel}"${misfit ? ` title="Doesn't fit this look's personnel"` : ` title="${esc(conceptBlurb(c) || c)}"`}>
-        <span class="concept-card-thumb">${renderConceptThumb(c, { w: 120, h: 72, scale: 0.72, formation: fid, variation: vk || undefined })}</span>
-        <span class="concept-card-name">${esc(c)}${misfit ? " ⚠" : ""}</span>
-        <span class="concept-card-info" data-pb-cinfo="${esc(fid)}|${esc(vk)}|${esc(c)}" title="Every man's job on ${esc(c)}" role="button">ℹ</span>
-        <span class="concept-card-test" data-pb-testc="${esc(fid)}|${esc(c)}" title="Test ${esc(c)} on the bench" role="button">🧪</span>
-      </button>`;
-      }).join("")}</div>`;
-    }
+    // Each look owns its own sheet now (no inherit-base). "Plays (N)" opens the
+    // dedicated plays screen for that one look — the grid, info, and test live
+    // there, not inline, so this card stays a compact list row.
+    const sheetOf = (vk) => (pb.sheets && pb.sheets[lookSheetKey(fid, vk || null)]) || resolveLookSheet(pb.sheets, fid, vk || null) || {};
     const lookGrid = `<div class="fb-look-grid">${looks.map((l) => {
       const e = entryFor(l.key);
       const inc = !!e;
       const nOn = inc ? Object.keys(sheetOf(l.key)).length : 0;
-      const forked = inc && !!l.key && !!ownSheet(l.key);
-      const isOpen = open && openLook === l.key;
       return `<div class="fb-look-card${inc ? " on" : ""}">
         <button type="button" class="fb-look-pick" data-pb-look="${esc(fid)}|${esc(l.key)}" title="${esc(l.pers)}">
           <span class="fb-look-dia">${renderFormationDiagram(fid, { variation: l.key || undefined, w: 118, h: 74 })}</span>
@@ -147,18 +107,17 @@ function renderPlaybookEditor() {
           <span class="fb-look-pers">${esc(l.pers)}</span>
         </button>
         ${inc ? `<label class="fb-look-wlbl">Usage <input class="pb-weight fb-look-weight" type="number" min="0" max="99" value="${e.weight != null ? e.weight : 0}" data-pb-lookweight="${esc(fid)}|${esc(l.key)}"/></label>` : ""}
-        ${inc ? `<button type="button" class="fb-look-plays pb-expand" data-pb-expand="${esc(fid)}|${esc(l.key)}">${isOpen ? "Hide plays ▴" : `Plays (${nOn}${l.key && !forked ? " · base" : ""}) ▾`}</button>` : ""}
+        ${inc ? `<button type="button" class="fb-look-plays" data-pb-plays="${esc(fid)}|${esc(l.key)}">Plays (${nOn}) →</button>` : ""}
         <button type="button" class="fb-look-test" data-pb-test="${esc(fid)}|${esc(l.key)}" title="Test this look on the bench">🧪 Test</button>
       </div>`;
     }).join("")}</div>`;
     const nDistinct = anyOn ? new Set(onLooks.flatMap((l) => Object.keys(sheetOf(l.key)))).size : 0;
-    return `<div class="pb-form fb-card${anyOn ? " on" : ""}${open ? " open" : ""}">
+    return `<div class="pb-form fb-card${anyOn ? " on" : ""}">
       <div class="fb-card-head-lite">
         <span class="fb-card-name">${esc(fid)}</span>
         ${anyOn ? `<span class="fb-card-count">${onLooks.length} look${onLooks.length === 1 ? "" : "s"} · ${nDistinct} play${nDistinct === 1 ? "" : "s"}</span>` : `<span class="fb-card-add muted">pick a look to add</span>`}
       </div>
       ${lookGrid}
-      ${concepts}
     </div>`;
   }).join("");
   const msg = v.errors.length ? `<div class="pb-msg err">${esc(v.errors[0])}</div>` : v.warnings.length ? `<div class="pb-msg warn">${esc(v.warnings[0])}</div>` : `<div class="pb-msg ok">Ready to save.</div>`;
@@ -173,6 +132,72 @@ function renderPlaybookEditor() {
       <button class="btn-mm btn-mm-new" data-pb-save="1"${v.errors.length ? " disabled" : ""}>${career ? "Save to My Season" : "Save Playbook"}</button>
       ${career ? `<button class="btn-mm btn-mm-secondary" data-pb-push="1"${v.errors.length ? " disabled" : ""}>⤴ Push to Workshop</button>` : ""}
       <button class="btn-mm btn-mm-secondary" data-pb-cancel="1">Cancel</button>
+    </div>
+  </div>`;
+}
+// ── The Plays screen (owner, 2026-08-18) ────────────────────────────────────
+// One look's play grid, on its own page — moved out of the builder so the
+// builder stays a clean list and the grid never reflows a responsive card row.
+// Every legal play for the look is a card; the selected ones are lit; tapping
+// toggles. Info (every man's job) opens inline here where there's room, and the
+// bench test lives here too. state.ui.pbPlays = { fid, vk } is the open look.
+function renderPlaysScreen() {
+  const pb = _pb();
+  const sel = state.ui.pbPlays || {};
+  const fid = aliasFormation(sel.fid);
+  const vk = sel.vk || "";
+  const vset = FORMATION_VARIATIONS[fid];
+  const entry = (pb && pb.formations || []).find((f) => aliasFormation(f.id) === fid && (f.variation || "") === vk);
+  if (!pb || !entry) { state.ui.pbPlays = null; return renderPlaybookEditor(); }
+  const lookLabel = vk ? (vset && vset[vk] && vset[vk].label) || vk : "Base";
+  // A look shows only the plays that FIT its personnel — a variation is its own
+  // formation (owner, 2026-08-18), so there are no misfits to grey out.
+  const fits = fittingConceptsForFormation(fid, vk || undefined);
+  pb.sheets = pb.sheets || {};
+  const key = lookSheetKey(fid, vk || null);
+  const sheet = pb.sheets[key] || {};
+  const onN = Object.keys(sheet).length;
+  const persText = vk ? variationPers(fid, vk) : personnelStr(fid);
+  // The play-info panel (every man's job) opens for one concept at a time.
+  const info = state.ui.pbInfo && state.ui.pbInfo.fid === fid && (state.ui.pbInfo.vk || "") === (vk || "") ? state.ui.pbInfo : null;
+  let infoPanel = "";
+  if (info && fits.includes(info.concept)) {
+    const blurb = conceptBlurb(info.concept);
+    const jobs = playAssignments({ name: info.concept }, { formation: fid, variation: vk || undefined });
+    infoPanel = `<div class="pb-cinfo">
+      <div class="pb-cinfo-head"><span class="pb-cinfo-name">${esc(info.concept)}</span><button type="button" class="btn-mm-del" data-pb-infoclose="1" aria-label="Close play info">✕</button></div>
+      ${blurb ? `<div class="pb-cinfo-blurb">${esc(blurb)}</div>` : ""}
+      <span class="pb-cinfo-art">${renderConceptThumb(info.concept, { w: 340, h: 215, formation: fid, variation: vk || undefined, jobs: true })}</span>
+      <div class="cs-jobs-list">${jobs.rows.map((r) => `<div class="cs-job-row"><b>${esc(r.label)}</b><span class="cs-job-pos">${esc(r.pos)}</span><span class="cs-job-text">${esc(r.job)}</span></div>`).join("")}</div>
+    </div>`;
+  }
+  const grid = `<div class="concept-grid">${fits.map((c) => {
+    const on = sheet[c] != null;
+    return `<button type="button" class="concept-card${on ? " on" : ""}" data-pb-concept="${esc(fid)}|${esc(vk)}|${esc(c)}" aria-pressed="${on}" title="${esc(conceptBlurb(c) || c)}">
+      <span class="concept-card-thumb">${renderConceptThumb(c, { w: 120, h: 72, scale: 0.72, formation: fid, variation: vk || undefined })}</span>
+      <span class="concept-card-name">${esc(c)}</span>
+      <span class="concept-card-info" data-pb-cinfo="${esc(fid)}|${esc(vk)}|${esc(c)}" title="Every man's job on ${esc(c)}" role="button">ℹ</span>
+      <span class="concept-card-test" data-pb-testc="${esc(fid)}|${esc(c)}" title="Test ${esc(c)} on the bench" role="button">🧪</span>
+    </button>`;
+  }).join("")}</div>`;
+  return `<div class="creator-hub pb-plays-screen">
+    <div class="creator-hub-head">
+      <div class="pb-plays-title-row">
+        <span class="pb-plays-dia">${renderFormationDiagram(fid, { variation: vk || undefined, w: 130, h: 84 })}</span>
+        <div>
+          <div class="creator-title">${esc(fid)}${vk ? ` · ${esc(lookLabel)}` : ""}</div>
+          <div class="creator-sub">${esc(persText)} · ${onN} of ${fits.length} plays on — tap to toggle</div>
+        </div>
+      </div>
+    </div>
+    <div class="pb-plays-tools">
+      <button type="button" class="btn-ghost btn-sm" data-pb-allon="1">Select all</button>
+      <button type="button" class="btn-ghost btn-sm" data-pb-alloff="1">Clear all</button>
+    </div>
+    ${infoPanel}
+    ${grid}
+    <div class="pb-actions">
+      <button class="btn-mm btn-mm-new" data-pb-plays-back="1">← Done — back to the book</button>
     </div>
   </div>`;
 }
@@ -213,7 +238,10 @@ function renderPlaybookPreview() {
   </div>`;
 }
 function renderPlaybooksTab() {
-  const inner = state.ui.pbPreview ? renderPlaybookPreview() : _pb() ? renderPlaybookEditor() : renderPlaybookList();
+  const inner = state.ui.pbPreview ? renderPlaybookPreview()
+    : state.ui.pbPlays && _pb() ? renderPlaysScreen()
+    : _pb() ? renderPlaybookEditor()
+    : renderPlaybookList();
   return `<div class="creator-wrapper">${inner}</div>`;
 }
 function _syncName() {
@@ -224,7 +252,7 @@ function playbooksListeners() {
   document.querySelectorAll("[data-pb-open]").forEach((b) => b.addEventListener("click", () => {
     const id = b.dataset.pbOpen;
     const data = loadCreationData("playbooks", id);
-    if (data) { state.ui.pb = { ...data }; state.ui.pbId = id; state.ui.pbExpand = null; rerender(); }
+    if (data) { state.ui.pb = { ...data }; state.ui.pbId = id; state.ui.pbPlays = null; rerender(); }
   }));
   document.querySelectorAll("[data-pb-del]").forEach((b) => b.addEventListener("click", () => {
     deleteCreation("playbooks", b.dataset.pbDel); rerender();
@@ -236,16 +264,16 @@ function playbooksListeners() {
   document.querySelector("[data-pbv-edit]")?.addEventListener("click", (e) => {
     const id = e.currentTarget.dataset.pbvEdit;
     const data = loadCreationData("playbooks", id);
-    if (data) { state.ui.pb = { ...data }; state.ui.pbId = id; state.ui.pbExpand = null; }
+    if (data) { state.ui.pb = { ...data }; state.ui.pbId = id; state.ui.pbPlays = null; }
     state.ui.pbPreview = null; rerender();
   });
   document.querySelector("[data-pb-new]")?.addEventListener("click", () => {
-    state.ui.pb = emptyPlaybook("My Playbook"); state.ui.pbId = null; state.ui.pbExpand = null; rerender();
+    state.ui.pb = emptyPlaybook("My Playbook"); state.ui.pbId = null; state.ui.pbPlays = null; rerender();
   });
   document.querySelectorAll("[data-pb-preset]").forEach((b) => b.addEventListener("click", () => {
     const book = DEFAULT_OFF_BOOKS.find((x) => x.name === b.dataset.pbPreset);
     if (!book) return;
-    state.ui.pb = JSON.parse(JSON.stringify(book)); state.ui.pbId = null; state.ui.pbExpand = null; rerender();
+    state.ui.pb = JSON.parse(JSON.stringify(book)); state.ui.pbId = null; state.ui.pbPlays = null; rerender();
   }));
   // editor — add/remove a LOOK (base or a variation); each is its own weighted entry
   document.querySelectorAll("[data-pb-look]").forEach((b) => b.addEventListener("click", () => {
@@ -263,44 +291,52 @@ function playbooksListeners() {
       if (!pb.formations.some((f) => aliasFormation(f.id) === fid)) {
         if (pb.sheets) for (const k of Object.keys(pb.sheets)) { if (k === fid || k.startsWith(fid + "|")) delete pb.sheets[k]; }
       }
-      if (state.ui.pbExpand === `${fid}|${vk}`) state.ui.pbExpand = null;
+      // If the removed look's plays screen was open, close it.
+      if (state.ui.pbPlays && aliasFormation(state.ui.pbPlays.fid) === fid && (state.ui.pbPlays.vk || "") === vk) state.ui.pbPlays = null;
     } else {
       const entry = { id: fid, weight: 25 }; if (vk) entry.variation = vk;
-      pb.formations.push(entry); state.ui.pbExpand = `${fid}|${vk}`;
-      // #23 auto-select: a look arrives with its FITTING plays already chosen
-      // (the one shared fits-function), seeded with the SHIPPED sheet weights —
-      // not a flat everything-equal book. Deselect freely. Per-look law (M2):
-      // the BASE look seeds the base sheet; a variation look added while a
-      // base sheet exists simply INHERITS it (no fork until edited); a
-      // variation look added with no base sheet seeds its OWN sheet, so its
-      // auto-selection fits ITS personnel.
+      pb.formations.push(entry);
+      // A look arrives with every play that FITS ITS personnel already selected
+      // (owner, 2026-08-18). Each look seeds its OWN sheet — no inherit-base — and
+      // a variation is its own formation: the empty look never carries a handoff
+      // because a back-needing play doesn't fit it and is never added.
       pb.sheets = pb.sheets || {};
-      const baseLive = pb.sheets[fid] && Object.keys(pb.sheets[fid]).length;
-      if (!vk) {
-        if (!baseLive) {
-          const seeded = autoSheetForFormation(fid);
-          if (Object.keys(seeded).length) pb.sheets[fid] = seeded;
-        }
-      } else if (!baseLive) {
-        const key = lookSheetKey(fid, vk);
-        if (!pb.sheets[key] || !Object.keys(pb.sheets[key]).length) {
-          const seeded = autoSheetForFormation(fid, vk);
-          if (Object.keys(seeded).length) pb.sheets[key] = seeded;
-        }
+      const key = lookSheetKey(fid, vk);
+      if (!pb.sheets[key] || !Object.keys(pb.sheets[key]).length) {
+        pb.sheets[key] = allFittingSheet(fid, vk);
       }
     }
     rerender();
   }));
-  // M2: drop a look's forked sheet — it inherits the base sheet again
-  document.querySelectorAll("[data-pb-unfork]").forEach((b) => b.addEventListener("click", (e) => {
-    e.stopPropagation();
+  // Open the dedicated plays screen for one look.
+  document.querySelectorAll("[data-pb-plays]").forEach((b) => b.addEventListener("click", () => {
     _syncName();
-    const raw = b.dataset.pbUnfork; const sep = raw.indexOf("|");
-    const fid = aliasFormation(raw.slice(0, sep)); const vk = raw.slice(sep + 1);
-    const pb = _pb();
-    if (pb && pb.sheets) delete pb.sheets[lookSheetKey(fid, vk)];
+    const raw = b.dataset.pbPlays; const sep = raw.indexOf("|");
+    state.ui.pbPlays = { fid: aliasFormation(raw.slice(0, sep)), vk: raw.slice(sep + 1) || "" };
+    state.ui.pbInfo = null;
     rerender();
   }));
+  document.querySelector("[data-pb-plays-back]")?.addEventListener("click", () => {
+    state.ui.pbPlays = null; state.ui.pbInfo = null; rerender();
+  });
+  // The plays-screen tools: select-all / clear-all. "Select all" = every play
+  // that fits this look (the grid only shows fitting plays now, so there is no
+  // separate "only what fits").
+  const _playsCtx = () => {
+    const s = state.ui.pbPlays; if (!s) return null;
+    const fid = aliasFormation(s.fid), vk = s.vk || "";
+    const pb = _pb(); if (!pb) return null;
+    pb.sheets = pb.sheets || {};
+    return { pb, fid, vk, key: lookSheetKey(fid, vk || null) };
+  };
+  document.querySelector("[data-pb-allon]")?.addEventListener("click", () => {
+    const c = _playsCtx(); if (!c) return;
+    c.pb.sheets[c.key] = allFittingSheet(c.fid, c.vk); rerender();
+  });
+  document.querySelector("[data-pb-alloff]")?.addEventListener("click", () => {
+    const c = _playsCtx(); if (!c) return;
+    c.pb.sheets[c.key] = {}; rerender();
+  });
   // ── M1 test-bench entrance: any BUILT-IN look or concept, one tap ─────────
   const benchDefaults = () => ({ front: "4-3", coverage: "c3", bring: "4" });
   document.querySelectorAll("[data-pb-test]").forEach((b) => b.addEventListener("click", () => {
@@ -328,12 +364,6 @@ function playbooksListeners() {
     state.ui.benchReturn = _career() ? "gameplan" : null;
     navigate("bench");
   }));
-  document.querySelectorAll("[data-pb-expand]").forEach((b) => b.addEventListener("click", () => {
-    _syncName();
-    state.ui.pbExpand = state.ui.pbExpand === b.dataset.pbExpand ? null : b.dataset.pbExpand;
-    state.ui.pbInfo = null;
-    rerender();
-  }));
   // D4/M2: the ℹ corner — open/close the big card for one concept of the
   // open look (art + blurb + every man's job).
   document.querySelectorAll("[data-pb-cinfo]").forEach((el) => el.addEventListener("click", (e) => {
@@ -359,7 +389,11 @@ function playbooksListeners() {
   }));
   document.querySelectorAll("[data-pb-concept]").forEach((el) => el.addEventListener("click", () => {
     _syncName();
-    // M2 per-look (#43): "fid|vk|concept" — the edit lands on THAT look.
+    // "fid|vk|concept" — the toggle lands on THAT look's own sheet. Each look
+    // owns its sheet (seeded with all-legal on add), so there is no fork-on-edit
+    // and no inherit-base to protect against any more. An emptied sheet stays an
+    // empty object on purpose: the look keeps its own (now zero-play) sheet
+    // rather than falling back to inheriting the base — inherit-base is retired.
     const raw = el.dataset.pbConcept;
     const s1 = raw.indexOf("|"), s2 = raw.indexOf("|", s1 + 1);
     const fid = aliasFormation(raw.slice(0, s1));
@@ -368,16 +402,9 @@ function playbooksListeners() {
     const pb = _pb();
     pb.sheets = pb.sheets || {};
     const key = lookSheetKey(fid, vk);
-    // FORK ON FIRST EDIT: a variation look editing while it still inherits
-    // copies the base sheet byte-for-byte, then edits the copy — the base and
-    // every other look stay untouched (the #43 echo, killed).
-    if (vk && !(pb.sheets[key] && Object.keys(pb.sheets[key]).length)) {
-      pb.sheets[key] = { ...(pb.sheets[fid] || {}) };
-    }
     pb.sheets[key] = pb.sheets[key] || {};
     if (pb.sheets[key][concept] != null) delete pb.sheets[key][concept];
     else pb.sheets[key][concept] = 50;
-    if (!Object.keys(pb.sheets[key]).length) delete pb.sheets[key];
     rerender();
   }));
   document.querySelector("[data-pb-save]")?.addEventListener("click", () => {

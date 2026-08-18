@@ -46,6 +46,16 @@ await click('[data-nav="gameplan"]');
 await click('[data-gpsection="defense"]');
 check(await page.locator('[data-defsub="calls"]').count() === 1, 'Calls tab renders in Defense Defaults');
 await click('[data-defsub="calls"]');
+// 2026-08-18: a fresh dynasty now carries a FULL starter defense (12 named calls
+// at the MAX_DEF_CALLS cap), so the author flow can't add a 13th. Empty the
+// library via the UI Delete buttons first, to test authoring from a clean slate.
+for (let i = 0; i < 15; i++) {
+  const del = page.locator('[data-call-del]').first();
+  if (!(await del.count())) break;
+  await del.dispatchEvent('click').catch(() => {});
+  await page.waitForTimeout(150);
+}
+await page.waitForTimeout(300);
 check(await page.locator('#new-call-name').count() === 1, 'call author input renders');
 
 // ── author a call ──
