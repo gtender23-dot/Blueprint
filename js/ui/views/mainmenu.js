@@ -263,7 +263,22 @@ function renderTreeHome() {
   const t = getTree(mmTreeId);
   if (!t) {
     mmTreeId = null;
+    mmTreeHub = null;
     return renderCoachSelect(null);
+  }
+  // A chair's DNA page and record book, opened FROM THE TREE (2026-08-17, owner:
+  // "move all four onto the tree screen"). Both pages were already built and
+  // already worked \u2014 they hung off renderCoachHome, whose door stopped being
+  // rendered when the tree replaced the one-coach setup, so the code shipped
+  // with no way in. Nothing about the pages changed; they just have a handle
+  // again. Their Back is [data-mm-view="back"], which now clears mmTreeHub and
+  // lands on the TREE, never on a coach home the player never opened. The
+  // playbook library was deliberately NOT brought across (owner) \u2014 it lists
+  // the old per-coach plan store, which the Workshop superseded.
+  if (mmTreeHub) {
+    const hc = getCoach(mmTreeHub.coachId);
+    if (hc) return mmTreeHub.view === "records" ? renderCoachRecordBook(hc) : renderCoachDna(hc);
+    mmTreeHub = null;
   }
   const slots = t.slots || {};
   const started = Object.keys(slots).length > 0 || !!t.meta;
@@ -280,7 +295,7 @@ function renderTreeHome() {
   const sharedTotal = sharedRows.reduce((s, r) => s + r.xp, 0);
   return `
   <div class="mm-actions">
-    <div class="mm-section-label">\u{1F333} ${escapeHtml(t.name.toUpperCase())} — COACHING TREE</div>
+    <div class="mm-section-label">\u{1F333} ${escapeHtml(t.name.toUpperCase())}</div>
     <p class="mm-hub-hint">${started ? `One world, ${t.meta ? `Season ${t.meta.season}` : "in progress"} — every chair below is the same league on the same week. Pick who you want to be, then load in.` : "Nothing planted yet. Every tree starts the same way: one coach, one job, the bottom of the sport."}</p>
 
     <div class="mm-section-label" style="margin-top:6px">THE CHAIRS</div>
@@ -293,7 +308,11 @@ function renderTreeHome() {
             <span class="btn-mm-label">${s.active ? "▶ " : ""}${div} — ${escapeHtml(s.schoolName || "?")}</span>
             <span class="btn-mm-meta">Seated season ${(_a2 = s.seatedSeason) != null ? _a2 : "—"} \xB7 ${s.seasonsWorked || 0} season${(s.seasonsWorked || 0) === 1 ? "" : "s"} in the chair${s.active ? " \xB7 currently coaching" : ""}</span>
           </button>
-        </div>`;
+        </div>
+        ${s.coachId ? `<div class="mm-hub-btns mm-chair-hub">
+          <button class="btn-mm btn-mm-hub" data-mm-view="dna" data-mm-view-coach="${escapeHtml(s.coachId)}">\u{1F9EC} DNA & Bonuses</button>
+          <button class="btn-mm btn-mm-hub" data-mm-view="records" data-mm-view-coach="${escapeHtml(s.coachId)}">\u{1F4D6} Record Book</button>
+        </div>` : ""}`;
     if (!started && div === C.TREE.START_DIVISION) return mmNewTrunk ? `
         <div class="mm-newcoach">
           <input class="form-input" id="mm-tc-first" type="text" placeholder="First" aria-label="Coach first name" maxlength="16" autocomplete="off" />
@@ -322,9 +341,26 @@ function renderTreeHome() {
       <div class="mm-library">
         ${(t.ledger || []).slice().reverse().map((r) => `<div class="mm-lib-row"><span>\u{1F396} ${escapeHtml(r.name)}</span><span class="muted">${escapeHtml(r.title || "")} \xB7 ${r.seasons || 0} yr</span></div>`).join("")}
       </div>` : ""}
+    ${renderTreeSavedTeams(t)}
     ${renderTreeClassics(t)}
     <button class="btn-mm btn-mm-secondary" id="mm-back-trees" style="margin-top:12px">← Back</button>
   </div>`;
+}
+// SAVED TEAMS for a tree (re-homed 2026-08-17, owner). Saved teams are stored
+// per COACH, so the tree's shelf is the union of every seated chair's teams,
+// tagged with whose they are when the tree has more than one coach. Delete
+// carries its own coach id ([data-mm-team-coach]) because mmCoachId is null on
+// this screen — the tree path never sets it.
+function renderTreeSavedTeams(t) {
+  const seats = Object.values(t.slots || {}).filter((s) => s && s.coachId);
+  const rows = [];
+  for (const seat of seats) {
+    const c = getCoach(seat.coachId);
+    if (!c) continue;
+    for (const team of c.teams || []) rows.push({ team, coach: c, multi: seats.length > 1 });
+  }
+  const body = rows.length ? rows.map(({ team, coach, multi }) => `<div class="mm-lib-row"><span>\u{1F3C8} ${escapeHtml(team.name)}${team.season ? ` <small>\xB7 S${team.season}</small>` : ""}${multi ? ` <small class="muted">\xB7 ${escapeHtml(coach.name.last || coach.name.first || "")}</small>` : ""}</span><button class="btn-mm-del" data-mm-team-del="${escapeHtml(team.id)}" data-mm-team-coach="${escapeHtml(coach.id)}" title="Delete saved team" aria-label="Delete saved team ${escapeHtml(team.name)}">✕</button></div>`).join("") : '<div class="mm-lib-empty muted">Save your current roster and gameplan from the Game Plan screen, then load it in Play Now.</div>';
+  return '<div class="mm-section-label" style="margin-top:14px">SAVED TEAMS \xB7 PLAY NOW</div><div class="mm-library">' + body + "</div>";
 }
 // Instant Classics for a tree — read from the menu snapshot (t.meta.classics)
 // so the screen lists them without opening the world save. Same replay button
@@ -332,7 +368,9 @@ function renderTreeHome() {
 function renderTreeClassics(t) {
   var _a;
   const classics = (((_a = t.meta) == null ? void 0 : _a.classics) || []).slice().sort((a, b) => (b.saved || 0) - (a.saved || 0));
-  if (!classics.length) return "";
+  // The header stays even with nothing in it (2026-08-17). An absent shelf reads
+  // as "this build lost the feature"; an empty one reads as "nothing yet".
+  if (!classics.length) return '<div class="mm-section-label" style="margin-top:14px">INSTANT CLASSICS</div><div class="mm-classics"><div class="mm-lib-empty muted">Close finishes, comebacks and overtime games are archived here automatically.</div></div>';
   const slot = treeWorldKey(t.id);
   const body = classics.map((item) => {
     var _a2, _b2;
@@ -543,9 +581,12 @@ async function setupListeners2() {
     const f = (_b2 = (_a2 = document.getElementById("mm-nt-first")) == null ? void 0 : _a2.value) == null ? void 0 : _b2.trim();
     const l = (_d2 = (_c2 = document.getElementById("mm-nt-last")) == null ? void 0 : _c2.value) == null ? void 0 : _d2.trim();
     if (!f && !l) return;
-    // The tree is named for the coach's last name (fallback to first, then a
-    // generic — createTree caps the length).
-    const treeName = l || f || "The Tree";
+    // The tree is named for the coach's last name, the way coaching families are
+    // actually talked about — "the Tender tree" (owner, 2026-08-17; the stored
+    // name is the full phrase, which is what new_world_probe N1b asserts).
+    // Fallback to the first name, then a generic. createTree caps at 28 chars,
+    // and the name inputs cap at 16, so the phrase can't overflow.
+    const treeName = l || f ? `The ${l || f} Tree` : "The Tree";
     const t = createTree(treeName);
     if (!t) return;
     const c = createCoach(f || "Coach", l || "", { treeId: t.id });
@@ -576,6 +617,7 @@ async function setupListeners2() {
     rerender();
   }));
   (_l = document.getElementById("mm-back-trees")) == null ? void 0 : _l.addEventListener("click", () => {
+    mmTreeHub = null;
     mmTreeId = null;
     rerender();
   });
@@ -616,7 +658,13 @@ async function setupListeners2() {
   }));
   document.querySelectorAll("[data-mm-view]").forEach((b) => b.addEventListener("click", () => {
     const v = b.dataset.mmView;
-    mmView = v === "back" ? null : v;
+    // On the TREE path the button names its chair's coach, and the page is
+    // rendered by renderTreeHome via mmTreeHub. Back clears BOTH so it can never
+    // land on the coach home (new_world_probe N7e).
+    const who = b.dataset.mmViewCoach;
+    if (v === "back") { mmView = null; mmTreeHub = null; }
+    else if (who) mmTreeHub = { view: v, coachId: who };
+    else mmView = v;
     rerender();
   }));
   document.querySelectorAll("[data-mm-world]").forEach((b) => b.addEventListener("click", async () => {
@@ -721,7 +769,9 @@ async function setupListeners2() {
     rerender();
   }));
   document.querySelectorAll("[data-mm-team-del]").forEach((b) => b.addEventListener("click", () => {
-    deleteSavedTeam(mmCoachId, b.dataset.mmTeamDel);
+    // The tree's shelf names the owning coach; the legacy coach path doesn't and
+    // falls back to mmCoachId.
+    deleteSavedTeam(b.dataset.mmTeamCoach || mmCoachId, b.dataset.mmTeamDel);
     rerender();
   }));
   (_g = document.getElementById("btn-mm-load")) == null ? void 0 : _g.addEventListener("click", () => {
@@ -745,11 +795,14 @@ async function setupListeners2() {
     });
   });
 }
-var mmCoachId, mmNewCoach, mmView, mmDeleteArmed, mmTreeId, mmNewTree, mmNewTrunk;
+var mmCoachId, mmNewCoach, mmView, mmTreeHub, mmDeleteArmed, mmTreeId, mmNewTree, mmNewTrunk;
 
 mmCoachId = null;
 mmNewCoach = false;
 mmView = null;
+// Which seated chair's hub page the TREE HOME is showing, if any:
+// { view: 'dna'|'records', coachId }. Null means the tree home itself.
+mmTreeHub = null;
 mmTreeId = null;
 mmNewTree = false;
 mmNewTrunk = false;
