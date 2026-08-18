@@ -112,6 +112,26 @@ function validateCustomFormation(cf) {
     if (!isBack && a.back) errors.push(`${s.pos} can't line up in the backfield (${a.label})`);
     if (a.online) online++;
   }
+  // Room in the huddle. The engine names skill slots the way a real call sheet
+  // does — receivers X/SL/F/V/Z, tight ends Y/U/W, backs H and 2 — and every
+  // downstream surface (depth chart, target shares, route art, the viewer's
+  // jerseys) keys off those names. Ask for a fourth tight end and there is no
+  // name to give him: _skillSlots ran off the end of its id table and threw,
+  // which the Designer reported as "fix the errors above" with NO errors listed
+  // (found 2026-08-17 from an owner screenshot: five TEs, a blank error block
+  // and a dead preview). These are the caps stated as football, checked here
+  // where every other legality lives.
+  const pkgN = { RB: 0, FB: 0, TE: 0, WR: 0 };
+  for (const s of slots) {
+    if (!s || !FORM_POS.includes(s.pos)) continue;
+    if (s.pos === "RB") pkgN.RB++;
+    else if (s.pos === "FB") pkgN.FB++;
+    else if (s.pos === "TE") pkgN.TE++;
+    else pkgN.WR++;
+  }
+  if (pkgN.TE > 3) errors.push(`a formation carries at most three tight ends \u2014 Y, U and W (got ${pkgN.TE})`);
+  if (pkgN.FB > 1) errors.push(`only one fullback fits the backfield (got ${pkgN.FB})`);
+  if (pkgN.RB + pkgN.FB > 2) errors.push(`at most two backs behind the quarterback (got ${pkgN.RB + pkgN.FB})`);
   // 7 on the line: the 5 OL are always on it, so 2+ skill players must join.
   if (online < 2) errors.push(`only ${5 + online} men on the line — the rules want 7 (put ${2 - online} more on the line)`);
   // Covered ends: an on-line man with a teammate on the line OUTSIDE him is

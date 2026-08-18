@@ -36,6 +36,17 @@ function _tryCompile(cf) {
     return null;
   }
 }
+// Same call, but it KEEPS the reason. The editor swallowed it and printed "fix
+// the errors above" over an empty error block whenever validation passed and
+// the compile still threw (owner screenshot 2026-08-17: five tight ends). A
+// message that points at errors must be able to name one.
+function _compileOrWhy(cf) {
+  try {
+    return { form: compileFormation(cf), why: null };
+  } catch (e) {
+    return { form: null, why: String((e && e.message) || e).replace(/^compileFormation: (invalid formation \u2014 )?/, "") };
+  }
+}
 
 function renderFormList() {
   const forms = listCreations("formations");
@@ -62,7 +73,8 @@ function renderFormList() {
 function renderFormEditor() {
   const cf = _f();
   const v = validateCustomFormation(cf);
-  const c = v.ok ? _tryCompile(cf) : null;
+  const built = v.ok ? _compileOrWhy(cf) : { form: null, why: null };
+  const c = built.form;
   const posOpts = (sel) => FORM_POS.map((p) => `<option value="${p}"${sel === p ? " selected" : ""}>${p}</option>`).join("");
   const anchorOpts = (s) => {
     const isBack = s.pos === "RB" || s.pos === "FB";
@@ -77,14 +89,17 @@ function renderFormEditor() {
       <select class="form-input fc-select fc-select-anchor" data-fc-anchor="${i}" aria-label="Player ${i + 1} alignment">${anchorOpts(s)}</select>
     </div>`).join("");
   const qbRow = Object.keys(QB_DEPTH).map((k) => `<button type="button" class="def-preset fc-qb${(cf.qb || "gun") === k ? " active" : ""}" data-fc-qb="${k}"><span class="def-preset-name">${k === "under" ? "Under Center" : k === "pistol" ? "Pistol" : "Shotgun"}</span></button>`).join("");
-  const problems = v.errors.length ? v.errors.map((e) => `<div class="pb-msg err">⛔ ${esc(e)}</div>`).join("") : "";
+  // A compile failure is an error like any other — it just found the problem a
+  // layer deeper than the legality pass did.
+  const errs = built.why ? [...v.errors, built.why] : v.errors;
+  const problems = errs.length ? errs.map((e) => `<div class="pb-msg err">⛔ ${esc(e)}</div>`).join("") : "";
   const warns = v.warnings.length ? v.warnings.map((w) => `<div class="pb-msg fc-warn">⚠️ ${esc(w)}</div>`).join("") : "";
   const derived = c ? `
     <div class="fc-derived">
       <div class="play-preview-head">${_persStr(c.pkg)} \xB7 plays from the <b>${esc(c.archetype)}</b> family (${c.playbook.length} calls)</div>
       <div class="gp-tip tip-info">▸ The rulebook sets the numbers: your formation inherits the ${esc(c.archetype)} identity, its call sheet filtered to what this alignment can run, and NO matchup edges — a designed look can never out-tune a shipped one.</div>
     </div>` : "";
-  const preview = c ? renderFormationDiagram(cf.name || "Custom", { slots: c.layout.slots, w: 260, h: 160 }) : `<div class="mm-lib-empty muted">Fix the errors above to see the alignment.</div>`;
+  const preview = c ? renderFormationDiagram(cf.name || "Custom", { slots: c.layout.slots, w: 260, h: 160 }) : `<div class="mm-lib-empty muted">${errs.length ? "Fix the errors above to see the alignment." : "This alignment can't be drawn yet."}</div>`;
   return `<div class="creator-hub">
     <div class="creator-hub-head"><div class="creator-title">Formation Designer</div>
       <div class="creator-sub">Place your five. The five linemen and the rulebook handle the rest.</div></div>
@@ -97,7 +112,7 @@ function renderFormEditor() {
     <div class="gp-row"><label class="gp-label">The look</label><div class="fc-preview">${preview}</div></div>
     ${derived}
     <div class="pb-actions">
-      <button class="btn-mm btn-mm-new" id="fc-save"${v.ok ? "" : " disabled"}>\u{1F4BE} Save formation</button>
+      <button class="btn-mm btn-mm-new" id="fc-save"${v.ok && c ? "" : " disabled"}>\u{1F4BE} Save formation</button>
       <button class="btn-mm btn-mm-secondary" data-form-back="1">← All formations</button>
     </div>
   </div>`;
