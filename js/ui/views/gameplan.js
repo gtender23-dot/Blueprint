@@ -169,9 +169,9 @@ function renderDefIdentityCard(gp) {
   const shellWord = gp.covShell === "single" ? "single-high" : gp.covShell === "two" ? "two-high" : "mixed shells";
   const styleWord = gp.covStyle === "man" ? "man-heavy" : gp.covStyle === "zone" ? "zone-heavy" : "man/zone mix";
   const pressWord = gp.pressLevel === "press" ? "press at the line" : gp.pressLevel === "off" ? "off coverage" : "mixed leverage";
-  const ps = gp.pressureSource || {};
-  const srcMax = Math.max(ps.edge || 0, ps.interior || 0, ps.secondary || 0);
-  const srcWord = !srcMax ? "everywhere" : srcMax === (ps.edge || 0) ? "off the edge" : srcMax === (ps.interior || 0) ? "up the middle" : "from the secondary";
+  // OD-9 (D16, 2026-08-18): the "comes off the edge/up the middle" phrase read
+  // gp.pressureSource — a field the sim deletes at every kickoff. The card now
+  // says only what the plan actually plays (identity + front own "who comes").
   const box = gp.runCommit || 0;
   const boxWord = box >= 8 ? "loaded against the run" : box >= 3 ? "leaning run" : box <= -8 ? "sitting on the pass" : box <= -3 ? "leaning pass" : "honest";
   const edgeWord = gp.edgePlay === "contain" ? "sets the edge" : gp.edgePlay === "crash" ? "pins its ears back" : "plays it straight";
@@ -185,7 +185,7 @@ function renderDefIdentityCard(gp) {
       <span class="muted" style="font-size:11px">what their film room sees</span></div>
     <div class="id-row"><span class="id-lbl">\u{1F9F1} Front</span><span><b>${escapeHtml(front)}</b> base \xB7 ${escapeHtml(mixWord)}</span></div>
     <div class="id-row"><span class="id-lbl">\u{1F441} Coverage</span><span>${escapeHtml(shellWord)}, ${escapeHtml(styleWord)} \xB7 ${escapeHtml(pressWord)}</span></div>
-    <div class="id-row"><span class="id-lbl">\u{1F525} Pressure</span><span><b>${escapeHtml(String(aggrWord))}</b> \xB7 ${escapeHtml(press)} \xB7 comes ${escapeHtml(srcWord)}</span></div>
+    <div class="id-row"><span class="id-lbl">\u{1F525} Pressure</span><span><b>${escapeHtml(String(aggrWord))}</b> \xB7 ${escapeHtml(press)}</span></div>
     <div class="id-row"><span class="id-lbl">\u{1F6E1} Run defense</span><span>box ${escapeHtml(boxWord)} \xB7 the edge ${escapeHtml(edgeWord)}</span></div>
     <div class="id-row"><span class="id-lbl">\u{1F91C} Tackling</span><span>${escapeHtml(tackleWord)}${extras ? ` \xB7 ${escapeHtml(extras)}` : ""}</span></div>
     ${nCalls ? `<div class="id-row"><span class="id-lbl">\u{1F4DE} Headset</span><span>${nCalls} named call${nCalls === 1 ? "" : "s"} ready${nChecks ? ` \xB7 ${nChecks} formation check${nChecks === 1 ? "" : "s"}` : ""}</span></div>` : ""}
@@ -272,8 +272,9 @@ function currentSimpleDial(gp, key) {
     return f === "Aggressive" || f === "Very Aggressive" ? "aggr" : f === "Conservative" || f === "Very Conservative" ? "safe" : "balanced";
   }
   if (key === "simpleDefPosture") {
-    const b = gp.blitzPct != null ? gp.blitzPct : 20;
-    return b >= 32 ? "attack" : b <= 12 ? "bend" : "balanced";
+    // OD-8 (D16): read the stop (aggrOf migrates a legacy raw blitzPct).
+    const a = aggrOf(gp);
+    return a === "attacking" || a === "house" ? "attack" : a === "bend" ? "bend" : "balanced";
   }
   if (key === "simpleTempo") {
     const t = gp.baseTempo || "Normal";
@@ -372,9 +373,11 @@ function currentSimpleSit(gp, cells, lever) {
     if (p == null) return "auto";
     return p >= 0.6 ? "pass" : p <= 0.4 ? "run" : "balanced";
   }
-  const b = cell.blitzPct;
-  if (b == null) return "auto";
-  return b >= 32 ? "attack" : b <= 12 ? "protect" : "balanced";
+  // OD-8 (D16): cells speak the stop now; a legacy numeric cell still reads
+  // through nearest-stop so an old save's lever lights the same button.
+  const a = cell.defAggression != null ? cell.defAggression : cell.blitzPct != null ? aggrStopFromBlitzPct(cell.blitzPct) : null;
+  if (a == null) return "auto";
+  return a === "attacking" || a === "house" ? "attack" : a === "bend" ? "protect" : "balanced";
 }
 function renderSimpleSituations(gp) {
   return `
@@ -418,24 +421,28 @@ function applySimpleSit(gp, sitKey, lever, val) {
       if (val === "auto") cell.tendency = null;
       else cell.tendency = val === "run" ? "Heavy Run" : val === "pass" ? "Heavy Pass" : "Balanced";
     } else {
+      // OD-8 (D16, 2026-08-18): the cell speaks the AGGRESSION STOP directly —
+      // the raw blitzPct numbers were migrated to these exact stops at every
+      // kickoff anyway (38→attacking, 10→bend, 20→balanced). OD-5 (D16): the
+      // coverageScheme values "aggressive"/"conservative" were placebos (no
+      // sim branch — they resolved as "balanced"); the posture is expressed by
+      // the fields that actually move: the stop, the shell, the cushion.
+      cell.blitzPct = null;
+      cell.coverageScheme = null;
       if (val === "auto") {
-        cell.blitzPct = null;
-        cell.coverageScheme = null;
+        cell.defAggression = null;
         cell.covShell = null;
         cell.pressLevel = null;
       } else if (val === "attack") {
-        cell.blitzPct = 38;
-        cell.coverageScheme = "aggressive";
+        cell.defAggression = "attacking";
         cell.covShell = "single";
         cell.pressLevel = "press";
       } else if (val === "protect") {
-        cell.blitzPct = 10;
-        cell.coverageScheme = "conservative";
+        cell.defAggression = "bend";
         cell.covShell = "two";
         cell.pressLevel = "off";
       } else {
-        cell.blitzPct = 20;
-        cell.coverageScheme = "balanced";
+        cell.defAggression = "balanced";
         cell.covShell = "balanced";
         cell.pressLevel = "balanced";
       }
@@ -454,21 +461,25 @@ function applySimpleDial(gp, key, val) {
     gp.fourthDown = val === "aggr" ? "Aggressive" : val === "safe" ? "Conservative" : "Moderate";
     gp.qbAggr = val === "aggr" ? 68 : val === "safe" ? 34 : 50;
   } else if (key === "simpleDefPosture") {
+    // OD-8 (D16, 2026-08-18): the posture writes the stop through setAggr —
+    // the old raw gp.blitzPct write never touched defAggression, so whenever a
+    // stop was already set the Simple dial was silently discarded at kickoff
+    // (the proven stale-pair bug). OD-5 (D16): "aggressive"/"conservative"
+    // coverageScheme were placebos (no sim branch) — the posture speaks
+    // through the dials the sim reads: stop, shell, cushion, box.
+    gp.coverageScheme = "balanced";
     if (val === "attack") {
-      gp.blitzPct = 38;
-      gp.coverageScheme = "aggressive";
+      setAggr(gp, "attacking");
       gp.covShell = "single";
       gp.pressLevel = "press";
       gp.runCommit = 8;
     } else if (val === "bend") {
-      gp.blitzPct = 10;
-      gp.coverageScheme = "conservative";
+      setAggr(gp, "bend");
       gp.covShell = "two";
       gp.pressLevel = "off";
       gp.runCommit = -6;
     } else {
-      gp.blitzPct = 20;
-      gp.coverageScheme = "balanced";
+      setAggr(gp, "balanced");
       gp.covShell = "balanced";
       gp.pressLevel = "balanced";
       gp.runCommit = 0;

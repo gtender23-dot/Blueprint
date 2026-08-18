@@ -5700,7 +5700,11 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
       offSpd: slotSpeedMap(offField == null ? void 0 : offField.bySlot, offRoster),
       defSpd: (defBaseField == null ? void 0 : defBaseField.bySlot) ? slotSpeedMap(defBaseField.bySlot, defRoster) : slotBodyFallbackMap(_defViewerSlots, defRoster),
       offSit,
-      tempo: offPlan._liveTempo || offEff.tempo,
+      // _liveTempo dead reads deleted (D16/OD ratified, 2026-08-18): the key
+      // was read in three places and written by NOTHING in js/ or tools/ —
+      // behavior-neutral by construction. If a live-tempo control is ever
+      // built, it goes through the plan/overlay, not a hidden runtime key.
+      tempo: offEff.tempo,
       blitzFired: (_za = playResult.blitzFired) != null ? _za : false,
       // BLITZ PIE: who came (ids), when a blitz fired — probe/film surface
       blitzerIds: playResult.blitzerIds || null,
@@ -5715,7 +5719,7 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     // down keeps the layer armed.)
     if (offPlan._nextPlay) delete offPlan._nextPlay;
     if (defPlan._nextPlay) delete defPlan._nextPlay;
-    const isHurry = (offPlan._liveTempo || offEff.tempo) === "Hurry";
+    const isHurry = offEff.tempo === "Hurry";
     const _gpGrade = ((offSchool == null ? void 0 : offSchool._dnaGrades) == null ? void 0 : offSchool._dnaGrades.groundPound) || 0;
     const _late = (gameState.half || 1) >= 2;
     const _gpFatigueMult = _late ? 1 - _gpGrade * 0.015 : 1;
@@ -5763,7 +5767,7 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
         offCtx.benchedMap[injQb.id] = true;
       }
     }
-    const tempoMult = (_Ca = C.TEMPO_MULT[offPlan._liveTempo || offEff.tempo]) != null ? _Ca : 1;
+    const tempoMult = (_Ca = C.TEMPO_MULT[offEff.tempo]) != null ? _Ca : 1;
     let elapsed = Math.max(4, Math.round(randNorm(
       (playType.startsWith("run") ? C.CLOCK_RUN.mean : C.CLOCK_PASS.mean) * tempoMult,
       playType.startsWith("run") ? C.CLOCK_RUN.sd : C.CLOCK_PASS.sd

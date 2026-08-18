@@ -38,7 +38,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import url from 'node:url';
-import { ROSTER_TARGETS, CLASS_YEARS } from '../js/constants.js';
+import { ROSTER_TARGETS, CLASS_YEARS, aggrStopFromBlitzPct } from '../js/constants.js';
 import { createPlayer } from '../js/engine/player.js';
 import { buildDepthChart } from '../js/engine/world.js';
 import { simulateGame } from '../js/engine/sim.js';
@@ -209,12 +209,21 @@ console.log('\n— 4. one card, three compile paths, three vocabularies —\n');
 
 console.log('\n— 5. placebo enums (pinned as CURRENT behavior — see the audit) —\n');
 {
-  const ids = DEF_COVERAGE_SCHEMES.map(s => s.id);
-  check('defbook offers aggressive/conservative coverage identities', ids.includes('aggressive') && ids.includes('conservative'));
+  // D16 (OD-5(b), owner-ratified): the placebo pins FLIPPED — the two dead
+  // values are RETIRED from every picker but keep LOADING (schema-compatible).
+  const active = DEF_COVERAGE_SCHEMES.filter(s => !s.retired).map(s => s.id);
+  check('D16: the live coverage identities are exactly balanced/lockTop/bracketTop',
+    active.length === 3 && active.includes('balanced') && active.includes('lockTop') && active.includes('bracketTop'), active.join(','));
+  check('D16: aggressive/conservative survive as RETIRED entries (old books keep validating/loading)',
+    DEF_COVERAGE_SCHEMES.some(s => s.id === 'aggressive' && s.retired === true) &&
+    DEF_COVERAGE_SCHEMES.some(s => s.id === 'conservative' && s.retired === true));
+
   check('the sim has NO aggressive/conservative coverageScheme branch',
     !/coverageScheme\s*===\s*"aggressive"/.test(SIM_SRC) && !/coverageScheme\s*===\s*"conservative"/.test(SIM_SRC));
   const attack = DEFAULT_DEF_BOOKS.find(b => b.name === 'Attack 3-4');
-  check('shipped "Attack 3-4" carries the placebo coverageScheme "aggressive"', attack && attack.coverageScheme === 'aggressive');
+  check('D16: "Attack 3-4" no longer carries a placebo — no starter book does',
+    attack && attack.coverageScheme === 'balanced' &&
+    DEFAULT_DEF_BOOKS.every(b => b.coverageScheme !== 'aggressive' && b.coverageScheme !== 'conservative'));
   const cards = [];
   for (const b of DEFAULT_DEF_BOOKS) for (const arr of Object.values(b.shelves || {})) for (const c of arr) cards.push([b.name, c]);
   const badZone = cards.filter(([, c]) => c.zoneStyle != null && !['spot', 'balanced', 'match'].includes(c.zoneStyle));
@@ -226,6 +235,68 @@ console.log('\n— 5. placebo enums (pinned as CURRENT behavior — see the audi
   const gd = cards.filter(([, c]) => c.greenDog === true);
   check('a starter card still carries greenDog:true that no compile path reads', gd.length > 0,
     gd.map(([b, c]) => `${b}/"${c.name}"`).join(', '));
+}
+
+console.log('\n— 6. D16 retirements, disclosed (OD-5/OD-8/OD-9 ratified 2026-08-17) —\n');
+{
+  const AI_SRC = fs.readFileSync(path.join(__dir, '../js/engine/ai.js'), 'utf8');
+  const CD_SRC = fs.readFileSync(path.join(__dir, '../js/ui/views/creatordef.js'), 'utf8');
+  const WORLD_SRC = fs.readFileSync(path.join(__dir, '../js/engine/world.js'), 'utf8');
+  const DB_SRC = fs.readFileSync(path.join(__dir, '../js/engine/defbook.js'), 'utf8');
+  const BENCH_SRC = fs.readFileSync(path.join(__dir, '../js/engine/bench.js'), 'utf8');
+  // OD-8 — blitzPct is derived-only: every writer writes the STOP.
+  check('OD-8: setAIGameplan writes the stop from the aggression roll (no raw blitzPct author)',
+    /defAggression:\s*aiAggrStop/.test(AI_SRC) && !/blitzPct:\s*15\s*\+\s*Math\.round/.test(AI_SRC));
+  // THE BAND CLAIM, PROVEN rather than sampled: OD-8 called the writer
+  // retirement "near-neutral by construction (the sim already quantizes)".
+  // It is EXACTLY neutral for the AI — the same 15–35 roll is quantized by the
+  // same aggrStopFromBlitzPct, one draw as before, so the stop distribution is
+  // identical draw-for-draw and the RNG stream position is preserved.
+  check('OD-8: setAIGameplan quantizes the SAME 15–35 roll (one draw, stream position preserved)',
+    /aggrStopFromBlitzPct\(15 \+ Math\.round\(Math\.random\(\) \* 20\)\)/.test(AI_SRC));
+  {
+    const mulb = (s) => { let t = s >>> 0; return () => { t += 0x6D2B79F5; let r = Math.imul(t ^ t >>> 15, 1 | t); r = r + Math.imul(r ^ r >>> 7, 61 | r) ^ r; return ((r ^ r >>> 14) >>> 0) / 4294967296; }; };
+    const oldR = mulb(7), newR = mulb(7);
+    let identical = true;
+    for (let i = 0; i < 20000; i++) {
+      // OLD: authored raw, quantized by the sim at the first kickoff.
+      const o = aggrStopFromBlitzPct(15 + Math.round(oldR() * 20));
+      // NEW: the identical roll, quantized at write time.
+      const n = aggrStopFromBlitzPct(15 + Math.round(newR() * 20));
+      if (o !== n) { identical = false; break; }
+    }
+    check('OD-8: the AI stop distribution is IDENTICAL to the pre-D16 path, draw for draw (the band claim)', identical);
+  }
+  check('OD-8: the AI weekly-reaction cell speaks the stop (house/bend), not 45/10',
+    /defAggression:\s*"house"/.test(AI_SRC) && !/blitzPct:\s*45/.test(AI_SRC) && !/blitzPct:\s*10/.test(AI_SRC));
+  check('OD-8: Simple-mode Defensive Posture routes through setAggr (the stale-pair discard is closed)',
+    /setAggr\(gp,\s*"attacking"\)/.test(GP_UI_SRC) && /setAggr\(gp,\s*"bend"\)/.test(GP_UI_SRC) &&
+    !/gp\.blitzPct\s*=\s*38/.test(GP_UI_SRC));
+  check('OD-8: Simple-mode situation cells write cell.defAggression, never a raw cell.blitzPct number',
+    /cell\.defAggression\s*=\s*"attacking"/.test(GP_UI_SRC) && !/cell\.blitzPct\s*=\s*38/.test(GP_UI_SRC));
+  check('OD-8: the sim\'s normalize/migration shims STAY (old saves keep converting)',
+    /aggrStopFromBlitzPct\(gp\.blitzPct\)/.test(SIM_SRC) &&
+    /cell\.blitzPct\s*!=\s*null\s*&&\s*cell\.defAggression\s*==\s*null/.test(SIM_SRC));
+  check('OD-8: defaultGameplan carries the stop from birth (blitzPct kept as its mirror)',
+    /defAggression:\s*"balanced",\s*\n\s*blitzPct:\s*20/.test(WORLD_SRC));
+  // OD-5 — the creator picker no longer offers the placebos.
+  check('OD-5: the creator coverage picker filters retired entries',
+    /DEF_COVERAGE_SCHEMES\.filter\(\(c\) => !c\.retired/.test(CD_SRC));
+  // OD-9 — pressureSource: off every authoring surface, schema still loads it.
+  check('OD-9: defaultGameplan no longer ships pressureSource', !/pressureSource:\s*\{/.test(WORLD_SRC));
+  check('OD-9: the creator pressure-source pie is off the editor surface', !/data-def-src/.test(CD_SRC));
+  check('OD-9: the identity card no longer narrates the dead field', !/=\s*gp\.pressureSource/.test(GP_UI_SRC));
+  check('OD-9: the SCHEMA keeps the field — emptyDefBook still carries it and apply still copies it (old books load)',
+    /pressureSource:\s*\{\s*edge:\s*50,\s*interior:\s*25,\s*secondary:\s*25\s*\}/.test(DB_SRC) &&
+    /gp\.pressureSource\s*=\s*\{\s*\.\.\.db\.pressureSource\s*\}/.test(DB_SRC));
+  check('OD-9: the sim still deletes it at kickoff (the retirement end-state, unchanged)',
+    /delete gp\.pressureSource/.test(SIM_SRC));
+  // _liveTempo — the reader-without-writer is gone.
+  check('_liveTempo dead reads deleted from sim.js (was read 3x, written never)',
+    !/offPlan\._liveTempo/.test(SIM_SRC));
+  // Fixture hygiene.
+  check('bench.js fixtures no longer carry defFormation/clockMgmt (inert keys)',
+    !/defFormation:/.test(BENCH_SRC) && !/clockMgmt:/.test(BENCH_SRC));
 }
 
 console.log(`\n${fail === 0 ? 'ALL PASS' : 'FAILURES'}  (${pass} pass, ${fail} fail)`);

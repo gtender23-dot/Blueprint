@@ -73,23 +73,22 @@ function renderIdentity(db) {
   }).join("");
   const aggrOpts = aggressionStops().map((a) => ({ id: a, label: (C.AGGRESSION.labels && C.AGGRESSION.labels[a]) || a }));
   const pressOpts = pressIdentities().map((pi) => ({ id: pi, label: (C.PRESS_IDENTITY[pi] && C.PRESS_IDENTITY[pi].label) || pi }));
-  const ps = db.pressureSource || { edge: 50, interior: 25, secondary: 25 };
+  // OD-9 (D16, 2026-08-18): the pressure-source pie is RETIRED from the editor
+  // surface — the sim deleted gp.pressureSource at every kickoff (G11), so the
+  // three sliders never did anything. Old books still LOAD the field (schema
+  // keeps it until the next schema bump); pressureIdentity + the front's
+  // signature own "who comes". Stated in the release note — not a silent cut.
   return `<details class="gp-section def-identity" open>
     <summary class="gp-section-hdr">THE IDENTITY <span class="gp-section-sub">who you are every snap — the shelves override it by situation</span></summary>
     <div class="def-section-head">Fronts <span class="muted">— tap to add, set one as your base</span></div>
     <div class="pb-forms">${frontCards}</div>
     <div class="def-section-head">Coverage identity</div>
-    ${_pickRow(db.coverageScheme, DEF_COVERAGE_SCHEMES, "data-def-cov")}
+    ${_pickRow(db.coverageScheme, DEF_COVERAGE_SCHEMES.filter((c) => !c.retired || c.id === db.coverageScheme), "data-def-cov")}
+    ${DEF_COVERAGE_SCHEMES.some((c) => c.retired && c.id === db.coverageScheme) ? `<div class="muted" style="font-size:11px;margin:4px 0 0">This defense carries a retired identity — it plays as Balanced (it always did). Pick another to move off it.</div>` : ""}
     <div class="def-section-head">Aggression <span class="muted">— how often you bring pressure</span></div>
     ${_pickRow(db.aggression, aggrOpts, "data-def-aggr")}
     <div class="def-section-head">Pressure look</div>
     ${_pickRow(db.pressIdentity, pressOpts, "data-def-press")}
-    <div class="def-section-head">Where pressure comes from</div>
-    <div class="def-source">
-      <label class="def-src-field"><span>Edge</span><input class="form-input" type="number" min="0" max="100" value="${ps.edge != null ? ps.edge : 50}" data-def-src="edge"/></label>
-      <label class="def-src-field"><span>Interior</span><input class="form-input" type="number" min="0" max="100" value="${ps.interior != null ? ps.interior : 25}" data-def-src="interior"/></label>
-      <label class="def-src-field"><span>Secondary</span><input class="form-input" type="number" min="0" max="100" value="${ps.secondary != null ? ps.secondary : 25}" data-def-src="secondary"/></label>
-    </div>
     <div class="def-toggles">
       <label class="def-toggle"><input type="checkbox" data-def-toggle="greenDog"${db.greenDog ? " checked" : ""}/> <span>Green-dog <span class="muted">— a back's blocker becomes a rusher when he stays in</span></span></label>
       <label class="def-toggle"><input type="checkbox" data-def-toggle="spyQB"${db.spyQB ? " checked" : ""}/> <span>Spy the QB <span class="muted">— keep a defender home to shadow a scrambler</span></span></label>
@@ -239,9 +238,6 @@ function defListeners() {
   document.querySelectorAll("[data-def-cov]").forEach((b) => b.addEventListener("click", () => { _syncName(); _d().coverageScheme = b.dataset.defCov; rerender(); }));
   document.querySelectorAll("[data-def-aggr]").forEach((b) => b.addEventListener("click", () => { _syncName(); _d().aggression = b.dataset.defAggr; rerender(); }));
   document.querySelectorAll("[data-def-press]").forEach((b) => b.addEventListener("click", () => { _syncName(); _d().pressIdentity = b.dataset.defPress; rerender(); }));
-  document.querySelectorAll("[data-def-src]").forEach((el) => el.addEventListener("change", () => {
-    const db = _d(); db.pressureSource = db.pressureSource || {}; db.pressureSource[el.dataset.defSrc] = Math.max(0, Math.min(100, +el.value || 0));
-  }));
   document.querySelectorAll("[data-def-toggle]").forEach((el) => el.addEventListener("change", () => { _d()[el.dataset.defToggle] = el.checked; }));
   // shelves — add / edit / delete / weight
   document.querySelectorAll("[data-card-add]").forEach((b) => b.addEventListener("click", () => {

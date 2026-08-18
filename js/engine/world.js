@@ -1732,8 +1732,11 @@ function defaultGameplan() {
     tendency: "Balanced",
     rushInPct: 60,
     passDepth: { short: 40, medium: 40, deep: 20 },
+    // OD-8 (D16, 2026-08-18): the stop is the dial; blitzPct is its derived
+    // mirror (balanced → 20) for legacy readers. OD-9 (D16): pressureSource no
+    // longer ships — the sim deleted it at every kickoff; old saves still load.
+    defAggression: "balanced",
     blitzPct: 20,
-    pressureSource: { edge: 50, interior: 20, secondary: 30 },
     coverageScheme: "balanced",
     greenDog: false,
     spyQB: false,

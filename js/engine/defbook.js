@@ -123,17 +123,18 @@ function bookCards(db) {
   return out;
 }
 
-// The five coverage identities the BOOK offers. NOTE (D10 cohesion audit,
-// 2026-08-18): the sim's assignCoverage branches ONLY on lockTop / bracketTop;
-// "aggressive" and "conservative" have no sim branch and currently resolve
-// exactly like "balanced" (pinned in tools/plan_cohesion_probe.mjs §5). The
-// shipped "Attack 3-4" starter carries "aggressive". Whether these two gain a
-// sim meaning, or the picker narrows to the three the engine speaks, is an
-// owner call — see the audit's OPEN DECISIONS. Do not add a sim branch here.
+// The coverage identities the BOOK stores. OD-5 RATIFIED (b) (D16,
+// 2026-08-18): the sim's assignCoverage branches ONLY on lockTop / bracketTop
+// — "aggressive"/"conservative" never had a sim branch and always resolved
+// exactly like "balanced" (proven in tools/plan_cohesion_probe.mjs §5). They
+// are RETIRED from every picker (`retired: true`); the field keeps LOADING
+// old books that carry them (they keep resolving as balanced, exactly as they
+// always did — now honestly labeled), and COVERAGE_IDS keeps them valid so
+// validateDefBook never bricks an old book. Do not add a sim branch here.
 var DEF_COVERAGE_SCHEMES = [
   { id: "balanced", label: "Balanced", desc: "Mix man and zone, protect the middle." },
-  { id: "aggressive", label: "Aggressive", desc: "Press coverage, jump routes, trust the rush." },
-  { id: "conservative", label: "Conservative", desc: "Soft zone, everything in front, no big plays." },
+  { id: "aggressive", label: "Aggressive", desc: "Retired — plays as Balanced (it always did).", retired: true },
+  { id: "conservative", label: "Conservative", desc: "Retired — plays as Balanced (it always did).", retired: true },
   { id: "lockTop", label: "Lock the No. 1", desc: "Travel your best corner onto their best receiver." },
   { id: "bracketTop", label: "Bracket the No. 1", desc: "Double their best receiver over the top." }
 ];

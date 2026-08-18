@@ -1,5 +1,5 @@
 import { __spreadProps, __spreadValues } from '../_spread.js';
-import { DEFAULT_PRACTICE, FORMATION_PLAYBOOK, PASS_TENDENCY } from '../constants.js';
+import { C, DEFAULT_PRACTICE, FORMATION_PLAYBOOK, PASS_TENDENCY, aggrStopFromBlitzPct } from '../constants.js';
 import { FRONT_PRESSURE_SIGNATURE } from './formations.js';
 import { derivedArchetype } from './player.js';
 import { defaultWeeklyPlan } from './situations.js';
@@ -267,6 +267,15 @@ function setAIGameplan(school) {
   if (kArch === "K-Accuracy") maxFGDist -= 2;
   maxFGDist += Math.round((agg - 0.5) * 6);
   maxFGDist = clamp2(maxFGDist, 35, 52);
+  // OD-8 (D16, 2026-08-18): the staff writes the AGGRESSION STOP, never a raw
+  // blitzPct number. NEAR-NEUTRAL BY CONSTRUCTION, exactly as ratified: the
+  // SAME 15–35 roll is kept and quantized HERE by the same aggrStopFromBlitzPct
+  // the sim used to apply at the first kickoff — same RNG draw, same draw
+  // ORDER, same resulting stop. (Keying the stop off the coach's personality
+  // instead would drop a Math.random() — shifting every downstream draw in this
+  // function — and widen the spread into bend/house, which the old path never
+  // produced. That is a tuning change, not a writer retirement.)
+  const aiAggrStop = aggrStopFromBlitzPct(15 + Math.round(Math.random() * 20));
   school.gameplan = __spreadProps(__spreadValues({
     offFormations,
     defBaseFront,
@@ -294,7 +303,8 @@ function setAIGameplan(school) {
     // mobility-scales it again, so a mislabeled statue still never keeps).
     rpoKeepPct: qbArch === "QB-Scrambler" ? randInt3(10, 15) : qbArch === "QB-Dual" ? randInt3(6, 11) : 0,
     gadgetRate: agg > 0.7 ? randInt3(4, 8) : agg < 0.3 ? randInt3(0, 2) : randInt3(2, 5),
-    blitzPct: 15 + Math.round(Math.random() * 20),
+    defAggression: aiAggrStop,
+    blitzPct: C.AGGRESSION.rate[aiAggrStop] != null ? C.AGGRESSION.rate[aiAggrStop] : 20,
     // pressureSource retired (G11, Aug 2026) — normalizeDefGameplan deleted it on
     // every load anyway; pressureIdentity + fieldAssignments.blitzShares own "who comes"
     coverageScheme: Math.random() < 0.75 ? "balanced" : Math.random() < 0.6 ? "lockTop" : "bracketTop",
@@ -445,8 +455,10 @@ function buildAISituations(bucket, offFormations, agg) {
   } else {
     sits.third_short = { tendency: "Heavy Run" };
   }
-  if (agg > 0.6) sits.third_long = __spreadProps(__spreadValues({}, sits.third_long || {}), { blitzPct: 45 });
-  else if (agg < 0.3) sits.third_long = __spreadProps(__spreadValues({}, sits.third_long || {}), { blitzPct: 10 });
+  // OD-8 (D16): the cell speaks the stop directly — "house"/"bend" are the
+  // exact nearest-stop images of the old raw 45/10 the sim migrated them to.
+  if (agg > 0.6) sits.third_long = __spreadProps(__spreadValues({}, sits.third_long || {}), { defAggression: "house" });
+  else if (agg < 0.3) sits.third_long = __spreadProps(__spreadValues({}, sits.third_long || {}), { defAggression: "bend" });
   return sits;
 }
 function ensureAISituations(school) {

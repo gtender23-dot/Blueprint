@@ -114,7 +114,9 @@ var DEFAULT_DEF_BOOKS = [
   option: "Option Scrape"
 }),
   defBookOf("Attack 3-4",
-    { baseFront: "3-4", frontMix: { "3-4": 60, "Nickel": 40 }, coverageScheme: "aggressive", aggression: "attacking", pressIdentity: "fireZone" },
+    // OD-5 (D16, 2026-08-18): coverageScheme "aggressive" was a placebo (no sim
+    // branch — it resolved as "balanced"); the starter now says what it plays.
+    { baseFront: "3-4", frontMix: { "3-4": 60, "Nickel": 40 }, coverageScheme: "balanced", aggression: "attacking", pressIdentity: "fireZone" },
     {
       base: [
         dcard("34 Sky", "3-4", "c3", "4", "fireZone", { weight: 60 }),
@@ -140,7 +142,9 @@ var DEFAULT_DEF_BOOKS = [
       ]
     }, { empty: "Dime Green", "10": "Trap 2", "11": "Zone Dog", "12": "Okie 2", heavy: "Bear Down", option: "34 Sky" }),
   defBookOf("Bend-Don't-Break",
-    { baseFront: "Nickel", frontMix: { "Nickel": 55, "4-3": 20, "Dime": 15, "Big Nickel": 10 }, coverageScheme: "conservative", aggression: "bend", pressIdentity: "secondLevel" },
+    // OD-5 (D16): "conservative" was a placebo — the bend identity lives in the
+    // aggression stop + the soft shelves, which this book already carries.
+    { baseFront: "Nickel", frontMix: { "Nickel": 55, "4-3": 20, "Dime": 15, "Big Nickel": 10 }, coverageScheme: "balanced", aggression: "bend", pressIdentity: "secondLevel" },
     {
       base: [
         dcard("Quarters Match", "Nickel", "c6", "4", null, { weight: 62, zoneStyle: "match" }),
@@ -169,7 +173,8 @@ var DEFAULT_DEF_BOOKS = [
   defBookOf("Pressure Everything", {
   baseFront: "46/Bear",
   frontMix: { "46/Bear": 55, "Nickel": 20, "Dime": 15, "5-2": 10 },
-  coverageScheme: "aggressive",
+  // OD-5 (D16): "aggressive" was a placebo — the heat lives in the house stop.
+  coverageScheme: "balanced",
   aggression: "house",
   pressIdentity: "theHouse",
   greenDog: true,

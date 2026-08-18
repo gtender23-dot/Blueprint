@@ -85,8 +85,10 @@ function _gpFor(formationId, variation) {
     offFormations: [entry],
     tendency: "Balanced", rushInPct: 60,
     passDepth: { short: 40, medium: 40, deep: 20 },
-    blitzPct: 20, defFormation: "Balanced D", defFront: "4-3",
-    fourthDown: "Moderate", clockMgmt: "Normal", maxFGDist: 42
+    // D16 fixture hygiene (2026-08-18): defFormation (written, read by nothing)
+    // and clockMgmt (deleted by the sim at normalize) dropped — inert keys.
+    blitzPct: 20, defFront: "4-3",
+    fourthDown: "Moderate", maxFGDist: 42
   };
 }
 

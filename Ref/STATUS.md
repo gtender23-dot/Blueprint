@@ -1,7 +1,17 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-18 · D12 SHIPPED (this Cowork session) — THE HONEST
+Last updated: **2026-08-18 · D16 SHIPPED (this Cowork session) — RETIREMENTS,
+DISCLOSED: blitzPct is derived-only (every writer writes the stop; the Simple
+posture dial no longer loses its arm-wrestle at kickoff), the aggressive/
+conservative coverage placebos are retired from every picker but still load,
+the pressureSource pie is off the editor surface (schema kept — release note
+OWED, see the checklist), the _liveTempo dead reads are gone, bench fixtures
+cleaned. The AI writer change is proven neutral DRAW-FOR-DRAW (a first draft
+that would have shifted every world was caught and corrected — see the entry).
+Node gates ×3 green, incl. on this commit's own staged snapshot; N=500 band +
+_equiv_walk attribution + browser eyeball OWED-LOCAL; full entry + OWNER
+CHECKLIST in the D16 section below.** Prior: **2026-08-18 · D12 SHIPPED (this Cowork session) — THE HONEST
 REPORT CARD: the plan-report CUSTOM/AUTO badge lists rebuilt from the SIT
 panel's real writable set (the dead `pressureIdentity` entry dropped, the 13
 missing fields added) + callSheet hygiene on defensive book load (a book swap
@@ -367,6 +377,109 @@ D6's in-flight concepts is RESOLVED in this session, card_lint 21/0 ×3.)
 Prior: D4 · M2 presentation; D3 · M2 engine; D7 · M4; D2 · M1; D5 · M3
 audit RATIFIED. Plan of record: BUILD ORDER v2 (2026-08-17), dispatch
 prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+
+## 2026-08-18 — D16 · RETIREMENTS, DISCLOSED (this Cowork session) — blitzPct writers · placebo enums · zombies
+## NODE-GATED ×3 (probe 77/0 on the shared tree, 61/0 on this commit's own snapshot) — ⚠ N=500 BAND + `_equiv_walk` ATTRIBUTION + BROWSER EYEBALL OWED-LOCAL
+
+Dispatch D16 (`Ref/COHESION_DISPATCH_2026-08-18.md`), owner-ratified OD-5(b) /
+OD-8 / OD-9 (recorded at 4510b12). DPB2's law held on every item: nothing was
+silently deleted — each retirement is disclosed in place, and OD-9's release
+note is an OWNER item below.
+
+**What shipped (all five items):**
+1. **`blitzPct` → derived-only.** `ai.js` setAIGameplan writes `defAggression`;
+   Simple-mode Defensive Posture writes the stop through **`setAggr`** (this
+   closes the proven stale-pair discard — the old raw `gp.blitzPct` write never
+   touched `defAggression`, so with a stop already set the Simple dial was
+   thrown away at the next kickoff); Simple-mode situation cells write
+   `cell.defAggression`; the AI weekly reaction writes `"house"`/`"bend"`
+   instead of 45/10; `defaultGameplan()` carries the stop from birth. The sim's
+   normalize/migration shims **STAY** (old saves still convert). Both Simple
+   READERS now read the stop (legacy numeric cells still light the right button
+   through `aggrStopFromBlitzPct`).
+2. **`coverageScheme` placebos narrowed (OD-5(b)).** `aggressive`/
+   `conservative` never had a sim branch — they always resolved as `balanced`.
+   They are now marked `retired` in `DEF_COVERAGE_SCHEMES`, filtered out of the
+   creator picker, and **still load**: a book carrying one keeps validating and
+   resolving exactly as before, with a disclosure line on the editor
+   ("plays as Balanced — it always did"). Three starter books stopped shipping
+   them (Attack 3-4, Bend-Don't-Break, Pressure Everything). The Game Plan
+   chip rows already offered only the three live values.
+3. **`pressureSource` retired off the authoring surface (OD-9).** The creator's
+   pressure pie (3 sliders + its listener) and the identity card's
+   "comes off the edge" phrase are gone; `defaultGameplan()` stops shipping the
+   field. **The schema keeps it** (`emptyDefBook` + `applyDefBookToGameplan` +
+   repair still carry it, so old books load) and the sim still deletes it at
+   kickoff. Progressive retirement, exactly as ratified — the release note is
+   owed (checklist).
+4. **`_liveTempo` dead reads deleted** (sim.js ×3). Read three times, written by
+   nothing in `js/` or `tools/` — behavior-neutral by construction.
+5. **Fixture hygiene:** `clockMgmt`/`defFormation` dropped from `bench.js`
+   fixtures (inert; `tools/` fixtures untouched).
+
+**⚠ THE BAND RISK, CLOSED BY CONSTRUCTION — AND A DRAFT CORRECTED MID-BLOCK.**
+The dispatch flagged item 1 as the band risk ("moves AI aggression
+distribution"). The first draft keyed the AI stop off the coach's personality
+(`agg`) — which is **not** what OD-8 ratified, and it was wrong twice: it
+**dropped a `Math.random()` draw** (shifting every downstream roll in
+`setAIGameplan`, so every generated world would differ) and it widened the
+spread into stops the old path never produced (0% → 20% `house`, 0% → 20%
+`bend`). Corrected to OD-8's literal ratification — *"`aggrStopFromBlitzPct` at
+write time"*: the **same** 15–35 roll, quantized where it is authored instead of
+at the first kickoff. Proven, not sampled: 200k paired draws, **stop identical
+draw-for-draw**, one draw consumed as before (attacking 47.5% · balanced 45.0%
+· selective 7.5%, both paths). Pinned in the probe so it cannot drift.
+
+**Gates (this sandbox, node):** `plan_cohesion_probe` **ALL PASS ×3** on the
+shared tree (77/0, §5 pins flipped + new §6 for the D16 retirements) AND
+**61/0** on this commit's own staged snapshot extracted with
+`git checkout-index` — the partial-staged commit is self-consistent, not just
+green alongside D13/D15's uncommitted work. `defbook_probe` 76/0 ·
+`save_migration_check` ALL PASS ×3 (both also re-run green on the staged
+snapshot) · clean esbuild build from a copy outside the mount (13/13 sanity,
+cache `cfb-dynasty-d87bdb2edd`, bundle parse 2/2, CSS braces 5698/5698,
+`data-def-src` and the old `pressureSource` default verified GONE from the
+bundle, `setAggr`/`defAggression`/the disclosure line verified IN) ·
+`node --check` clean on all eight touched JS files. Build was tree-as-found
+(D13/D15 hunks present — the D2 precedent).
+
+**⚠ OWED-LOCAL (environment, not findings):**
+- **`stat_realism_harness` at N=500.** This sandbox caps a single call at
+  ~3 minutes and N=500 needs longer (N=60 ≈ 20 s, N=500 did not finish twice);
+  background processes do not survive between calls. Ran **N=250 ×2** instead:
+  only the three standing flags (rush low, comp %, INT % at the band edge),
+  **nothing new**. Given the draw-for-draw identity proof above, the band is
+  neutral by construction; the N=500 run is still owed on the owner machine.
+- **`_equiv_walk`.** NOT byte-neutral by design and should not be gated as
+  such: the identity card lost a phrase, the creator lost the pie, and an AI
+  plan's `blitzPct` is now the stop's rate at authoring time (it was the raw
+  15–35 draw until the first kickoff rewrote it). Run it and **attribute** the
+  diffs to those three; a diff anywhere else is a real finding.
+
+**OWNER CHECKLIST (D16):**
+- [ ] **RELEASE NOTE (OD-9 requires it, this is the disclosure half of the
+  retirement):** "The defensive book's *where pressure comes from* sliders have
+  been retired — they never reached the game. Who comes is set by your pressure
+  identity and your front. Old books load unchanged." Same note should carry:
+  "*Aggressive* / *Conservative* coverage identities are retired — they always
+  played as Balanced; books carrying them keep working."
+- [ ] **Browser eyeball, one sitting:** open a defensive book in the Workshop —
+  the pressure pie is GONE and nothing below it shifted; a book saved with the
+  old "Aggressive" identity still loads and shows the retired-identity note.
+  Game Plan → Simple mode → Defensive Posture: set **Attack**, leave, come back
+  — the button is still lit (it was silently discarded before), and Advanced
+  mode's Aggression reads *Attacking*. The DEFENSIVE IDENTITY card's Pressure
+  row no longer says "comes off the edge".
+- [ ] **Local gates:** `node tools/_gate.mjs core`, plus the two owed items
+  above (N=500 band, `_equiv_walk` with the diffs attributed).
+
+**Commit scoped to (partial-staged around D13/D15's live hunks in the shared
+files — sim.js hunks 4-6, defaultbooks.js hunks 2/3/5, defbook.js hunk 3, and a
+reconstructed HEAD+mine blob for the probe, whose tail interleaves with D13's
+pins):** `js/engine/ai.js` · `js/engine/bench.js` · `js/engine/defaultbooks.js` ·
+`js/engine/defbook.js` · `js/engine/sim.js` · `js/engine/world.js` ·
+`js/ui/views/creatordef.js` · `js/ui/views/gameplan.js` ·
+`tools/plan_cohesion_probe.mjs` · `Ref/STATUS.md`. NOT pushed.
 
 ## 2026-08-18 — D12 · THE HONEST REPORT CARD (this Cowork session) — badge lists + stale callSheet, UI tier
 ## NODE-GATED ×3 — ⚠ PW SMOKE + THE `_equiv_walk` ATTRIBUTION RUN OWED-LOCAL (not walk-neutral BY DESIGN)
