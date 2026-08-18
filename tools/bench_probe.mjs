@@ -179,8 +179,17 @@ hdr('B10 — auto-select seeds SHIPPED sheet weights, not flat ones');
   const shipped = shippedSheetWeights('Spread');
   const shippedNames = Object.keys(shipped).filter((c) => sheet[c] != null);
   check(shippedNames.length > 0 && shippedNames.every((c) => sheet[c] === shipped[c]), `starter-book weights carry through (${shippedNames.length} shipped concepts)`);
+  // 2026-08-18 (owner-directed, commit 91fefce — "ALL-LEGAL PER LOOK"): a
+  // starter book now selects EVERY fitting play at a FLAT weight, exactly like
+  // the Playbook Builder's default. A book's identity comes from WHICH looks it
+  // runs and how it leans, not from a curated play menu. The old pin here
+  // asserted the seeded sheet was NOT flat — that encoded the retired curated-
+  // weights model and has been red since that change. What still matters, and
+  // is checked above, is that the seed carries the SHIPPED weights through
+  // verbatim, whatever they are.
   const ws = new Set(Object.values(sheet));
-  check(ws.size > 1, `the sheet is NOT flat (${ws.size} distinct weights)`);
+  check([...ws].every((w) => typeof w === 'number' && w > 0),
+    `every seeded weight is a live number (${ws.size} distinct: ${[...ws].join('/')})`);
   check(DEFAULT_OFF_BOOKS.length > 0, 'starter books present (the shipped source)');
 }
 

@@ -486,6 +486,68 @@ D16's `_liveTempo` hunks in the same file deliberately left unstaged**) ·
 `tools/plan_cohesion_probe.mjs` (**partial-staged — §2 only; D13/D16 own §5 and
 the import line**) · `Ref/STATUS.md` (this entry + the header). NOT pushed.
 
+## 2026-08-18 — GATE REPAIR (this Cowork session) — the owner's local CORE run: 3 reds, none from D13/D14/D16, ONE a real product bug
+## ALL THREE GREEN ×3 · CLEAN BUILD · ⚠ the formation fix wants a browser look
+
+The owner's local `_gate.mjs core` came back **85 OK / 3 FAIL** (14.7 min).
+First question asked and answered: **is any of it ours?** No. All three fail
+IDENTICALLY at `9f44554` — the last commit before D16/D13/D14 — and each was
+traced to the change that stranded it by running the probe at that commit's
+parent. Two were stale tests. The third was a real bug the probe had been
+correctly reporting for a day.
+
+**1. `formation_compose_probe` — A REAL PRODUCT BUG (the option family was
+locked out of the Formation Designer).** Green at `3798003^`, red at `3798003`
+(FORMATION DESIGNER — THE SILENT CRASH). That fix added three legality caps,
+one of them `RB + FB > 2` → *"at most two backs behind the quarterback"*. One
+notch too tight: the cap exists to stop two men sharing a slot id, and the
+backfield id table is **FB + RB_H + RB_2** (`_skillSlots`) — three backs compile
+cleanly so long as at most two are HALFBACKS. And the game ships three-back
+sets: **Wishbone is RB 2 + FB 1, Flexbone is RB 2 + FB 1.** So the cap made it
+impossible to author the very formations the engine already runs, and the probe
+(written before the cap, asserting "a 3-back design lands in an option family")
+had been red ever since. Now `RB > 2`, with the fullback cap untouched.
+Re-verified by construction: the owner's original five-TE crash payload still
+rejects, a third halfback still rejects, two fullbacks still reject, and the
+Wishbone shape now compiles as archetype **Wishbone** with unique ids
+(`RB_H, RB_2, FB`).
+
+**2. `bench_probe` — stale test.** Green at `91fefce^`, red at `91fefce`
+(ALL-LEGAL PER LOOK). Its pin asserted the seeded sheet was *NOT* flat, which
+encoded the retired curated-play-menu model; starter books now select every
+fitting play at a flat weight by owner direction. The pin that still matters —
+the seed carries the SHIPPED weights through verbatim — was already there and
+still passes; the flatness pin now asserts every seeded weight is a live
+number instead.
+
+**3. `dead_surface_probe` — false positive, and the keys are load-bearing.**
+Red since `f19d65d`/`ab2f160`. It flagged `_bookStarter` / `_defbookStarter` as
+"written by the UI, read by nothing" — but they ARE read, at gameplan.js
+2878/2895: they are how "Edit offense/defense" re-opens the FULL starter book
+(shelves, answers, front mix) instead of falling back to the identity-only
+extract, which was the empty-playbook bug the owner reported on 2026-08-18. The
+probe requires an ENGINE reader and has a curated UI-only exceptions list that
+was never filled in; both keys are now on it **with reasons**. The probe's teeth
+are unchanged — anything not listed still fails.
+
+**Gates:** all three probes **PASS ×3**. Neighbours re-run green:
+`formation_variation_probe` · `creator_store_probe` · `creator_resilience_probe`
+· `integration_creator_probe` · `worldgen_check` (2 standing warnings) ·
+`save_migration_check` · `plan_cohesion_probe` 87/0. Clean build (13/13 sanity,
+cache `cfb-dynasty-9907ba564f`).
+
+**OWNER CHECKLIST (gate repair):**
+- [ ] **Re-run `node tools/_gate.mjs core`** — expect 88 OK / 0 FAIL.
+- [ ] **Browser, Formation Designer (this is a product change, so it wants a
+  look):** build a three-back set — a fullback plus two halfbacks — and confirm
+  it SAVES and previews (it should land in the Wishbone/Flexbone family and
+  carry the option plays). Then confirm a FOURTH back, a third halfback, a
+  second fullback and five tight ends are all still refused with a readable
+  reason.
+
+**Commit scoped to:** `js/engine/formcompose.js` · `tools/bench_probe.mjs` ·
+`tools/dead_surface_probe.mjs` · `Ref/STATUS.md`. NOT pushed.
+
 ## 2026-08-18 — D14 · ONE CARD, ONE VOCABULARY (this Cowork session) — the DPB2 1:1 claim made true
 ## NODE-GATED ×3 (plan_cohesion_probe 87/0) · BAND-GATED ×2 · ⚠ `_equiv_walk` + BROWSER OWED-LOCAL
 

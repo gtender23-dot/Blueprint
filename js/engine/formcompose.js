@@ -131,7 +131,15 @@ function validateCustomFormation(cf) {
   }
   if (pkgN.TE > 3) errors.push(`a formation carries at most three tight ends \u2014 Y, U and W (got ${pkgN.TE})`);
   if (pkgN.FB > 1) errors.push(`only one fullback fits the backfield (got ${pkgN.FB})`);
-  if (pkgN.RB + pkgN.FB > 2) errors.push(`at most two backs behind the quarterback (got ${pkgN.RB + pkgN.FB})`);
+  // 2026-08-18: this was `RB + FB > 2` — one notch too tight, and it locked the
+  // OPTION FAMILY out of the designer. The cap exists to stop two men sharing a
+  // slot id, and the backfield id table is FB + RB_H + RB_2 (_skillSlots), so
+  // THREE backs compile cleanly as long as at most two are halfbacks. The game
+  // itself ships three-back sets — Wishbone and Flexbone are both RB 2 + FB 1 —
+  // so the old cap made it impossible to author the very formations the engine
+  // already runs (formation_compose_probe's "Triple Threat" case, red since the
+  // cap landed). One fullback, two halfbacks: three backs, three distinct ids.
+  if (pkgN.RB > 2) errors.push(`at most two halfbacks behind the quarterback (got ${pkgN.RB}) — a fullback may join them`);
   // 7 on the line: the 5 OL are always on it, so 2+ skill players must join.
   if (online < 2) errors.push(`only ${5 + online} men on the line — the rules want 7 (put ${2 - online} more on the line)`);
   // Covered ends: an on-line man with a teammate on the line OUTSIDE him is

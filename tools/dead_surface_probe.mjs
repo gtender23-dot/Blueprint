@@ -34,7 +34,17 @@ const engineFiles = [...list('js/engine', (f) => f.endsWith('.js')), 'js/state.j
 // wants to persist with the plan). Every entry needs a reason. Anything not
 // here that lacks an engine reader FAILS.
 const UI_ONLY = new Map([
-  // none yet — the first sweep decides what belongs here, with reasons
+  // 2026-08-18: the STARTER-BOOK MARKERS. When the wizard, applyStartingChoices
+  // or an in-game load applies a SHIPPED starter book (as opposed to a Workshop
+  // custom), it stamps the book's name here so "Edit offense/defense" can
+  // re-open the FULL book — shelves, answers, front mix — instead of falling
+  // back to defBookFromGameplan, which extracts identity only and produced the
+  // empty-playbook bug the owner reported. Read by the UI at
+  // gameplan.js renderDefTab/renderPlaybooksTab (the defaultOffBook/
+  // defaultDefBook re-load); the ENGINE has no business reading either, so
+  // "no engine reader" is correct here rather than dead.
+  ['_bookStarter', 'starter offensive book name — UI re-opens the full book on Edit offense'],
+  ['_defbookStarter', 'starter defensive book name — UI re-opens the full book on Edit defense']
 ]);
 
 let pass = 0, fail = 0;
