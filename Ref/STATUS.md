@@ -486,6 +486,104 @@ D16's `_liveTempo` hunks in the same file deliberately left unstaged**) ·
 `tools/plan_cohesion_probe.mjs` (**partial-staged — §2 only; D13/D16 own §5 and
 the import line**) · `Ref/STATUS.md` (this entry + the header). NOT pushed.
 
+## 2026-08-18 — D14 · ONE CARD, ONE VOCABULARY (this Cowork session) — the DPB2 1:1 claim made true
+## NODE-GATED ×3 (plan_cohesion_probe 87/0) · BAND-GATED ×2 · ⚠ `_equiv_walk` + BROWSER OWED-LOCAL
+
+OD-6 (owner-RATIFIED, 4510b12). DPB2 claimed every card element maps 1:1 onto
+the engine's vocabulary; the cohesion audit refuted it on five counts. The
+three compile paths now derive from ONE declaration, and the two ratified gaps
+are closed.
+
+**What shipped:**
+1. **`CARD_VOCAB` (defbook.js, exported).** One table: every card element, its
+   enum, and which of the three seams (call / cell / check) consumes it.
+   `cardToDefCall` / `cardToCell` / `cardToFormCheck` derive their key sets
+   from it instead of hand-listing — which is how the three drifted apart in
+   the first place. Where a seam is false it is false **on purpose and in
+   writing**: `dogGame`/`rotation` are call-only (a cell/check is a standing
+   posture with no field to land them in), and `greenDog` is a BOOK identity
+   toggle that was never a card element (the validator warns on it as an
+   unknown key).
+2. **The call seam gains the cushion.** `applyDefCall` grew a `pressLevel`
+   branch and `pickDefCall`'s normalizer now speaks the key. A card could
+   always author press/off, `cardToDefCall` always emitted it, and `syncDefEff`
+   already carried `pressLevelEff` to the coverage pick — but no branch existed,
+   so **the headset ignored a card's cushion while a situation cell honored it**.
+   That asymmetry was the sharpest edge of "one card, three defenses".
+3. **The check seam keeps its coverage — the fix with teeth.** A book answer
+   built from a family card (2-Man / Tampa 2 / Cover 6 / Prevent) used to reach
+   the field with NO coverage at all: `cardToFormCheck` copied only shell/style
+   and the family name died there, so *"vs Empty, check to Dime Tampa 2"*
+   quietly played whatever the standing dials said. The answer now carries the
+   family AND its implied shell/style, and the formCheck apply site forwards it.
+   **PROVEN at sim level** (new probe §7): against a single/man/press standing
+   plan an answer naming Tampa 2 stamps Tampa 2 on **100% of 632 dropbacks**;
+   the pre-D14 shape of the same answer (shell/style only) produces the two-high
+   zone families **100%** of the time and Tampa 2 **never**. OD-2(a)'s order is
+   preserved and pinned: the CALL's family is cleared first, then the CHECK's
+   own family is set.
+4. **The three family→shell copies are ONE.** `COV_FAMILY` (constants.js) now
+   holds shell + style + a `callable` flag; sim.js's `FAMILY_SHELL` and
+   `COV_FAMILY_IMPLIES` and defbook.js's `_FAMILY_SHELL` all derive from it.
+   The `callable` flag is load-bearing, not decoration: only the four
+   card-selectable pictures may be pinned by name, because deriving the whole
+   table into `COV_FAMILY_IMPLIES` would let a stray `covFamily:"Cover 2"`
+   start overwriting the dials — a behavior change wearing a cleanup's clothes.
+
+**⚠ AN AUDIT FINDING THAT DOES NOT REPRODUCE (reported, not "fixed").** The
+audit recorded the shell-only copy as *"sim.js 320 shell-only map — missing
+Cover 2-Man"* and the dispatch asked for it to be fixed as part of the merge,
+after verifying it was shell-only cosmetic. It was verified: **`FAMILY_SHELL`
+has carried `"Cover 2-Man": "two"` all along**, including at the audit's own
+commit (checked `git show ec7300b:js/engine/sim.js`). There was no gap. Nothing
+was changed on that account and the merge is a pure de-duplication; a probe pin
+now records the entry's presence so the claim can't be re-raised.
+
+**Deliberately NOT done (the one thing D14 leaves open).** The dispatch's
+expected shape allowed the check seam to gain `robberCall`/`zoneStyle`
+*"if ratified"* — and they are **not**. OD-6's ratified text names the family
+coverages and `pressLevel` at minimum; those shipped. Robber/zone-eyes on a
+personnel answer would be a new behavior nobody has approved, so they stay out
+and `CARD_VOCAB` declares them `check:false`. **Owner decision if wanted** —
+it is a two-line change once ratified (the apply site already routes through
+`applyDefCall`, which speaks both).
+
+**Gates (this sandbox, node):** `plan_cohesion_probe` **ALL PASS ×3 (87/0)** —
+§4's pins FLIPPED with the fix (every "DROPS" pin that encoded a defect now
+asserts the unified behavior or a declared call-only exclusion) plus the new
+§7 sim arms · `defbook_probe` ×3 · `defsheet_probe` ×3 · `card_lint_probe`
+21/0 · `defcall_probe` 32/0 · `covfam_probe` N=90 ALL PASS 17/0 ·
+`save_migration_check` PASS · **`defcall_band_ab` BANDS HELD** (300 games/arm:
+drift pts 0.25 · rush 2.47 · pass 2.31) · **`stat_realism` N=250 ×2 at AI mix:
+standing flags only, nothing new** (run 1 rush 153.2 / comp 57.1 / INT 2.14;
+run 2 rush 151.3 / comp 56.6 / INT 1.95) — this was the band-gated block, since
+`pressLevel` entering the call path moves coverage math · clean build
+(13/13 sanity, cache `cfb-dynasty-9b9d9caa89`, bundle parse 2/2, CSS
+5698/5698, both new tables verified in the bundle).
+
+**⚠ OWED-LOCAL:** `_equiv_walk` (not neutral by design — a card-driven answer
+that names a family now plays that family; attribute the diffs to §7's proven
+change and treat anything else as a finding) · `covfam_probe` at the manifest's
+N=120 (sandbox call cap; N=90 full-green, and N=120 was green as far as it got)
+· `stat_realism` N=500 · the browser eyeball below.
+
+**OWNER CHECKLIST (D14):**
+- [ ] **Browser, one game:** open a defensive book, give a personnel answer a
+  family card — *vs Empty → a Tampa 2 / 2-Man / Cover 6 / Prevent call* — then
+  play a game against an empty/spread offense and watch the coverage readout on
+  those snaps. It should read the family you named. Before this change it read
+  your standing coverage and the answer did nothing.
+- [ ] **Headset cushion:** call a card that presses (or plays off) from the
+  headset and confirm the corners' leverage matches the card. The cell path
+  always did this; the headset path is new.
+- [ ] **Decide (or park): should a personnel answer be able to carry
+  `robberCall` / `zoneStyle`?** Not ratified, so not shipped — see above.
+- [ ] **Local gates:** `node tools/_gate.mjs core`, plus the owed items.
+
+**Commit scoped to:** `js/constants.js` · `js/engine/defbook.js` ·
+`js/engine/sim.js` · `tools/plan_cohesion_probe.mjs` · `Ref/STATUS.md`.
+NOT pushed.
+
 ## 2026-08-18 — D16 · RETIREMENTS, DISCLOSED (this Cowork session) — blitzPct writers · placebo enums · zombies
 ## NODE-GATED ×3 (probe 77/0 on the shared tree, 61/0 on this commit's own snapshot) — ⚠ N=500 BAND + `_equiv_walk` ATTRIBUTION + BROWSER EYEBALL OWED-LOCAL
 

@@ -1,6 +1,6 @@
 import { __spreadProps, __spreadValues } from '../_spread.js';
 import { PASS_CONCEPTS, RUN_CONCEPTS } from '../concepts.js';
-import { C, DEF_WEIGHTS, FORMATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, FRONT_ROLES, MEASURED_ATTRS, OFF_WEIGHTS, OUT_OF_POS, PASS_TENDENCY, PENALTY_CATALOG, STARTER_COUNTS, SUB_ADJACENT, aggrStopFromBlitzPct, aliasFormation } from '../constants.js';
+import { C, COV_FAMILY, DEF_WEIGHTS, FORMATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, FRONT_ROLES, MEASURED_ATTRS, OFF_WEIGHTS, OUT_OF_POS, PASS_TENDENCY, PENALTY_CATALOG, STARTER_COUNTS, SUB_ADJACENT, aggrStopFromBlitzPct, aliasFormation } from '../constants.js';
 import { DEF_DROP_ELIGIBLE, DEF_FIELD_LAYOUTS, OFF_FIELD_LAYOUTS } from '../constants_field.js';
 import { contestGap } from './contests.js';
 import { resolveDefField, resolveOffField } from './fieldassign.js';
@@ -189,6 +189,13 @@ function applyDefCall(defEff, o, defSchool) {
   if (o.pressureIdentity) defEff.pressureIdentity = o.pressureIdentity === "auto" ? null : o.pressureIdentity;
   if (o.robberCall) defEff.robberCall = o.robberCall;
   if (o.zoneStyle) defEff.zoneStyle = o.zoneStyle;
+  // D14 (OD-6, ratified 2026-08-18): the CUSHION reaches the call seam. A card
+  // could always author press/off, cardToDefCall always emitted it, and
+  // syncDefEff already carried pressLevelEff to the coverage pick — but this
+  // branch didn't exist, so the headset silently ignored a card's cushion
+  // while a situation cell honored it. That asymmetry was the sharpest edge of
+  // the "one card, three defenses" finding. "auto" means no opinion.
+  if (o.pressLevel && o.pressLevel !== "auto") defEff.pressLevel = o.pressLevel;
   if (o.aggression) {
     defEff.defAggression = o.aggression;
     defEff.blitzPct = clamp2(((_a = C.AGGRESSION.rate[o.aggression]) != null ? _a : 20) + ((_c = (_b = defSchool == null ? void 0 : defSchool.weeklyPlan) == null ? void 0 : _b.blitzShift) != null ? _c : 0), 0, 75);
@@ -282,6 +289,9 @@ function pickDefCall(gp, sitKey, persClass) {
     covFamily: c.covFamily || null,
     rotation: c.rotation || null,
     rush3: c.rush3 ? true : null,
+    // D14: the normalizer speaks the cushion now (it dropped it before, so a
+    // card's press/off died here even when applyDefCall would have taken it).
+    pressLevel: c.pressLevel || null,
     // PASS 4 ingredients (sparse — absent on every pre-Pass-4 call).
     pressLook: c.pressLook || null,
     dogGame: c.dogGame || null
@@ -309,26 +319,18 @@ function coverageFamily(shell, style, sAwr) {
 // to their plain dials, byte-identical Pass-2 behavior).
 // FAMILY_SHELL: every family's structural shell — feeds _conceptCtx.shell so
 // the mechanics layer (Fix E bail, leverage help) agrees with the name layer.
-var FAMILY_SHELL = {
-  "Cover 1": "single",
-  "Cover 3": "single",
-  "Cover 0": "single",
-  "C3 Fire Zone": "single",
-  "Cover 2": "two",
-  "Cover 4": "two",
-  "Cover 2-Man": "two",
-  "Cover 6": "two",
-  "Tampa 2": "two",
-  "Prevent": "two"
-};
+// D14 (OD-6, 2026-08-18): DERIVED from the ONE table (constants.js COV_FAMILY)
+// — this was one of three hand-kept copies of the same truth.
+var FAMILY_SHELL = Object.fromEntries(Object.entries(COV_FAMILY).map(([fam, v]) => [fam, v.shell]));
 // A pinned family forces its implied dials so every shell/style-keyed mechanic
 // downstream (PA bite, robber, deep help, scramble mults) agrees with the call.
-var COV_FAMILY_IMPLIES = {
-  "Cover 6": { shell: "two", style: "zone" },
-  "Tampa 2": { shell: "two", style: "zone" },
-  "Cover 2-Man": { shell: "two", style: "man" },
-  "Prevent": { shell: "two", style: "zone" }
-};
+// D14: also DERIVED from COV_FAMILY — the `callable` four, i.e. the pictures a
+// CALL can pin by name. Deriving the whole table here instead would let a
+// covFamily naming an OUTPUT-only family ("Cover 2") start overwriting the
+// dials; that is a behavior change, so the callable flag carries the line.
+var COV_FAMILY_IMPLIES = Object.fromEntries(
+  Object.entries(COV_FAMILY).filter(([, v]) => v.callable).map(([fam, v]) => [fam, { shell: v.shell, style: v.style }])
+);
 function resolveJetSweep(offPersonnel, defPersonnel, offRoster, defRoster, offUnit, defUnit, gameplan, defPlan, frontId, formationId, qb, jetMan, rbShares = null, rbPool = null) {
   var _a, _b, _c;
   const dfind = (id) => defRoster.find((p) => p.id === id);
@@ -4812,6 +4814,13 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
           edgePlay: _chk.edgePlay || null,
           pressureIdentity: _chk.pressureIdentity || null,
           aggression: _chk.defAggression || null,
+          // D14 (OD-6, ratified): an ANSWER may name a family picture. The
+          // clear above drops the CALL's family first, then this sets the
+          // CHECK's own — so "vs Empty, check to Dime Tampa 2" now actually
+          // plays Tampa 2 instead of falling back to the standing dials.
+          // Only a book answer can carry one (the CHK UI has no family row),
+          // which is the same asymmetry pressureIdentity already had.
+          covFamily: _chk.covFamily || null,
           runCommit: _chk.runCommit != null ? clamp2(defEff.runCommit + _chk.runCommit, -25, 25) : null
         }, defSchool);
         syncDefEff(defPlanEff, defEff);

@@ -2801,6 +2801,40 @@ FORMATION_PLAYBOOK = {
   "Empty": ["QB Sneak", "Jet Sweep", "Draw", "Slant-Flat", "Stick", "Mesh", "Shallow Cross", "Bubble Screen", "Tunnel Screen", "Slip Screen", "Smash", "Seam-Read Smash", "Curl-Flat", "Y-Cross", "Flood", "Dagger", "PA Deep Cross", "Yankee", "Post-Wheel", "Mills (Post-Dig)", "Four Verts", "Red-Zone Fade", "Whip", "Follow", "Y-Option", "Deep Out", "Comeback", "Corner-Post", "Deep Over", "Spacing", "Double Slants", "Hoss", "Drive", "Bench", "Stick-Nod", "Scissors", "Skinny Post", "Spot", "Sail", "Levels", "Sluggo Seam", "QB Power"]
 };
 
+// ── D14 (OD-6, 2026-08-18): THE ONE COVERAGE-FAMILY TABLE ───────────────────
+// The family→shell truth used to live in THREE hand-kept copies (sim.js
+// FAMILY_SHELL and COV_FAMILY_IMPLIES, defbook.js _FAMILY_SHELL). They agreed,
+// but nothing made them agree — the next family added to one was a silent
+// disagreement waiting to happen. This is now the single source; all three
+// derive from it.
+//
+//   shell / style — what the picture IS structurally. `style` is what the
+//     coverage pick would read off the dials if the same picture were dialed
+//     up by hand, so a family and its hand-dialed twin can't drift apart.
+//   callable — can a CALL pin this family by name? Only the four pictures a
+//     card can select (2-Man / Tampa 2 / Cover 6 / Prevent) force their dials
+//     through applyDefCall. The rest are OUTPUT names — what the coverage pick
+//     produces from shell+style — and pinning one by name has never been a
+//     thing a call could do. Keeping the distinction is load-bearing: making
+//     every family callable would let a stray covFamily:"Cover 2" start
+//     overwriting the dials, which is a behavior change, not a cleanup.
+//
+// AUDIT NOTE (D14): the cohesion audit recorded the shell-only copy as
+// "missing Cover 2-Man". It is NOT and never was — the entry has been present
+// since before the audit commit (verified at ec7300b). Nothing was fixed here;
+// this merge is a pure de-duplication and changes no behavior.
+var COV_FAMILY = {
+  "Cover 0":       { shell: "single", style: "man",  callable: false },
+  "Cover 1":       { shell: "single", style: "man",  callable: false },
+  "Cover 3":       { shell: "single", style: "zone", callable: false },
+  "C3 Fire Zone":  { shell: "single", style: "zone", callable: false },
+  "Cover 2":       { shell: "two",    style: "zone", callable: false },
+  "Cover 4":       { shell: "two",    style: "zone", callable: false },
+  "Cover 2-Man":   { shell: "two",    style: "man",  callable: true },
+  "Cover 6":       { shell: "two",    style: "zone", callable: true },
+  "Tampa 2":       { shell: "two",    style: "zone", callable: true },
+  "Prevent":       { shell: "two",    style: "zone", callable: true }
+};
 // W4 (§2): legacy migration — map an old numeric blitzPct to its nearest
 // AGGRESSION stop. Used by the UI, the sim and old-save normalization so a
 // plan authored before the aggression dial existed keeps behaving the same.
@@ -2813,4 +2847,4 @@ function aggrStopFromBlitzPct(pct) {
   return "house";
 }
 
-export { ARCHETYPE_DISTANCE, ATTRIBUTES, ATTR_FLOORS, C, CLASS_YEARS, DEFAULT_PRACTICE, DEF_FRONTS, DEF_FRONT_COUNTS, DEF_FRONT_WEIGHTS, DEF_WEIGHTS, FORMATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, FORMATION_VARIATIONS, FORMATION_ROLE_OVERRIDE, FORMATION_SITUATIONAL, FORMATION_WEIGHTS, FRONT_ROLES, MATCHUP_MATRIX, MEASURED_ATTRS, OFF_ROLE_BY_PLAY, OFF_WEIGHTS, OUT_OF_POS, OVR_POS_ADJ, PASS_TENDENCY, PENALTY_CATALOG, POSITIONS, POS_WEIGHTS, PRACTICE_TOOLS, RECRUIT_CORE, ROLE_WEIGHTS, ROSTER_POS_MAX, ROSTER_POS_MIN, ROSTER_TARGETS, SAVE_VERSION, SIZE_BANDS, SLOT_ELIGIBILITY, STARTER_COUNTS, SUB_ADJACENT, aggrStopFromBlitzPct, aliasFormation, attrLabel, schemeRosterTargets, schemeStarterCounts, schemeStarterOverride, schoolSchemeFront };
+export { COV_FAMILY, ARCHETYPE_DISTANCE, ATTRIBUTES, ATTR_FLOORS, C, CLASS_YEARS, DEFAULT_PRACTICE, DEF_FRONTS, DEF_FRONT_COUNTS, DEF_FRONT_WEIGHTS, DEF_WEIGHTS, FORMATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, FORMATION_VARIATIONS, FORMATION_ROLE_OVERRIDE, FORMATION_SITUATIONAL, FORMATION_WEIGHTS, FRONT_ROLES, MATCHUP_MATRIX, MEASURED_ATTRS, OFF_ROLE_BY_PLAY, OFF_WEIGHTS, OUT_OF_POS, OVR_POS_ADJ, PASS_TENDENCY, PENALTY_CATALOG, POSITIONS, POS_WEIGHTS, PRACTICE_TOOLS, RECRUIT_CORE, ROLE_WEIGHTS, ROSTER_POS_MAX, ROSTER_POS_MIN, ROSTER_TARGETS, SAVE_VERSION, SIZE_BANDS, SLOT_ELIGIBILITY, STARTER_COUNTS, SUB_ADJACENT, aggrStopFromBlitzPct, aliasFormation, attrLabel, schemeRosterTargets, schemeStarterCounts, schemeStarterOverride, schoolSchemeFront };

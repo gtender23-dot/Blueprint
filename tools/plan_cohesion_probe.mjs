@@ -44,13 +44,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import url from 'node:url';
-import { ROSTER_TARGETS, CLASS_YEARS, aggrStopFromBlitzPct } from '../js/constants.js';
+import { ROSTER_TARGETS, CLASS_YEARS, COV_FAMILY, aggrStopFromBlitzPct } from '../js/constants.js';
 import { createPlayer } from '../js/engine/player.js';
 import { buildDepthChart } from '../js/engine/world.js';
 import { simulateGame } from '../js/engine/sim.js';
 import {
   cardToDefCall, cardToCell, cardToFormCheck, emptyDefCard,
-  DEF_COVERAGE_SCHEMES, validateDefBook, CARD_EXTRA_ENUMS, CARD_EXTRA_LEGACY
+  DEF_COVERAGE_SCHEMES, validateDefBook, CARD_EXTRA_ENUMS, CARD_EXTRA_LEGACY, CARD_VOCAB
 } from '../js/engine/defbook.js';
 import { DEFAULT_DEF_BOOKS } from '../js/engine/defaultbooks.js';
 
@@ -203,32 +203,61 @@ console.log('\n— 4. one card, three compile paths, three vocabularies —\n');
     dogGame: 'green', pressLevel: 'press', greenDog: true,
   };
   const call = cardToDefCall(card), cell = cardToCell(card), chk = cardToFormCheck(card);
-  // The headset/call path: emits pressLevel — which pickDefCall's normalizer
-  // and applyDefCall both drop (pinned below) — and carries dogGame.
-  check('cardToDefCall emits pressLevel (the call path will drop it)', call.pressLevel === 'press');
+  // ── D14 (OD-6, owner-ratified 2026-08-18): THE PINS FLIP ──────────────────
+  // Every "DROPS" pin below was a defect pinned as current behavior. The three
+  // seams now derive their key sets from ONE exported CARD_VOCAB table, so the
+  // asymmetries can't come back by hand-editing one list and not the others.
+  check('D14: CARD_VOCAB is exported and every seam column is declared',
+    CARD_VOCAB && Object.values(CARD_VOCAB).every(v => 'call' in v && 'cell' in v && 'check' in v));
+  // The headset/call path — and now the sim ACTUALLY honors the cushion.
+  check('cardToDefCall emits pressLevel', call.pressLevel === 'press');
   check('cardToDefCall carries dogGame', call.dogGame === 'green');
-  check('cardToDefCall DROPS greenDog (the "Dime Green Dog" card class)', !('greenDog' in call));
-  // The shelf→cell path: honors pressLevel, DROPS dogGame.
+  check('cardToDefCall DROPS greenDog (a book identity toggle, never a card element)', !('greenDog' in call));
+  // The shelf→cell path: unchanged by D14 (ratified — it already spoke every
+  // key a standing posture can hold).
   check('cardToCell carries pressLevel (the cell path honors the cushion)', cell.pressLevel === 'press');
-  check('cardToCell DROPS dogGame (the standing answer loses the dog game)', !('dogGame' in cell));
+  check('cardToCell DROPS dogGame (call-only by design — no cell-side field)', !('dogGame' in cell));
   check('cardToCell carries robberCall + zoneStyle', cell.robberCall === 'rob' && cell.zoneStyle === 'match');
-  // The answers→formCheck path: drops robber/zone-eyes/cushion/dog.
-  for (const k of ['robberCall', 'zoneStyle', 'pressLevel', 'dogGame', 'greenDog']) {
-    check(`cardToFormCheck DROPS ${k}`, !(k in chk));
+  // The answers→formCheck path: dog/rotation stay call-only BY DESIGN, and the
+  // three call-only-by-design drops are now declared in CARD_VOCAB, not
+  // accidents of a hand-listed key set.
+  for (const k of ['dogGame', 'rotation', 'greenDog']) {
+    check(`cardToFormCheck DROPS ${k} (declared call-only in CARD_VOCAB)`, !(k in chk));
   }
-  // A family coverage loses its shell/style entirely in a personnel answer.
+  for (const k of ['dogGame', 'rotation']) {
+    check(`CARD_VOCAB declares ${k} call-only`, CARD_VOCAB[k].call && !CARD_VOCAB[k].cell && !CARD_VOCAB[k].check);
+  }
+  // THE RATIFIED FIX: a family coverage now SURVIVES into a personnel answer,
+  // translated through the ONE table. Before D14 the answer arrived with no
+  // coverage at all and quietly fell back to the standing dials.
   const famChk = cardToFormCheck({ ...emptyDefCard('T2'), coverage: 'tampa2' });
-  check('cardToFormCheck({coverage:"tampa2"}) carries NO covShell/covStyle (the answer loses the coverage)',
-    !('covShell' in famChk) && !('covStyle' in famChk));
-  // The sim-side vocabulary pin: pickDefCall's normalizer key list (sim.js).
-  // pressLevel is NOT in it — the drop is at this seam. If the sim ever grows
-  // the key, this pin fails and the audit finding is resolved: update both.
-  const NORMALIZED = ['front', 'covShell', 'covStyle', 'edgePlay', 'pressureIdentity', 'robberCall', 'zoneStyle', 'aggression', 'runCommit', 'covFamily', 'rotation', 'rush3', 'pressLook', 'dogGame'];
+  check('D14: cardToFormCheck({coverage:"tampa2"}) keeps the family AND its implied shell/style',
+    famChk.covFamily === 'Tampa 2' && famChk.covShell === 'two' && famChk.covStyle === 'zone');
+  check('D14: a plain-dials card still yields plain dials in the answer (no phantom family)',
+    !('covFamily' in cardToFormCheck({ ...emptyDefCard('C3'), coverage: 'c3' })));
+  // The sim-side vocabulary pins: the normalizer and applyDefCall now speak the
+  // cushion, and the check apply site forwards a family.
+  const NORMALIZED = ['front', 'covShell', 'covStyle', 'edgePlay', 'pressureIdentity', 'robberCall', 'zoneStyle', 'aggression', 'runCommit', 'covFamily', 'rotation', 'rush3', 'pressLook', 'dogGame', 'pressLevel'];
   for (const k of NORMALIZED) {
-    check(`pickDefCall normalizer still speaks "${k}"`, new RegExp(`${k}\\s*:\\s*c\\.${k === 'rush3' ? 'rush3' : k}`).test(SIM_SRC));
+    check(`pickDefCall normalizer speaks "${k}"`, new RegExp(`${k}\\s*:\\s*c\\.${k === 'rush3' ? 'rush3' : k}`).test(SIM_SRC));
   }
-  check('pickDefCall normalizer does NOT speak pressLevel', !/pressLevel\s*:\s*c\.pressLevel/.test(SIM_SRC));
-  check('applyDefCall has no pressLevel branch', !/o\.pressLevel/.test(SIM_SRC));
+  check('D14: applyDefCall HAS a pressLevel branch (the headset honors a card cushion)',
+    /if \(o\.pressLevel && o\.pressLevel !== "auto"\) defEff\.pressLevel = o\.pressLevel;/.test(SIM_SRC));
+  check('D14: the formCheck apply site forwards covFamily (the answer keeps its picture)',
+    /covFamily: _chk\.covFamily \|\| null,/.test(SIM_SRC));
+  check('D14: OD-2(a) order preserved — the CALL family is cleared BEFORE the check applies its own',
+    SIM_SRC.indexOf('if (_chk.covShell || _chk.covStyle) defEff.covFamily = null;') <
+    SIM_SRC.indexOf('covFamily: _chk.covFamily || null,'));
+  // The THREE hand-kept family→shell copies are now ONE (constants.js).
+  check('D14: sim.js FAMILY_SHELL is derived, not hand-listed',
+    /var FAMILY_SHELL = Object\.fromEntries\(Object\.entries\(COV_FAMILY\)/.test(SIM_SRC));
+  check('D14: sim.js COV_FAMILY_IMPLIES is derived from the callable families',
+    /var COV_FAMILY_IMPLIES = Object\.fromEntries\(\s*Object\.entries\(COV_FAMILY\)\.filter\(\(\[, v\]\) => v\.callable\)/.test(SIM_SRC));
+  check('D14: only the four card-selectable pictures are callable (an output-only family cannot overwrite dials)',
+    Object.entries(COV_FAMILY).filter(([, v]) => v.callable).map(([f]) => f).sort().join('|')
+      === 'Cover 2-Man|Cover 6|Prevent|Tampa 2');
+  check('D14: the shell-only copy carries Cover 2-Man (the audit recorded it missing — it never was)',
+    COV_FAMILY['Cover 2-Man'].shell === 'two');
 }
 
 console.log('\n— 5. placebo enums (pinned as CURRENT behavior — see the audit) —\n');
@@ -293,6 +322,29 @@ console.log('\n— 5. placebo enums (pinned as CURRENT behavior — see the audi
   check('D13: an unknown card KEY is a warning, not an error (future vocab can add keys)',
     vKey.ok && vKey.warnings.some(w => /unknown key "spyQB"/.test(w)));
   check('D13: all six starter books validate ok', DEFAULT_DEF_BOOKS.every(b => validateDefBook(b).ok));
+}
+
+console.log(`\n— 7. D14: the ANSWER keeps its coverage (OD-6 ratified) — ${N} games/arm\n`);
+{
+  // The sharpest half of "one card, three defenses", proven at sim level.
+  // A book answer built from a Tampa 2 card used to reach the field with NO
+  // coverage — cardToFormCheck copied only shell/style and the family name
+  // died there — so "vs Empty/spread, check to Dime Tampa 2" quietly played
+  // whatever the dials said. The standing plan here is single/man/press, so
+  // any Tampa 2 on the ledger can only have come from the ANSWER.
+  const CALL = { defCalls: { Probe: { covShell: 'single', covStyle: 'man' } }, callSheet: sheetAll('Probe') };
+  const withFam = covCounts({ covShell: 'single', covStyle: 'man' }, 71000,
+    { ...CALL, formChecks: { spread: { covFamily: 'Tampa 2', covShell: 'two', covStyle: 'zone' } } });
+  check('D14: an answer naming a family STAMPS that family on the snap',
+    share(withFam, ['Tampa 2']) >= 0.9,
+    `${(share(withFam, ['Tampa 2']) * 100).toFixed(1)}% of ${withFam.db} [${fmt(withFam)}]`);
+  // Control — the PRE-D14 shape of the same answer (shell/style only, family
+  // dropped): the dials resolve to the two-high zone families, never Tampa 2.
+  const plain = covCounts({ covShell: 'single', covStyle: 'man' }, 71000,
+    { ...CALL, formChecks: { spread: { covShell: 'two', covStyle: 'zone' } } });
+  check('control (the pre-D14 shape): shell/style alone can never produce Tampa 2',
+    share(plain, ['Tampa 2']) <= 0.02 && share(plain, ['Cover 2', 'Cover 4']) >= 0.85,
+    `Tampa2 ${(share(plain, ['Tampa 2']) * 100).toFixed(1)}% · two-high zone ${(share(plain, ['Cover 2', 'Cover 4']) * 100).toFixed(1)}% of ${plain.db}`);
 }
 
 console.log('\n— 6. D16 retirements, disclosed (OD-5/OD-8/OD-9 ratified 2026-08-17) —\n');

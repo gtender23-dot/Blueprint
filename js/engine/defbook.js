@@ -1,4 +1,4 @@
-import { DEF_FRONTS, C, aggrStopFromBlitzPct } from '../constants.js';
+import { DEF_FRONTS, C, COV_FAMILY, aggrStopFromBlitzPct } from '../constants.js';
 
 // ── customDefBook shape (Creativity Tools — the defensive playbook, Aug 2026) ─
 // The defensive twin of playbook.js. Where an offensive playbook is formation +
@@ -83,6 +83,46 @@ var CARD_EXTRA_LEGACY = {
   zoneStyle: ["quarterQuarterHalf"]
 };
 var CARD_KNOWN_KEYS = new Set(["name", "front", "coverage", "bring", "look", "weight", "runCommit", ...Object.keys(CARD_EXTRA_ENUMS)]);
+// ── D14 (OD-6, owner-ratified 2026-08-18): ONE CARD, ONE VOCABULARY ─────────
+// DPB2 claimed every card element maps 1:1 onto the engine's vocabulary. The
+// cohesion audit refuted that on five counts: the card's three compile paths
+// (the headset CALL, the situation CELL, the personnel CHECK) each hand-listed
+// their own key set, so ONE card meant THREE different defenses. This table is
+// now the single declaration of what a card can say and who listens; all three
+// compiles derive from it instead of hand-listing.
+//
+//   key    — the card field.
+//   enum   — legal values (see CARD_EXTRA_ENUMS); null = not an enum.
+//   call   — reaches the headset/named-call seam (applyDefCall).
+//   cell   — reaches a situation cell (getEffectivePlan's vocabulary).
+//   check  — reaches a personnel answer (the formCheck apply site).
+//
+// Where a seam is FALSE it is false for a reason, not by accident:
+//   dogGame  — call only. A cell/check is a standing posture; the dog game is
+//              a per-call flavor with no cell-side field to land in.
+//   rotation — call only, same reason (D13 put it on the call seam).
+//   greenDog — read by NOTHING. It is a standing identity toggle on the BOOK
+//              (gameplan.greenDog), never a card element; a card that carries
+//              one is authoring noise. validateDefBook warns on it as an
+//              unknown key. Kept out of the table on purpose.
+var CARD_VOCAB = {
+  front:      { enum: null,         call: true, cell: true,  check: true  },
+  coverage:   { enum: null,         call: true, cell: true,  check: true  },
+  bring:      { enum: null,         call: true, cell: true,  check: true  },
+  look:       { enum: null,         call: true, cell: true,  check: true  },
+  runCommit:  { enum: null,         call: true, cell: true,  check: true  },
+  edgePlay:   { enum: "edgePlay",   call: true, cell: true,  check: true  },
+  robberCall: { enum: "robberCall", call: true, cell: true,  check: false },
+  zoneStyle:  { enum: "zoneStyle",  call: true, cell: true,  check: false },
+  pressLevel: { enum: "pressLevel", call: true, cell: true,  check: false },
+  dogGame:    { enum: "dogGame",    call: true, cell: false, check: false },
+  rotation:   { enum: "rotation",   call: true, cell: false, check: false }
+};
+// The card's "extras" — everything past the four big choices — grouped by the
+// seam that consumes them, derived so a new row in CARD_VOCAB wires itself in.
+var _vocabKeys = (seam) => Object.keys(CARD_VOCAB).filter(
+  (k) => CARD_VOCAB[k][seam] && !["front", "coverage", "bring", "look"].includes(k)
+);
 // A card → the sparse defCall payload the headset/named-call system consumes.
 // ⚠ D10 cohesion audit (2026-08-18): the card's THREE compile paths speak
 // three different vocabularies, so one card means three different defenses —
@@ -99,20 +139,20 @@ function cardToDefCall(card) {
   const out = { ...cov.fields, ...bring.fields };
   if (card.front && isFront(card.front)) out.front = card.front;
   if (card.look && pressIdentities().includes(card.look)) out.pressureIdentity = card.look;
-  // `rotation` joined this list with D13 (OD-7, 2026-08-18): the ratified card
-  // repair moved the zoneStyle:"sky"/"cloud"/"fire" strays onto the rotation
-  // key, and pickDefCall's normalizer + applyDefCall already speak rotation —
-  // cardToDefCall was the ONE seam dropping it, which would have made the
-  // repair dead data. Call-only on purpose: cells/checks can't speak rotation
-  // (cardToCell copies from a different list; audit disposition table).
-  for (const k of ["runCommit", "edgePlay", "robberCall", "zoneStyle", "dogGame", "pressLevel", "rotation"]) {
+  // D14: the key list is DERIVED from CARD_VOCAB (was hand-listed here and in
+  // two other places, which is how the three seams drifted apart).
+  for (const k of _vocabKeys("call")) {
     if (card[k] != null && card[k] !== "auto" && card[k] !== "") out[k] = card[k];
   }
   return out;
 }
 // A card → the def-side fields a SITUATION CELL consumes (getEffectivePlan's
 // vocabulary — families translate to shell/style; a cell has no covFamily).
-var _FAMILY_SHELL = { "Cover 6": { covShell: "two", covStyle: "zone" }, "Tampa 2": { covShell: "two", covStyle: "zone" }, "Cover 2-Man": { covShell: "two", covStyle: "man" }, "Prevent": { covShell: "two", covStyle: "zone" } };
+// D14: DERIVED from the ONE table (constants.js COV_FAMILY) — this was the
+// third hand-kept copy of the family→shell truth.
+var _FAMILY_SHELL = Object.fromEntries(
+  Object.entries(COV_FAMILY).filter(([, v]) => v.callable).map(([fam, v]) => [fam, { covShell: v.shell, covStyle: v.style }])
+);
 function cardToCell(card) {
   const call = cardToDefCall(card);
   const cell = {};
@@ -125,7 +165,10 @@ function cardToCell(card) {
     if (call.covShell) cell.covShell = call.covShell;
     if (call.covStyle) cell.covStyle = call.covStyle;
   }
-  for (const k of ["runCommit", "edgePlay", "robberCall", "zoneStyle", "pressLevel"]) if (call[k] != null) cell[k] = call[k];
+  // D14: derived from CARD_VOCAB. The cell seam gains nothing new (ratified) —
+  // it already spoke every key a standing posture can hold; dogGame/rotation
+  // stay call-only by design (documented in the table).
+  for (const k of _vocabKeys("cell")) if (call[k] != null) cell[k] = call[k];
   return cell;
 }
 // A card → a formCheck cell ("when they show this personnel, check to…").
@@ -135,10 +178,26 @@ function cardToFormCheck(card) {
   if (call.front) chk.defFront = call.front;
   if (call.aggression) chk.defAggression = call.aggression;
   if (call.pressureIdentity) chk.pressureIdentity = call.pressureIdentity;
-  if (call.covShell) chk.covShell = call.covShell;
-  if (call.covStyle) chk.covStyle = call.covStyle;
-  if (call.edgePlay) chk.edgePlay = call.edgePlay;
-  if (call.runCommit != null) chk.runCommit = call.runCommit;
+  // ── D14 (OD-6, ratified): THE ANSWER KEEPS ITS COVERAGE ───────────────────
+  // A card whose coverage is one of the four FAMILY pictures (2-Man, Tampa 2,
+  // Cover 6, Prevent) used to arrive at a personnel answer with NO coverage at
+  // all: cardToDefCall puts those on `covFamily` and this seam only copied
+  // shell/style, so "vs Empty, check to Dime Tampa 2" checked to… whatever the
+  // standing dials said. The answer now carries the family AND its implied
+  // shell/style, translated through the ONE table (COV_FAMILY via
+  // _FAMILY_SHELL) — the same translation the cell seam already used, so a
+  // card means the same defense whichever door it comes through.
+  const fam = call.covFamily && _FAMILY_SHELL[call.covFamily];
+  if (fam) {
+    chk.covFamily = call.covFamily;
+    chk.covShell = fam.covShell;
+    chk.covStyle = fam.covStyle;
+  } else {
+    if (call.covShell) chk.covShell = call.covShell;
+    if (call.covStyle) chk.covStyle = call.covStyle;
+  }
+  // D14: derived from CARD_VOCAB (front/coverage/bring/look handled above).
+  for (const k of _vocabKeys("check")) if (call[k] != null) chk[k] = call[k];
   return chk;
 }
 var DEF_ANSWER_CLASSES = [
@@ -446,7 +505,7 @@ function repairDefBook(db) {
 export {
   DEFBOOK_SCHEMA_VERSION, DEF_COVERAGE_SCHEMES, COVERAGE_IDS,
   DEF_SHELVES, DEF_SHELF_CARD_CAP, DEF_CALL_COVERAGES, DEF_CALL_BRING, DEF_ANSWER_CLASSES,
-  CARD_EXTRA_ENUMS, CARD_EXTRA_LEGACY,
+  CARD_EXTRA_ENUMS, CARD_EXTRA_LEGACY, CARD_VOCAB,
   frontIds, isFront, aggressionStops, pressIdentities,
   emptyDefBook, emptyDefCard, cardToDefCall, cardToCell, cardToFormCheck, bookCards,
   validateDefBook, applyDefBookToGameplan, defBookFromGameplan, repairDefBook,
