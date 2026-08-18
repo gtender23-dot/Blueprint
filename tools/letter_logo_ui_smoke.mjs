@@ -33,11 +33,12 @@ try{
   // this section used to enter through (#btn-mm-newcoach → coach home → [data-mm-world-new])
   // was retired by W9 §12 — the tree is the ONLY start path. START A DYNASTY takes the
   // coach's name in one form and goes straight into the wizard (navigate('newgame')); a
-  // tree run locks take-the-job/D3 and skips the Situation step, so #ob-next-0 lands
-  // directly on THE JOB (state → level → school list — the screen under test here).
+  // every run is take-the-job at the start division, so #ob-next-0 lands directly on
+  // THE JOB (state → school list — the screen under test here). The Situation step and
+  // the level cards were retired 2026-08-17; picking a state is enough to fill the board.
   await wizard.locator('#btn-mm-newtree').click(); await wizard.locator('#mm-nt-first').fill('Logo'); await wizard.locator('#mm-nt-last').fill('Test'); await wizard.locator('#mm-nt-create').click(); await wizard.waitForTimeout(400);
   check(await wizard.locator('.ob-kicker').count()>=1,'new dynasty entry (the tree door) opens the wizard');
-  await wizard.locator('#ob-next-0').click(); await wizard.locator('[data-ob-state="CA"]').click(); await wizard.locator('[data-ob-div="D3"]').click(); await wizard.waitForTimeout(150);
+  await wizard.locator('#ob-next-0').click(); await wizard.locator('[data-ob-state="CA"]').click(); await wizard.waitForTimeout(150);
   const schoolRows=wizard.locator('.ob-school-row:not(.ob-school-found)'); const rowCount=await schoolRows.count(); const rowMarks=wizard.locator('.ob-school-row:not(.ob-school-found) .ob-school-mark .crest-letter');
   check(rowCount>0 && await rowMarks.count()===rowCount,'opportunity board replaces every school emoji with its letter mark',`${await rowMarks.count()}/${rowCount}`);
   const rowText=await wizard.locator('.ob-school-list').innerText(); check(!/[🐺🐻🦅🐍🐴🐏🐝🐉🐆🐯🦁]/u.test(rowText),'opportunity board has no mascot emoji logos'); check(await noOverflow(wizard),'opportunity-board letter marks fit phone'); await wizard.screenshot({path:join(SHOTS,'letter_logos_job_picker_phone.png'),fullPage:true});

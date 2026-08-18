@@ -57,7 +57,7 @@ try {
   // prefix-matched selector EACH — a single shared selector would stop after the OC pick
   // (the same dead-end that stalled new_world_probe; FULLGATE_TRIAGE 2026-08-17 item 3).
   const advanceWizard = () => p.evaluate((OPTIONS) => {
-    for (const id of ['ob-next-0', 'ob-next-1', 'ob-next-2', 'ob-next-3', 'ob-next-4', 'ob-start']) {
+    for (const id of ['ob-next-0', 'ob-next-2', 'ob-next-3', 'ob-next-4', 'ob-start']) {
       const el = document.getElementById(id);
       if (el && !el.disabled && el.offsetParent !== null) { el.click(); return '#' + id; }
     }
@@ -70,7 +70,7 @@ try {
       return sel;
     }
     return null;
-  }, ['[data-ob-challenge]', '[data-ob-state]', '[data-ob-div]', '[data-ob-school]',
+  }, ['[data-ob-state]', '[data-ob-school]',
       '[data-ob-staff^="OC:"]', '[data-ob-staff^="DC:"]', '[data-ob-qb]', '[data-ob-front]']);
   let started = false;
   let idle = 0;

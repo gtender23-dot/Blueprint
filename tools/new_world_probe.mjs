@@ -73,13 +73,18 @@ const settle = (ms = 350) => page.waitForTimeout(ms);
 // EACH (prefix-matched) — a single shared selector would trip the "skip group
 // if any active" guard after the OC pick and dead-end the walk (the logged
 // "N3 … -1 node(s), 0 chars" — FULLGATE_TRIAGE 2026-08-17 item 3).
-const OPTIONS = ['[data-ob-challenge]', '[data-ob-state]', '[data-ob-div]', '[data-ob-school]',
+// 2026-08-17: the Situation step and the level cards are RETIRED (owner — every
+// dynasty is take-the-job at the start division, so neither was ever a real
+// question). [data-ob-challenge] and [data-ob-div] no longer exist anywhere in
+// the build; they are gone from here rather than left as harmless misses, so
+// this list keeps describing the screens a person actually sees.
+const OPTIONS = ['[data-ob-state]', '[data-ob-school]',
                  '[data-ob-staff^="OC:"]', '[data-ob-staff^="DC:"]',
                  '[data-ob-qb]', '[data-ob-front]'];
 async function advanceWizard() {
   return page.evaluate((OPTIONS) => {
     // An enabled forward button always wins.
-    for (const id of ['ob-next-0', 'ob-next-1', 'ob-next-2', 'ob-next-3', 'ob-next-4', 'ob-start']) {
+    for (const id of ['ob-next-0', 'ob-next-2', 'ob-next-3', 'ob-next-4', 'ob-start']) {
       const el = document.getElementById(id);
       if (el && !el.disabled && el.offsetParent !== null) { el.click(); return '#' + id; }
     }
@@ -227,27 +232,36 @@ try {
   if (!backToMenu) {
     check(false, 'N7 could not get back to the main menu to check the tree home');
   } else {
-    // Confirm/leave any "are you sure" step the menu button raises.
-    await page.evaluate(() => {
-      const y = [...document.querySelectorAll('button')].find(x =>
-        x.offsetParent !== null && /^(yes|leave|main menu|confirm)/i.test((x.textContent || '').trim()));
-      if (y) y.click();
-    });
-    await settle(900);
-    // Leaving a tree world usually lands straight back on that tree's home, so
-    // only click through the list when it does not.
-    await page.evaluate(() => {
-      if (/SEATED SEASON|THE RETIRED|PLAYBOOK LIBRARY/.test((document.body.innerText || '').toUpperCase())) return;
-      const tree = document.querySelector('[data-mm-tree]') ||
-        [...document.querySelectorAll('button')].find(b => (b.textContent || '').includes('🌳'));
-      if (tree) tree.click();
-    });
-    await settle(700);
+    // Walking OUT is a multi-step transition and it does not always take on the
+    // first press: the world can be holding a prompt (a "CONTINUE" card between
+    // days is the common one), and leaving lands on the tree LIST as often as on
+    // the tree home. The old fixed sequence — one confirm click, one tree click,
+    // one fixed wait — read the screen mid-flight and reported the shelf missing
+    // when it simply had not arrived yet (two false reds, 2026-08-17; the same
+    // build rendered the whole shelf when driven by hand). So: press toward the
+    // tree home and re-check, up to a real timeout, and stop the moment it is up.
+    let onTree = false;
+    for (let i = 0; i < 12 && !onTree; i++) {
+      onTree = await page.evaluate(() => {
+        const txt = (document.body.innerText || '').toUpperCase();
+        if (/THE CHAIRS|SEATED SEASON|THE RETIRED/.test(txt)) return true;
+        // Whatever is in the way first: a confirm, a between-days card, a modal.
+        const btn = [...document.querySelectorAll('button')].filter(b => b.offsetParent !== null);
+        const step = btn.find(b => /^(yes|leave|main menu|confirm|continue)/i.test((b.textContent || '').trim()));
+        if (step) { step.click(); return false; }
+        const home = document.getElementById('btn-main-menu');
+        if (home && home.offsetParent !== null) { home.click(); return false; }
+        const tree = document.querySelector('[data-mm-tree]') ||
+          btn.find(b => (b.textContent || '').includes('\u{1F333}'));
+        if (tree) { tree.click(); return false; }
+        return false;
+      });
+      if (!onTree) await settle(450);
+    }
     const shelf = await page.evaluate(() => {
       const txt = (document.body.innerText || '').toUpperCase();
       return {
-        opened: /THE RETIRED|PLAYBOOK LIBRARY|BANKED BY THE TREE|SEATED SEASON/.test(txt),
-        library: txt.includes('PLAYBOOK LIBRARY'),
+        opened: /THE CHAIRS|THE RETIRED|BANKED BY THE TREE|SEATED SEASON/.test(txt),
         teams: txt.includes('SAVED TEAMS'),
         classics: txt.includes('INSTANT CLASSICS'),
         dnaBtns: document.querySelectorAll('[data-mm-view="dna"][data-mm-view-coach]').length,
@@ -255,30 +269,38 @@ try {
       };
     });
     check(shelf.opened, 'N7 the tree home is reachable from the menu after leaving a world', JSON.stringify(shelf));
-    check(shelf.library && shelf.teams && shelf.classics,
-      'N7b the tree home carries the library, saved teams and instant classics',
-      `library ${shelf.library} · teams ${shelf.teams} · classics ${shelf.classics}`);
+    // The playbook library is NOT part of this shelf, by owner decision
+    // (2026-08-17): it lists the old per-coach plan store that the Workshop
+    // superseded, so re-homing it would surface something stale.
+    check(shelf.teams && shelf.classics,
+      'N7b the tree home carries saved teams and instant classics',
+      `teams ${shelf.teams} · classics ${shelf.classics}`);
     check(shelf.dnaBtns > 0 && shelf.recBtns > 0,
       'N7c every seated chair opens its own DNA and record book',
       `${shelf.dnaBtns} DNA · ${shelf.recBtns} records`);
 
     // And the pages behind those buttons actually render, with a Back that works.
+    // Same lesson as the walk out: click, then WAIT FOR THE SCREEN, never for a
+    // fixed 400ms. A record book with a full career in it is a big render, and
+    // reading too early called a working Back button broken (2026-08-17).
     const hub = await page.evaluate(async () => {
-      const open = (sel) => { const b = document.querySelector(sel); if (b) { b.click(); return true; } return false; };
       const read = () => (document.body.innerText || '').toUpperCase();
+      const TREE = /THE CHAIRS|SEATED SEASON|THE RETIRED/;
+      const clickAwait = async (sel, want) => {
+        const b = document.querySelector(sel);
+        if (!b) return false;
+        b.click();
+        for (let i = 0; i < 16; i++) {
+          await new Promise(r => setTimeout(r, 125));
+          if (want.test(read())) return true;
+        }
+        return false;
+      };
       const out = {};
-      open('[data-mm-view="dna"][data-mm-view-coach]');
-      await new Promise(r => setTimeout(r, 400));
-      out.dna = /DNA & BONUSES/.test(read());
-      open('[data-mm-view="back"]');
-      await new Promise(r => setTimeout(r, 400));
-      out.backFromDna = /SEATED SEASON|THE RETIRED|PLAYBOOK LIBRARY/.test(read());
-      open('[data-mm-view="records"][data-mm-view-coach]');
-      await new Promise(r => setTimeout(r, 400));
-      out.records = /RECORD BOOK/.test(read());
-      open('[data-mm-view="back"]');
-      await new Promise(r => setTimeout(r, 400));
-      out.backFromRecords = /SEATED SEASON|THE RETIRED|PLAYBOOK LIBRARY/.test(read());
+      out.dna = await clickAwait('[data-mm-view="dna"][data-mm-view-coach]', /DNA & BONUSES/);
+      out.backFromDna = await clickAwait('[data-mm-view="back"]', TREE);
+      out.records = await clickAwait('[data-mm-view="records"][data-mm-view-coach]', /RECORD BOOK/);
+      out.backFromRecords = await clickAwait('[data-mm-view="back"]', TREE);
       return out;
     });
     check(hub.dna && hub.records, 'N7d both hub pages render for a chair', JSON.stringify(hub));

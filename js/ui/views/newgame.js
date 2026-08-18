@@ -1,19 +1,52 @@
 import { C } from '../../constants.js';
 import { getCoach } from '../../engine/coachprofile.js';
 import { generateCandidates } from '../../engine/staff.js';
-import { findStartProgram } from '../../engine/starts.js';
-import { CONFERENCES, SCHOOL_DATA, WORLDGEN_INFO, applyIdentityToSchool, availableStates, generatePlayerProgram, generateWorld } from '../../engine/world.js';
-import { navigate, notify, rerender, startNewGame, startNewGamePrepared, state } from '../../state.js';
+import { WORLDGEN_INFO, applyIdentityToSchool, assembleWorldSources, availableStates, generatePlayerProgram, generateWorld, rosterHintsFromBooks } from '../../engine/world.js';
+import { navigate, notify, rerender, startNewGamePrepared, state } from '../../state.js';
 import { repairCreation } from '../../engine/creatorrepair.js';
 import { DEFAULT_OFF_BOOKS, DEFAULT_DEF_BOOKS, defaultOffBook, defaultDefBook } from '../../engine/defaultbooks.js';
 import { BLUEPRINT_MARK } from '../logo.js';
-import { BUILTIN_PLANS, applyPlanToSchool, builtinPlan, gameplanIsSimple } from './gameplan.js';
 import { listCreations, loadCreationData } from '../../engine/creator.js';
 import { applyPlaybookToGameplan } from '../../engine/playbook.js';
 import { applyDefBookToGameplan } from '../../engine/defbook.js';
 import { escapeHtml, renderCrest } from '../../utils.js';
 
+// The world the wizard shops in. Rebuilt only when the world SOURCE changes,
+// which is one thing today: whether the start division comes from worldgen or
+// from one of your saved leagues (owner call 2026-08-17 — Creator entrance #1,
+// `Ref/CREATOR_ENTRANCES.md`). Season Mode and Play Now already read those
+// shelves; the dynasty door was the last one that couldn't.
+//
+// IDENTITY ONLY, on purpose: a saved league carries names, colors, conferences
+// and prestige, and `generateWorld` builds every roster in it fresh. Nothing
+// authored in the Creator rides into a dynasty as players (owner, 2026-08-17).
 function obGetWorld() {
+  const key = ob.leagueId || "";
+  if (_obWorld && _obWorldKey === key) return _obWorld;
+  _obWorldKey = key;
+  _obWorld = null;
+  try {
+    if (ob.leagueId) {
+      const bp = loadCreationData("leagues", ob.leagueId);
+      const rep = bp ? repairCreation("leagues", bp) : null;
+      if (rep && rep.ok) {
+        const div = bp.division || START_DIV;
+        const src = assembleWorldSources({ [div]: { conferences: bp.conferences, teams: bp.teams } });
+        _obWorld = generateWorld({ schools: src.schools, conferences: src.conferences });
+      } else {
+        // Never fail silently — the old bare catch is what let a stale creation
+        // vanish without a word (AUDIT_2026-08-15).
+        notify(rep ? `"${(bp && bp.name) || "That league"}" can't load in this build — using the standard world` : "That league is gone — using the standard world", "warning");
+        ob.leagueId = null;
+        _obWorldKey = "";
+      }
+    }
+  } catch (e) {
+    notify("That league wouldn't build — using the standard world", "warning");
+    ob.leagueId = null;
+    _obWorldKey = "";
+    _obWorld = null;
+  }
   if (!_obWorld) {
     try {
       _obWorld = generateWorld();
@@ -23,28 +56,32 @@ function obGetWorld() {
   }
   return _obWorld;
 }
-// The onboarding renumbers itself to the steps actually SHOWN. A tree run (the
-// default start) locks "take the job" and skips the Situation step — without
-// this the header jumped STEP 1 -> STEP 3 and the progress dots left a gap.
+// The onboarding renumbers itself to the steps actually SHOWN. Every run is a
+// tree run now — the founding job is take-the-job at the start division, which
+// is the ONLY way into a dynasty (the main menu's PLANT A TREE door), so the
+// Situation step (obStep 1) that used to pick a start type is gone entirely and
+// the level is never asked for. Retired 2026-08-17, owner: "we only use the
+// forced D3 start so you shouldn't even need to click on it." The engine's
+// start machinery (`engine/starts.js`) is deliberately LEFT IN PLACE — the
+// Ashes scholarship cap and Hot Seat leash are wired into recruiting.js and
+// season.js, so this is a door closed, not a system torn out.
 // obActiveSteps = every internal step shown (incl. the unnumbered Staff screen,
 // obStep 4); obNumberedSteps = only the user-facing numbered ones.
-function obActiveSteps() { return state._treeId ? [0, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5]; }
-function obNumberedSteps() { return state._treeId ? [0, 2, 3, 5] : [0, 1, 2, 3, 5]; }
+function obActiveSteps() { return [0, 2, 3, 4, 5]; }
+function obNumberedSteps() { return [0, 2, 3, 5]; }
 function obStepLabel(s) { const i = obNumberedSteps().indexOf(s); return i >= 0 ? `STEP ${i + 1}` : ""; }
 function renderNewGame() {
-  if (legacyMode) return renderLegacy();
+  // The coach's name is taken at the MAIN MENU (the PLANT A TREE door's one
+  // form, #mm-nt-first/#mm-nt-last) and carried in on state._coachProfileName.
+  // The wizard never asks for it again — do not add a name step here.
   if (state._coachProfileName && obStep === 0 && !ob.first && !ob.last) {
     ob.first = state._coachProfileName.first;
     ob.last = state._coachProfileName.last;
   }
-  if (state._treeId) {
-    // Coaching tree run: lock to D3 / "take the job" and skip the situation
-    // and division-choice steps so the founder lands straight on the school
-    // picker. Only set if not already set so re-renders don't clobber a later
-    // state (e.g. a division the player has since narrowed to).
-    if (!ob.challenge || ob.challenge === "takejob") ob.challenge = "takejob";
-    if (!ob.division) ob.division = "D3";
-  }
+  // Every run founds a career the same way: take the job, at the start
+  // division. Neither is a question any more, so neither is a screen.
+  ob.challenge = "takejob";
+  ob.division = START_DIV;
   return `
   <div class="newgame ob">
     <div class="newgame-header">
@@ -72,12 +109,9 @@ function renderStep() {
   switch (obStep) {
     case 0:
       return stepSignature();
-    case 1:
-      return stepSituation();
-    // the start decides everything downstream
     case 2:
       return stepJob();
-    // state → level → the actual program
+    // world → state → the actual program
     case 3:
       return stepIdentity();
     case 4:
@@ -90,11 +124,15 @@ function renderStep() {
 }
 function stepStaff() {
   var _a;
-  const key = ob.qbPref + "|" + ob.defFront + "|" + ob.division;
+  const hints = obHints();
+  const key = hints.qbPref + "|" + hints.defFront + "|" + ob.division;
   if (obCand.key !== key) {
     const fakeSchool = { prestige: ob.challenge === "powerhouse" ? ((_a = C.PRESTIGE_MAX) == null ? void 0 : _a[ob.division]) || 4 : 2, division: ob.division };
-    const ocSort = ob.qbPref === "QB-Mobile" ? "qbRunDesign" : "passGame";
-    const dcSort = ob.defFront === "46/Bear" || ob.defFront === "4-3" ? "runFits" : ob.defFront === "Nickel" || ob.defFront === "Dime" ? "coverage" : "blitzDesign";
+    // Sort the OC list toward the book's leaning passer, the DC list toward what
+    // its front asks of its coordinator — a QB-run designer for a mobile book,
+    // run-fits for a 4-3, coverage/blitz otherwise.
+    const ocSort = hints.qbPref === "QB-Scrambler" ? "qbRunDesign" : "passGame";
+    const dcSort = hints.defFront === "4-3" ? "runFits" : "coverage";
     obCand = {
       key,
       oc: generateCandidates("OC", fakeSchool, 4).sort((a, b) => (b.ratings[ocSort] || 0) - (a.ratings[ocSort] || 0)),
@@ -163,7 +201,6 @@ function stepSignature() {
         <button class="gp-mode-btn${gpMode === "advanced" ? " active" : ""}" data-ob-gpmode="advanced">Advanced</button>
       </div>
       <div class="ob-setting-desc" style="margin-top:6px;opacity:.8">You can switch between Simple and Advanced any time from Settings \u203a Game \u203a Game Plan Detail \u2014 your plan carries over either way.</div>
-      ${gpMode === "simple" ? `<div class="ob-setting-desc" style="margin-top:8px;color:var(--gold);font-weight:600">\u{1F331} One catch for THIS run: a Simple start is Division III, Take the Job only \u2014 the grassroots path. Pick Advanced now to unlock D1/D2 and the other start types.</div>` : ""}
     </div>
 
     ${(() => {
@@ -182,118 +219,161 @@ function stepSignature() {
     </div>`;
   })()}
 
-    <div class="ob-setting-row">
-      <div class="ob-setting-label">Starting Game Plan</div>
-      <div class="ob-setting-desc">A ready-made identity to open with. You can tweak every dial on the Game Plan screen, or load a different preset any time \u2014 nothing here is locked in.</div>
-      <select class="form-select" id="ob-start-plan" style="margin-top:6px;max-width:280px">
-        <option value=""${!ob.startPlan ? " selected" : ""}>Team default \u2014 let the staff set it</option>
-        ${(() => { const pbs = listCreations("playbooks"); return pbs.length ? `<optgroup label="Your custom playbooks">${pbs.map((pb) => `<option value="pb:${escapeHtml(pb.id)}"${ob.startPlan === "pb:" + pb.id ? " selected" : ""}>${escapeHtml(pb.data.name || "Untitled")}</option>`).join("")}</optgroup>` : ""; })()}
-        <optgroup label="Starter books">${DEFAULT_OFF_BOOKS.map((b) => `<option value="dpb:${escapeHtml(b.name)}"${ob.startPlan === "dpb:" + b.name ? " selected" : ""}>${escapeHtml(b.name)}</option>`).join("")}</optgroup>
-        <optgroup label="Preset schemes">${BUILTIN_PLANS.map((p) => `<option value="${escapeHtml(p.name)}"${ob.startPlan === p.name ? " selected" : ""}>${escapeHtml(p.name)}</option>`).join("")}</optgroup>
-      </select>
-      ${ob.startPlan && builtinPlan(ob.startPlan) ? `<div class="ob-setting-desc" style="margin-top:6px;opacity:.85">${escapeHtml(builtinPlan(ob.startPlan).blurb)}</div>` : ob.startPlan && ob.startPlan.startsWith("pb:") ? `<div class="ob-setting-desc" style="margin-top:6px;opacity:.85">Your custom playbook \u2014 your formations and concepts open the season.</div>` : ""}
-    </div>
-
-    <div class="ob-setting-row">
-      <div class="ob-setting-label">Starting Defense</div>
-      <div class="ob-setting-desc">Open with a starter defensive book or one of your own from the Workshop. Leave on the default and your staff sets the front and coverage.</div>
-      <select class="form-select" id="ob-start-def" style="margin-top:6px;max-width:280px">
-        <option value=""${!ob.startDef ? " selected" : ""}>Team default \u2014 let the staff set it</option>
-        ${(() => { const dbs = listCreations("defbooks"); return dbs.length ? `<optgroup label="Your defenses">${dbs.map((db) => `<option value="dd:${escapeHtml(db.id)}"${ob.startDef === "dd:" + db.id ? " selected" : ""}>${escapeHtml(db.data.name || "Untitled")}</option>`).join("")}</optgroup>` : ""; })()}
-        <optgroup label="Starter books">${DEFAULT_DEF_BOOKS.map((b) => `<option value="ddb:${escapeHtml(b.name)}"${ob.startDef === "ddb:" + b.name ? " selected" : ""}>${escapeHtml(b.name)}</option>`).join("")}</optgroup>
-      </select>
-    </div>
-
     <button class="btn-primary ob-next" id="ob-next-0" style="margin-top:16px">LET'S GO \u2192</button>
-    <div class="ob-alt"><a href="#" id="ob-legacy-link">\u2026or take over an existing program instead</a></div>
   </div>
 `;
 }
-function stepSituation() {
-  const simpleLock = gameplanIsSimple();
-  const cards = simpleLock ? CHALLENGE_CARDS.filter((c) => c.id === "takejob") : CHALLENGE_CARDS;
+// The two starting-book pickers used to live up here on the ground-rules screen,
+// two screens away from the QB room and the front they dress. They moved to the
+// Blueprint step (owner, 2026-08-17) so every scheme choice is made in one
+// place; the element ids are unchanged so the appliers and the smokes that
+// drive them did not move with them.
+// \u2500\u2500 The books ARE the identity (2026-08-17, owner) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// The old Blueprint step asked a QB type and a defensive front as separate
+// questions, then shaped the roster off the answer. That's retired: the coach
+// picks his OFFENSIVE BOOK and his DEFENSIVE BOOK here \u2014 the same starters,
+// presets removed (owner: "delete them completely") \u2014 and the roster leans off
+// the books (rosterHintsFromBooks in world.js). One identity choice, not three.
+//
+// Each option resolves to the ACTUAL book object so a card can describe what it
+// runs and what it does to the roster. "Team default" is null \u2014 the staff sets
+// the book and the roster arrives as generated. Custom Workshop books sit beside
+// the starters and are read exactly the same way (off their formations / front).
+
+// One-line "what this does to your first roster," derived, never a coefficient.
+function offRosterLean(book) {
+  const h = rosterHintsFromBooks(book, null).qbPref;
+  return h === "QB-Gunslinger" ? "leans your roster toward a big-armed passer and a deep receiver room"
+    : h === "QB-Scrambler" ? "leans your roster toward a dual-threat quarterback who can run it"
+    : h === "QB-Game-Manager" ? "leans your roster toward a ball-control quarterback and a heavy backfield"
+    : h === "QB-Pocket" ? "leans your roster toward a pocket passer and balanced skill players"
+    : "your staff sets the offense and the roster arrives balanced";
+}
+function defRosterLean(book) {
+  const f = rosterHintsFromBooks(null, book).defFront;
+  return f === "3-4" ? "leans your front toward two-gap ends and stand-up rush linebackers"
+    : f === "4-3" ? "leans your front toward speed off the edge"
+    : "your staff sets the front and the bodies arrive balanced";
+}
+// No "team default" (owner, 2026-08-17): a book is a required pick, so the
+// roster always leans off a real book. Only actual books appear — the starters
+// and the coach's own Workshop creations.
+function offOptions() {
+  const out = [];
+  for (const b of DEFAULT_OFF_BOOKS) out.push({ id: "dpb:" + b.name, label: b.name, sub: b.tendency ? String(b.tendency) : "Starter book", book: b, kind: "starter" });
+  for (const pb of listCreations("playbooks")) {
+    const data = loadCreationData("playbooks", pb.id);
+    out.push({ id: "pb:" + pb.id, label: pb.data.name || "Untitled", sub: "Your custom playbook", book: data, kind: "custom" });
+  }
+  return out;
+}
+function defOptions() {
+  const out = [];
+  for (const b of DEFAULT_DEF_BOOKS) out.push({ id: "ddb:" + b.name, label: b.name, sub: (b.baseFront || "") + " base", book: b, kind: "starter" });
+  for (const db of listCreations("defbooks")) {
+    const data = loadCreationData("defbooks", db.id);
+    out.push({ id: "dd:" + db.id, label: db.data.name || "Untitled", sub: "Your custom defense", book: data, kind: "custom" });
+  }
+  return out;
+}
+// Resolve a picked id back to its book object. "" / null → null (team default);
+// a starter is looked up by name, a custom by its creation id. Repair-on-load a
+// custom so a stale one still reads its front/formations for the hint (and never
+// fails silently — the book application later re-checks and warns if it can't
+// actually apply).
+function bookById(kind, id) {
+  if (!id) return null;
+  if (kind === "off") {
+    if (id.startsWith("dpb:")) return DEFAULT_OFF_BOOKS.find((b) => b.name === id.slice(4)) || null;
+    if (id.startsWith("pb:")) { const raw = loadCreationData("playbooks", id.slice(3)); const r = raw ? repairCreation("playbooks", raw) : null; return r ? r.data : null; }
+    return null;
+  }
+  if (id.startsWith("ddb:")) return DEFAULT_DEF_BOOKS.find((b) => b.name === id.slice(4)) || null;
+  if (id.startsWith("dd:")) { const raw = loadCreationData("defbooks", id.slice(3)); const r = raw ? repairCreation("defbooks", raw) : null; return r ? r.data : null; }
+  return null;
+}
+// The two roster hints the engine consumes, resolved from the CURRENT book
+// picks. Either may be null — that side of the roster is left as generated.
+function obHints() {
+  return rosterHintsFromBooks(bookById("off", ob.startPlan), bookById("def", ob.startDef));
+}
+function bookCard(o, active, lean, ariaGroup) {
   return `
-  <div class="ob-step">
-    <div class="ob-kicker">${obStepLabel(1)} \u2014 THE SITUATION</div>
-    <h2 class="ob-headline">What kind of job are you taking, Coach ${escapeHtml(ob.last || "")}?</h2>
-    <p class="ob-flavor">${simpleLock ? "Simple game planning locks you to the grassroots start \u2014 take a Division III job and build it up. Switch to Advanced back in Step 1 for the other start types." : "Every program in this world has a hundred years of history behind it \u2014 banners, scandals, a legend or two, and a rival it has hated since 1926. Pick the story you want to walk into."}</p>
-    <div class="ob-challenge-grid">
-      ${cards.map((c) => `
-        <button class="ob-pick-card ob-challenge-card${ob.challenge === c.id ? " active" : ""}" data-ob-challenge="${c.id}">
-          <div class="ob-pick-head"><span class="ob-pick-icon">${c.icon}</span><span class="ob-pick-title">${c.title}</span></div>
-          <div class="ob-pick-desc">${c.desc}</div>
+    <button class="ob-pick-card ob-book-card${active ? " active" : ""}" data-ob-book="${ariaGroup}" data-ob-book-id="${escapeHtml(o.id)}">
+      <div class="ob-pick-head"><span class="ob-pick-title">${escapeHtml(o.label)}</span>${o.kind === "custom" ? '<span class="ob-book-tag">yours</span>' : ""}</div>
+      <div class="ob-pick-sub">${escapeHtml(o.sub)}</div>
+      <div class="ob-pick-desc">${escapeHtml(lean(o.book))}</div>
+    </button>`;
+}
+// Creator entrance #1 \u2014 the world you'll coach in. Collapsed by default and
+// skipped entirely by the fast path: the standard world is already selected, so
+// a coach who doesn't build leagues never opens this. Only leagues saved at the
+// START DIVISION are offered, because that's the only chair a founding coach
+// can sit in \u2014 a D1 league has no job in it for him.
+function renderWorldPicker() {
+  const leagues = listCreations("leagues").filter((l) => (l.data.division || "D1") === START_DIV);
+  const open = ob.worldOpen || !!ob.leagueId;
+  const cur = ob.leagueId ? leagues.find((l) => l.id === ob.leagueId) : null;
+  return `
+  <div class="ob-expander${open ? " open" : ""}">
+    <button class="ob-expander-head" data-ob-expand="world">
+      <span class="ob-expander-title">THE WORLD \u2014 ${cur ? escapeHtml(cur.name) : "the standard world"}</span>
+      <span class="ob-expander-caret">${open ? "\u25be" : "\u25b8"}</span>
+    </button>
+    ${open ? `
+    <div class="ob-expander-body">
+      <p class="ob-flavor" style="margin-top:0">Play the dynasty inside a league you built in the Workshop. Your conferences, your programs, your names on the wall \u2014 the rosters are generated fresh either way.</p>
+      <div class="ob-league-list">
+        <button class="ob-league-row${!ob.leagueId ? " active" : ""}" data-ob-league="">
+          <span class="ob-league-name">The standard world</span>
+          <span class="ob-league-sub">A fresh procedural country, every program invented on the spot</span>
         </button>
-      `).join("")}
-    </div>
-    <div class="ob-nav-row">
-      <button class="btn-ghost" data-ob-back="0">\u2190 Back</button>
-      <button class="btn-primary ob-next" id="ob-next-1" ${!ob.challenge ? "disabled" : ""}>NEXT \u2192</button>
-    </div>
-  </div>`;
-}
-function renderStartPreview() {
-  if (!ob.division || !ob.challenge) return "";
-  if (ob.challenge === "takejob" || ob.challenge === "outpost") return "";
-  const key = `${ob.challenge}|${ob.division}`;
-  if (_previewCache.key !== key) {
-    try {
-      const w = obGetWorld();
-      _previewCache = { key, val: w ? findStartProgram(w, ob.challenge, ob.division) : null };
-    } catch (e) {
-      _previewCache = { key, val: null };
-    }
-  }
-  const p = _previewCache.val;
-  if (!p) return `<div class="ob-start-preview ob-start-none">No program at this level has that history in this world. Try another division.</div>`;
-  return `
-  <div class="ob-start-preview">
-    <div class="ob-start-school">${escapeHtml(p.school.name)} <span class="ob-start-star">${p.school.prestige.toFixed(1)}\u2605</span></div>
-    <div class="ob-start-why">${escapeHtml(p.why)}</div>
-    <div class="ob-start-note">This is the job. It's waiting for you.</div>
-  </div>`;
-}
-function loreStartAvailable() {
-  if (ob.challenge === "takejob" || ob.challenge === "outpost") return true;
-  if (!ob.division) return false;
-  const key = `${ob.challenge}|${ob.division}`;
-  if (_previewCache.key !== key) {
-    try {
-      const w = obGetWorld();
-      _previewCache = { key, val: w ? findStartProgram(w, ob.challenge, ob.division) : null };
-    } catch (e) {
-      _previewCache = { key, val: null };
-    }
-  }
-  return !!_previewCache.val;
-}
-function stepJob() {
-  const isOutpost = ob.challenge === "outpost";
-  const isLore = ob.challenge === "ashes" || ob.challenge === "hotseat" || ob.challenge === "heir";
-  // Tree runs are locked to D3 regardless of game-plan complexity (Simple/Advanced).
-  if (state._treeId) ob.division = "D3";
-  const divCards = gameplanIsSimple() || state._treeId ? DIV_CARDS.filter((d) => d.id === "D3") : DIV_CARDS;
-  if (isLore) {
-    return `
-    <div class="ob-step">
-      <div class="ob-kicker">${obStepLabel(2)} \u2014 THE JOB</div>
-      <h2 class="ob-headline">How big is the stage?</h2>
-      <p class="ob-flavor">Pick a level. We'll find the program whose history matches your situation \u2014 the story chooses the school.</p>
-      <div class="ob-card-grid">
-        ${divCards.map((d) => `
-          <button class="ob-pick-card${ob.division === d.id ? " active" : ""}" data-ob-div="${d.id}">
-            <div class="ob-pick-head"><span class="ob-pick-icon">${d.icon}</span><span class="ob-pick-title">${d.title}</span></div>
-            <div class="ob-pick-sub">${d.sub}</div>
-            <div class="ob-pick-desc">${d.desc}</div>
+        ${leagues.map((l) => `
+          <button class="ob-league-row${ob.leagueId === l.id ? " active" : ""}" data-ob-league="${escapeHtml(l.id)}">
+            <span class="ob-league-name">${escapeHtml(l.name)}</span>
+            <span class="ob-league-sub">${(l.data.teams || []).length} programs \u00b7 ${(l.data.conferences || []).length} conference${(l.data.conferences || []).length === 1 ? "" : "s"} \u00b7 ${escapeHtml(l.data.division || START_DIV)}</span>
           </button>`).join("")}
       </div>
-      ${renderStartPreview()}
-      <div class="ob-nav-row">
-        <button class="btn-ghost" data-ob-back="${state._treeId ? "0" : "1"}">\u2190 Back</button>
-        <button class="btn-primary ob-next" id="ob-next-2" ${!ob.division || ob.division && !loreStartAvailable() ? "disabled" : ""}>TAKE IT \u2192</button>
+      ${leagues.length ? "" : `<div class="ob-start-preview ob-start-none">No ${START_DIV} leagues saved yet. Build one in the Workshop \u2014 Main Menu \u203a Creator \u203a Leagues \u2014 and it will show up here.</div>`}
+    </div>` : ""}
+  </div>`;
+}
+// Creator entrance #2 \u2014 coach a team you made. It founds a NEW program wearing
+// your team's identity rather than repainting somebody else's, which is both
+// the honest reading of "my team" and the only one that leaves the rest of the
+// world's history intact. Identity only: name, mascot, colors, crest. Authored
+// rosters are ignored on purpose (owner, 2026-08-17) \u2014 a dynasty recruits its
+// own players or it isn't a dynasty.
+function renderTeamPicker() {
+  const teams = listCreations("teams");
+  const open = ob.teamOpen || !!ob.teamId;
+  const cur = ob.teamId ? teams.find((t) => t.id === ob.teamId) : null;
+  return `
+  <div class="ob-expander${open ? " open" : ""}">
+    <button class="ob-expander-head" data-ob-expand="team">
+      <span class="ob-expander-title">COACH MY OWN TEAM \u2014 ${cur ? escapeHtml(cur.name) : "off"}</span>
+      <span class="ob-expander-caret">${open ? "\u25be" : "\u25b8"}</span>
+    </button>
+    ${open ? `
+    <div class="ob-expander-body">
+      <p class="ob-flavor" style="margin-top:0">Found the program yourself and put one of your created teams on the field. It takes the open conference seat in the state you pick; the players are recruited, not imported.</p>
+      <div class="ob-league-list">
+        <button class="ob-league-row${!ob.teamId ? " active" : ""}" data-ob-team="">
+          <span class="ob-league-name">Off</span>
+          <span class="ob-league-sub">Take one of the jobs already on the board</span>
+        </button>
+        ${teams.map((t) => `
+          <button class="ob-league-row${ob.teamId === t.id ? " active" : ""}" data-ob-team="${escapeHtml(t.id)}">
+            <span class="ob-league-name">${escapeHtml(t.data.name || t.name)}${t.data.nick ? ` <span class="muted">${escapeHtml(t.data.nick)}</span>` : ""}</span>
+            <span class="ob-league-sub">built as ${escapeHtml(t.data.division || "D1")} \u00b7 joins as ${START_DIV}</span>
+          </button>`).join("")}
       </div>
-    </div>`;
-  }
-  const states = isOutpost ? [{ state: "HI" }, { state: "AK" }] : availableStates().filter((s) => s.state !== "HI" && s.state !== "AK");
+      ${teams.length ? "" : `<div class="ob-start-preview ob-start-none">No teams saved yet. Build one in the Workshop \u2014 Main Menu \u203a Creator \u203a Teams \u2014 and it will show up here.</div>`}
+    </div>` : ""}
+  </div>`;
+}
+function stepJob() {
+  const states = availableStates().filter((s) => s.state !== "HI" && s.state !== "AK");
   const byRegion = {};
   for (const { state: st } of states) {
     let region = "Midwest", bestN = 0;
@@ -309,8 +389,11 @@ function stepJob() {
   return `
   <div class="ob-step">
     <div class="ob-kicker">${obStepLabel(2)} \u2014 THE JOB</div>
-    <h2 class="ob-headline">${isOutpost ? "Which ocean?" : "Where does the story begin, Coach " + escapeHtml(ob.last || "") + "?"}</h2>
-    <p class="ob-flavor">${isOutpost ? "Nobody plays football out here yet. You will found the program \u2014 and then recruit against 2,500 miles of open water for every kid on the mainland." : "Pick a state and a level, then choose the program you want to take over. Real towns, invented programs, and a hundred years of history already on the wall."}</p>
+    <h2 class="ob-headline">Where does the story begin, Coach ${escapeHtml(ob.last || "")}?</h2>
+    <p class="ob-flavor">${ob.teamId ? "Pick the state your program calls home. It takes an open seat in that state's conference \u2014 a brand-new program, wearing your colors." : "Pick a state, then choose the program you want to take over. Real towns, invented programs, and a hundred years of history already on the wall."}</p>
+
+    ${renderWorldPicker()}
+    ${renderTeamPicker()}
 
     <div class="ob-state-groups">
       ${Object.entries(byRegion).map(([region, sts]) => `
@@ -322,24 +405,12 @@ function stepJob() {
         </div>`).join("")}
     </div>
 
-    ${ob.state ? `
-      <div class="ob-kicker" style="margin-top:16px">THE LEVEL${gameplanIsSimple() ? ` <span style="color:var(--gold);font-weight:600;letter-spacing:0">\u2014 D3 (Simple)</span>` : ""}</div>
-      <div class="ob-card-grid">
-        ${divCards.map((d) => `
-          <button class="ob-pick-card${ob.division === d.id ? " active" : ""}" data-ob-div="${d.id}">
-            <div class="ob-pick-head"><span class="ob-pick-icon">${d.icon}</span><span class="ob-pick-title">${d.title}</span></div>
-            <div class="ob-pick-sub">${d.sub}</div>
-            <div class="ob-pick-desc">${d.desc}</div>
-          </button>`).join("")}
-      </div>` : ""}
-
-    ${!isOutpost && ob.state && ob.division ? renderSchoolPicker() : ""}
-    ${isOutpost && ob.state && ob.division ? `<div class="ob-start-preview"><div class="ob-start-why">You will found the first program in ${escapeHtml(STATE_NAMES[ob.state] || ob.state)}. Every recruit in the country is an ocean away \u2014 but so is every rival recruiter.</div></div>` : ""}
+    ${ob.state ? renderSchoolPicker() : ""}
 
     <div class="ob-nav-row">
-      <button class="btn-ghost" data-ob-back="${state._treeId ? "0" : "1"}">\u2190 Back</button>
-      <button class="btn-primary ob-next" id="ob-next-2" ${!ob.state || !ob.division || !isOutpost && !ob.schoolId ? "disabled" : ""}>
-        ${isOutpost ? "FOUND IT \u2192" : ob.schoolId ? "TAKE THE JOB \u2192" : "PICK A PROGRAM"}
+      <button class="btn-ghost" data-ob-back="0">\u2190 Back</button>
+      <button class="btn-primary ob-next" id="ob-next-2" ${!ob.state || !ob.schoolId ? "disabled" : ""}>
+        ${ob.schoolId === "__found__" ? "FOUND IT \u2192" : ob.schoolId ? "TAKE THE JOB \u2192" : "PICK A PROGRAM"}
       </button>
     </div>
   </div>`;
@@ -349,6 +420,23 @@ function renderSchoolPicker() {
   const list = ((w == null ? void 0 : w.schools) || []).filter((s) => s.state === ob.state && s.division === ob.division);
   const stName = escapeHtml(STATE_NAMES[ob.state] || ob.state);
   list.sort((a, b) => b.prestige - a.prestige);
+  const myTeam = ob.teamId ? loadCreationData("teams", ob.teamId) : null;
+  // Coaching your own team IS founding one — there is no other job on the board
+  // for it, so the board isn't shown.
+  if (myTeam) {
+    return `
+    <div class="ob-kicker" style="margin-top:16px">THE PROGRAM</div>
+    <div class="ob-school-list">
+      <button class="ob-school-row ob-school-found active" data-ob-school="__found__">
+        <div class="ob-school-top">
+          <span class="ob-school-name">\u{1F331} ${escapeHtml(myTeam.name || "Your program")}${myTeam.nick ? ` ${escapeHtml(myTeam.nick)}` : ""}</span>
+          <span class="ob-school-star">${ob.division}</span>
+        </div>
+        <div class="ob-school-sub">Your team, founded in ${stName} — a real town, a conference seat waiting</div>
+        <div class="ob-school-hw ob-school-bare">your name, your colors, your crest — and a roster you have to go recruit</div>
+      </button>
+    </div>`;
+  }
   const foundRow = `
   <button class="ob-school-row ob-school-found${ob.schoolId === "__found__" ? " active" : ""}" data-ob-school="__found__">
     <div class="ob-school-top">
@@ -391,34 +479,24 @@ function renderSchoolPicker() {
   </div>`;
 }
 function stepIdentity() {
+  const offs = offOptions();
+  const defs = defOptions();
   return `
   <div class="ob-step">
     <div class="ob-kicker">${obStepLabel(3)} \u2014 THE BLUEPRINT</div>
-    <h2 class="ob-headline">What kind of football do you believe in?</h2>
-    <p class="ob-flavor">This shapes the roster we recruit for your first season \u2014 your QB room and your defensive bodies arrive built for it.</p>
-    <div class="ob-section-label">QUARTERBACK TYPE</div>
+    <h2 class="ob-headline">Pick your books, Coach ${escapeHtml(ob.last || "")}.</h2>
+    <p class="ob-flavor">Your offensive and defensive books ARE your identity \u2014 and your first roster is built loosely to fit them. Nothing's locked: every dial is yours on the Game Plan screen, and you can load a different book any week.</p>
+    <div class="ob-section-label">OFFENSIVE BOOK</div>
     <div class="ob-card-grid ob-grid-2">
-      ${QB_CARDS.map((q) => `
-        <button class="ob-pick-card${ob.qbPref === q.id ? " active" : ""}" data-ob-qb="${q.id}">
-          <div class="ob-pick-head"><span class="ob-pick-icon">${q.icon}</span><span class="ob-pick-title">${q.title}</span></div>
-          <div class="ob-pick-sub">${q.sub}</div>
-          <div class="ob-pick-desc">${q.desc}</div>
-        </button>
-      `).join("")}
+      ${offs.map((o) => bookCard(o, ob.startPlan === o.id, offRosterLean, "off")).join("")}
     </div>
-    <div class="ob-section-label">DEFENSIVE FRONT</div>
+    <div class="ob-section-label">DEFENSIVE BOOK</div>
     <div class="ob-card-grid ob-grid-2">
-      ${FRONT_CARDS.map((f) => `
-        <button class="ob-pick-card${ob.defFront === f.id ? " active" : ""}" data-ob-front="${f.id}">
-          <div class="ob-pick-head"><span class="ob-pick-icon">${f.icon}</span><span class="ob-pick-title">${f.title}</span></div>
-          <div class="ob-pick-sub">${f.sub}</div>
-          <div class="ob-pick-desc">${f.desc}</div>
-        </button>
-      `).join("")}
+      ${defs.map((o) => bookCard(o, ob.startDef === o.id, defRosterLean, "def")).join("")}
     </div>
     <div class="ob-nav-row">
       <button class="btn-ghost" data-ob-back="2">\u2190 Back</button>
-      <button class="btn-primary ob-next" id="ob-next-3" ${!ob.qbPref || !ob.defFront ? "disabled" : ""}>FOUND THE PROGRAM \u2192</button>
+      <button class="btn-primary ob-next" id="ob-next-3" ${!ob.startPlan || !ob.startDef ? "disabled" : ""}>FOUND THE PROGRAM \u2192</button>
     </div>
   </div>
 `;
@@ -484,7 +562,6 @@ function stepReveal() {
           <div class="ob-rv-row"><span>Enrollment</span><span>${(s.enrollment || 0).toLocaleString()} students</span></div>
           <div class="ob-rv-row"><span>Conference</span><span>${escapeHtml(conference.name)} \xB7 ${s.division}</span></div>
           <div class="ob-rv-row"><span>Prestige</span>${renderPrestigePips(s.prestige, maxPips)}</div>
-          ${ob.challenge ? `<div class="ob-rv-row ob-rv-challenge"><span>Challenge</span><span>${(CHALLENGE_CARDS.find((c) => c.id === ob.challenge) || {}).icon || ""} ${(CHALLENGE_CARDS.find((c) => c.id === ob.challenge) || {}).title || ""}</span></div>` : ""}
         </div>
         ${replaced ? `<p class="ob-replaced">The ${escapeHtml(s.nick)} take the place of ${escapeHtml(replaced.name)}, whose program folded this spring.</p>` : ""}
         ${renderHeritageBlurb(s)}
@@ -498,22 +575,37 @@ function stepReveal() {
   </div>
 `;
 }
+// Your created team's IDENTITY, stamped over the program that was just founded.
+// The same shape Play Now uses (makeCreatorTeam), minus the authored stars:
+// a dynasty's roster is recruited, never imported (owner, 2026-08-17). Prestige
+// is NOT taken from the creation either — the founding program's prestige is
+// what the division and the world decided, and a created team can't buy its way
+// past that on the way in.
+function stampCreatorTeam(school) {
+  if (!ob.teamId || !school) return;
+  const c = loadCreationData("teams", ob.teamId);
+  if (!c) { notify("That team is gone — founding with a generated identity", "warning"); return; }
+  if (c.name) school.name = c.name;
+  if (c.nick) school.nick = c.nick;
+  if (Array.isArray(c.colors) && c.colors.length === 2) school.colors = c.colors;
+  if (c.crestText) school.crestText = c.crestText;
+  if (c.crestSeed) school.crestSeed = c.crestSeed;
+  if (c.logo) school.logo = c.logo;
+  school._creatorTeam = true;
+}
 function buildPending() {
   const world = obGetWorld() || generateWorld();
-  const founding = ob.challenge === "outpost" || ob.challenge === "takejob" && ob.schoolId === "__found__";
+  // The books lean the roster now (owner, 2026-08-17): resolve the picks to the
+  // same {qbPref, defFront} the shaper always took. Either can be null — that
+  // side arrives as generated.
+  const hints = obHints();
+  // Two jobs exist: take one that's on the board, or found one. Coaching a
+  // created team is always the second.
+  const founding = ob.teamId != null || ob.schoolId === "__found__";
   if (!founding) {
-    let school = null, why = null;
-    if (ob.challenge === "takejob") {
-      school = world.schools.find((s) => s.id === ob.schoolId) || null;
-    } else {
-      const pick2 = findStartProgram(world, ob.challenge, ob.division);
-      if (pick2) {
-        school = pick2.school;
-        why = pick2.why;
-      }
-    }
+    const school = world.schools.find((s) => s.id === ob.schoolId) || null;
     if (school) {
-      applyIdentityToSchool(school, ob.qbPref, ob.defFront);
+      applyIdentityToSchool(school, hints.qbPref, hints.defFront);
       if (ob.oc && ob.dc) school.staff = { oc: ob.oc, dc: ob.dc };
       return {
         world,
@@ -521,8 +613,8 @@ function buildPending() {
           school,
           replaced: null,
           takeover: true,
-          startId: ob.challenge,
-          startPick: why ? { why } : null,
+          startId: "takejob",
+          startPick: null,
           conference: { id: school.conf, name: school.conf, short: school.conf, division: school.division }
         }
       };
@@ -531,12 +623,12 @@ function buildPending() {
   const result = generatePlayerProgram(world, {
     state: ob.state,
     division: ob.division,
-    qbPref: ob.qbPref,
-    defFront: ob.defFront,
-    challenge: ob.challenge,
-    custom: ob.custom
+    qbPref: hints.qbPref,
+    defFront: hints.defFront,
+    challenge: "takejob"
   });
-  result.startId = ob.challenge;
+  result.startId = "takejob";
+  stampCreatorTeam(result.school);
   if (ob.oc && ob.dc) result.school.staff = { oc: ob.oc, dc: ob.dc };
   return { world, result };
 }
@@ -552,8 +644,9 @@ function devTakeJobStart() {
   ob.schoolId = school.id;
   ob.state = school.state;
   ob.division = school.division;
-  ob.qbPref = rand2(QB_CARDS).id;
-  ob.defFront = rand2(FRONT_CARDS).id;
+  // Dev quick-start: open with the first starter book each side.
+  ob.startPlan = DEFAULT_OFF_BOOKS.length ? "dpb:" + DEFAULT_OFF_BOOKS[0].name : "";
+  ob.startDef = DEFAULT_DEF_BOOKS.length ? "ddb:" + DEFAULT_DEF_BOOKS[0].name : "";
   ob.oc = null;
   ob.dc = null;
   const p = buildPending();
@@ -562,27 +655,10 @@ function devTakeJobStart() {
   state.settings = state.settings || {};
   state.settings.challenge = "takejob";
 }
-function saveNameInputs() {
-  const f = document.getElementById("ob-first");
-  const l = document.getElementById("ob-last");
-  if (f) ob.first = f.value.trim();
-  if (l) ob.last = l.value.trim();
-}
 function setupListeners3() {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+  var _a, _c, _d, _e, _f, _g, _h, _i;
   (_a = document.getElementById("btn-back-to-menu")) == null ? void 0 : _a.addEventListener("click", () => {
-    legacyMode = false;
     navigate("mainmenu");
-  });
-  if (legacyMode) {
-    setupLegacyListeners();
-    return;
-  }
-  (_b = document.getElementById("ob-legacy-link")) == null ? void 0 : _b.addEventListener("click", (e) => {
-    e.preventDefault();
-    saveNameInputs();
-    legacyMode = true;
-    rerender();
   });
   document.querySelectorAll("[data-ob-diff-key]").forEach((btn) => btn.addEventListener("click", () => {
     if (!state.settings) state.settings = {};
@@ -599,18 +675,14 @@ function setupListeners3() {
     state.settings.recruitAssist = btn.dataset.obAssist;
     rerender();
   }));
-  {
-    const sp = document.getElementById("ob-start-plan");
-    if (sp) sp.addEventListener("change", (e) => {
-      ob.startPlan = e.target.value || null;
-      rerender();
-    });
-    const sd = document.getElementById("ob-start-def");
-    if (sd) sd.addEventListener("change", (e) => {
-      ob.startDef = e.target.value || null;
-      rerender();
-    });
-  }
+  // The book cards ARE the Blueprint step now — one grid per side, "" means
+  // team default. Re-render so the picked card lights and its lean line shows.
+  document.querySelectorAll("[data-ob-book]").forEach((b) => b.addEventListener("click", () => {
+    const id = b.dataset.obBookId || "";
+    if (b.dataset.obBook === "off") ob.startPlan = id;
+    else ob.startDef = id;
+    rerender();
+  }));
   (_c = document.getElementById("ob-next-0")) == null ? void 0 : _c.addEventListener("click", () => {
     if (!ob.first && !ob.last) {
       if (state._coachProfileName) {
@@ -621,61 +693,52 @@ function setupListeners3() {
         ob.last = "Player";
       }
     }
-    if (state._treeId) {
-      // Tree runs skip the situation step (locked to "take the job") and the
-      // division-choice (locked to D3) and land on the school picker.
-      ob.challenge = "takejob";
-      ob.division = "D3";
-      obStep = 2;
-    } else {
-      obStep = 1;
-    }
+    obStep = 2;
     rerender();
   });
   document.querySelectorAll("[data-ob-state]").forEach((b) => b.addEventListener("click", () => {
     ob.state = b.dataset.obState;
-    ob.schoolId = null;
+    // Founding your own team is the job no matter which state it's in, so the
+    // pick survives the move; every other pick is a specific school and can't.
+    ob.schoolId = ob.teamId ? "__found__" : null;
     rerender();
   }));
-  (_d = document.getElementById("ob-next-1")) == null ? void 0 : _d.addEventListener("click", () => {
-    if (ob.challenge) {
-      obStep = 2;
-      rerender();
-    }
-  });
   document.querySelectorAll("[data-ob-school]").forEach((b) => b.addEventListener("click", () => {
     ob.schoolId = b.dataset.obSchool;
     rerender();
   }));
-  document.querySelectorAll("[data-ob-challenge]").forEach((b) => b.addEventListener("click", () => {
-    ob.challenge = b.dataset.obChallenge;
-    ob.state = null;
-    ob.division = null;
-    ob.schoolId = null;
+  document.querySelectorAll("[data-ob-expand]").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.obExpand;
+    if (k === "world") ob.worldOpen = !ob.worldOpen;
+    if (k === "team") ob.teamOpen = !ob.teamOpen;
     rerender();
   }));
-  document.querySelectorAll("[data-ob-div]").forEach((b) => b.addEventListener("click", () => {
-    ob.division = b.dataset.obDiv;
-    ob.schoolId = null;
+  document.querySelectorAll("[data-ob-league]").forEach((b) => b.addEventListener("click", () => {
+    const id = b.dataset.obLeague || null;
+    if (id === ob.leagueId) return;
+    ob.leagueId = id;
+    // A different world is a different set of jobs — the state survives, the
+    // school it pointed at does not.
+    ob.schoolId = ob.teamId ? "__found__" : null;
+    obGetWorld();
+    rerender();
+  }));
+  document.querySelectorAll("[data-ob-team]").forEach((b) => b.addEventListener("click", () => {
+    const id = b.dataset.obTeam || null;
+    if (id === ob.teamId) return;
+    ob.teamId = id;
+    ob.schoolId = id ? ob.state ? "__found__" : null : null;
     rerender();
   }));
   (_e = document.getElementById("ob-next-2")) == null ? void 0 : _e.addEventListener("click", () => {
-    const needSchool = ob.challenge === "takejob";
-    if (ob.division && (!needSchool || ob.schoolId)) {
+    if (ob.state && ob.schoolId) {
       obStep = 3;
       rerender();
     }
   });
-  document.querySelectorAll("[data-ob-qb]").forEach((b) => b.addEventListener("click", () => {
-    ob.qbPref = b.dataset.obQb;
-    rerender();
-  }));
-  document.querySelectorAll("[data-ob-front]").forEach((b) => b.addEventListener("click", () => {
-    ob.defFront = b.dataset.obFront;
-    rerender();
-  }));
   (_f = document.getElementById("ob-next-3")) == null ? void 0 : _f.addEventListener("click", () => {
-    if (!ob.qbPref || !ob.defFront) return;
+    // A book each side is required — no team default (owner, 2026-08-17).
+    if (!ob.startPlan || !ob.startDef) return;
     obStep = 4;
     rerender();
   });
@@ -729,28 +792,23 @@ function setupListeners3() {
       obStep = 0;
       await startNewGamePrepared({ first: ob.first, last: ob.last }, world, result.school, result);
       state.settings = state.settings || {};
-      state.settings.challenge = ob.challenge;
-      if (ob.challenge === "rebuild" && state.playerCoach) {
-        state.playerCoach.jobSecurity = 90;
-      }
-      if (ob.challenge === "crisis" && state.playerCoach) {
-        state.playerCoach.budget = Math.round((state.playerCoach.budget || 0) * 0.5);
-      }
-      if (ob.challenge === "custom" && state.playerCoach) {
-        state.playerCoach.jobSecurity = ob.custom.jobSecurity;
-        state.playerCoach.budget = Math.round((state.playerCoach.budget || 0) * (ob.custom.budgetPct / 100));
-      }
+      state.settings.challenge = "takejob";
       {
         const school2 = state.world.schools.find((s) => s.id === state.playerSchoolId);
         // apply* returns a NEW gameplan (never mutates), so the merged result has
         // to be written back — replace the contents, keeping engine _fields.
         const assignGp = (merged) => { for (const k of Object.keys(school2.gameplan)) { if (!k.startsWith("_")) delete school2.gameplan[k]; } Object.assign(school2.gameplan, merged); };
-        const startBuiltin = ob.startPlan && !ob.startPlan.startsWith("pb:") && !ob.startPlan.startsWith("dpb:") ? builtinPlan(ob.startPlan) : null;
-        if (startBuiltin && school2) applyPlanToSchool(school2, startBuiltin.gp);
-        else if (school2 && ob.startPlan && ob.startPlan.startsWith("dpb:")) {
+        // The whole-game PRESETS were removed from the wizard (owner, 2026-08-17):
+        // startPlan is now only "" (team default), a starter book (dpb:), or a
+        // custom playbook (pb:). Defense is applied separately below, so the two
+        // sides never fight over the same dials the way a preset used to.
+        if (school2 && ob.startPlan && ob.startPlan.startsWith("dpb:")) {
           // A starter book opens the season (always current-build-legal).
           const book = defaultOffBook(ob.startPlan.slice(4));
-          if (book) { try { assignGp(applyPlaybookToGameplan(book, school2.gameplan)); } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's plan`, "warning"); } }
+          // Remember WHICH starter it was, so "Edit playbook" can re-open the
+          // full book. applyPlaybookToGameplan JSON-clones the gameplan, so the
+          // marker is stamped AFTER, on the live gameplan (owner, 2026-08-18).
+          if (book) { try { assignGp(applyPlaybookToGameplan(book, school2.gameplan)); school2.gameplan._bookStarter = book.name; } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's plan`, "warning"); } }
         }
         else if (school2 && ob.startPlan && ob.startPlan.startsWith("pb:")) {
           // A custom playbook opens the season: copy its formations + concepts.
@@ -767,7 +825,12 @@ function setupListeners3() {
         // defensive dials, so it composes with either preset or custom offense).
         if (school2 && ob.startDef && ob.startDef.startsWith("ddb:")) {
           const book = defaultDefBook(ob.startDef.slice(4));
-          if (book) { try { assignGp(applyDefBookToGameplan(book, school2.gameplan)); } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's defense`, "warning"); } }
+          // Remember WHICH starter defense it was, so "Edit defense" re-opens the
+          // full book — its shelves (named calls) and answers, not a lossy
+          // identity-only extract that came up with an empty call sheet (owner,
+          // 2026-08-18: "the defensive playbook should be absorbing the defense
+          // default selections").
+          if (book) { try { assignGp(applyDefBookToGameplan(book, school2.gameplan)); school2.gameplan._defbookStarter = book.name; } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's defense`, "warning"); } }
         } else if (school2 && ob.startDef && ob.startDef.startsWith("dd:")) {
           const dbRaw = loadCreationData("defbooks", ob.startDef.slice(3));
           if (dbRaw) {
@@ -794,195 +857,45 @@ function setupListeners3() {
   });
   document.querySelectorAll("[data-ob-back]").forEach((b) => b.addEventListener("click", (e) => {
     e.preventDefault();
-    saveNameInputs();
     obStep = parseInt(b.dataset.obBack);
     rerender();
   }));
-}
-function renderLegacy() {
-  return `
-  <div class="newgame">
-    <div class="newgame-header">
-      <div class="newgame-logo">
-        <span class="logo-hex logo-hex-mark">${BLUEPRINT_MARK}</span>
-        <h1>BLUEPRINT</h1>
-        <p class="newgame-sub">Take Over an Existing Program</p>
-      </div>
-    </div>
-    <div class="newgame-back">
-      <button class="btn-ghost" id="btn-back-to-menu">\u2190 Main Menu</button>
-      <button class="btn-ghost" id="btn-back-to-wizard">\u2190 Found a New Program Instead</button>
-    </div>
-    <div class="newgame-form-wrapper">
-      <div class="newgame-card">
-        <div class="form-section">
-          <label class="form-label">COACH NAME</label>
-          <div class="ob-name-row">
-            <input class="form-input" id="ob-first" type="text" placeholder="First" aria-label="Coach first name" maxlength="16" autocomplete="off" value="${escapeHtml(ob.first)}" />
-            <input class="form-input" id="ob-last" type="text" placeholder="Last" aria-label="Coach last name" maxlength="16" autocomplete="off" value="${escapeHtml(ob.last)}" />
-          </div>
-        </div>
-        <div class="form-section">
-          <label class="form-label">SELECT SCHOOL</label>
-          <div class="division-tabs">
-            ${["D1", "D2", "D3"].map((div) => `
-              <button class="div-tab${activeDivision === div ? " active" : ""}" data-div="${div}">
-                ${div === "D1" ? "Division I \u2014 Elite" : div === "D2" ? "Division II \u2014 Mid-Tier" : "Division III \u2014 Grassroots"}
-              </button>
-            `).join("")}
-          </div>
-          <div class="school-conf-grid" id="school-grid">
-            ${renderSchoolGrid(activeDivision)}
-          </div>
-        </div>
-        <div class="selected-school-info" id="selected-school-info" style="display:none">
-          <div class="info-banner">
-            <div>
-              <div class="info-school-name" id="info-school-name"></div>
-              <div class="info-school-detail" id="info-school-detail"></div>
-            </div>
-            <button class="btn-primary btn-start" id="btn-start">START DYNASTY \u2192</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-`;
-}
-function renderSchoolGrid(division) {
-  var _a;
-  const maxPips = ((_a = C.PRESTIGE_MAX) == null ? void 0 : _a[division]) || 5;
-  const schools = SCHOOL_DATA.filter((s) => s.division === division);
-  const byConf = {};
-  for (const s of schools) (byConf[s.conf] = byConf[s.conf] || []).push(s);
-  return Object.entries(byConf).map(([confId, confSchools]) => {
-    const conf = CONFERENCES[confId];
-    const classTag = (conf == null ? void 0 : conf.conferenceClass) === "power" ? '<span class="conf-class-tag conf-power">Power</span>' : (conf == null ? void 0 : conf.conferenceClass) === "midMajor" ? '<span class="conf-class-tag conf-midmajor">Mid-Major</span>' : "";
-    return `
-    <div class="conf-group">
-      <div class="conf-group-header">
-        <span class="conf-group-name">${escapeHtml((conf == null ? void 0 : conf.name) || confId)}</span>
-        ${classTag}
-      </div>
-      <div class="conf-school-row">
-        ${confSchools.map((s) => `
-          <div class="school-card${selectedSchoolId === s.id ? " selected" : ""}" data-school-id="${s.id}" role="button" tabindex="0" aria-pressed="${selectedSchoolId === s.id ? "true" : "false"}" aria-label="Select ${escapeHtml(s.name)} ${escapeHtml(s.nick)}, ${escapeHtml(s.division)} program">
-            <div class="school-card-header">
-              <span class="school-crest">${renderCrest(s, 30)}</span>
-              ${renderPrestigePips(s.prestige, maxPips)}
-            </div>
-            <div class="school-card-name">${escapeHtml(s.name)}</div>
-            <div class="school-card-nick" style="color:${s.colors[0]}">${escapeHtml(s.nick)}</div>
-            ${s.city ? `<div class="school-card-loc" style="font-size:11px;color:#6a7490;margin-top:1px;">${escapeHtml(s.city)}, ${escapeHtml(s.state)}</div>` : ""}
-            ${schoolCardCoachLine(s)}
-            <div class="school-card-colors">
-              <span class="color-dot" style="background:${s.colors[0]}" title="${s.colors[0]}"></span>
-              <span class="color-dot" style="background:${s.colors[1]}" title="${s.colors[1]}"></span>
-              <span class="school-abbr-tag">${escapeHtml(s.abbr || "")}</span>
-            </div>
-          </div>
-        `).join("")}
-      </div>
-    </div>
-  `;
-  }).join("");
 }
 function renderPrestigePips(p, max = 5) {
   const filled = Math.max(0, Math.min(Math.round(p || 0), max));
   return `<span class="prestige-pips">${"\u25CF".repeat(filled)}${"\u25CB".repeat(max - filled)}</span>`;
 }
-function schoolCardCoachLine(s) {
-  var _a, _b;
-  const coach = s == null ? void 0 : s.coach;
-  if (!coach) return `<div class="school-card-coach"><span>\u{1F454} Vacant</span></div>`;
-  const first = ((_a = coach.name) == null ? void 0 : _a.first) || "";
-  const last = ((_b = coach.name) == null ? void 0 : _b.last) || "Coach";
-  const isYou = coach === state.playerCoach || s.id === state.playerSchoolId && !coach.isAI;
-  const nm = escapeHtml(`${first} ${last}`.trim());
-  return `<div class="school-card-coach"><span>\u{1F454} ${isYou ? `<span class="sc-coach-you">${nm} (You)</span>` : nm}</span></div>`;
-}
-function setupLegacyListeners() {
-  var _a, _b;
-  (_a = document.getElementById("btn-back-to-wizard")) == null ? void 0 : _a.addEventListener("click", () => {
-    saveNameInputs();
-    legacyMode = false;
-    rerender();
-  });
-  document.querySelectorAll(".div-tab").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      saveNameInputs();
-      activeDivision = btn.dataset.div;
-      rerender();
-    });
-  });
-  document.querySelectorAll(".school-card").forEach((card) => {
-    const selectCard = () => {
-      document.querySelectorAll(".school-card").forEach((c) => {
-        c.classList.remove("selected");
-        c.setAttribute("aria-pressed", "false");
-      });
-      card.classList.add("selected");
-      card.setAttribute("aria-pressed", "true");
-      selectedSchoolId = card.dataset.schoolId;
-      const school = SCHOOL_DATA.find((s) => s.id === selectedSchoolId);
-      if (school) {
-        const conf = CONFERENCES[school.conf];
-        const maxPrestige = school.division === "D1" ? 6 : 5;
-        document.getElementById("selected-school-info").style.display = "block";
-        document.getElementById("info-school-name").textContent = `${school.name} ${school.nick}`;
-        const loc = school.city ? `${school.city}, ${school.state} \xB7 ` : "";
-        const venue = school.stadium ? ` \xB7 ${school.stadium.name} (${school.stadium.capacity.toLocaleString()})` : "";
-        const enroll = school.enrollment ? ` \xB7 ${school.enrollment.toLocaleString()} students` : "";
-        document.getElementById("info-school-detail").textContent = `${loc}${(conf == null ? void 0 : conf.name) || school.conf} \xB7 ${school.division} \xB7 Prestige ${school.prestige}/${maxPrestige}${venue}${enroll}`;
-      }
-    };
-    card.addEventListener("click", selectCard);
-    card.addEventListener("keydown", (e) => {
-      if (e.key !== "Enter" && e.key !== " ") return;
-      e.preventDefault();
-      selectCard();
-    });
-  });
-  (_b = document.getElementById("btn-start")) == null ? void 0 : _b.addEventListener("click", () => {
-    saveNameInputs();
-    if (!ob.first || !ob.last) {
-      alert("Please enter your first and last name.");
-      return;
-    }
-    if (!selectedSchoolId) {
-      alert("Please select a school.");
-      return;
-    }
-    try {
-      startNewGame(`${ob.first} ${ob.last}`, selectedSchoolId);
-    } catch (e) {
-      console.error(e);
-      alert("Error starting game: " + e.message);
-    }
-  });
-}
-var obStep, _obWorld, ob, pending, generating, legacyMode, activeDivision, selectedSchoolId, REGION_LABELS, STATE_NAMES, QB_CARDS, FRONT_CARDS, DIV_CARDS, obCand, CHALLENGE_CARDS, _previewCache;
+var obStep, _obWorld, _obWorldKey, START_DIV, ob, pending, generating, REGION_LABELS, STATE_NAMES, obCand;
 
 obStep = 0;
 _obWorld = null;
+_obWorldKey = "";
+// Where every career starts. Read from the tree's own constant rather than
+// spelled "D3" in eight places — if the tree ever seats its first coach
+// somewhere else, the wizard follows it without an edit.
+START_DIV = (C.TREE && C.TREE.START_DIVISION) || "D3";
 ob = {
   first: "",
   last: "",
   state: null,
   division: null,
-  qbPref: null,
-  defFront: null,
   challenge: "takejob",
   schoolId: null,
   oc: null,
   dc: null,
-  custom: { prestige: 2, jobSecurity: 60, budgetPct: 100 }
+  // The starting books — the identity choice. A book is REQUIRED (owner: no team
+  // default), so these default to the first starter of each side and the coach
+  // changes them; the FOUND button won't fire until both are a real pick.
+  startPlan: DEFAULT_OFF_BOOKS.length ? "dpb:" + DEFAULT_OFF_BOOKS[0].name : "",
+  startDef: DEFAULT_DEF_BOOKS.length ? "ddb:" + DEFAULT_DEF_BOOKS[0].name : "",
+  // Creator entrances — both default to off, both collapsed.
+  leagueId: null,
+  teamId: null,
+  worldOpen: false,
+  teamOpen: false
 };
 pending = null;
 generating = false;
-legacyMode = false;
-activeDivision = "D1";
-selectedSchoolId = null;
 REGION_LABELS = {
   Northeast: "Northeast",
   MidAtlantic: "Mid-Atlantic",
@@ -1053,108 +966,6 @@ STATE_NAMES = {
   WV: "West Virginia",
   WY: "Wyoming"
 };
-QB_CARDS = [
-  {
-    id: "QB-Pocket",
-    icon: "\u{1F3AF}",
-    title: "THE SURGEON",
-    sub: "Pro-Style Pocket Passer",
-    desc: "Wins from the chalkboard \u2014 timing, protections, progressions. The pocket is a fortress, not a cage."
-  },
-  {
-    id: "QB-Scrambler",
-    icon: "\u26A1",
-    title: "THE ESCAPE ARTIST",
-    sub: "Dual-Threat Scrambler",
-    desc: "When the pocket dies, the play is just getting started. Pistol/RPO looks, designed keepers, broken-play magic."
-  },
-  {
-    id: "QB-Gunslinger",
-    icon: "\u{1F52B}",
-    title: "THE GUNSLINGER",
-    sub: "Air Raid Big Arm",
-    desc: "Big arm, bigger risks. Vertical shots, tight windows, and a fanbase with a heart condition."
-  },
-  {
-    id: "QB-Game-Manager",
-    icon: "\u265F\uFE0F",
-    title: "THE CHESS PLAYER",
-    sub: "Game Manager",
-    desc: "Protect the ball, lean on the ground game, win field position. Boring is beautiful in November."
-  }
-];
-FRONT_CARDS = [
-  {
-    id: "4-3",
-    icon: "\u{1F6E1}\uFE0F",
-    title: "4-3 FRONT",
-    sub: "4 DL \xB7 3 LB \xB7 4 DB",
-    desc: "Balanced base built on speed off the edge. Your DEs hunt quarterbacks; the MIKE cleans up everything else."
-  },
-  {
-    id: "3-4",
-    icon: "\u{1F9F1}",
-    title: "3-4 FRONT",
-    sub: "3 DL \xB7 4 LB \xB7 4 DB",
-    desc: "Two-gapping 5-tech ends anchor the line so your stand-up OLBs can hunt. Versatile, blitz-friendly, built on mass."
-  }
-];
-DIV_CARDS = [
-  {
-    id: "D1",
-    icon: "\u{1F3DF}\uFE0F",
-    title: "DIVISION I",
-    sub: "The Big Time",
-    desc: "90,000-seat cathedrals and TV money. You start in a mid-major \u2014 the powers don't know your name yet."
-  },
-  {
-    id: "D2",
-    icon: "\u{1F3C8}",
-    title: "DIVISION II",
-    sub: "The Proving Ground",
-    desc: "Real scholarships, real bus rides. Close the gap between here and the big time."
-  },
-  {
-    id: "D3",
-    icon: "\u{1F331}",
-    title: "DIVISION III",
-    sub: "The Grassroots",
-    desc: "Where dynasties are born in 3,000-seat stadiums. Every great story starts somewhere small."
-  }
-];
 obCand = { oc: [], dc: [], key: null };
-CHALLENGE_CARDS = [
-  {
-    id: "takejob",
-    icon: "\u{1F3C8}",
-    title: "Take the Job",
-    desc: "Pick any program in the country and go to work. Some have banners and a century of hate; some have never won anything. You choose which."
-  },
-  {
-    id: "outpost",
-    icon: "\u{1F3DD}\uFE0F",
-    title: "The Outpost",
-    desc: "Found the first program in Hawaii or Alaska. Every recruit alive is an ocean away \u2014 your dollars land at a fraction and flying one kid in costs what the mainland pays for four. But nobody crosses that water to poach your islands either."
-  },
-  {
-    id: "ashes",
-    icon: "\u{1F9F1}",
-    title: "The Ashes",
-    desc: "Inherit a league penalty. Your class is capped at 14 for three years while rivals sign full \u2014 you develop your way out, or you don't. The AD knows, so the leash is long."
-  },
-  {
-    id: "hotseat",
-    icon: "\u{1F525}",
-    title: "The Hot Seat",
-    desc: "A fallen power. A loaded roster, a wall of banners, and an AD who measures you against the trophy case instead of last season. Every loss costs double."
-  },
-  {
-    id: "heir",
-    icon: "\u{1F451}",
-    title: "The Heir",
-    desc: "Follow a legend who just retired. His numbers are literally your mandate and his assistants are on your payroll at his prices. It can only get worse."
-  }
-];
-_previewCache = { key: null, val: null };
 
 export { devTakeJobStart, renderNewGame, setupListeners3, setupListeners3 as setupListeners };

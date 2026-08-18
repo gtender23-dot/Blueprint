@@ -938,6 +938,62 @@ function applyIdentityToSchool(school, qbPref, defFront, tier = null, pBonus = n
   school.depthOrder = buildRoleSortedDepthOrder(school.roster);
   school.depthChart = buildDepthChart(school.roster, school.gameplan, school.depthOrder);
 }
+// ── Books → roster leaning (new-game wizard, 2026-08-17, owner) ──────────────
+// The wizard's Blueprint step used to ask "what kind of football do you believe
+// in?" — a QB type and a defensive front — and shape the first roster off the
+// answer. That question retired: the STARTING BOOKS are the identity now, so the
+// roster leans off the books the coach actually picked instead of a parallel
+// pair of questions. This reads any book — a starter, a preset, or a Workshop
+// custom — down to the same two hints applyIdentityToSchool already consumes, so
+// nothing downstream changes: the front seven and QB room still nudge toward the
+// scheme, "loosely" (only the top few bodies at each spot), exactly as before.
+//
+// Deliberately soft. A book names formations and a base front; it does NOT name
+// a QB archetype. So the offense hint is inferred from the book's dominant
+// formation family and run/pass lean — the same signal a scout would read off a
+// call sheet — and a book that leans on nothing in particular returns no hint,
+// which leaves that side of the roster as generated.
+function offHintFromBook(book) {
+  if (!book) return null;
+  const forms = book.offFormations || book.formations || [];
+  if (!forms.length && !book.tendency) return null;
+  const total = forms.reduce((s, f) => s + (typeof f.weight === "number" ? f.weight : 1), 0) || 1;
+  const wOf = (ids) => forms.filter((f) => ids.includes(f.id)).reduce((s, f) => s + (typeof f.weight === "number" ? f.weight : 1), 0);
+  const air = wOf(["Air Raid", "Empty"]) / total;
+  const option = wOf(["Pistol/RPO", "Flexbone", "Wishbone"]) / total;
+  const ground = wOf(["Power-I", "Jumbo"]) / total;
+  const tend = book.tendency || "";
+  // A hint fires only when a family actually LEADS the book — a change-up
+  // Power-I inside a balanced West Coast book is not a ground identity. The
+  // threshold is deliberately loose (a book usually leads with 35–45% of one
+  // family), and a book that leads with nothing falls through to the pocket
+  // default, which is what "balanced" means for the QB room.
+  const lead = 0.34;
+  if (air >= lead && air >= option && air >= ground) return "QB-Gunslinger";
+  if (option >= lead && option >= ground) return "QB-Scrambler";
+  if (ground >= lead || /Heavy Run/i.test(tend)) return "QB-Game-Manager";
+  if (/Heavy Pass/i.test(tend)) return "QB-Gunslinger";
+  return "QB-Pocket";
+}
+function defHintFromBook(book) {
+  const front = book && (book.defBaseFront || book.baseFront);
+  if (!front) return null;
+  // Two roster shapes exist: the 3-4 family wants big two-gap ends and stand-up
+  // rush linebackers, the 4-3 family wants speed off the edge. Every base front
+  // a book can carry maps to one of them — the heavy odd/eight-in-the-box fronts
+  // (46 Bear, 4-4) lean like a 3-4, the four-down and sub packages lean 4-3 —
+  // so a defensive book never shapes NOTHING the way it did when only the two
+  // literal strings counted.
+  if (front === "3-4" || front === "46/Bear" || front === "4-4") return "3-4";
+  return "4-3";
+}
+// The wizard hands us whatever it resolved for each side: a starter/custom
+// playbook object, a preset's gameplan, or null (team default). Returns the
+// { qbPref, defFront } pair applyIdentityToSchool takes — either may be null,
+// meaning "leave that side of the roster as generated."
+function rosterHintsFromBooks(offBook, defBook) {
+  return { qbPref: offHintFromBook(offBook), defFront: defHintFromBook(defBook) };
+}
 function availableStates() {
   const counts = {};
   for (const cities of Object.values(REGION_CITIES))
@@ -3680,4 +3736,4 @@ CONFERENCES = Object.fromEntries(
 NONCONF_GAME_DAYS = [5, 6, 7, 8];
 CONF_GAME_DAYS = [9, 10, 11, 13, 14, 15, 16, 17, 18];
 
-export { CONFERENCES, SCHOOL_DATA, WORLDGEN_INFO, STAR_CALIBER, applyIdentityToSchool, applyTeamStars, availableStates, buildDepthChart, buildRoleSortedDepthOrder, assembleWorldSources, cityInState, coinStarPlayer, coinTeamIdentity, compileLeague, defaultGameplan, generateAICoach, generateExhibitionTeam, generatePlayerProgram, generateRecruitPool, generateSchedule, generateWorld, hashStr, repairRecruitLocations };
+export { CONFERENCES, SCHOOL_DATA, WORLDGEN_INFO, STAR_CALIBER, applyIdentityToSchool, applyTeamStars, availableStates, buildDepthChart, buildRoleSortedDepthOrder, assembleWorldSources, cityInState, coinStarPlayer, coinTeamIdentity, compileLeague, defaultGameplan, generateAICoach, generateExhibitionTeam, generatePlayerProgram, generateRecruitPool, generateSchedule, generateWorld, hashStr, repairRecruitLocations, rosterHintsFromBooks };
