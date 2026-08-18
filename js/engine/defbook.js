@@ -36,7 +36,7 @@ var DEF_SHELVES = [
   { key: "gamble", label: "The Gamble", desc: "Your pressure package — headset calls, never automatic.", cells: [] },
   { key: "protect", label: "Protect", desc: "Late with a lead — keep everything in front.", cells: ["four_min_lead"] }
 ];
-var DEF_SHELF_CARD_CAP = 2; // 5 shelves × 2 ≤ the headset's 12-call library
+var DEF_SHELF_CARD_CAP = 3; // raised 2→3 (owner, 2026-08-17): more than one named call per shelf. 5×3=15 > the 12-call headset library, so applyDefBookToGameplan's compile independently caps the headset at 12 distinct calls (the n>=12 guard) — a book carries at most 12 named calls no matter how full its shelves.
 // The eight coverage pictures a card can call, mapped to the exact engine
 // fields the call system consumes (shell/style primitives or a covFamily).
 var DEF_CALL_COVERAGES = [

@@ -33,7 +33,7 @@
 //    a pinned bench seed.
 import { DEFAULT_DEF_BOOKS, DEFAULT_OFF_BOOKS } from '../js/engine/defaultbooks.js';
 import { validateDefBook, applyDefBookToGameplan, cardToDefCall, bookCards, DEF_SHELVES } from '../js/engine/defbook.js';
-import { validatePlaybook, legalConceptsForFormation } from '../js/engine/playbook.js';
+import { validatePlaybook, legalConceptsForFormation, splitSheetKey, lookSheetKey } from '../js/engine/playbook.js';
 import { benchSnap, benchTeams } from '../js/engine/bench.js';
 import { DEF_FRONTS, C, FORMATION_PACKAGES, FORMATION_VARIATIONS } from '../js/constants.js';
 
@@ -102,14 +102,19 @@ for (const b of DEFAULT_OFF_BOOKS) {
     if (f.variation && !(FORMATION_VARIATIONS[f.id] && FORMATION_VARIATIONS[f.id][f.variation])) { offBad++; bad.push(`"${b.name}": unknown look "${f.id}/${f.variation}"`); }
     if (!(typeof f.weight === 'number' && f.weight > 0)) { offBad++; bad.push(`"${b.name}": "${f.id}" carries no weight`); }
   }
-  for (const fid of new Set(b.formations.map((f) => f.id))) {
-    if (!(b.sheets[fid] && Object.keys(b.sheets[fid]).length > 0)) { offBad++; bad.push(`"${b.name}": carried formation "${fid}" has no sheet`); }
+  // 2026-08-18: books are all-legal PER LOOK, so a look's sheet is keyed by its
+  // OWN look key ("fid" or "fid|variation"), not always the base fid. Check that
+  // every carried look has a non-empty sheet under its own key.
+  for (const f of b.formations) {
+    const lk = lookSheetKey(f.id, f.variation || null);
+    if (!(b.sheets[lk] && Object.keys(b.sheets[lk]).length > 0)) { offBad++; bad.push(`"${b.name}": carried look "${lk}" has no sheet`); }
   }
-  for (const [fid, s] of Object.entries(b.sheets)) {
-    const legal = new Set(legalConceptsForFormation(fid));
-    for (const [cName, w] of Object.entries(s)) {
-      if (!legal.has(cName)) { offBad++; bad.push(`"${b.name}": ${fid} sheet holds illegal "${cName}"`); }
-      if (!(typeof w === 'number' && w > 0)) { offBad++; bad.push(`"${b.name}": ${fid}/"${cName}" weight bad`); }
+  for (const [key, sh] of Object.entries(b.sheets)) {
+    const { id: baseFid } = splitSheetKey(key);
+    const legal = new Set(legalConceptsForFormation(baseFid));
+    for (const [cName, w] of Object.entries(sh)) {
+      if (!legal.has(cName)) { offBad++; bad.push(`"${b.name}": ${key} sheet holds illegal "${cName}"`); }
+      if (!(typeof w === 'number' && w > 0)) { offBad++; bad.push(`"${b.name}": ${key}/"${cName}" weight bad`); }
     }
   }
 }

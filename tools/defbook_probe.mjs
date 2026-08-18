@@ -80,7 +80,8 @@ const card = (name, over = {}) => ({ ...emptyDefCard(name), ...over });
 // ── (5) validation gates ─────────────────────────────────────────────────────
 ok(!validateDefBook({ ...e, shelves: { nope: [] } }).ok, 'unknown shelf rejected');
 ok(!validateDefBook({ ...e, shelves: { base: 'x' } }).ok, 'non-array shelf rejected');
-ok(!validateDefBook({ ...e, shelves: { base: [card('A'), card('B'), card('C')] } }).ok, `over-cap shelf rejected (cap ${DEF_SHELF_CARD_CAP})`);
+ok(!validateDefBook({ ...e, shelves: { base: Array.from({ length: DEF_SHELF_CARD_CAP + 1 }, (_, i) => card('C' + i)) } }).ok, `over-cap shelf rejected (cap ${DEF_SHELF_CARD_CAP})`);
+ok(validateDefBook({ ...e, shelves: { base: Array.from({ length: DEF_SHELF_CARD_CAP }, (_, i) => card('C' + i)) } }).ok, `a shelf filled to the cap (${DEF_SHELF_CARD_CAP}) is valid`);
 ok(!validateDefBook({ ...e, shelves: { base: [null] } }).ok, 'malformed call rejected');
 ok(!validateDefBook({ ...e, shelves: { base: [card('A', { front: 'GhostFront' })] } }).ok, 'unknown card front rejected');
 ok(!validateDefBook({ ...e, shelves: { base: [card('A', { coverage: 'c9' })] } }).ok, 'unknown card coverage rejected');
@@ -92,7 +93,16 @@ const vWarn = validateDefBook({ ...e, shelves: { base: [card('A')] }, answers: {
 ok(vWarn.ok && vWarn.warnings.some((w) => w.includes('Missing')), 'answer naming an off-shelf call warns, does not error');
 
 // ── (6) shelf → defCalls: shelf order, name dedupe, the 12-call cap ─────────
-ok(DEF_SHELVES.length * DEF_SHELF_CARD_CAP <= 12, 'shelf capacity can never exceed the 12-call headset library');
+// The shelf cap (3) x 5 shelves = 15 can now exceed the 12-call headset, so the
+// guarantee lives in the COMPILE: applyDefBookToGameplan caps the library at 12
+// distinct names regardless of how full the shelves are (cap raised 2->3,
+// 2026-08-17). Prove it by overflowing every shelf to the cap and counting.
+{
+  const over = {}; let _oi = 0;
+  for (const sh of DEF_SHELVES) over[sh.key] = Array.from({ length: DEF_SHELF_CARD_CAP }, () => card('OC' + (_oi++), { coverage: 'c3' }));
+  const gpOver = applyDefBookToGameplan({ ...emptyDefBook('Over'), shelves: over }, {});
+  ok(Object.keys(gpOver.defCalls || {}).length === 12, `compile caps the headset at 12 even when shelves hold ${DEF_SHELVES.length * DEF_SHELF_CARD_CAP} (${Object.keys(gpOver.defCalls || {}).length})`);
+}
 const shelves10 = {}; let _ci = 0;
 for (const sh of DEF_SHELVES) shelves10[sh.key] = [card(`Call${_ci++}`, { coverage: 'c3' }), card(`Call${_ci++}`, { coverage: 'c1', bring: '5' })];
 const fullBook = { ...emptyDefBook('Full'), shelves: shelves10 };
