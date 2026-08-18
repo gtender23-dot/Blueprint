@@ -13,12 +13,14 @@
 //      ~200-208, COV_FAMILY_IMPLIES) — proven at sim level: a single/man/press
 //      standing plan under an all-rows "Tampa 2" call sheet stamps Tampa 2 on
 //      the pass ledger, which coverageFamily('single','man') can never emit.
-//   2. CHK-AFTER-CALL ORDER DEPENDENCE. A formCheck's shell/style overwrite a
-//      sampled call's shell/style (sim.js ~4768 CALL then ~4776 CHK, same
-//      defEff) — but a check CANNOT clear defEff.covFamily, and the coverage
-//      pick (~4958) short-circuits on the family. So the same check wins
-//      against a plain-dials call and silently LOSES against a family call.
-//      Both arms proven at sim level with the same check.
+//   2. CHK-AFTER-CALL — THE RATIFIED WINNER (D15, OD-2(a) 2026-08-17): the
+//      personnel check is the more specific layer and WINS in both arms. A
+//      formCheck's shell/style overwrite a sampled call's shell/style, AND
+//      when the check writes shell/style it clears defEff.covFamily, so the
+//      coverage pick reads the check's dials instead of short-circuiting on
+//      the family name. A check naming NEITHER shell nor style leaves the
+//      family standing (OD-1(a): the family is the call grammar). Plus OD-3
+//      source pins: the headset re-stamp after the _nextPlay merge.
 //   3. THE BOX SPEAKS TWO SEMANTICS. A CALL's runCommit is ABSOLUTE
 //      (clamp2(o.runCommit,-25,25)); a CHK's runCommit is a DELTA
 //      (defEff.runCommit + _chk.runCommit). The UI splits again: CALL_FIELDS
@@ -136,7 +138,7 @@ console.log(`— 1. a family call OVERWRITES the standing shell/style dials — 
     share(c, ['Tampa 2']) >= 0.9, `${(share(c, ['Tampa 2']) * 100).toFixed(1)}% of ${c.db} dropbacks [${fmt(c)}]`);
 }
 
-console.log('\n— 2. CHK-after-CALL: the same check wins vs plain dials, loses vs a family —\n');
+console.log('\n— 2. CHK-after-CALL: the check WINS in both arms (D15, OD-2(a) ratified) —\n');
 {
   const CHK = { formChecks: { spread: { covShell: 'single', covStyle: 'man' } } };
   // Arm A — plain-dials call (two/zone). The spread check runs AFTER the call
@@ -151,12 +153,30 @@ console.log('\n— 2. CHK-after-CALL: the same check wins vs plain dials, loses 
   const ctl = covCounts({ covShell: 'two', covStyle: 'zone' }, 43000);
   check('control (no check): the call\'s two/zone dials govern',
     share(ctl, ['Cover 2', 'Cover 4']) >= 0.85, `${(share(ctl, ['Cover 2', 'Cover 4']) * 100).toFixed(1)}% of ${ctl.db} [${fmt(ctl)}]`);
-  // Arm B — family call under the SAME check. The check still overwrites the
-  // shell/style dials, but it cannot clear defEff.covFamily and the coverage
-  // pick short-circuits on the family: the check silently loses.
+  // Arm B — family call under the SAME check. RATIFIED WINNER (was the pinned
+  // defect): the check's shell/style write clears defEff.covFamily, so the
+  // coverage pick reads the check's single/man — the family is GONE.
   const b = covCounts({ covFamily: 'Tampa 2' }, 44000, CHK);
-  check('family call: the SAME formCheck is silently ignored by the coverage pick',
-    share(b, ['Tampa 2']) >= 0.9, `${(share(b, ['Tampa 2']) * 100).toFixed(1)}% of ${b.db} [${fmt(b)}]`);
+  check('family call: the check\'s shell/style write CLEARS the family — check wins (OD-2(a))',
+    share(b, ['Cover 1', 'Cover 0']) >= 0.85, `${(share(b, ['Cover 1', 'Cover 0']) * 100).toFixed(1)}% of ${b.db} [${fmt(b)}]`);
+  check('family call under the check: Tampa 2 no longer stamps',
+    share(b, ['Tampa 2']) <= 0.05, `${(share(b, ['Tampa 2']) * 100).toFixed(1)}%`);
+  // Arm C — a check that names NEITHER shell nor style (box-only) leaves the
+  // family standing: OD-1(a), the family is the call grammar on its snap.
+  const c2 = covCounts({ covFamily: 'Tampa 2' }, 45000,
+    { formChecks: { spread: { runCommit: 4 } } });
+  check('box-only check: the family STANDS (clear is gated on a shell/style write)',
+    share(c2, ['Tampa 2']) >= 0.9, `${(share(c2, ['Tampa 2']) * 100).toFixed(1)}% of ${c2.db} [${fmt(c2)}]`);
+  // OD-3 source pins (the _nextPlay seam is coached-game machinery this
+  // AI-only harness can't drive; timecontrol_probe owns the live seam):
+  // the headset re-stamp exists AND sits after the _nextPlay merge loop.
+  const npIdx = SIM_SRC.indexOf('plan._nextPlay;');
+  const restampRe = /\/\/ OD-3[^]*?if \(forcedDefCall && !forcedDefCall\._ride\) applyDefCall\(defEff, forcedDefCall, defSchool\);/;
+  const m = restampRe.exec(SIM_SRC);
+  check('OD-3: headset re-stamp after the _nextPlay merge exists in sim.js', !!m);
+  check('OD-3: the re-stamp sits AFTER the _nextPlay merge loop', !!m && npIdx > 0 && m.index > npIdx);
+  check('OD-2(a): the CHK site clears covFamily on a shell/style write',
+    /if \(_chk\.covShell \|\| _chk\.covStyle\) defEff\.covFamily = null;/.test(SIM_SRC));
 }
 
 console.log('\n— 3. the box speaks two semantics + three UI magnitudes (source pins) —\n');

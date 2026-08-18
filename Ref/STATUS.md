@@ -1,7 +1,20 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-18 · D16 SHIPPED (this Cowork session) — RETIREMENTS,
+Last updated: **2026-08-18 · D15 SHIPPED (this Cowork session) — PRECEDENCE,
+RATIFIED AND WRITTEN DOWN: the personnel CHECK now beats a sampled family call
+(OD-2(a) — a check that writes shell/style CLEARS the call's covFamily, so the
+coverage pick reads the check instead of short-circuiting on the family name),
+the live headset call now beats the timeout's `_nextPlay` overlay on
+overlapping keys (OD-3 — re-stamped after the merge), and the seven-layer
+overlay precedence chain is WRITTEN DOWN as a comment table at the apply site
+for the first time anywhere but prose. plan_cohesion_probe §2's pins FLIPPED
+from pinning the defect to pinning the fix (+ a box-only-check arm proving the
+OD-1(a) family-stands case, + OD-3 source pins). 77/0 ×3; covfam proven
+BYTE-IDENTICAL vs pristine HEAD on an isolated HEAD+D15 tree; N=300 band shows
+only the manifest's standing flags. covfam at the manifest's N=120 and the
+browser eyeball are OWED-LOCAL; full entry + OWNER CHECKLIST in the D15 section
+below.** Prior: **2026-08-18 · D16 SHIPPED (this Cowork session) — RETIREMENTS,
 DISCLOSED: blitzPct is derived-only (every writer writes the stop; the Simple
 posture dial no longer loses its arm-wrestle at kickoff), the aggressive/
 conservative coverage placebos are retired from every picker but still load,
@@ -377,6 +390,101 @@ D6's in-flight concepts is RESOLVED in this session, card_lint 21/0 ×3.)
 Prior: D4 · M2 presentation; D3 · M2 engine; D7 · M4; D2 · M1; D5 · M3
 audit RATIFIED. Plan of record: BUILD ORDER v2 (2026-08-17), dispatch
 prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+
+## 2026-08-18 — D15 · PRECEDENCE, RATIFIED AND WRITTEN DOWN (this Cowork session) — the sim seam
+## NODE-GATED ×3 (plan_cohesion 77/0 ×3 on the shared tree) — ⚠ covfam AT N=120 + BROWSER EYEBALL OWED-LOCAL
+
+The owner's ratified picks OD-1(a), OD-2(a)+(c), OD-3 (recorded in `4510b12`)
+are now IN THE CODE, and the precedence chain they settle is written down where
+it is applied. Three edits, all at the apply sites, no reordering beyond the
+picks.
+
+**What shipped (`js/engine/sim.js`, three hunks):**
+1. **OD-2(a) — the check wins.** At the formChecks apply site: when a check
+   writes `covShell` or `covStyle`, it now clears `defEff.covFamily` before
+   `applyDefCall`. The coverage pick (~4958) therefore reads the check's dials
+   instead of short-circuiting on a family name the check could never clear.
+   **The clear is GATED on a shell/style write** — a box-only or front-only
+   check leaves the family standing, which is OD-1(a) (the family is the CALL
+   grammar, the trio the STANDING identity). The family's independent riders
+   (`rotation`, `rush3`) survive: a check cannot speak them, and that
+   vocabulary is D14's to unify, not D15's to invent.
+2. **OD-3 — the headset wins.** `applyDefCall(defEff, forcedDefCall, …)` is
+   re-stamped immediately AFTER the `_nextPlay` merge loop, so a Next-Play
+   timeout adjustment now fills only the keys the coach's live call did not
+   name. Idempotent by construction (`applyDefCall` re-derives `blitzPct` from
+   the called stop the same way), and `_ride` resumes are excluded exactly as
+   before. Verified in the bundle: the call appears TWICE (original + re-stamp).
+   The OFFENSIVE `forcedCall` has no overlap with `_nextPlay` by construction —
+   its fields are read off the forcedCall object, never merged into `offEff` —
+   and that is stated in the comment table so nobody re-derives it.
+3. **The precedence table itself**, as a comment block at the head of the apply
+   sequence: all seven layers, what applies each, and who beats whom, carrying
+   the OD numbers. This is the first time the chain exists anywhere but prose.
+
+**`tools/plan_cohesion_probe.mjs` §2 — the pins FLIPPED (the probe working as
+designed).** Arm B used to assert "the SAME formCheck is silently ignored by
+the coverage pick"; it now asserts the check's single/man GOVERNS and Tampa 2
+no longer stamps. Added: **Arm C**, a box-only check (`runCommit` only) proving
+the family STANDS — the gate on the clear is real and not a blanket family
+kill; and three OD-3/OD-2(a) source pins (the re-stamp EXISTS and sits AFTER
+the `_nextPlay` merge — index-compared, not just grepped — plus the CHK-site
+clear). §2's header comment rewritten to describe the ratified winner.
+
+**Gates (this sandbox, node) — on the tree AS FOUND (the D2 precedent; D12/D13/
+D16 are live uncommitted in it):**
+- `plan_cohesion_probe` **77/0 ×3** (the 77 includes D13's and D16's own flipped
+  sections — my §2 arms are 6 of them).
+- `defcall_probe` 32/0 · `timecontrol_probe` PASS **×3** (the `_nextPlay`/
+  headset seam — the probe that owns the live timeout path) · `record_call_probe`
+  PASS **×3**.
+- **covfam ATTRIBUTION, the strong result:** rather than run the giant on a tree
+  carrying three other sessions' work, I built an ISOLATED tree — pristine
+  `HEAD` + ONLY D15's three sim.js hunks (D16's `_liveTempo` hunks filtered out
+  of the patch) — and ran `covfam_probe` on both. **Output is BYTE-IDENTICAL
+  (`diff` empty).** D15 is covfam-neutral by proof, not by argument. It is also
+  neutral by construction: covfam's harness sets no `formChecks` and no
+  `forcedDefCall`, so neither edit is reachable from it.
+- **Band:** `stat_realism_harness 300` on that same isolated D15 tree shows
+  ONLY the manifest's three standing flags (rush low / comp% / INT%) and
+  nothing new — rush 149.7, comp% 56.4, INT 1.91, points 26.0, all other rows
+  OK.
+- **Clean build** from a copy outside the mount (standing workaround): 13/13
+  sanity PASS, 3715 KB, cache `cfb-dynasty-d87bdb2edd`, bundle parses (2/2
+  script blocks), CSS braces balanced 5698/5698, and both edits verified
+  present in the bundle with comments correctly stripped.
+
+**⚠ OWED-LOCAL (ledgered, not hidden):**
+- **`covfam_probe 120`** — the dispatch's N. This sandbox caps a tool call at
+  ~178 s and **kills background processes between calls** (verified: `setsid`
+  survives within a call, is reaped after it), so a ~15-minute probe cannot run
+  here at all. Discharged as far as it can be by the byte-identical N=10
+  HEAD-vs-D15 comparison above; the N=120 run is owed on the owner machine.
+- **`_equiv_walk`** — PW tier, unrunnable here (standing).
+- The **browser eyeball** below.
+
+**OWNER CHECKLIST (D15) — one live game, defense:**
+- [ ] **The check now beats the family call.** Give a defensive book a
+  vs-Spread (or vs-Empty) ANSWER that names a shell/style — single-high man —
+  and a call sheet whose row samples a FAMILY call (Tampa 2 / Cover 6 /
+  Prevent). Face that formation: the film/coverage readout must show the
+  ANSWER's coverage, not the family. Before D15 the answer was silently
+  ignored 100% of the time.
+- [ ] **A box-only answer still lets the family play.** Same book, but make the
+  answer commit the box ONLY (no shell/style): the family call should still
+  show. This is the OD-1(a) half — worth one look so the rule reads as
+  "specific beats general", not "checks kill families".
+- [ ] **Headset beats the timeout sheet.** Call a defensive timeout, set a
+  Next-Play adjustment, then on the very next snap make a LIVE headset call
+  that names one of the same fields: your headset call must win that field
+  (the timeout's other fields still apply).
+- [ ] **`node tools/covfam_probe.mjs 120`** on the owner machine (the owed
+  giant), plus the standing `_equiv_walk`.
+
+**Commit scoped to:** `js/engine/sim.js` (**partial-staged — three hunks;
+D16's `_liveTempo` hunks in the same file deliberately left unstaged**) ·
+`tools/plan_cohesion_probe.mjs` (**partial-staged — §2 only; D13/D16 own §5 and
+the import line**) · `Ref/STATUS.md` (this entry + the header). NOT pushed.
 
 ## 2026-08-18 — D16 · RETIREMENTS, DISCLOSED (this Cowork session) — blitzPct writers · placebo enums · zombies
 ## NODE-GATED ×3 (probe 77/0 on the shared tree, 61/0 on this commit's own snapshot) — ⚠ N=500 BAND + `_equiv_walk` ATTRIBUTION + BROWSER EYEBALL OWED-LOCAL

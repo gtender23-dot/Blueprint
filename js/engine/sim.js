@@ -4636,6 +4636,22 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
       margin: gameState.score.def - gameState.score.off,
       clock: gameState.clock
     });
+    // ── THE OVERLAY PRECEDENCE CHAIN (ratified 2026-08-17, OD-1/OD-2/OD-3;
+    // D15 2026-08-18 — the first time this exists anywhere but prose) ──────
+    //
+    // | # | layer                     | applied at        | wins/loses |
+    // |---|---------------------------|-------------------|------------|
+    // | 1 | weeklyPlan                | getEffectivePlan  | weekly > cell > standing, per-field ?? chain |
+    // | 2 | situation cell            | getEffectivePlan  | same chain |
+    // | 3 | forcedDefCall (headset)   | applyDefCall below| suppresses layers 5+6 entirely (unless _ride); BEATS layer 4 on overlapping keys (OD-3: re-stamped after the _nextPlay merge — the headset is the later, more specific human intent) |
+    // | 4 | _nextPlay (timeout)       | Object.assign below| fills every key the headset didn't name; one real snap, cleared after |
+    // | 5 | defCalls × callSheet CALL | pickDefCall→applyDefCall | outranks standing plan + weekly (you called it, you own it); runCommit ABSOLUTE |
+    // | 6 | formChecks CHK            | applyDefCall      | more specific than the CALL — beats its dials AND clears its covFamily when the check writes shell/style (OD-2(a)); runCommit DELTA |
+    // | 7 | front/coverage resolve    | defFrontId / covFam pick | a surviving covFamily IS the coverage (OD-1(a): the family is the CALL grammar, the shell/style trio the STANDING identity — a named family beats the dials on its snap); no family → coverageFamily(shell, style) |
+    //
+    // The offensive forcedCall has NO overlap with layer 4 by construction:
+    // its fields (concept/formationId/variation/playAction/rpo/…) are read
+    // from the forcedCall object directly, never merged into offEff.
     const offEff = getEffectivePlan(offPlan, offSchool == null ? void 0 : offSchool.weeklyPlan, offSit);
     const defEff = getEffectivePlan(defPlan, defSchool == null ? void 0 : defSchool.weeklyPlan, defSit);
     // F1: the coach's live defensive call beats the sheet for exactly this
@@ -4656,6 +4672,11 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
         eff.blitzPct = (_npA = C.AGGRESSION.rate[np.defAggression]) != null ? _npA : eff.blitzPct;
       }
     }
+    // OD-3 (ratified 2026-08-17): the live headset call WINS over the timeout's
+    // next-play overlay on overlapping keys — re-stamp it after the merge, so
+    // _nextPlay fills only the keys the coach's call didn't name. Idempotent
+    // (applyDefCall re-derives blitzPct from the called stop the same way).
+    if (forcedDefCall && !forcedDefCall._ride) applyDefCall(defEff, forcedDefCall, defSchool);
     const offPlanEff = __spreadProps(__spreadValues({}, offPlan), {
       qbRunPct: offEff.qbRunPct,
       passDepth: offEff.passDepth,
@@ -4776,6 +4797,14 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     if ((!forcedDefCall || forcedDefCall._ride) && defPlan.formChecks) {
       const _chk = defPlan.formChecks[formationCheckClass(offFormationId)];
       if (_chk) {
+        // OD-2(a) (ratified 2026-08-17): the personnel check is the MORE
+        // SPECIFIC layer — when it writes shell/style it also clears a sampled
+        // call's covFamily, so the coverage pick below reads the check's dials
+        // instead of short-circuiting on the family name. A check that names
+        // neither (box-only, front-only) leaves the family standing. The
+        // family's independent riders (rotation, rush3) persist — a check
+        // can't speak them (that vocabulary is D14's).
+        if (_chk.covShell || _chk.covStyle) defEff.covFamily = null;
         applyDefCall(defEff, {
           front: _chk.defFront && _chk.defFront !== "auto" ? _chk.defFront : null,
           covShell: _chk.covShell || null,
