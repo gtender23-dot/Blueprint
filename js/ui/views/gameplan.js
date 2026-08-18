@@ -11,7 +11,7 @@ import { getCreation, listCreations, loadCreationData } from '../../engine/creat
 import { repairCreation } from '../../engine/creatorrepair.js';
 import { DEFAULT_OFF_BOOKS, DEFAULT_DEF_BOOKS, defaultOffBook, defaultDefBook } from '../../engine/defaultbooks.js';
 import { applyPlaybookToGameplan, playbookFromGameplan, lookSheetKey, splitSheetKey, resolveLookSheet } from '../../engine/playbook.js';
-import { applyDefBookToGameplan, defBookFromGameplan, emptyDefBook } from '../../engine/defbook.js';
+import { applyDefBookToGameplan, defBookFromGameplan, emptyDefBook, pruneCallSheet } from '../../engine/defbook.js';
 import { applyControllerOverlay, controllerOverlayOf, synthesizeTeamPlan } from '../../engine/teamplan.js';
 import { renderPlaybooksTab, playbooksListeners } from './creatorplaybook.js';
 import { renderDefTab, defListeners } from './creatordef.js';
@@ -2948,6 +2948,9 @@ function setupListeners() {
         const merged = kind === "dpb" ? applyPlaybookToGameplan(book, school2.gameplan) : applyDefBookToGameplan(book, school2.gameplan);
         for (const k of Object.keys(school2.gameplan)) { if (!k.startsWith("_")) delete school2.gameplan[k]; }
         Object.assign(school2.gameplan, merged);
+        // D12 (OD-11): the def-book compile already prunes, but a load is also
+        // the healing moment for a sheet an OLD save left stale — idempotent.
+        pruneCallSheet(school2.gameplan);
         // Stage 3: a starter book replaces this side — its Workshop identity
         // (if any) comes off, and the STARTER marker goes on so "Edit book"
         // re-opens the whole starter (shelves+answers included, 2026-08-18).
@@ -2976,6 +2979,8 @@ function setupListeners() {
         const merged = kind === "pb" ? applyPlaybookToGameplan(data, school2.gameplan) : applyDefBookToGameplan(data, school2.gameplan);
         for (const k of Object.keys(school2.gameplan)) { if (!k.startsWith("_")) delete school2.gameplan[k]; }
         Object.assign(school2.gameplan, merged);
+        // D12 (OD-11): see the starter branch above — heal-on-load, idempotent.
+        pruneCallSheet(school2.gameplan);
         // Stage 3: stamp the book's Workshop identity (creation id + saved
         // time) so the Game Plan can offer "a newer version exists" later.
         // The stamps are gameplan _fields — they survive wipes + re-synthesis

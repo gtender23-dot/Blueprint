@@ -1,7 +1,16 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-18 · D11 MANIFEST COMPLETION SHIPPED (data + probe only)
+Last updated: **2026-08-18 · D12 SHIPPED (this Cowork session) — THE HONEST
+REPORT CARD: the plan-report CUSTOM/AUTO badge lists rebuilt from the SIT
+panel's real writable set (the dead `pressureIdentity` entry dropped, the 13
+missing fields added) + callSheet hygiene on defensive book load (a book swap
+can no longer leave the matchup sheet naming dead calls — new `pruneCallSheet`
+in defbook.js, wired into the compile + heal-on-load on `#gp-lib-load`). Node
+gates green ×3 incl. new defsheet_probe §C; PW tier + the `_equiv_walk`
+attribution run OWED-LOCAL (this change is NOT walk-neutral by design); full
+entry + OWNER CHECKLIST in the D12 section below.** Prior:
+**2026-08-18 · D11 MANIFEST COMPLETION SHIPPED (data + probe only)
 — PLAN_FIELD_SIDE gains the 13 audited gap fields (7 off, callSheet def, 5 ST
 team), plan_side_probe's SIM_CONSUMED widened to the full audit census;
 playbook_root_probe 24/0 ×3 + a node-level flat-plan proof (old-compile ≡
@@ -358,6 +367,111 @@ D6's in-flight concepts is RESOLVED in this session, card_lint 21/0 ×3.)
 Prior: D4 · M2 presentation; D3 · M2 engine; D7 · M4; D2 · M1; D5 · M3
 audit RATIFIED. Plan of record: BUILD ORDER v2 (2026-08-17), dispatch
 prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+
+## 2026-08-18 — D12 · THE HONEST REPORT CARD (this Cowork session) — badge lists + stale callSheet, UI tier
+## NODE-GATED ×3 — ⚠ PW SMOKE + THE `_equiv_walk` ATTRIBUTION RUN OWED-LOCAL (not walk-neutral BY DESIGN)
+
+Executed the D12 block from `Ref/COHESION_DISPATCH_2026-08-18.md` (ec7300b),
+OD-11/OD-12 owner-RATIFIED (4510b12). Both defects were the audit's "it lies
+to the coach" pair: the plan report's CUSTOM/AUTO badge could never match on a
+field no cell can carry and read AUTO on most fields a cell CAN carry; and a
+defensive book load replaced `defCalls` but kept the old `callSheet`, whose
+rows named calls that no longer existed — `pickDefCall` filters dead entries
+(sim.js), so the matchup sheet silently stopped firing and the game quietly
+played plain dials.
+
+**What shipped:**
+- **`js/ui/app.js`** — `PLAN_OFF_FIELDS`/`PLAN_DEF_FIELDS` rebuilt from the
+  truth: exactly the fields the SIT panel writes into a situation cell
+  (renderSitPanel/wireSituationListeners, cell dialect — `tempo`, `defFront`).
+  OFF: offFormations, tendency, passDepth, qbRunPct, optionRate, jetRate,
+  tempo, drawRate, protIdentity, protEmphasis, qbAggr, conceptWeights. DEF:
+  defFront, defAggression, runCommit, coverageScheme, covShell, covStyle,
+  pressLevel, edgePlay, optionKey, subPhilosophy, tackleStyle. The dead
+  `pressureIdentity` badge entry is GONE (no SIT control writes it; the badge
+  could never read CUSTOM off it). The badge now reads CUSTOM iff the cell
+  carries a field the coach can actually set there. Simple-mode postures write
+  covShell/coverageScheme/pressLevel cells — those now correctly badge CUSTOM;
+  Simple's "auto" writes null, which correctly badges AUTO.
+- **`js/engine/defbook.js`** — new exported `pruneCallSheet(gp)`:
+  filters every callSheet cell to names the CURRENT `defCalls` library holds —
+  survivors keep their exact weights (none invented), dead entries drop, and
+  empty cells/rows/sheets are deleted (the empty-structures old-save law), so
+  a row whose calls all died renders as an EMPTY cell — inheriting the
+  standing plan, the exact meaning the Matchup Call Sheet's empty-cell copy
+  already explains. `applyDefBookToGameplan` calls it whenever its compile
+  replaces the library (n>0 named calls); an identity-only book (no shelves)
+  still leaves the old library AND its sheet untouched (the "Edit defense"
+  identity-save path depends on that — comment at gameplan.js setupListeners).
+  This closes EVERY def-load door at the engine seam: `#gp-lib-load` ddb/dd,
+  the one-tap book-update banner, the wizard/applyStartingChoices.
+- **`js/ui/views/gameplan.js`** — belt-and-suspenders heal-on-load: the
+  `#gp-lib-load` starter (dpb/ddb) and Workshop (pb/dd) branches call
+  `pruneCallSheet` after the plan swap — idempotent, and it heals a sheet an
+  OLD save left stale through the pre-fix door (offense loads included).
+- **`tools/defsheet_probe.mjs`** — new §C "BOOK LOAD LEAVES NO DEAD CALLSHEET
+  ROW": loads a starter book over a gameplan carrying a stale sheet (all-dead
+  row, mixed row, all-alive row, dead personnel cell) and proves zero dead
+  references, all-dead rows deleted, surviving weights exact, input not
+  mutated, the identity-only carve-out, and the exported healer's
+  empty-sheet delete. 8 checks, green ×3.
+
+**Gates (this sandbox, node, tree as found — D11/D13/D15/D16 sessions live in
+parallel):** defsheet_probe (incl. new §C) **109/0 ×3** · defbook_probe
+**76/0 ×3** · plan_cohesion_probe **75/0 ×3** (final runs; mid-session counts
+moved 59→75 as the parallel blocks landed their pins — two transient reds seen
+mid-run were D16's pressureSource/placebo pins mid-edit, ZERO reds ever named
+a D12 surface) · clean esbuild build from a temp copy OUTSIDE the mount
+(13/13 sanity, CSS braces 5698/5698 balanced, 2 script blocks, cache
+**`cfb-dynasty-ede3402d8e`**, `pruneCallSheet` + the new badge fields verified
+IN the bundle, old badge list verified GONE) · dist/ + blueprint-pages.zip
+copied back byte-identical (sha256 match) · `node --check` clean on the three
+touched js files · temp copies cleaned up after.
+
+**Re-verified at commit time (this session was resumed after a credit
+interruption; the tree had moved under D13/D15/D16 in the meantime):** all
+three gates re-run on the FINAL tree — defsheet_probe **109/0 ×3**,
+defbook_probe **76/0 ×3**, plan_cohesion_probe **75/0 ×3**, `node --check`
+clean. AND the commit was proved self-sufficient IN ISOLATION: a
+`git checkout-index` extract of the staged index alone (HEAD + D12's five
+files, none of the neighbouring sessions' hunks) builds **13/13 sanity, cache
+`cfb-dynasty-1d7725a236`**, CSS 5698/5698 balanced, 2 script blocks,
+`pruneCallSheet` present in the bundle, and passes defsheet_probe 109/0 +
+defbook_probe 76/0 on its own — so this commit does not depend on any
+parallel session's uncommitted work to be valid.
+
+**⚠ `_equiv_walk` — run OWED-LOCAL, and NOT expected identical (say-so per the
+dispatch):** this change intentionally alters rendered DOM, so the walk MUST
+diff. A D12-less baseline build was prepared and built clean in the sandbox
+(cache `cfb-dynasty-7a865d2241`) but the PW browser tier is unrunnable here
+(Windows-only binaries in `.pw-browsers/`; the sandbox network allowlist
+blocks the Linux headless-shell download — same wall as D11). On the local
+machine: run the walk on builds with/without the D12 commit and attribute the
+diffs to exactly (a) plan-report badge spans (CUSTOM where a cell carries a
+newly-listed field, no badge driven by pressureIdentity), (b) matchup
+call-sheet rows absent where a book load killed their calls. Any OTHER diff is
+unexplained — treat per the gate's law.
+
+**OWNER CHECKLIST (D12):**
+- [ ] **Local gate:** `node tools/defsheet_probe.mjs` + `defbook_probe` +
+  `plan_cohesion_probe` ×3, then `node tools/build.mjs` (Windows box — the
+  standing mount caveat), then the `_equiv_walk` attribution run above, then
+  `defcall_ui_smoke` (PW — first run on this change, OWED).
+- [ ] **Browser eyeball (one sitting):** (1) play a game with a situation cell
+  customized via a previously-unlisted control (e.g. set Cushion=Press on 3rd
+  & long) → the post-game plan report's row badges **CUSTOM** (it read AUTO
+  before); (2) load a different starter DEFENSE over a plan whose matchup
+  sheet weighted the old calls → the Matchup Call Sheet shows those rows
+  EMPTY (inheriting), not naming ghosts — and `pickDefCall` keeps firing on
+  rows you re-author.
+- [ ] Commit note: this session's commit is partial-staged around live
+  parallel work (defbook.js also carries D13's uncommitted hunks; gameplan.js
+  may carry D16's) — verify `git log --stat` looks right before any deploy.
+
+**Commit scoped to (partial-staged):** js/ui/app.js (badge-list hunk) ·
+js/engine/defbook.js (pruneCallSheet hunks ONLY — D13's validator hunks left
+unstaged) · js/ui/views/gameplan.js (import + two heal-on-load hunks ONLY) ·
+tools/defsheet_probe.mjs (§C) · Ref/STATUS.md (this entry). NOT pushed.
 
 ## 2026-08-18 — D11 · MANIFEST COMPLETION (this Cowork session) — data + probes only, no consumer rewired
 ## NODE-GATED ×3 — ⚠ `_equiv_walk` OWED-LOCAL (PW blocked by sandbox allowlist; byte-identity expected BY CONSTRUCTION)

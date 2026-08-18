@@ -227,6 +227,32 @@ function validateDefBook(db) {
   return { ok: errors.length === 0, errors, warnings };
 }
 
+// D12 (OD-11, owner-ratified 2026-08-18): when a book load replaces defCalls,
+// the matchup call sheet must be rebuilt against the NEW library — a row that
+// names a call the library no longer holds is dead (pickDefCall filters dead
+// entries, sim.js — so the stale sheet never crashed, it silently stopped
+// firing and the game quietly played plain dials). Surviving names keep their
+// weights; dead entries drop; NO new weights are invented. Empty cells, rows
+// and sheets are deleted (the empty-structures old-save law), so a row whose
+// calls all died renders as an EMPTY cell — inheriting the standing plan, the
+// exact meaning the Matchup Call Sheet's empty-cell copy already explains.
+function pruneCallSheet(gp) {
+  const sheet = gp ? gp.callSheet : null;
+  if (!sheet || typeof sheet !== "object") return;
+  const lib = gp.defCalls && typeof gp.defCalls === "object" ? gp.defCalls : {};
+  for (const sit of Object.keys(sheet)) {
+    const row = sheet[sit];
+    if (!row || typeof row !== "object") { delete sheet[sit]; continue; }
+    for (const pers of Object.keys(row)) {
+      const cell = Array.isArray(row[pers]) ? row[pers].filter((e) => Array.isArray(e) && lib[e[0]]) : [];
+      if (cell.length) row[pers] = cell;
+      else delete row[pers];
+    }
+    if (!Object.keys(row).length) delete sheet[sit];
+  }
+  if (!Object.keys(sheet).length) delete gp.callSheet;
+}
+
 // Load a defense into a gameplan — returns a NEW gameplan (input untouched); the
 // offense and everything the book doesn't govern carry through. Throws on a book
 // with hard errors.
@@ -262,7 +288,13 @@ function applyDefBookToGameplan(db, gameplan) {
       calls[card.name] = cardToDefCall(card);
       n++;
     }
-    if (n) gp.defCalls = calls;
+    if (n) {
+      gp.defCalls = calls;
+      // D12 (OD-11): the library just changed hands — drop sheet rows that
+      // name calls the new library doesn't hold. Only when calls were actually
+      // compiled: a shelf-less book leaves the old library (and its sheet) alone.
+      pruneCallSheet(gp);
+    }
     // The TOP-weighted card of each shelf becomes the standing situational
     // answer — written into that shelf's cells, DEF FIELDS ONLY (a cell's
     // offensive keys — the owner's situational controls — are preserved).
@@ -370,5 +402,6 @@ export {
   DEF_SHELVES, DEF_SHELF_CARD_CAP, DEF_CALL_COVERAGES, DEF_CALL_BRING, DEF_ANSWER_CLASSES,
   frontIds, isFront, aggressionStops, pressIdentities,
   emptyDefBook, emptyDefCard, cardToDefCall, cardToCell, cardToFormCheck, bookCards,
-  validateDefBook, applyDefBookToGameplan, defBookFromGameplan, repairDefBook
+  validateDefBook, applyDefBookToGameplan, defBookFromGameplan, repairDefBook,
+  pruneCallSheet
 };

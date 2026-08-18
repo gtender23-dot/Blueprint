@@ -1659,8 +1659,20 @@ function describePlay(play, names) {
     `Incomplete${pbu ? " \u2014 " + pbu + " with the PBU" : ""}`
   ]), cls: "pbp-muted" };
 }
-var PLAN_OFF_FIELDS = ["offFormations", "tendency", "passDepth", "qbRunPct", "tempo", "protIdentity"];
-var PLAN_DEF_FIELDS = ["defFront", "defAggression", "pressureIdentity", "coverageScheme", "runCommit"];
+// D12 (OD-12, owner-ratified 2026-08-18): the CUSTOM/AUTO badge lists are
+// rebuilt from the truth — the set of fields the SIT panel can actually write
+// into a situation cell (renderSitPanel + wireSituationListeners, gameplan.js;
+// cell dialect on purpose: `tempo` not baseTempo, `defFront` not defBaseFront).
+// The old lists lied in both directions: `pressureIdentity` was listed but NO
+// situation cell can carry it (the SIT editor has no control for it; AI cells
+// don't write it — the badge could never match), while most of what the panel
+// DOES write (covShell/covStyle/pressLevel/edgePlay/optionKey/subPhilosophy/
+// tackleStyle/optionRate/jetRate/drawRate/protEmphasis/qbAggr/conceptWeights)
+// was missing — a cell customized through those controls read AUTO. The badge
+// reads CUSTOM iff the cell carries a field the coach can set there. If a SIT
+// control is added or retired, update the matching list WITH it.
+var PLAN_OFF_FIELDS = ["offFormations", "tendency", "passDepth", "qbRunPct", "optionRate", "jetRate", "tempo", "drawRate", "protIdentity", "protEmphasis", "qbAggr", "conceptWeights"];
+var PLAN_DEF_FIELDS = ["defFront", "defAggression", "runCommit", "coverageScheme", "covShell", "covStyle", "pressLevel", "edgePlay", "optionKey", "subPhilosophy", "tackleStyle"];
 function planAgg(drives, poss) {
   var _a;
   const bySit = {};

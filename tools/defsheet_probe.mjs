@@ -176,6 +176,53 @@ let a34bad = 0;
 for (const p of arm34) if (p.rushN !== 3 || p.rush3 !== true) { a34bad++; bad.push(`3-4 bring-3 snap rushed ${p.rushN} (rush3=${p.rush3})`); }
 ok(arm34.length >= 8 && a34bad === 0, `bring 3 on the 3-4 lands on exactly three (${arm34.length} snaps)`);
 
+// ═══ C. BOOK LOAD LEAVES NO DEAD CALLSHEET ROW (D12 / OD-11, 2026-08-18) ═════
+// Loading a defensive book replaces gp.defCalls; before D12 the old callSheet
+// rode through the copy naming calls the new library doesn't hold, and
+// pickDefCall's dead-entry filter made the matchup sheet silently stop firing.
+// applyDefBookToGameplan now prunes the sheet against the NEW library:
+// surviving names keep their exact weights, dead entries drop, and a row whose
+// calls all died is DELETED (renders as an empty cell — inherits the standing
+// plan), never lingers. pruneCallSheet is also exported for heal-on-load.
+{
+  const { pruneCallSheet } = await import('../js/engine/defbook.js');
+  const bk = DEFAULT_DEF_BOOKS[0];
+  const newNames = new Set(Object.keys(applyDefBookToGameplan(bk, {}).defCalls || {}));
+  const survivor = [...newNames][0];
+  const staleGp = {
+    tendency: 'Balanced',
+    defCalls: { 'Old Stack': { front: '4-3' }, 'Old Zero': { aggression: 'house' } },
+    callSheet: {
+      third_long: { any: [['Old Stack', 60], ['Old Zero', 40]] },          // all dead → row must die
+      red_zone: { any: [['Old Stack', 70], [survivor, 30]], empty: [['Old Zero', 100]] }, // mixed → survivor only
+      base: { any: [[survivor, 100]] }                                     // all alive → untouched
+    }
+  };
+  const loaded = applyDefBookToGameplan(bk, staleGp);
+  const sheet = loaded.callSheet || {};
+  let deadRefs = 0;
+  for (const row of Object.values(sheet)) for (const cell of Object.values(row)) {
+    for (const e of cell) if (!loaded.defCalls[e[0]]) deadRefs++;
+  }
+  ok(deadRefs === 0, `book load leaves ZERO dead callSheet references (${deadRefs})`);
+  ok(!sheet.third_long, 'a row whose calls all died is deleted — renders empty, never lingers');
+  ok(sheet.red_zone && sheet.red_zone.any && sheet.red_zone.any.length === 1
+    && sheet.red_zone.any[0][0] === survivor && sheet.red_zone.any[0][1] === 30,
+    'a surviving name keeps its exact weight — no weights invented');
+  ok(sheet.red_zone && !sheet.red_zone.empty, 'an all-dead personnel cell is deleted from a surviving row');
+  ok(sheet.base && sheet.base.any[0][0] === survivor && sheet.base.any[0][1] === 100, 'an all-alive row is untouched');
+  ok(staleGp.callSheet.third_long.any.length === 2, 'the input gameplan is not mutated');
+  // identity-only book (no shelves) → old library stays → sheet stays whole.
+  const idOnly = { name: 'Identity', baseFront: '4-3', frontMix: { '4-3': 100 }, aggression: 'balanced', coverageScheme: 'balanced' };
+  const kept = applyDefBookToGameplan(idOnly, staleGp);
+  ok(kept.defCalls && kept.defCalls['Old Stack'] && kept.callSheet && kept.callSheet.third_long,
+    'an identity-only book (no shelves) leaves the old library AND its sheet alone');
+  // the exported healer: prunes in place, deletes an emptied sheet outright.
+  const healGp = { defCalls: { Live: { front: 'Dime' } }, callSheet: { base: { any: [['Ghost', 100]] } } };
+  pruneCallSheet(healGp);
+  ok(!healGp.callSheet, 'pruneCallSheet deletes an emptied sheet (empty-structures old-save law)');
+}
+
 console.log(`DEFSHEET PROBE — ${pass} pass, ${fail} fail`);
 if (fail) { console.log('  FAILURES:'); bad.slice(0, 25).forEach((m) => console.log('   -', m)); }
 console.log(fail ? 'DEFSHEET PROBE FAIL' : 'DEFSHEET PROBE PASS');
