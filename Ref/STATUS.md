@@ -1,7 +1,234 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-17 DEFENSIVE TIMEOUT DOOR (owner-ratified same
+Last updated: **2026-08-18 EDIT DEFENSE LOADS THE FULL BOOK + PRESET-REMOVAL
+RE-APPLIED (owner: "clicking edit defense brings up an empty playbook; the
+defensive playbook should absorb the default front / front-mix / a variety of
+fronts"). ROOT CAUSE: the wizard applies a starter def book via
+applyDefBookToGameplan (sets baseFront/frontMix/aggression + the 12 named calls
+into gp.defCalls), but "Edit defense" fell back to defBookFromGameplan which
+extracts identity ONLY — 0 shelves, 0 answers — so the call sheet came up empty
+(fronts DID load; the named CALLS + vs-personnel answers were lost). _defbookName
+is unreliable (ai.js overwrites it with a synthesized scheme name). FIX: stamp a
+dedicated _defbookStarter (and _bookStarter for offense) whenever the
+wizard / applyStartingChoices / in-game load applies a STARTER book; cleared when
+a Workshop custom book loads. "Edit defense" now: Workshop source id -> STARTER
+re-load (defaultDefBook, full shelves+answers+front mix) -> identity extract as
+last resort. Offense door mirrors it (_bookStarter -> defaultOffBook). VERIFIED
+in-browser: Edit Defense on a carried Option Killer now shows 12 named calls + 6
+vs-personnel answers + 3 fronts w/ base tag (was 0 calls / 0 answers).
+ALSO FIXED A REGRESSION FOUND HERE: the earlier "presets removed everywhere" edit
+to gameplan.js had been CLOBBERED when gameplan.js was re-staged for the
+sheet-rework (BUILTIN_PLANS was back — array, builtinPlan, the "Preset plans"
+optgroup, the builtin: load handler, the export, the applyStartingChoices preset
+branch). Re-removed all of it on the current device gameplan.js; seasonmodeview
+was already clean; no other importer. defcall_ui_smoke updated: a fresh dynasty
+now carries a FULL 12-call starter defense (MAX_DEF_CALLS cap), so the smoke
+empties the library via the UI Delete buttons before authoring. VERIFIED: clean
+build cfb-dynasty-d3f0e4ad8c (bundle -8KB from the preset cut), new_world_probe
+PASS zero errors, defcall_ui_smoke PASS, formation_playbook_ui_smoke PASS. NOTE:
+gameplan.js edits were lost once this session by editing a re-staged stale copy —
+always re-stage + diff before editing that file. Build caveat unchanged (mount
+can't rmdir; re-run node tools/build.mjs on Windows; gate owed). Prior in this
+session: 2026-08-18 VARIATIONS ARE THEIR OWN FORMATIONS — FITTING-ONLY
+PLAYS, NO MISFITS (owner: the formation variations must be treated as separate
+formations). The prior all-legal fill used legalConceptsForFormation (base-only,
+ignores variation), so a variation carried its base's whole list including plays
+that need personnel it lacks (Air Raid|empty carried 9 back-needing plays shown
+as misfit warns). ROOT FIX: every place a look's play set is built or shown now
+uses fittingConceptsForFormation(fid, variation) (personnel-aware), so a
+variation is genuinely its own formation and a non-fitting play is NEVER added —
+no misfit can exist. Changed: defaultbooks.js allFittingSheet driving the 6
+starter books; creatorplaybook.js allFittingSheet for add-look + Select-all; the
+plays-screen grid iterates the FITTING set and the misfit class/warn/title path
+is DELETED; the redundant "Only what fits" tool removed. RESULT: Air Raid|empty
+49->40 plays; NO MISFITS in any book. VERIFIED: defsheet_probe 101/0, defbook_probe
+76/0, clean build cfb-dynasty-77abd01905, new_world_probe PASS zero page+console
+errors, formation_playbook_ui_smoke PASS, Air Raid Empty plays screen renders
+"5 WR - 40 of 40 plays on" with 0 misfit cards. Build caveat unchanged (mount
+can't rmdir; re-run node tools/build.mjs on Windows before deploy; gate owed).
+Prior in this session: 2026-08-18 OFFENSIVE STARTER BOOKS -> ALL-LEGAL PER LOOK (owner:
+default offense playbooks should have all their formations' plays selected the
+same way as the builder). The 6 DEFAULT_OFF_BOOKS no longer hand-list a curated
+few plays per formation — each carried look (base AND variation: Air Raid|empty,
+Power-I|big, Pistol/RPO|trips, etc.) gets its OWN sheet key filled with its
+formation's full legal set at flat weight, matching the builder's all-legal
+default. offBook() dropped its hand-authored sheets arg; sheets are DERIVED from
+the formations list via new allLegalSheets()/allLegalSheet(). Identity now comes
+from WHICH looks a book runs + its tendency/depth lean, not a curated play menu
+(owner-approved). Legal concepts are per-FORMATION so a variation key fills from
+its base fid. defsheet_probe had a base-key assumption (flagged every
+variation-key sheet illegal + every variation-only carry unsheeted) — FIXED to
+splitSheetKey to the base fid and check each carried look's own key. The engine's
+validatePlaybook already handled variation keys (all 6 books validate clean).
+VERIFIED: defsheet_probe 101/0, defbook_probe 76/0, save_migration PASS, worldgen
+PASS, clean build cfb-dynasty-cb02e0bc37, new_world_probe PASS zero page+console
+errors, formation_playbook_ui_smoke PASS, and a fresh Air Raid dynasty's in-game
+formation sheet reads "49 of 49 plays live" (was the curated 7). Build caveat
+unchanged (mount can't rmdir; re-run node tools/build.mjs on Windows before
+deploy; gate owed). Prior in this session: 2026-08-18 PLAYBOOK EDITOR REWORK — ALL-LEGAL DEFAULT + SEPARATE
+PLAYS SCREEN + DECLUTTERED GAME-PLAN SHEET (owner: inherit-base on select was
+wrong; all legal plays should be selected; plays belong on a separate screen; the
+editor felt wonky). THREE surfaces. (1) creatorplaybook.js: adding a look seeds
+its OWN sheet with EVERY legal play selected (allLegalSheet, flat 50) — no
+autoSheetForFormation seeding, no inherit-base; Base + each variation independent
+from creation; an emptied sheet stays an empty object (stays independent). (2)
+The concept grid moved OFF the builder onto a dedicated full-page PLAYS SCREEN
+(state.ui.pbPlays, a 4th internal screen): builder is now a compact formation
+list with a "Plays (N)" button; the screen has the grid + Select-all/Clear-all/
+Only-what-fits + info + test + Back. Kills the inline-expand reflow wonk. (3) The
+in-game Game Plan formation-sheet editor (gameplan.js renderFormationPlaybook)
+had the same always-on clutter (a "set here · tap to reset" pill on every play +
+per-look inherit hints) surfaced by the earlier always-apply-a-book change —
+inherit/fork model retired there too: each look owns its full sheet, pills +
+"from base sheet" language GONE, slider no longer forks-on-write, dead
+data-fpbclear handler removed, "BASE PLAYBOOK (N)" chips -> "All Plays"/look
+chips, Reset = "reset to the book's mix". VERIFIED: clean build
+cfb-dynasty-b6781a0e6a, formation_playbook_ui_smoke rewritten to the new model +
+PASS 13/13 (was 3 stale fails on the retired pills), new_world_probe PASS zero
+page+console errors, screenshots confirm 49/49 plays on a fresh look + the pill
+wall gone. Build caveat unchanged (mount can't rmdir; re-run node tools/build.mjs
+on Windows before deploy; gate owed). Prior in this session: 2026-08-18 STARTER BOOKS REBUILT — EVERY DEFENSE ANSWERS EVERY
+OFFENSE (owner: a book facing empties mid-season had nothing but a lone 4-3
+zone; "more than 1 named call everywhere, made for every game, survive a full
+season"). Done as a 13-agent workflow (author each of 6 def books + audit the 6
+off books, adversarial season-slate verify each, synthesize) — but EVERY
+AI-authored literal was validated against the real engine before adoption, which
+caught three agent-error classes: (1) Pressure Everything had an illegal 6th
+shelf "option" (whole book dropped at module load) → card moved into short; (2)
+six cards wrote dogGame:true (engine takes only green|cross) → "cross"; (3)
+card-level pressLevel:N and a stray card spyQB:true (neither in applyDefCall's
+vocabulary) stripped. SHELF CAP raised 2→3 (DEF_SHELF_CARD_CAP); the 12-call
+headset is still enforced in the apply compile, and defbook_probe's two
+cap-assuming assertions were rewritten. RESULT: all 6 defensive books now answer
+ALL SIX personnel classes {empty,10,11,12,heavy,option} — vs empty every book
+checks to a Dime sub-package (Option Killer was a lone 4-4 zone, now Dime
+Rush-3), spread 10p→Nickel/Dime, heavy→46/Bear or 5-2, option→4-4 contain; no
+mid-season playbook switch needed. ≤12 distinct calls/book, real per-shelf
+variety, identity preserved. OFFENSE audit found one real hole (Triple Option
+Power-I was 3 live concepts, keyable) → widened to 5 (Counter+Toss, verified
+legal); its OTHER claim (Ground&Pound Jumbo drops PA Deep Cross) was a
+hallucination — PA Deep Cross IS legal from Jumbo and renders, no change.
+VERIFIED: defbook_probe 76/0, defsheet_probe 101/0, clean build
+cfb-dynasty-90e632916b, new_world_probe PASS zero page+console errors across a
+full dynasty. Heavier sim probes (defcall/covfam night giants) OWED on owner
+machine; re-run node tools/build.mjs on Windows before deploy. Prior in this
+session: 2026-08-17 BLUEPRINT = THE BOOKS (owner-directed, this Cowork
+session). The dynasty wizard's Blueprint step no longer asks "what kind of
+football do you believe in?" — the QB-type and defensive-front CARD pickers are
+gone. The step now presents the OFFENSIVE BOOK and DEFENSIVE BOOK as pick-cards
+(reusing .ob-pick-card, a .ob-book-tag on custom Workshop books), each card
+naming what it runs and a derived one-line "leans your roster toward…". The
+first roster is built loosely off the chosen books: world.js gains
+rosterHintsFromBooks(offBook, defBook) → the same {qbPref, defFront} the shaper
+always consumed, inferred from a book's dominant formation family + tendency
+(offense) and base front (defense). offHintFromBook only fires a lean when a
+family actually LEADS (≥34% weight) so a change-up Power-I in West Coast/Pro
+Balanced reads pocket, not ground; defHintFromBook maps every front to a shape
+(3-4/46/4-4 → 3-4 power bodies, everything else → 4-3 speed) so no defensive
+book shapes nothing. Verified numbers (all six each side): Air Raid→gunslinger,
+Ground&Pound/Pro Balanced→game-manager/pocket correctly split, Spread/Triple
+Option→scrambler, West Coast/Pro Balanced→pocket; every defense leans a front.
+TWO owner follow-ups same session: (1) NO team-default on the book screen — a
+book is a REQUIRED pick, the grids open pre-selected on the first starter each
+side and FOUND THE PROGRAM gates until both are chosen; the roster therefore
+always leans off a real book. (2) The five whole-game PRESETS (BUILTIN_PLANS)
+are DELETED EVERYWHERE — they predate the offense/defense book split. Removed
+from: the dynasty wizard (already), Season Mode setup ("Preset schemes"
+optgroup), and the Game Plan screen's "Load a plan" list ("Preset plans"
+optgroup + its builtin: load handler). BUILTIN_PLANS / builtinPlan definitions
+and the preset branch of applyStartingChoices removed from gameplan.js; the
+gameplan.js export list dropped BUILTIN_PLANS + builtinPlan. applyPlanToSchool
+STAYS (the coach's own saved-library loads still use it). Starter books and
+Workshop creations are the only shipped plans now. VERIFIED this sandbox: clean
+build cfb-dynasty-ba6127529e (bundle shrank ~9KB from the cut), new_world_probe
+PASS (wizard now 9 clicks, down from 11), st_ui_smoke + defcall_ui_smoke PASS.
+Same build/gate caveats as below (mount can't rmdir → built from a copy outside
+it; re-run node tools/build.mjs on Windows before deploy; CORE/FULL gate owed).
+Prior in this session: 2026-08-17 FORMATION DESIGNER — THE SILENT CRASH (owner bug
+report, this Cowork session). Owner screenshot: five tight ends, "Fix the errors
+above to see the alignment", and NO errors above. Two real defects, both fixed
+at source. (1) THE CRASH: _skillSlots names skill slots from fixed id tables —
+receivers X/SL/F/V/Z (five), tight ends Y/U/W (THREE), backs H and 2 — and a
+fourth TE destructured `undefined` and threw ("undefined is not iterable",
+formcompose.js:185). validateCustomFormation never checked personnel, so it
+returned ok:true with an empty error list and Save stayed ENABLED — a formation
+that cannot compile could be saved, and the list view's "needs repair" rows are
+where they landed. Three caps now live with the other legality checks, stated as
+football: at most three tight ends (Y, U, W), one fullback, two backs. The back
+caps close a quieter version of the same bug — a third back silently reused the
+RB_2 id and a second FB the FB id, so two men shared one slot. (2) THE LIE: the
+editor swallowed the compile error (`_tryCompile` → null) and printed a message
+pointing at an error block that could be empty. _compileOrWhy keeps the reason,
+a compile failure now renders as an error line like any other, the fallback copy
+no longer claims errors exist when none do, and Save is disabled unless the
+formation actually COMPILES, not merely validates. Verified: the owner's exact
+five-TE payload now reports "a formation carries at most three tight ends — Y, U
+and W (got 5)"; 3TE+2WR, five-wide empty and the default all still compile
+(Single Back 37 / Empty 40 / Spread 60 plays); formation_playbook_ui_smoke PASS;
+new_world_probe PASS ×3. ALSO — PROBE HARDENING, no product change: N7's walk out
+of the world read the screen mid-transition (a between-days CONTINUE card can
+hold the world open, and leaving lands on the tree LIST as often as the tree
+home), and the hub check read on a fixed 400ms. Both now press-and-poll until the
+screen arrives. That is what the two false N7 reds were — driven by hand, the
+same build rendered the whole shelf. Clean build cfb-dynasty-7ad994c8d1.
+Prior in this session: 2026-08-17 TREE-SCREEN RE-HOME + NEW_WORLD ALL GREEN (owner
+decisions, this Cowork session) — the orphaned coach-home panels have a door
+again. renderCoachHome() has been unreachable since the tree replaced the
+one-coach setup (nothing renders [data-mm-coach] or #btn-mm-newcoach any more),
+so its DNA page and Record Book shipped as working code with no way in. Both are
+now opened FROM THE TREE: every seated chair carries its own
+[data-mm-view="dna"|"records"][data-mm-view-coach] pair, rendered through the new
+mmTreeHub state, and their Back clears it and lands on the TREE (never the coach
+home). SAVED TEAMS re-homed onto the tree as the union of every seated chair's
+teams, tagged by coach when there's more than one; its delete carries
+[data-mm-team-coach] because mmCoachId is null on this path. INSTANT CLASSICS now
+keeps its header when empty (an absent shelf reads as a lost feature). The
+PLAYBOOK LIBRARY was deliberately NOT brought across — owner: "not the playbook
+library that will be broken"; it lists the old per-coach plan store the Workshop
+superseded, and N7b no longer asks for it. Tree naming settled (owner): the
+stored name is now the full phrase "The Tender Tree" (mainmenu.js, was the bare
+surname) and the tree-home header dropped its now-redundant "— COACHING TREE".
+RESULT: new_world_probe is 12/12 GREEN for the first time — N1b and N7/N7b–e
+included, the four reds the manifest has carried as an owed owner decision since
+2026-08-17 are CLOSED. Clean build (cache cfb-dynasty-633f373789), st_ui_smoke +
+defcall_ui_smoke re-run green on the same build. Same build caveat as below —
+this mount forbids rmdir so the build ran from a copy outside it; re-run
+`node tools/build.mjs` on the Windows box before deploying, and the CORE/FULL
+gate there is still OWED. Prior in this session: 2026-08-17 NEW-WORLD WIZARD REBUILD (owner-directed, this
+Cowork session) — the dynasty start flow is now FIVE screens with every dead
+click removed: the Situation step (5 start types) and the level cards are
+RETIRED (owner: "we only use the forced D3 start so you shouldn't even need to
+click on it"), the legacy "take over an existing program instead" screen is
+DELETED outright (owner), and the starting playbook + defense pickers MOVED off
+the ground-rules screen onto THE BLUEPRINT beside the QB room and the front they
+dress. Two Creator entrances finally opened on the dynasty door (owner: "add
+both but ignore all authored rosters"): THE WORLD — play the dynasty inside a
+saved league, START_DIVISION leagues only, identity-only so generateWorld builds
+every roster fresh — and COACH MY OWN TEAM — a created team's name/colors/crest
+stamped onto a program you FOUND (authored stars deliberately NOT applied; a
+dynasty recruits its own). Both are collapsed expanders defaulting to off, so
+the fast path is unchanged. The coach's NAME is still taken at the MAIN MENU
+(#mm-nt-first/last) and never asked for again — do not add a Coach step.
+engine/starts.js is deliberately LEFT IN PLACE (Ashes cap + Hot Seat leash are
+wired into recruiting.js/season.js) — a door closed, not a system torn out.
+Walker/probe edits to match: new_world + calendar_display lost
+data-ob-challenge/data-ob-div/ob-next-1 from their OPTIONS and next lists,
+letter_logo lost its hard [data-ob-div="D3"] click. VERIFIED IN THIS SANDBOX:
+clean build (13/13 sanity, cache cfb-dynasty-17fa133e80), new_world_probe
+N2 walks the wizard end to end in 11 clicks for the FIRST TIME (was the
+documented dead-end) with N3/N4/N5/N8 green — zero page AND console errors
+across the whole first session — plus st_ui_smoke, defcall_ui_smoke,
+worldgen_check and save_migration_check all PASS. ⚠ TWO REDS THAT ARE NOT THIS
+CHANGE: new_world N7b–e (the tree-home shelf that never existed in js/ — the
+owner decision the manifest already records is still owed) and N1b (the tree is
+named "Whitaker", the probe asserts "The Whitaker Tree"; mainmenu.js:548 sets
+the bare surname — product/probe mismatch, untouched here, owner call).
+⚠ BUILD CAVEAT: this Cowork mount forbids rmdir/unlink, so tools/build.mjs
+cannot run against it (it rm's dist/ first) — the build was run from a copy of
+the tree OUTSIDE the mount and dist/ + blueprint-pages.zip copied back. Re-run
+`node tools/build.mjs` on the Windows box before any deploy. FULL/CORE gate on
+the owner machine is OWED. Prior same day: 2026-08-17 DEFENSIVE TIMEOUT DOOR (owner-ratified same
 session) — the coach can now call ⏱️ from the DEFENSIVE call panel (new chip,
 `[data-cs-timeout]`, burns HIS pool, works with pins or on RIDE THE PLAN), and
 building it surfaced + fixed TWO latent engine bugs: (1) NO player timeout has
@@ -115,6 +342,38 @@ D6's in-flight concepts is RESOLVED in this session, card_lint 21/0 ×3.)
 Prior: D4 · M2 presentation; D3 · M2 engine; D7 · M4; D2 · M1; D5 · M3
 audit RATIFIED. Plan of record: BUILD ORDER v2 (2026-08-17), dispatch
 prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+
+## 2026-08-18 — COMMITTED ON BEHALF (session ledger, owner-authorized commit job)
+
+The owner's finished home work (the 2026-08-17→08-18 entries above) was
+committed by a Cowork session under the standing lock workaround — all
+content authored by owner locally; the session only grouped, staged and
+committed (zero code changes). Sanity floor re-run pre-commit on the tree
+as-is: clean esbuild build from a copy outside the mount (13/13 sanity,
+cache `cfb-dynasty-d3f0e4ad8c`), dist/ already byte-identical (no
+copy-back), bundle parse 2/2 script blocks, CSS braces 5698/5698. Commits
+(branch `source`, NOT pushed):
+
+- `f19d65d` NEW-WORLD WIZARD REBUILD + BLUEPRINT = THE BOOKS
+  (newgame.js, world.js, new_world/calendar_display/letter_logo probes,
+  _gate_manifest)
+- `d87c60b` TREE-SCREEN RE-HOME + NEW_WORLD ALL GREEN (mainmenu.js)
+- `3798003` FORMATION DESIGNER — THE SILENT CRASH (formcompose.js,
+  creatorform.js)
+- `91fefce` STARTER BOOKS REBUILT — EVERY DEFENSE ANSWERS EVERY OFFENSE;
+  ALL-LEGAL / FITTING-ONLY offense sheets (defaultbooks.js, defbook.js,
+  defbook/defsheet probes)
+- `ab2f160` PLAYBOOK EDITOR REWORK + EDIT DEFENSE LOADS THE FULL BOOK +
+  PRESET-REMOVAL RE-APPLIED (creatorplaybook.js, gameplan.js,
+  seasonmodeview.js, style.css, formation_playbook/defcall smokes)
+- `039b73b` D10 dispatch docs (Ref/D10_COHESION_AUDIT_PROMPT.md,
+  Ref/D10_DISPATCH_BLOCK.md)
+- (final commit) Ref/STATUS.md — the 08-17→08-18 entries + this ledger
+
+Deliberately LEFT uncommitted, untouched, per owner instruction: the ~39
+modified PNGs, `_night_full_log.txt`, `test_notes_8-16.txt`, `_to_delete/`.
+Build caveat unchanged (re-run `node tools/build.mjs` on Windows before
+deploy; gate owed).
 
 ## 2026-08-17 — DEFENSIVE TIMEOUT DOOR (this sandbox) — owner-ratified build + TWO latent engine bugs found and fixed
 ## NODE-GATED ×3 — ⚠ THE LIVE DEFENSIVE-⏱️ CLICK IS BROWSER-OWED
