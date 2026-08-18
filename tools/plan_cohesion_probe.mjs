@@ -35,8 +35,12 @@
 //   5. PLACEBO ENUMS. defbook offers coverageScheme aggressive/conservative
 //      ("the five coverage identities the sim honors") — the sim branches only
 //      on lockTop/bracketTop; the shipped "Attack 3-4" starter carries the
-//      placebo. Starter card extras carry values outside the engine enums
-//      (zoneStyle:"fire"/"soft", robberCall:true) that no validator flags.
+//      placebo. Card extras: D13 (OD-7, ratified 2026-08-18) repaired the
+//      starter strays and gave validateDefBook enum teeth — these pins now
+//      assert ABSENCE (the probe working as designed: pins flip WITH the fix).
+//      The last stray, zoneStyle:"quarterQuarterHalf", was owner-resolved
+//      (realism: QQH IS Cover 6 — the card already calls c6) — extra dropped;
+//      the validator keeps a legacy WARNING for pre-fix saved copies.
 import fs from 'node:fs';
 import path from 'node:path';
 import url from 'node:url';
@@ -46,7 +50,7 @@ import { buildDepthChart } from '../js/engine/world.js';
 import { simulateGame } from '../js/engine/sim.js';
 import {
   cardToDefCall, cardToCell, cardToFormCheck, emptyDefCard,
-  DEF_COVERAGE_SCHEMES
+  DEF_COVERAGE_SCHEMES, validateDefBook, CARD_EXTRA_ENUMS, CARD_EXTRA_LEGACY
 } from '../js/engine/defbook.js';
 import { DEFAULT_DEF_BOOKS } from '../js/engine/defaultbooks.js';
 
@@ -237,7 +241,6 @@ console.log('\n— 5. placebo enums (pinned as CURRENT behavior — see the audi
   check('D16: aggressive/conservative survive as RETIRED entries (old books keep validating/loading)',
     DEF_COVERAGE_SCHEMES.some(s => s.id === 'aggressive' && s.retired === true) &&
     DEF_COVERAGE_SCHEMES.some(s => s.id === 'conservative' && s.retired === true));
-
   check('the sim has NO aggressive/conservative coverageScheme branch',
     !/coverageScheme\s*===\s*"aggressive"/.test(SIM_SRC) && !/coverageScheme\s*===\s*"conservative"/.test(SIM_SRC));
   const attack = DEFAULT_DEF_BOOKS.find(b => b.name === 'Attack 3-4');
@@ -246,15 +249,50 @@ console.log('\n— 5. placebo enums (pinned as CURRENT behavior — see the audi
     DEFAULT_DEF_BOOKS.every(b => b.coverageScheme !== 'aggressive' && b.coverageScheme !== 'conservative'));
   const cards = [];
   for (const b of DEFAULT_DEF_BOOKS) for (const arr of Object.values(b.shelves || {})) for (const c of arr) cards.push([b.name, c]);
-  const badZone = cards.filter(([, c]) => c.zoneStyle != null && !['spot', 'balanced', 'match'].includes(c.zoneStyle));
-  const badRob = cards.filter(([, c]) => c.robberCall != null && !['auto', 'rob', 'overtop'].includes(c.robberCall));
-  check('starter cards still carry zoneStyle values outside spot/balanced/match (fire/soft — inert)',
-    badZone.length > 0, badZone.map(([b, c]) => `${b}/"${c.name}":${c.zoneStyle}`).join(', '));
-  check('starter cards still carry robberCall values outside auto/rob/overtop (true — behaves as auto)',
-    badRob.length > 0, badRob.map(([b, c]) => `${b}/"${c.name}":${c.robberCall}`).join(', '));
+  // D13 (OD-7, owner-ratified): the invalid-values pins FLIPPED — they assert
+  // absence now. That is the probe working as designed.
+  const badZone = cards.filter(([, c]) => c.zoneStyle != null && !CARD_EXTRA_ENUMS.zoneStyle.includes(c.zoneStyle));
+  check('D13: no starter card carries a zoneStyle outside the enum (QQH owner-resolved: it IS Cover 6)',
+    badZone.length === 0, badZone.map(([b, c]) => `${b}/"${c.name}":${c.zoneStyle}`).join(', '));
+  check('D13: "Bend Cover 6" calls the c6 picture with NO zoneStyle extra (QQH was a redundant restatement)',
+    cards.some(([, c]) => c.name === 'Bend Cover 6' && c.coverage === 'c6' && c.zoneStyle == null));
+  check('D13: quarterQuarterHalf is registered LEGACY (old saved copies warn, never red)',
+    (CARD_EXTRA_LEGACY.zoneStyle || []).includes('quarterQuarterHalf'));
+  const badRob = cards.filter(([, c]) => c.robberCall != null && !CARD_EXTRA_ENUMS.robberCall.includes(c.robberCall));
+  check('D13: no starter card carries a robberCall outside auto/rob/overtop', badRob.length === 0,
+    badRob.map(([b, c]) => `${b}/"${c.name}":${c.robberCall}`).join(', '));
+  check('D13: the six robberCall:true cards now rob for real (robberCall:"rob" ×6)',
+    cards.filter(([, c]) => c.robberCall === 'rob').length === 6);
+  const badRot = cards.filter(([, c]) => c.rotation != null && !CARD_EXTRA_ENUMS.rotation.includes(c.rotation));
+  check('D13: every card rotation is sky/cloud/buzz', badRot.length === 0,
+    badRot.map(([b, c]) => `${b}/"${c.name}":${c.rotation}`).join(', '));
+  check('D13: the Coastal strays landed on rotation (sky/sky/cloud) and Bear Fire Zone buzzes',
+    cards.some(([, c]) => c.name === 'Coastal Cover 3' && c.rotation === 'sky')
+    && cards.some(([, c]) => c.name === 'Sky Rotation Cover 3' && c.rotation === 'sky' && c.robberCall === 'rob')
+    && cards.some(([, c]) => c.name === 'Dime Coastal 3' && c.rotation === 'cloud')
+    && cards.some(([, c]) => c.name === 'Bear Fire Zone' && c.rotation === 'buzz'));
+  check('D13: "Lead Prevent" plays its soft zone for real (zoneStyle:"spot")',
+    cards.some(([, c]) => c.name === 'Lead Prevent' && c.zoneStyle === 'spot'));
   const gd = cards.filter(([, c]) => c.greenDog === true);
-  check('a starter card still carries greenDog:true that no compile path reads', gd.length > 0,
+  check('D13: no starter card carries dead greenDog:true ("Dime Green Dog" speaks dogGame:"green" now)',
+    gd.length === 0 && cards.some(([, c]) => c.name === 'Dime Green Dog' && c.dogGame === 'green'),
     gd.map(([b, c]) => `${b}/"${c.name}"`).join(', '));
+  // The card→call seam carries rotation now (D13 — the ONE seam that dropped
+  // it; without this the repaired rotation data would compile to nothing).
+  check('D13: cardToDefCall carries rotation',
+    cardToDefCall({ ...emptyDefCard('R'), coverage: 'c3', rotation: 'sky' }).rotation === 'sky');
+  // Validator teeth: a stray value reds; the known-pending value warns only.
+  const vBook = (card) => validateDefBook({ ...DEFAULT_DEF_BOOKS[0], shelves: { base: [card] }, answers: {} });
+  const vBad = vBook({ ...emptyDefCard('Stray'), zoneStyle: 'fire' });
+  check('D13: validateDefBook reds an unknown zoneStyle ("fire")',
+    !vBad.ok && vBad.errors.some(e => /zoneStyle "fire"/.test(e)));
+  const vPend = vBook({ ...emptyDefCard('Pend'), zoneStyle: 'quarterQuarterHalf' });
+  check('D13: validateDefBook treats quarterQuarterHalf as legacy (warning, ok stays true — old saves keep loading)',
+    vPend.ok && vPend.warnings.some(w => /legacy value/.test(w)));
+  const vKey = vBook({ ...emptyDefCard('Zombie'), spyQB: true });
+  check('D13: an unknown card KEY is a warning, not an error (future vocab can add keys)',
+    vKey.ok && vKey.warnings.some(w => /unknown key "spyQB"/.test(w)));
+  check('D13: all six starter books validate ok', DEFAULT_DEF_BOOKS.every(b => validateDefBook(b).ok));
 }
 
 console.log('\n— 6. D16 retirements, disclosed (OD-5/OD-8/OD-9 ratified 2026-08-17) —\n');

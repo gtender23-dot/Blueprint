@@ -69,6 +69,18 @@ var DEFAULT_OFF_BOOKS = [
 ];
 
 // defense — a card helper: name + the three big choices (+ coach-mode extras)
+// D13 (OD-7, owner-ratified 2026-08-18): the starter cards' invalid extras were
+// typos and are repaired to intent — zoneStyle "sky"/"cloud" were `rotation`
+// values; "fire" was the fire zone's buzz rotation (`rotation:"buzz"` — the sim's
+// C3 Fire Zone family is modeled WITH buzz, sim.js ~2350); "soft" was the soft
+// spot-drop zone (`zoneStyle:"spot"` — the engine's own gloss for soft zone);
+// robberCall:true ×6 → "rob"; card greenDog:true → dogGame:"green". The last
+// stray, zoneStyle:"quarterQuarterHalf" on "Bend Cover 6", was resolved by an
+// owner-delegated realism call (2026-08-18): quarter-quarter-half IS Cover 6 —
+// a split-field coverage, not a Cover 3 rotation — and the card already calls
+// the c6 picture ("Quarters to the field, Cover 2 to the boundary"), so the
+// extra was a redundant restatement of the card's own coverage and is simply
+// dropped. validateDefBook keeps a legacy warning for old saved copies.
 function dcard(name, front, coverage, bring, look, extra) {
   return { ...emptyDefCard(name), front, coverage, bring, look: look || null, ...(extra || {}) };
 }
@@ -153,8 +165,8 @@ var DEFAULT_DEF_BOOKS = [
       ],
       passing: [
         dcard("Tampa Wall", "Dime", "tampa2", "4", null, { weight: 60 }),
-        dcard("Dime Robber", "Dime", "c1", "4", null, { weight: 48, robberCall: true }),
-        dcard("Empty Bracket", "Dime", "c2man", "4", null, { weight: 44, robberCall: true })
+        dcard("Dime Robber", "Dime", "c1", "4", null, { weight: 48, robberCall: "rob" }),
+        dcard("Empty Bracket", "Dime", "c2man", "4", null, { weight: 44, robberCall: "rob" })
       ],
       short: [
         dcard("Goal Line Load", "46/Bear", "c1", "5", "secondLevel", { runCommit: 14, weight: 60 }),
@@ -182,13 +194,13 @@ var DEFAULT_DEF_BOOKS = [
 }, {
   base: [
     dcard("Bear Zero", "46/Bear", "c1", "6", "theHouse", { runCommit: 2, edgePlay: "crash", weight: 60 }),
-    dcard("Bear Fire Zone", "46/Bear", "c3", "5", "fireZone", { zoneStyle: "fire", weight: 52 }),
+    dcard("Bear Fire Zone", "46/Bear", "c3", "5", "fireZone", { rotation: "buzz", weight: 52 }),
     dcard("Double A Gap", "46/Bear", "c1", "5", "fireZone", { dogGame: "cross", weight: 48 })
   ],
   passing: [
     dcard("Nickel Blitz", "Nickel", "c1", "5", "secondaryHeat", { weight: 58 }),
-    dcard("Dime Green Dog", "Dime", "c2man", "5", "secondaryHeat", { greenDog: true, weight: 56 }),
-    dcard("Dime Rat Trap", "Dime", "tampa2", "4", "secondLevel", { robberCall: true, weight: 54 })
+    dcard("Dime Green Dog", "Dime", "c2man", "5", "secondaryHeat", { dogGame: "green", weight: 56 }),
+    dcard("Dime Rat Trap", "Dime", "tampa2", "4", "secondLevel", { robberCall: "rob", weight: 54 })
   ],
   short: [
     dcard("Goal Line Bear", "5-2", "c1", "6", "theHouse", { runCommit: 3, edgePlay: "crash", weight: 60 }),
@@ -200,8 +212,8 @@ var DEFAULT_DEF_BOOKS = [
     dcard("Cross Dog", "Nickel", "c1", "6", "theHouse", { dogGame: "cross", weight: 50 })
   ],
   protect: [
-    dcard("Lead Prevent", "Dime", "tampa2", "4", null, { zoneStyle: "soft", weight: 55 }),
-    dcard("Dime Rat Trap", "Dime", "tampa2", "4", "secondLevel", { robberCall: true, weight: 45 })
+    dcard("Lead Prevent", "Dime", "tampa2", "4", null, { zoneStyle: "spot", weight: 55 }),
+    dcard("Dime Rat Trap", "Dime", "tampa2", "4", "secondLevel", { robberCall: "rob", weight: 45 })
   ],
 }, {
   empty: "Dime Rat Trap",
@@ -220,25 +232,27 @@ var DEFAULT_DEF_BOOKS = [
   spyQB: false
 }, {
   base: [
-    dcard("Coastal Cover 3", "Nickel", "c3", "4", "secondLevel", { zoneStyle: "sky", weight: 60 }),
-    dcard("Sky Rotation Cover 3", "Nickel", "c3", "4", "secondLevel", { zoneStyle: "sky", robberCall: true, weight: 52 }),
+    dcard("Coastal Cover 3", "Nickel", "c3", "4", "secondLevel", { rotation: "sky", weight: 60 }),
+    dcard("Sky Rotation Cover 3", "Nickel", "c3", "4", "secondLevel", { rotation: "sky", robberCall: "rob", weight: 52 }),
     dcard("Scrape Exchange", "4-4", "c3", "4", null, { runCommit: 2, edgePlay: "contain", weight: 48 })
   ],
   passing: [
-    dcard("Dime Coastal 3", "Dime", "c3", "4", "secondLevel", { zoneStyle: "cloud", weight: 58 }),
+    dcard("Dime Coastal 3", "Dime", "c3", "4", "secondLevel", { rotation: "cloud", weight: 58 }),
     dcard("Empty Bracket 2-Man", "Dime", "c2man", "4", null, { weight: 55 }),
     dcard("Tampa Trap", "Nickel", "tampa2", "4", null, { weight: 50 })
   ],
   short: [
     dcard("Bear Down G-Line", "46/Bear", "c1", "5", "theHouse", { runCommit: 3, edgePlay: "crash", weight: 60 }),
-    dcard("Goal Line Robber", "5-2", "c3", "5", "secondLevel", { runCommit: 3, robberCall: true, weight: 50 })
+    dcard("Goal Line Robber", "5-2", "c3", "5", "secondLevel", { runCommit: 3, robberCall: "rob", weight: 50 })
   ],
   gamble: [
     dcard("Coastal Fire Zone", "Nickel", "c3", "5", "fireZone", { dogGame: "cross", weight: 55 }),
     dcard("Cover 3 Buzz Blitz", "Big Nickel", "c3", "5", "secondaryHeat", { dogGame: "cross", weight: 50 })
   ],
   protect: [
-    dcard("Bend Cover 6", "Nickel", "c6", "4", null, { zoneStyle: "quarterQuarterHalf", weight: 55 }),
+    // OD-7 resolved (owner-delegated, realism): quarter-quarter-half IS the c6
+    // picture this card already calls — the old zoneStyle extra was redundant.
+    dcard("Bend Cover 6", "Nickel", "c6", "4", null, { weight: 55 }),
     dcard("Prevent Coastal", "Dime", "prevent", "3", null, { weight: 48 })
   ]
 }, {

@@ -768,7 +768,22 @@ staged by this commit.
 NOT pushed.
 
 ## 2026-08-18 — D13 · STARTER-DATA REPAIR + VALIDATOR TEETH (this Cowork session)
-## NODE-GATED ×3 GREEN · CLEAN BUILD · ⚠ COMMIT DELIBERATELY HELD — see "why" below
+## NODE-GATED ×3 GREEN · CLEAN BUILD · ✅ CODE LANDED 2026-08-18 (see the release note at the end of this entry)
+
+**UPDATE — the held commit LANDED.** D15 and D16 have since committed their own
+hunks, so D13’s files were no longer interleaved with anyone’s live work. The
+parked code was re-verified against OD-7 (every repair matches the ratified
+typo-reading), re-gated on the current tree, and committed on its own:
+`defbook_probe` ×3 · `defsheet_probe` ×3 · `plan_cohesion_probe` ×3 (77/0) ·
+`covfam_probe` **N=90 ALL PASS 17/0** (N=120 ran 14/14 green before the
+sandbox’s ~3-minute call cap cut it — the manifest N is OWED-LOCAL; N=45 is
+below this probe’s noise floor and flakes the Cover 6 cloud arm, so do not
+gate at that size) · `defcall_probe` 32/0 · `card_lint_probe` 21/0 · clean
+build (cache `cfb-dynasty-d87bdb2edd`) · `stat_realism` N=250 at AI mix: the
+three standing flags only, **nothing new** (the six starters are AI-visible and
+the repairs activate real mechanics — robber calls and rotations that were
+inert before — so this was a genuine band check, not a formality). N=500 is
+OWED-LOCAL with the rest.
 
 OD-7 (owner-RATIFIED at the audit's typo-reading, 4510b12) is BUILT. Every
 invalid starter-card extra is repaired to intent, `validateDefBook` now has

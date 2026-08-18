@@ -60,6 +60,29 @@ var DEF_CALL_BRING = {
 function emptyDefCard(name) {
   return { name: String(name || "New Call").slice(0, 24), front: null, coverage: "base", bring: "4", look: null, weight: 50 };
 }
+// ── D13 (OD-7, owner-ratified 2026-08-18): the card extras' legal vocabulary ─
+// validateDefBook enum-checks these so the invalid-values class (zoneStyle
+// "fire"/"soft"/"sky"/"cloud", robberCall:true) can't ship again. "auto" means
+// "no opinion" wherever it appears — cardToDefCall strips it at compile.
+var CARD_EXTRA_ENUMS = {
+  edgePlay: ["auto", "contain", "balanced", "crash"],
+  robberCall: ["auto", "rob", "overtop"],
+  zoneStyle: ["auto", "spot", "balanced", "match"],
+  dogGame: ["green", "cross"],
+  pressLevel: ["auto", "press", "balanced", "off"],
+  rotation: ["sky", "cloud", "buzz"]
+};
+// LEGACY values — resolved strays a pre-fix saved book may still carry.
+// Warned, never a hard red (bookpush gates on validate.ok — a red would brick
+// an old "Save as my own" copy of a pre-D13 starter; the value was always
+// inert). quarterQuarterHalf resolved 2026-08-18 (owner-delegated, realism):
+// quarter-quarter-half IS Cover 6, a split-field coverage — the "Bend Cover 6"
+// card already calls the c6 picture, so the extra was redundant and is gone
+// from the shipped data. New strays red like anything else.
+var CARD_EXTRA_LEGACY = {
+  zoneStyle: ["quarterQuarterHalf"]
+};
+var CARD_KNOWN_KEYS = new Set(["name", "front", "coverage", "bring", "look", "weight", "runCommit", ...Object.keys(CARD_EXTRA_ENUMS)]);
 // A card → the sparse defCall payload the headset/named-call system consumes.
 // ⚠ D10 cohesion audit (2026-08-18): the card's THREE compile paths speak
 // three different vocabularies, so one card means three different defenses —
@@ -76,7 +99,13 @@ function cardToDefCall(card) {
   const out = { ...cov.fields, ...bring.fields };
   if (card.front && isFront(card.front)) out.front = card.front;
   if (card.look && pressIdentities().includes(card.look)) out.pressureIdentity = card.look;
-  for (const k of ["runCommit", "edgePlay", "robberCall", "zoneStyle", "dogGame", "pressLevel"]) {
+  // `rotation` joined this list with D13 (OD-7, 2026-08-18): the ratified card
+  // repair moved the zoneStyle:"sky"/"cloud"/"fire" strays onto the rotation
+  // key, and pickDefCall's normalizer + applyDefCall already speak rotation —
+  // cardToDefCall was the ONE seam dropping it, which would have made the
+  // repair dead data. Call-only on purpose: cells/checks can't speak rotation
+  // (cardToCell copies from a different list; audit disposition table).
+  for (const k of ["runCommit", "edgePlay", "robberCall", "zoneStyle", "dogGame", "pressLevel", "rotation"]) {
     if (card[k] != null && card[k] !== "auto" && card[k] !== "") out[k] = card[k];
   }
   return out;
@@ -212,6 +241,22 @@ function validateDefBook(db) {
         if (c.bring != null && !DEF_CALL_BRING[c.bring]) errors.push(`call "${c.name}": unknown pressure count "${c.bring}"`);
         if (c.look != null && !pressIdentities().includes(c.look)) errors.push(`call "${c.name}": unknown pressure look "${c.look}"`);
         if (c.weight != null && (typeof c.weight !== "number" || c.weight < 0)) errors.push(`call "${c.name}": weight must be ≥ 0`);
+        // D13 (OD-7): the coach-mode extras are enum-checked so the invalid-
+        // values class can't ship again. Unknown KEYS are warnings only — a
+        // future vocabulary can add keys without bricking old books.
+        if (c.runCommit != null && typeof c.runCommit !== "number") errors.push(`call "${c.name}": runCommit must be a number`);
+        for (const [k, legal] of Object.entries(CARD_EXTRA_ENUMS)) {
+          const v = c[k];
+          if (v == null || legal.includes(v)) continue;
+          if ((CARD_EXTRA_LEGACY[k] || []).includes(v)) {
+            warnings.push(`call "${c.name}": ${k} "${v}" is a retired legacy value (quarter-quarter-half is the Cover 6 picture — call c6 instead); the engine ignores it`);
+          } else {
+            errors.push(`call "${c.name}": unknown ${k} "${v}" (legal: ${legal.join("/")})`);
+          }
+        }
+        for (const k of Object.keys(c)) {
+          if (!CARD_KNOWN_KEYS.has(k)) warnings.push(`call "${c.name}": unknown key "${k}" — the engine reads nothing from it`);
+        }
       }
     }
   }
@@ -401,6 +446,7 @@ function repairDefBook(db) {
 export {
   DEFBOOK_SCHEMA_VERSION, DEF_COVERAGE_SCHEMES, COVERAGE_IDS,
   DEF_SHELVES, DEF_SHELF_CARD_CAP, DEF_CALL_COVERAGES, DEF_CALL_BRING, DEF_ANSWER_CLASSES,
+  CARD_EXTRA_ENUMS, CARD_EXTRA_LEGACY,
   frontIds, isFront, aggressionStops, pressIdentities,
   emptyDefBook, emptyDefCard, cardToDefCall, cardToCell, cardToFormCheck, bookCards,
   validateDefBook, applyDefBookToGameplan, defBookFromGameplan, repairDefBook,
