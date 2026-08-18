@@ -1,7 +1,14 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-18 · D10 CLOSED OUT + ALL TWELVE ODs RATIFIED — owner
+Last updated: **2026-08-18 · D11 MANIFEST COMPLETION SHIPPED (data + probe only)
+— PLAN_FIELD_SIDE gains the 13 audited gap fields (7 off, callSheet def, 5 ST
+team), plan_side_probe's SIM_CONSUMED widened to the full audit census;
+playbook_root_probe 24/0 ×3 + a node-level flat-plan proof (old-compile ≡
+new-compile ≡ gameplan, 60 schools) discharge the partition question;
+_equiv_walk OWED-LOCAL (PW download blocked by the sandbox allowlist) with
+byte-identity expected BY CONSTRUCTION; full entry + owner checklist in the D11
+section below.** Prior: **2026-08-18 · D10 CLOSED OUT + ALL TWELVE ODs RATIFIED — owner
 blanket YES (2026-08-17) to OD-1…OD-12 at their stated recommendations, marked
 in the audit doc; D10's owed-local gates ran green on a fresh VM (build clean,
 sha256 vs HEAD byte-identical, probe 44/0 ×3) and the session commit landed;
@@ -351,6 +358,79 @@ D6's in-flight concepts is RESOLVED in this session, card_lint 21/0 ×3.)
 Prior: D4 · M2 presentation; D3 · M2 engine; D7 · M4; D2 · M1; D5 · M3
 audit RATIFIED. Plan of record: BUILD ORDER v2 (2026-08-17), dispatch
 prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+
+## 2026-08-18 — D11 · MANIFEST COMPLETION (this Cowork session) — data + probes only, no consumer rewired
+## NODE-GATED ×3 — ⚠ `_equiv_walk` OWED-LOCAL (PW blocked by sandbox allowlist; byte-identity expected BY CONSTRUCTION)
+
+Executed the D11 block from `Ref/COHESION_DISPATCH_2026-08-18.md` (ec7300b)
+verbatim, under the OD-11 ratification (4510b12).
+
+**What shipped (pure data + probe):**
+- **`js/engine/teamplan.js`** — `PLAN_FIELD_SIDE` gains the audited gaps:
+  `screenRate`/`paRate`/`chipHelp`/`wildcatPassRate`/`rpoKeepPct`/
+  `rbCarryShares`/`runDirection` → **off**; `callSheet` → **def** (the
+  "book swap leaves a stale callSheet" gap now has an owner); `stFakes`/
+  `puntDef`/`retScheme`/`patApproach`/`surpriseOnside` → **team**. Commented
+  in place per field group. No consumer rewired — the compiler's partition
+  semantics do the rest; an off/def field moves from overlay into its book on
+  the next synthesis.
+- **`tools/plan_side_probe.mjs`** — `SIM_CONSUMED` widened from
+  "getEffectivePlan's reads" to the FULL audit census (§1 tables): 57 fields,
+  each verified as a live `.field` read in sim.js/situations.js before listing
+  (grep table run this session). The section-3 sidedness spot-check gains all
+  13 new fields. 34/0 ×3.
+- **`tools/plan_cohesion_probe.mjs` — deliberately NOT touched.** Block item 3
+  says extend §5 only if D13 hasn't landed; D13 was landing IN THIS TREE
+  mid-session (see below), and its session owns those pin flips.
+
+**Partition safety — proven, not assumed (the block's stated risk):**
+- `playbook_root_probe` **24/0 ×3** on the changed manifest (the round-trip
+  law: split+compile ≡ gameplan on real worlds).
+- A one-off node proof (not committed): on a generated world with AI plans,
+  60 schools — OLD-manifest compile ≡ NEW-manifest compile ≡ `school.gameplan`
+  (sorted-JSON equality, 0 mismatches). The manifest moves fields between
+  bags; the compiled flat plan is unchanged.
+- Nothing in production recompiles the flat plan from the parts today (the
+  audit's own finding: the two verbs have zero production callers), so the
+  sim-read `school.gameplan` is untouched at runtime BY CONSTRUCTION.
+
+**Gates (this sandbox, node):** `plan_side_probe` 34/0 **×3** ·
+`playbook_root_probe` 24/0 **×3** · `book_update_probe` 47/0 ·
+`save_migration_check` ALL PASS · clean esbuild build ×2 in /tmp (HEAD:
+`cfb-dynasty-d3f0e4ad8c` — matches the recorded prior build — and
+HEAD+this-change: `cfb-dynasty-16d52a119c`; temp copies deleted after) ·
+`node --check` clean on both changed files. `plan_cohesion_probe` ran
+**49/0 ×2 clean**, then went red mid-session — attributed below, not this
+change.
+
+**⚠ `_equiv_walk` OWED-LOCAL:** the walk needs Playwright's Linux
+chrome-headless-shell; the repo's `.pw-browsers/` carries WINDOWS builds and
+the CDN download is 403-blocked by the sandbox network allowlist (standing
+condition). Mitigation: both builds produced above, and the flat-plan proof +
+zero-production-recompile argument make the walk byte-identical by
+construction. On the local machine: build HEAD and this tree, run
+`node tools/_equiv_walk.mjs` on both, diff transcripts — identical discharges
+the gate; if it diverges, per the block's law the field stays OUT (revert,
+report).
+
+**⚠ Parallel-session ledger (tree as found, D2 precedent):** D13 was landing
+LIVE in this tree during the gate runs — `defbook.js` grew
+`CARD_EXTRA_ENUMS`/`validateDefBook` teeth mid-run (one probe run crashed on
+its half-written state, then healed), `defaultbooks.js` card fixes landed, and
+`plan_cohesion_probe` grew 44→49→60 checks under us with its §5 tripwires
+flipping exactly as designed (last observed: 60 checks, 1 red — D13's
+remaining pin, their session's to flip). None of those files is touched or
+staged by this commit.
+
+**OWNER CHECKLIST (D11):**
+- [ ] **Local `_equiv_walk`** (the one owed gate): build HEAD~ and HEAD after
+  this commit lands, walk both, diff transcripts (details in the entry above).
+- [ ] Nothing else — no UI, no behavior, no browser eyeball owed by this
+  change-set.
+
+**Commit scoped to:** `js/engine/teamplan.js` · `tools/plan_side_probe.mjs` ·
+`Ref/STATUS.md` (this entry). Partial-staged around D13's in-flight files.
+NOT pushed.
 
 ## 2026-08-18 — D10 · PLAYBOOK↔DIALS COHESION AUDIT (this Cowork session) — report-first, mechanical fixes only
 ## NODE-GATED (all reachable probes ×3 green) — ⚠ BUILD + _equiv_walk + COMMIT OWED-LOCAL (sandbox VM died mid-session, see below)

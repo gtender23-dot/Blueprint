@@ -60,6 +60,17 @@ const PLAN_FIELD_SIDE = {
   protEmphasis: "off",
   losFreedom: "off",
   targetShares: "off",
+  // D11 (2026-08-18, OD-11 ratified): the audited manifest gaps — standing
+  // fields the sim consumes that previously drifted into the overlay, so a
+  // book swap didn't govern its whole side. Pure data; the compiler's
+  // partition semantics do the rest.
+  screenRate: "off",
+  paRate: "off",
+  chipHelp: "off",
+  wildcatPassRate: "off",
+  rpoKeepPct: "off",
+  rbCarryShares: "off",
+  runDirection: "off",
   // ── DEFENSE — the defbook owns front / coverage / pressure identity + dials ─
   defBaseFront: "def",
   defFrontMix: "def",
@@ -83,11 +94,21 @@ const PLAN_FIELD_SIDE = {
   bracketWho: "def",
   defCalls: "def",
   formChecks: "def",
+  // D11: defCalls is book-owned but the SHEET that weights them lived in the
+  // overlay — the audited "book swap leaves a stale callSheet" gap (OD-11).
+  callSheet: "def",
   // ── TEAM — stays in the overlay (the game plan is its controller) ──────────
   fourthDown: "team",
   maxFGDist: "team",
   baseTempo: "team",
-  situations: "team"
+  situations: "team",
+  // D11: the special-teams standing knobs, audited as sim-consumed but
+  // unlisted. Team-side — the overlay keeps them, now by decision, not drift.
+  stFakes: "team",
+  puntDef: "team",
+  retScheme: "team",
+  patApproach: "team",
+  surpriseOnside: "team"
 };
 
 const TEAMPLAN_SCHEMA_VERSION = 1;

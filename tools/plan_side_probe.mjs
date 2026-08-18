@@ -26,20 +26,38 @@ ok(OFF_FIELDS.length > 0 && DEF_FIELDS.length > 0, `both sides carry fields (off
 const expect = {
   offFormations: 'off', formationPlaybooks: 'off', tendency: 'off', passDepth: 'off', targetShares: 'off',
   defBaseFront: 'def', coverageScheme: 'def', pressureIdentity: 'def', blitzPct: 'def', defFrontMix: 'def',
-  fourthDown: 'team', maxFGDist: 'team', baseTempo: 'team', situations: 'team'
+  fourthDown: 'team', maxFGDist: 'team', baseTempo: 'team', situations: 'team',
+  // D11 (OD-11): the audited manifest gaps, now sided by decision.
+  screenRate: 'off', paRate: 'off', chipHelp: 'off', wildcatPassRate: 'off',
+  rpoKeepPct: 'off', rbCarryShares: 'off', runDirection: 'off',
+  callSheet: 'def',
+  stFakes: 'team', puntDef: 'team', retScheme: 'team', patApproach: 'team', surpriseOnside: 'team'
 };
 for (const [f, side] of Object.entries(expect)) ok(PLAN_FIELD_SIDE[f] === side, `${f} is sided '${side}' (got '${PLAN_FIELD_SIDE[f]}')`);
 
-// ── 4. every standing gameplan field getEffectivePlan reads is in the manifest ─
-// These are the `gameplan.X` reads in situations.js getEffectivePlan — the base
-// (non-cell, non-weekly) plan fields the sim resolves from. A field the sim reads
-// but the manifest forgot would drift into "unowned overlay" forever; fail loudly.
+// ── 4. every standing gameplan field the sim consumes is in the manifest ─────
+// D11 (2026-08-18): widened from "getEffectivePlan's reads" to the FULL census
+// of standing gameplan fields sim.js reads (COHESION_AUDIT_2026-08-18 §1
+// tables — offense/defense/team dispositions), so the next manifest gap can't
+// ship silently. Every entry below is verified as a `.field` read in
+// js/engine/sim.js (or situations.js). A field the sim reads but the manifest
+// forgot would drift into "unowned overlay" forever; fail loudly.
 const SIM_CONSUMED = [
-  'offFormations', 'passDepth', 'qbRunPct', 'baseTempo', 'defAggression', 'blitzPct',
-  'pressureIdentity', 'protIdentity', 'coverageScheme', 'runCommit', 'optionKey',
-  'robberCall', 'zoneStyle', 'edgePlay', 'optionRate', 'jetRate', 'drawRate',
-  'covShell', 'covStyle', 'pressLevel', 'tackleStyle', 'subPhilosophy', 'bracketWho',
-  'protEmphasis', 'qbAggr', 'losFreedom', 'conceptWeights', 'situations'
+  // offense
+  'offFormations', 'formationPlaybooks', 'tendency', 'passDepth', 'rushInPct',
+  'conceptWeights', 'rpoRate', 'gadgetRate', 'qbRunPct', 'optionRate', 'optionMix',
+  'pitchAggr', 'jetRate', 'drawRate', 'motionRate', 'qbAggr', 'protIdentity',
+  'protEmphasis', 'losFreedom', 'targetShares',
+  'screenRate', 'paRate', 'chipHelp', 'wildcatPassRate', 'rpoKeepPct',
+  'rbCarryShares', 'runDirection',
+  // defense
+  'defBaseFront', 'defFrontMix', 'defAggression', 'blitzPct', 'pressureIdentity',
+  'coverageScheme', 'covShell', 'covStyle', 'pressLevel', 'runCommit', 'edgePlay',
+  'optionKey', 'robberCall', 'zoneStyle', 'tackleStyle', 'subPhilosophy',
+  'bracketWho', 'greenDog', 'spyQB', 'defCalls', 'callSheet', 'formChecks',
+  // team
+  'fourthDown', 'maxFGDist', 'baseTempo', 'situations',
+  'stFakes', 'puntDef', 'retScheme', 'patApproach', 'surpriseOnside'
 ];
 const missing = SIM_CONSUMED.filter((f) => !(f in PLAN_FIELD_SIDE));
 ok(missing.length === 0, `every sim-consumed standing field is in the manifest (missing: ${missing.join(', ') || 'none'})`);
