@@ -1,7 +1,11 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-18 EDIT DEFENSE LOADS THE FULL BOOK + PRESET-REMOVAL
+Last updated: **2026-08-18 D10 · PLAYBOOK↔DIALS COHESION AUDIT — report shipped
+(`Ref/COHESION_AUDIT_2026-08-18.md` + `Ref/COHESION_DISPATCH_2026-08-18.md`,
+D11–D17), new CORE probe `plan_cohesion_probe` 44/0 ×3, comment-only js edits;
+full entry + OWNER CHECKLIST in the D10 section below.** Prior:
+**2026-08-18 EDIT DEFENSE LOADS THE FULL BOOK + PRESET-REMOVAL
 RE-APPLIED (owner: "clicking edit defense brings up an empty playbook; the
 defensive playbook should absorb the default front / front-mix / a variety of
 fronts"). ROOT CAUSE: the wizard applies a starter def book via
@@ -342,6 +346,104 @@ D6's in-flight concepts is RESOLVED in this session, card_lint 21/0 ×3.)
 Prior: D4 · M2 presentation; D3 · M2 engine; D7 · M4; D2 · M1; D5 · M3
 audit RATIFIED. Plan of record: BUILD ORDER v2 (2026-08-17), dispatch
 prompts in `Ref/DISPATCH_PLAN_2026-08-17.md`.**
+
+## 2026-08-18 — D10 · PLAYBOOK↔DIALS COHESION AUDIT (this Cowork session) — report-first, mechanical fixes only
+## NODE-GATED (all reachable probes ×3 green) — ⚠ BUILD + _equiv_walk + COMMIT OWED-LOCAL (sandbox VM died mid-session, see below)
+
+The owner's question ("the playbooks aren't meshing yet — find every conflict
+with the old dials; maximum cohesion") is answered in
+**`Ref/COHESION_AUDIT_2026-08-18.md`** (OPEN DECISIONS OD-1…OD-12 first, then
+the full disposition table = the D8-item-4 map, evidenced file:line) with
+remediation as ready-to-paste blocks **D11–D17 in
+`Ref/COHESION_DISPATCH_2026-08-18.md`**. Nothing outcome-bearing was touched.
+
+**The headlines (each proven, not read — details + file:line in the audit):**
+1. **A covFamily call OVERWRITES the standing shell/style dials unconditionally
+   and never touches the cushion** — and when a personnel check and a named
+   call fire on the same snap, the SAME check wins 100% against a plain-dials
+   call and is IGNORED 100% against a family call (the coverage pick
+   short-circuits on the family the check can't clear). Proven at sim level by
+   the new probe, 100% rates, seeded.
+2. **DPB2's "every element maps 1:1" claim is FALSE on five counts**: the
+   card's three compile paths speak three vocabularies (pressLevel dropped by
+   the call path but honored by cells; dogGame the exact inverse; formChecks
+   drop robber/zone/cushion/dog AND the family coverages; card greenDog read
+   by nothing — the shipped "Dime Green Dog" card's green dog never compiles);
+   plus Box = ±8-delta in checks vs ±10-absolute in calls under one label.
+3. **Placebo controls shipped**: coverageScheme "aggressive"/"conservative"
+   have NO sim branch (assignCoverage speaks only lockTop/bracketTop) — the
+   "Attack 3-4" starter carries one, Simple mode writes both; starter cards
+   carry enum values the engine can't parse (zoneStyle "fire"/"soft"/"sky"/
+   "cloud"/"quarterQuarterHalf", robberCall:true ×6 — "Dime Rat Trap" robs
+   nothing) and validateDefBook never checks extras.
+4. **The two-verb compile seam has ZERO production callers** — 26 writer sites
+   in 9 files write school.gameplan directly (17 without re-synthesis; the
+   wizard leaves school.book a stale pre-book snapshot), so the data flow is
+   still gameplan→book, the inverse of the target architecture.
+5. **Zombies + orphans**: pressureSource is written by three writers, shown by
+   the UI, and DELETED by the sim at every kickoff; `_liveTempo` is read 3× in
+   sim.js and written by nothing; a defensive book load leaves the callSheet
+   naming dead calls (the matchup sheet silently stops firing); the plan-report
+   CUSTOM/AUTO badge lists are wrong in both directions; blitzPct still has
+   three raw writers and Simple mode's Defensive Posture write is provably
+   discarded at kickoff when a stop is already set.
+
+**What shipped (Part C — provably inert only):**
+- **`tools/plan_cohesion_probe.mjs`** (NEW, registered CORE in
+  `tools/_gate_manifest.mjs`) — 44 checks pinning all of the above (sim-level
+  arms + source pins + data pins). **ALL PASS 44/0 ×3.** Pins CURRENT behavior
+  including the defects — each D-block flips its pins WITH its fix.
+- **Comment-only** corrections in `js/engine/defbook.js` (the false "five
+  coverage identities the sim honors" claim; the three-vocabularies warning on
+  cardToDefCall). Zero behavior; esbuild strips comments.
+- Deliberately NOT fixed (reported instead): every outcome-bearing item above —
+  the bar was "provably inert or typo-class with unambiguous target", and none
+  cleared it. PLAN_FIELD_SIDE + plan_side_probe already existed (Stage-1
+  addendum) — verified, not re-implemented.
+
+**Gates run (this sandbox, node):** plan_side_probe ×3 PASS ·
+plan_cohesion_probe ×3 ALL PASS (44/0) · playbook_root_probe PASS ·
+defbook_probe PASS · tendency_probe PASS · play_fidelity_probe 4 (18 green) ·
+save_migration_check ALL PASS · integration_creator_probe PASS · node --check
+clean on the three touched files. **playcall_probe no longer exists** — the
+playcall gate is `ui_playcall_smoke.mjs` (PW tier, unrunnable here).
+
+**⚠ ENVIRONMENT FAILURE (ledgered so nobody re-diagnoses):** the sandbox VM's
+own disk filled while tar-copying the tree to /tmp for the standing
+build-outside-the-mount workaround, and the VM then failed to boot ANY shell
+("no space left on device" writing /etc/srt-settings — 5 straight failures,
+wedged). All probe runs above completed BEFORE the wedge. Consequences, all
+OWED-LOCAL: (1) clean esbuild build + CSS parse; (2) the `_equiv_walk`
+byte-identity gate — mitigation: the ONLY js/ change is comment-only and
+esbuild strips comments, so the bundle should be **byte-identical to a HEAD
+build by construction** — on the local machine, build HEAD and this tree and
+compare sha256 of dist/index.html; identical hashes discharge the gate
+outright, and if they differ, per the gate's law treat it as an unintended
+behavior change (revert + report); (3) **the session commit** — no shell, no
+git. A restarted session (fresh VM) can run all three; /tmp leftovers die with
+the VM.
+
+**OWNER CHECKLIST (D10):**
+- [ ] **Read `Ref/COHESION_AUDIT_2026-08-18.md` OPEN DECISIONS (OD-1…OD-12)**
+  — each is phone-standalone with a recommendation; the disposition table
+  underneath is the D8-item-4 dial map, evidenced. D13–D17 in the dispatch
+  file are blocked on your picks; D11 (manifest data) and D12 (badge/callSheet
+  hygiene) can fire as soon as you nod at OD-11/OD-12.
+- [ ] **OD-7 needs per-card answers** (the invalid starter-card values — most
+  look like `rotation` typos and robberCall:"rob"; the audit lists every card).
+- [ ] **Local gate**: `node tools/plan_cohesion_probe.mjs` (also in CORE now),
+  then the OWED build + sha256 compare vs HEAD described above, then commit
+  this session's files (list below). NEVER push.
+- [ ] Browser eyeball (rides any future gameplan session, nothing visual
+  changed here): none owed by this session beyond the standing list.
+
+**Commit scoped to (when the local machine commits on behalf):**
+`js/engine/defbook.js` (comments only) · `tools/plan_cohesion_probe.mjs` (new) ·
+`tools/_gate_manifest.mjs` (one CORE entry) ·
+`Ref/COHESION_AUDIT_2026-08-18.md` (new) ·
+`Ref/COHESION_DISPATCH_2026-08-18.md` (new) · `Ref/STATUS.md` (this entry).
+Suggested message: `D10 cohesion audit: report + dispatch D11-D17 +
+plan_cohesion_probe (CORE) + defbook comment corrections`. NOT pushed.
 
 ## 2026-08-18 — COMMITTED ON BEHALF (session ledger, owner-authorized commit job)
 

@@ -61,6 +61,15 @@ function emptyDefCard(name) {
   return { name: String(name || "New Call").slice(0, 24), front: null, coverage: "base", bring: "4", look: null, weight: 50 };
 }
 // A card → the sparse defCall payload the headset/named-call system consumes.
+// ⚠ D10 cohesion audit (2026-08-18): the card's THREE compile paths speak
+// three different vocabularies, so one card means three different defenses —
+// cardToDefCall emits pressLevel (which pickDefCall's normalizer + applyDefCall
+// both DROP — the headset path ignores a card's cushion) and carries dogGame;
+// cardToCell honors pressLevel but drops dogGame; cardToFormCheck drops
+// robberCall/zoneStyle/pressLevel/dogGame AND the covFamily coverages' shell/
+// style. A card's greenDog is read by none of the three. All pinned in
+// tools/plan_cohesion_probe.mjs §4; unifying the vocabulary is outcome-bearing
+// and owner-gated (Ref/COHESION_DISPATCH_2026-08-18.md).
 function cardToDefCall(card) {
   const cov = DEF_CALL_COVERAGES.find((c) => c.id === card.coverage) || DEF_CALL_COVERAGES[DEF_CALL_COVERAGES.length - 1];
   const bring = DEF_CALL_BRING[card.bring] || DEF_CALL_BRING["4"];
@@ -114,8 +123,13 @@ function bookCards(db) {
   return out;
 }
 
-// The five coverage identities the sim honors (sim.js: balanced / aggressive /
-// conservative / lockTop / bracketTop), with plain labels for the picker.
+// The five coverage identities the BOOK offers. NOTE (D10 cohesion audit,
+// 2026-08-18): the sim's assignCoverage branches ONLY on lockTop / bracketTop;
+// "aggressive" and "conservative" have no sim branch and currently resolve
+// exactly like "balanced" (pinned in tools/plan_cohesion_probe.mjs §5). The
+// shipped "Attack 3-4" starter carries "aggressive". Whether these two gain a
+// sim meaning, or the picker narrows to the three the engine speaks, is an
+// owner call — see the audit's OPEN DECISIONS. Do not add a sim branch here.
 var DEF_COVERAGE_SCHEMES = [
   { id: "balanced", label: "Balanced", desc: "Mix man and zone, protect the middle." },
   { id: "aggressive", label: "Aggressive", desc: "Press coverage, jump routes, trust the rush." },
