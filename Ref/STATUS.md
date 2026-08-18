@@ -546,6 +546,131 @@ staged by this commit.
 `Ref/STATUS.md` (this entry). Partial-staged around D13's in-flight files.
 NOT pushed.
 
+## 2026-08-18 — D13 · STARTER-DATA REPAIR + VALIDATOR TEETH (this Cowork session)
+## NODE-GATED ×3 GREEN · CLEAN BUILD · ⚠ COMMIT DELIBERATELY HELD — see "why" below
+
+OD-7 (owner-RATIFIED at the audit's typo-reading, 4510b12) is BUILT. Every
+invalid starter-card extra is repaired to intent, `validateDefBook` now has
+enum teeth on the extras, and `plan_cohesion_probe` §5's pins FLIPPED to assert
+absence (the probe working as designed).
+
+**The card repairs (js/engine/defaultbooks.js — all six starter books):**
+- `zoneStyle:"sky"/"cloud"` → **`rotation:"sky"/"cloud"`** (Coastal Cover 3, Sky
+  Rotation Cover 3, Dime Coastal 3) — the audit's reading: these were always
+  `rotation` values (sky/cloud/buzz), never zone-teaching values.
+- `zoneStyle:"fire"` (Bear Fire Zone) → **`rotation:"buzz"`** — the sim already
+  models the C3 Fire Zone family WITH the buzz safety (sim.js ~2350); "fire"
+  was naming the pressure, and the rotation is what the card meant to set.
+- `zoneStyle:"soft"` (Lead Prevent) → **`zoneStyle:"spot"`** — soft zone IS
+  spot-drop in the engine's own vocabulary; it stays on the zoneStyle key.
+- `robberCall:true` ×6 → **`"rob"`** — "Dime Robber", "Dime Rat Trap" (×2),
+  "Empty Bracket", "Sky Rotation Cover 3", "Goal Line Robber" now actually rob.
+  `true` was falling through as `auto`: the cards robbed nothing.
+- `greenDog:true` on "Dime Green Dog" → **`dogGame:"green"`** — the card's green
+  dog compiled through NO path before; it does now.
+
+**⚠ THE FLAGGED EXCEPTION, NOW OWNER-RESOLVED (was awaiting a named target).**
+`zoneStyle:"quarterQuarterHalf"` on "Bend Cover 6" had no legal target in any
+card enum, so it was left untouched and flagged. The owner then delegated the
+pick with "lean into realism", and the answer is option (1) of his two:
+**quarter-quarter-half IS Cover 6** — a split-field coverage, not a Cover 3
+rotation — and the card ALREADY calls the `c6` picture ("Quarters to the field,
+Cover 2 to the boundary"). The extra was a redundant restatement of the card's
+own coverage, so it is simply **dropped**; the card is now
+`dcard("Bend Cover 6", "Nickel", "c6", "4", null, { weight: 55 })`. No guessed
+mapping was invented, and the fallback (rotation "cloud") was NOT needed.
+`quarterQuarterHalf` is retained in `CARD_EXTRA_LEGACY` so a pre-fix saved copy
+of the book still loads with a WARNING, never a hard red (`bookpush` gates on
+`validate.ok` — a red would brick an old "Save as my own" copy of a starter).
+
+**One seam fix the repair EXPOSED (would have been dead data otherwise):**
+`cardToDefCall` did not carry `rotation` — the one compile seam that dropped it,
+while `pickDefCall`'s normalizer and `applyDefCall` both already speak it. The
+repaired rotation data would have compiled to nothing. `rotation` added to that
+key list; call-only on purpose (cells/checks can't speak it — audit's table).
+
+**Validator teeth (js/engine/defbook.js):** new exported `CARD_EXTRA_ENUMS`
+(edgePlay · robberCall · zoneStyle · dogGame · pressLevel · rotation) +
+`CARD_EXTRA_LEGACY`; `validateDefBook` enum-checks every extra and type-checks
+`runCommit`. **Unknown KEYS are warnings, not errors** — a future vocabulary
+(D14's CARD_VOCAB) can add keys without bricking old books, exactly as the block
+prescribes.
+
+**Gates (this sandbox, node):** `plan_cohesion_probe` **77/0 ×3** ·
+`defsheet_probe` **PASS ×3** · `defbook_probe` **PASS ×3** ·
+`save_migration_check` ALL PASS · `defcall_probe` 32/0 · clean esbuild build
+from a copy outside the mount (**13/13 sanity, cache `cfb-dynasty-ede3402d8e`**,
+3715 KB) · `node --check` clean on both engine files.
+
+**⚠ TWO REDS THAT ARE NOT THIS CHANGE-SET (both attributed by A/B, not read):**
+1. **`covfam_probe` — "Cover 6 cloud corner hardens the boundary short ball"
+   FAILS (WR1 short comp% 57.1 vs ctrl 54.4).** Attributed: re-ran with all four
+   D13 files reverted to HEAD and the rest of the tree as found — **byte-identical
+   numbers, same single red.** covfam's import graph (constants/player/world/sim)
+   never reaches defbook.js or defaultbooks.js, so D13 cannot move it by
+   construction. The live cause is the PARALLEL D15 sim.js precedence work in the
+   working tree (`if (_chk.covShell || _chk.covStyle) defEff.covFamily = null;`),
+   which is exactly this mechanic. **D15's to own — reported, not fixed around.**
+2. **`stat_realism` comp% 56.4 [band ~60-66] "off".** Same A/B: baseline (D13
+   reverted, tree as found) reads **57.5, also off** — the miss is pre-existing,
+   not D13's. Deltas are mixed and inside noise for an unseeded harness at
+   n=120 (D13 arm is actually the better one on rush yds and yds/play). **No
+   D13-attributable band movement.**
+
+**⚠ OWED-LOCAL (the sandbox MCP call cap is ~180 s, and background jobs do not
+survive a call):** `covfam_probe 120` and `stat_realism_harness 500` at their
+MANIFEST N — run here at N=30 and n=120 respectively. `defcall_probe` ran at
+N=120 (manifest default 1200). Re-run all three on the owner machine.
+
+**⚠ WHAT WAS COMMITTED, AND WHY THE CODE IS HELD (deliberate, not forgotten).**
+**Committed: `Ref/STATUS.md` only (this entry) — NOT pushed.** The three code
+files are held, with the reason PROVEN rather than asserted:
+
+*They are an ATOMIC set.* Test run: a HEAD tree carrying **only** D13's
+`defbook.js` → `defsheet_probe` **FAILS** ("six defensive starters survive
+load-time validation (3)") and the committed `plan_cohesion_probe` reds **41/3**.
+That is the validator teeth biting the un-repaired starter data, exactly as
+designed. So `defbook.js` (teeth) + `defaultbooks.js` (repaired data) +
+`plan_cohesion_probe.mjs` (flipped pins) must land in ONE commit or the tip is
+red between them.
+
+*And two of the three still carry other blocks' uncommitted hunks:*
+- `js/engine/defbook.js` — **now purely D13** (D12's `pruneCallSheet` landed in
+  9f44554, so it is no longer in this diff).
+- `js/engine/defaultbooks.js` — carries **D16's three OD-5 hunks** (the
+  aggressive/conservative placebo retirements).
+- `tools/plan_cohesion_probe.mjs` — carries **D15's §2 arms** and **D16's §5
+  pins**, line-adjacent to D13's §5 pins in the same block.
+
+Committing the set scoped-by-path would sweep D15's and D16's in-flight work
+into a commit labelled D13; excising their hunks would ship a file state that
+has never existed in the tree and that no gate has run against. Neither is
+acceptable, so the set waits. **Nothing was staged, unstaged or reset — the
+index was left exactly as found throughout.** D13 is complete and green in the
+WORKING TREE. Land it as ONE commit once D15/D16 are in, scoped to:
+`js/engine/defbook.js` · `js/engine/defaultbooks.js` ·
+`tools/plan_cohesion_probe.mjs`. NEVER push.
+
+**⚠ A COLLISION THAT ALREADY FIRED (flagged before it happened, no harm done).**
+D12's staged `defbook.js` blob was a snapshot taken BEFORE D13's edits reached
+the worktree, so their commit **9f44554 does not contain** D13's
+`CARD_EXTRA_ENUMS`/`CARD_EXTRA_LEGACY`, the validator teeth or the `rotation`
+carry. Verified after the fact: those lines are absent from the tip and intact
+in the worktree — nothing was lost, and the pending D13 commit above restores
+them to the tip. The general lesson for this tree: **re-stage from the worktree,
+never from an older snapshot**, when several blocks share a file.
+
+**OWNER CHECKLIST (D13):**
+- [ ] **Eyeball one live defense:** load the Coastal book, open Edit Defense —
+  "Coastal Cover 3" / "Dime Coastal 3" should read as rotation calls, and
+  "Bend Cover 6" should carry NO zone-teaching extra (it's a c6 card).
+- [ ] **Local gate at manifest N:** `node tools/covfam_probe.mjs 120`,
+  `node tools/stat_realism_harness.mjs 500`, `node tools/defcall_probe.mjs`.
+- [ ] **The covfam red is D15's** — confirm it clears when D15's sim.js work is
+  finished or reverted; do not chase it inside D13.
+- [ ] **Commit D13 from the WORKING TREE** (see the scoping + collision notes
+  above) once the parallel blocks land. NEVER push.
+
 ## 2026-08-18 — D10 · PLAYBOOK↔DIALS COHESION AUDIT (this Cowork session) — report-first, mechanical fixes only
 ## NODE-GATED (all reachable probes ×3 green) — ⚠ BUILD + _equiv_walk + COMMIT OWED-LOCAL (sandbox VM died mid-session, see below)
 
