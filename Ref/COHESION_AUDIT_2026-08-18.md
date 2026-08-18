@@ -18,7 +18,13 @@ below is evidenced file:line; the sharpest claims are pinned by a new CORE probe
 
 ## OPEN DECISIONS (phone-first — each stands alone)
 
+> **RATIFIED 2026-08-17 — owner returned a blanket YES to all twelve, each at its
+> stated recommendation.** Per-OD dispositions marked below; recorded in
+> `Ref/STATUS.md` (2026-08-18 ratification entry). All D-blocks blocked on ODs
+> are now unblocked, subject to D11–D17's own dependency order.
+
 **OD-1 · Who owns COVERAGE: the family card or the shell/style/cushion trio?**
+**RATIFIED (a):** the family is the CALL grammar, the trio is the STANDING identity — a named family beats the dials on its snap, formalized.
 PROVEN (probe §1): a card/call carrying `covFamily` overwrites `covShell`/`covStyle`
 unconditionally (sim.js 200-208) and never touches `pressLevel`. The trio and the
 family are two grammars for one quantity.
@@ -31,6 +37,7 @@ nothing says so and the CHK layer half-breaks it (OD-2).
 *Cost of wrong:* coaches keep authoring dials the family silently discards.
 
 **OD-2 · When a personnel CHECK and a sampled CALL both fire, who wins?**
+**RATIFIED (a)+(c):** the check (more specific layer) wins — it clears/overrides `covFamily` when it writes shell/style — and the check vocabulary learns the coverage pictures.
 PROVEN (probe §2): the check overwrites a plain-dials call's shell/style (CHK runs
 after CALL on the same `defEff`, sim.js 4768→4776) — but the check **cannot clear
 `defEff.covFamily`**, and the coverage pick (4958) short-circuits on the family. The
@@ -45,6 +52,7 @@ today `cardToFormCheck` DROPS the family coverages entirely, defbook.js 94-105).
 coverage on compile (Dime Tampa 2 as an answer checks the front but not the Tampa 2).
 
 **OD-3 · The timeout `_nextPlay` overlay beats the live headset call. Intended?**
+**RATIFIED:** the headset wins — `forcedCall`/`forcedDefCall` beat `_nextPlay` on overlapping keys.
 `Object.assign(eff, plan._nextPlay)` (sim.js 4650-4658) runs AFTER the forced defcall
 apply (4645) — so a Next-Play timeout adjustment silently overrides fields of the
 coach's explicit headset call on that snap. Every prior doc says "your live headset
@@ -54,6 +62,7 @@ call still beats the sheet"; nothing says what beats the headset.
 *Cost of wrong:* rare, but it's the coach's own two hands fighting.
 
 **OD-4 · The Box speaks two semantics and three magnitudes under one label.**
+**RATIFIED:** DELTA at every overlay layer (call/check/headset), ABSOLUTE only on the standing dial; one overlay magnitude (±10); starter-card values restated on that scale.
 A CALL's `runCommit` is ABSOLUTE (`clamp2(o.runCommit,-25,25)`, sim.js 196); a CHK's is
 a DELTA (`defEff.runCommit + _chk.runCommit`, 4786); CALL-then-CHK stacks
 absolute-then-delta (order-dependent by construction). UI: CALL_FIELDS ±10
@@ -68,6 +77,7 @@ values on that scale.
 doors, and nobody can tune it.
 
 **OD-5 · `coverageScheme: aggressive / conservative` is a placebo.**
+**RATIFIED (b):** narrow every writer and the picker to the three values the engine speaks; the book field keeps loading old data.
 PROVEN (probe §5): `assignCoverage` branches only on `lockTop`/`bracketTop` (sim.js
 1085, 1218, and the lockTop branch at 1046); "aggressive"/"conservative" resolve
 exactly as "balanced". Yet the defbook picker offers all five AND claims "the five
@@ -83,6 +93,7 @@ stops offering placebos).
 them to.
 
 **OD-6 · Unify the card's three compile vocabularies (the DPB2 1:1 claim is FALSE).**
+**RATIFIED:** one exported CARD_VOCAB table read by all three compiles; sim call path gains the missing keys — ships band-gated via dispatch D12.
 PROVEN (probe §4): one card through the three seams — `cardToDefCall` emits
 `pressLevel` (dropped by pickDefCall's normalizer + applyDefCall — the headset ignores
 a card's cushion) and carries `dogGame`; `cardToCell` honors `pressLevel` but drops
@@ -97,6 +108,7 @@ ships band-gated after the owner ratifies the vocabulary table (dispatch D12).
 speaks") stays false and every future card feature lands in one seam and not the others.
 
 **OD-7 · Starter cards carry values the engine can't parse (nobody validates extras).**
+**RATIFIED:** typo-reading per the audit — the zoneStyle values are `rotation` typos (sky/cloud/buzz-class), `robberCall: true` → `"rob"`; the fixing D-block also extends `validateDefBook` to the extras enums. Band-gated.
 PROVEN (probe §5): `zoneStyle: "fire"/"soft"` (Pressure Everything),
 `zoneStyle: "sky"/"cloud"/"quarterQuarterHalf"` (Coastal Cover 3 — these look like
 they were meant for the `rotation` key, whose legal values are sky/cloud/buzz),
@@ -111,6 +123,7 @@ activates a real mechanic) → band-gated.
 *Cost of wrong:* the flagship starter books advertise defenses they don't play.
 
 **OD-8 · `blitzPct`: finish the retirement.**
+**RATIFIED:** every writer writes the stop (`setAggr`/`aggrStopFromBlitzPct` at write time); `blitzPct` becomes derived-only. Band-gated.
 The stop (`defAggression`) is the dial; `blitzPct` is supposed to be its derived
 mirror (sim.js 48 re-derives it unconditionally at every kickoff). But THREE writers
 still author raw numbers: `ai.js:297` (15–35, discarded at first kickoff),
@@ -124,6 +137,7 @@ sim already quantizes), but band-gate it.
 *Cost of wrong:* the Simple dial keeps losing arm-wrestles the player can't see.
 
 **OD-9 · `pressureSource` is a zombie the book still carries.**
+**RATIFIED:** progressive retirement — off the book editor's front page, old books keep loading, dropped at the next schema bump, stated in the release note.
 Written by `defaultGameplan()` (world.js 1736), `applyDefBookToGameplan`
 (defbook.js 234), the creator UI (creatordef.js 243); displayed by the Game Plan
 identity card (gameplan.js 172); **deleted by the sim at every kickoff**
@@ -136,6 +150,7 @@ next schema bump. NOT a silent deletion — say it in the release note.
 placebo.
 
 **OD-10 · Ratify the writer-graph collapse (Stage 3 for real).**
+**RATIFIED:** dispatch D16's sequencing as written — writers routed through the verbs, `_equiv_walk` byte-gated per batch.
 `assignBook` / `assignDefBook` / `setOverlay` (teamplan.js 299-318) have **ZERO
 production callers** — only `playbook_root_probe` exercises them. 26 writer sites in
 9 files write `school.gameplan` directly; 9 re-synthesize the books afterward
@@ -152,6 +167,7 @@ meshing": the books are derived FROM the bag, so nothing the book says can bind.
 writers scribble on.
 
 **OD-11 · `PLAN_FIELD_SIDE` has gaps — a book swap doesn't own its whole side.**
+**RATIFIED:** extend `PLAN_FIELD_SIDE` (data + probe update) AND the defbook compile rebuilds/clears `callSheet` (behavioral D-block).
 The manifest carries 46 fields, but the sim also consumes standing fields that are
 NOT in it and therefore live in the overlay: `screenRate`, `paRate`, `chipHelp`,
 `wildcatPassRate`, `rpoKeepPct`, `rbCarryShares`, `runDirection` (offense);
@@ -165,6 +181,7 @@ defbook compile rebuild or clear `callSheet` (behavioral — D-block).
 *Cost of wrong:* book swaps keep half-taking effect.
 
 **OD-12 · The plan-report badge lists are wrong (small, but it lies to the coach).**
+**RATIFIED:** derive the badge lists from PLAN_FIELD_SIDE ∩ cell-writable set — its own tiny D-block.
 `PLAN_OFF_FIELDS`/`PLAN_DEF_FIELDS` (app.js 1662-1663) drive the CUSTOM/AUTO badge
 (app.js 1745). `PLAN_DEF_FIELDS` lists `pressureIdentity`, which no situation cell
 can carry (the SIT editor has no control for it; AI cells don't write it) — dead

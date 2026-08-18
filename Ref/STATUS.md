@@ -1,7 +1,12 @@
 # ⚑ STATUS — where we actually are (living doc)
 
 **Read this FIRST in any new chat. Update it whenever you finish a chunk.**
-Last updated: **2026-08-18 D10 · PLAYBOOK↔DIALS COHESION AUDIT — report shipped
+Last updated: **2026-08-18 · D10 CLOSED OUT + ALL TWELVE ODs RATIFIED — owner
+blanket YES (2026-08-17) to OD-1…OD-12 at their stated recommendations, marked
+in the audit doc; D10's owed-local gates ran green on a fresh VM (build clean,
+sha256 vs HEAD byte-identical, probe 44/0 ×3) and the session commit landed;
+see the ratification entry at the bottom.** Prior: **2026-08-18 D10 ·
+PLAYBOOK↔DIALS COHESION AUDIT — report shipped
 (`Ref/COHESION_AUDIT_2026-08-18.md` + `Ref/COHESION_DISPATCH_2026-08-18.md`,
 D11–D17), new CORE probe `plan_cohesion_probe` 44/0 ×3, comment-only js edits;
 full entry + OWNER CHECKLIST in the D10 section below.** Prior:
@@ -3615,3 +3620,32 @@ to the 20 stage files — the folder's ~197 other dirty entries (Codex-era
 docs, probe screenshots) were left as found; the "clean checkpoint commit"
 question from the repo-layout section remains an owner call. Still NEVER
 push from here.
+
+## 2026-08-18 — D10 CLOSEOUT + OD RATIFICATION (fresh-VM session, commit job)
+
+**D10 closeout.** The audit session's VM died before its final gates; this
+session (fresh VM) discharged them: uncommitted set verified as exactly the
+OWNER-CHECKLIST scope + the standing deliberately-left files; clean esbuild
+build from a temp copy outside the mount (all sanity PASS, cache
+`cfb-dynasty-d3f0e4ad8c`), CSS braces 5698/5698; `plan_cohesion_probe` ×3 ALL
+PASS (44/0); **equivalence gate discharged by construction and by hash** —
+this tree's `dist/index.html` sha256-identical to a HEAD build
+(`91ed108b…e2cd`), as required for comment-only js changes. Commit `ec7300b`
+(branch `source`, NOT pushed): defbook.js comments · plan_cohesion_probe.mjs ·
+_gate_manifest.mjs CORE entry · audit + dispatch docs · STATUS D10 entry.
+
+**OD RATIFICATION (owner, 2026-08-17 — blanket YES to all twelve, each at its
+stated recommendation).** Marked per-OD in
+`Ref/COHESION_AUDIT_2026-08-18.md` OPEN DECISIONS. The record: OD-1 (a)
+family=CALL grammar, trio=STANDING identity · OD-2 (a)+(c) check wins and
+learns coverages · OD-3 headset beats `_nextPlay` · OD-4 delta-everywhere,
+±10 overlay magnitude, cards restated · OD-5 (b) narrow to the three the
+engine speaks · OD-6 CARD_VOCAB via D12 · OD-7 typo-reading (`rotation`
+typos; robberCall:"rob") + validateDefBook extended · OD-8 every writer
+writes the stop, blitzPct derived-only · OD-9 progressive retirement of
+pressureSource · OD-10 D16 sequencing ratified · OD-11 extend PLAN_FIELD_SIDE
++ rebuild callSheet · OD-12 badge lists derived. **Consequence: D11–D17 are
+no longer owner-blocked** — dispatchability is now governed only by the
+dependency table in `Ref/COHESION_DISPATCH_2026-08-18.md`. Deliberately-left
+files remain uncommitted (~39 PNGs, `_night_full_log.txt`,
+`test_notes_8-16.txt`). NOT pushed.
