@@ -9,8 +9,25 @@
 // Usage: node tools/_equiv_walk.mjs <path-to-built-html>
 import { chromium } from 'playwright';
 import { createHash } from 'crypto';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
-const target = process.argv[2];
+// 2026-08-18: take a PATH, hand Chromium a URL. The old `'file://' + target`
+// broke on both counts a real invocation hits: a relative path became a HOST
+// ("file://dist/index.html" → ERR_FILE_NOT_FOUND, dist read as a hostname), and
+// a Windows path needs "file:///C:/…" with forward slashes. pathToFileURL on a
+// resolved path handles relative, absolute, Windows and POSIX alike.
+const targetArg = process.argv[2];
+if (!targetArg) {
+  console.error('Usage: node tools/_equiv_walk.mjs <path-to-built-html>   (e.g. dist/index.html)');
+  process.exit(2);
+}
+const target = resolve(targetArg);
+if (!existsSync(target)) {
+  console.error(`_equiv_walk: no such file — ${target}\n(run "node tools/build.mjs" first, then point at dist/index.html)`);
+  process.exit(2);
+}
 // ── ENTRY: the TREE door ────────────────────────────────────────────────────
 // REPAIRED 2026-08-18. This walk had rotted against the shipped UI and would
 // dead-end mid-wizard: it entered through `#btn-mm-newcoach` (the one-coach
@@ -55,7 +72,7 @@ try {
     let s = 20260726;
     Math.random = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
   });
-  await p.goto('file://' + target, { waitUntil: 'load' });
+  await p.goto(pathToFileURL(target).href, { waitUntil: 'load' });
   await p.waitForTimeout(1200);
 
   const snap = async (label) => {
