@@ -486,6 +486,50 @@ D16's `_liveTempo` hunks in the same file deliberately left unstaged**) ·
 `tools/plan_cohesion_probe.mjs` (**partial-staged — §2 only; D13/D16 own §5 and
 the import line**) · `Ref/STATUS.md` (this entry + the header). NOT pushed.
 
+## 2026-08-18 — OWED-LOCAL GATES DISCHARGED (owner's machine) + the ypc question answered
+
+The gates D13/D14/D16 and the gate repair left owed-local have been run by the
+owner on the Windows box. Recording them so nobody re-runs or re-diagnoses.
+
+**DISCHARGED:**
+- **`stat_realism_harness 500`** (the band gate the sandbox's ~3-minute
+  per-command cap could never reach): **the two standing flags only — rush
+  148.6 low, comp% 57.1 low — and NOTHING new.** INT% 1.83, pts 26.2,
+  yds/play 5.44, plays 71.5, sacks 2.23, TO 1.51 all in band. This is the
+  band half of D13 (starter repairs activate real robber/rotation mechanics),
+  D14 (`pressLevel` entering the call path moves coverage math) and D16.
+- **`covfam_probe 120`** (manifest N): **ALL PASS.** The sandbox could only
+  reach N=90 full-green (14/17 at N=120 before the cap, all green). Note for
+  future sessions: **do not gate this probe below N≈90** — at N=45 the
+  "Cover 6 cloud corner" arm reds on sample noise alone, since it measures a
+  ~5-point completion gap on a filtered slice of throws.
+- **`_gate.mjs core`**: ran 85 OK / 3 FAIL; all three diagnosed as NOT ours
+  (identical failures at `9f44554`), fixed and committed at `b396951` — one
+  real product bug (the formation-designer back cap) and two stale probe pins.
+  A confirming re-run (expect 88/0) is the only leftover.
+
+**THE ypc QUESTION — ANSWERED: pre-existing, not ours.** The N=500 run showed
+RB `ypc 4.72` against the harness's stated 4.2–4.6 (unflagged — the harness
+does not gate it). A/B'd it rather than hand-waving: same harness, same N=250,
+`9f44554` (before D13/D14/D16) vs HEAD →
+
+| | rush yds | ypc | comp% | yds/play |
+|---|---|---|---|---|
+| before | 152.8 | **4.78** | 56.3 | 5.41 |
+| after  | 150.8 | **4.74** | 56.1 | 5.40 |
+
+Every column is inside run-to-run noise and ypc was **higher before**. None of
+the three blocks touches run fitting, which is what the numbers say. The
+above-band ypc is a **standing condition of the sim**, not a regression — a
+backlog item if the run game is ever retuned, not a ship blocker.
+
+**STILL OWED (unchanged):** `_equiv_walk` with its diffs attributed (D14 and
+D16 are NOT walk-neutral by design — each entry lists exactly which diffs are
+legitimate; anything else is a finding) · the browser eyeball list (D13/D14/D16
+checklists + the Formation Designer three-back case from the gate repair) ·
+a green `_gate.mjs night` before any deploy · rebuild `dist/` before deploying
+(the copy on disk is stamped `9b9d9caa89`, which predates the gate repair).
+
 ## 2026-08-18 — GATE REPAIR (this Cowork session) — the owner's local CORE run: 3 reds, none from D13/D14/D16, ONE a real product bug
 ## ALL THREE GREEN ×3 · CLEAN BUILD · ⚠ the formation fix wants a browser look
 
