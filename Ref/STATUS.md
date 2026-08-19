@@ -487,7 +487,26 @@ D16's `_liveTempo` hunks in the same file deliberately left unstaged**) ·
 the import line**) · `Ref/STATUS.md` (this entry + the header). NOT pushed.
 
 ## 2026-08-18 — D17 · BATCH A: THE LOAD PATHS ROUTE THROUGH THE VERBS (the stale-book bug fixed)
-## NODE-GATED ×3 · ⚠ `_equiv_walk` vs the pre-batch build is the DEFINING gate and is OWED-LOCAL
+## NODE-GATED ×3 · ✅ **WALK-GATED — BYTE-IDENTICAL (owner ran it, see below)**
+
+**✅ THE DEFINING GATE IS DISCHARGED.** The owner walked the pre-batch build and
+the Batch A build and compared. Diffs, in full:
+- snapshots **00–03** — the main menu printing its 10-char build id (expected,
+  and the same signature every walk comparison carries);
+- snapshots **09–11** — the wizard's STAFF step, 754 → 2392 chars. That is the
+  coordinator-dossier fix (`5e601ed`) which landed BEFORE this batch and is
+  baked into the stale baseline, **not** Batch A.
+- **Nothing else.** The whole wizard and all thirteen tour screens are
+  byte-identical, so the nine converted load sites are behaviourally neutral.
+
+Worth recording as method: the dossier diff is a CONTROL. It proves the walk
+actually detects a real UI change, so the silence everywhere else means the
+tool was awake — which matters given the walk was dead-ending mid-wizard
+earlier the same day. A byte-identity gate that has never been seen to FAIL is
+not yet evidence of anything.
+
+⚠ The baseline transcript is now stale (it predates the dossier). Regenerate
+`walk-head.txt` from the Batch A build before gating Batch B.
 
 First batch of the writer-graph collapse (OD-10). Batch A converts the LOAD
 writers — the lowest-risk group, and the one carrying the actual bug.
