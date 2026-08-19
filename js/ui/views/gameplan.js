@@ -10,7 +10,7 @@ import { defaultGameplan } from '../../engine/world.js';
 import { getCreation, listCreations, loadCreationData } from '../../engine/creator.js';
 import { repairCreation } from '../../engine/creatorrepair.js';
 import { DEFAULT_OFF_BOOKS, DEFAULT_DEF_BOOKS, defaultOffBook, defaultDefBook } from '../../engine/defaultbooks.js';
-import { applyPlaybookToGameplan, playbookFromGameplan, lookSheetKey, splitSheetKey, resolveLookSheet } from '../../engine/playbook.js';
+import { applyPlaybookToGameplan, carriedOffLooks, playbookFromGameplan, lookSheetKey, splitSheetKey, resolveLookSheet } from '../../engine/playbook.js';
 import { applyDefBookToGameplan, defBookFromGameplan, emptyDefBook, pruneCallSheet } from '../../engine/defbook.js';
 import { adoptPlan, applyControllerOverlay, adoptDefPlan, adoptOffPlan, controllerOverlayOf, setPlanFields, synthesizeTeamPlan } from '../../engine/teamplan.js';
 import { renderPlaybooksTab, playbooksListeners } from './creatorplaybook.js';
@@ -2335,17 +2335,22 @@ function renderSitPanel(gp, key) {
     Array.isArray(cell.offFormations),
     `AUTO \u2014 your default package: ${inheritForms}`,
     `<div class="sitfc-grid">
-      ${Object.keys(FORMATIONS).map((fid) => {
-      const entry = (cell.offFormations || []).find((x) => x.id === fid);
-      return `<div class="sitfc${entry ? " selected" : ""}" data-sitfc="${fid}">
-          <span class="sitfc-name">${escapeHtml(fid)}</span>${entry ? '<span class="fc-check">\u2713</span>' : ""}
+      ${carriedOffLooks(gp, { all: true }).map((l) => {
+      // 2026-08-19: the carried LOOKS, not Object.keys(FORMATIONS). A situation
+      // could pin a formation the playbook doesn't carry — the sim would then
+      // be asked for a look with no call sheet — and it had no concept of a
+      // variation at all, so "Flexbone" in a situation meant base Flexbone even
+      // for a team that only runs Trips.
+      const entry = (cell.offFormations || []).find((x) => x.id === l.id && (x.variation || null) === l.variation);
+      return `<div class="sitfc${entry ? " selected" : ""}" data-sitfc="${escapeHtml(l.key)}">
+          <span class="sitfc-name">${escapeHtml(l.label)}</span>${entry ? '<span class="fc-check">\u2713</span>' : ""}
         </div>`;
     }).join("")}
     </div>
     <div class="formation-weights" style="margin-top:8px">
       ${(cell.offFormations || []).map((entry, i) => `
         <div class="fw-row">
-          <span class="fw-label">${escapeHtml(entry.id)}</span>
+          <span class="fw-label">${escapeHtml(entry.variation ? `${entry.id} · ${entry.variation}` : entry.id)}</span>
           <input class="gp-slider sitfw-slider" type="range" data-sitfw-index="${i}" min="5" max="95" value="${entry.weight}" />
           <span class="fw-pct" id="sitfw-pct-${i}">${Math.round(entry.weight)}%</span>
         </div>`).join("")}
@@ -2742,13 +2747,18 @@ function wireSituationListeners(gp, { getOpenKey, setOpenKey, root = document } 
     card.addEventListener("click", () => {
       const cell = sitCell();
       if (!cell || !Array.isArray(cell.offFormations)) return;
-      const fid = card.dataset.sitfc;
-      const idx = cell.offFormations.findIndex((f) => f.id === fid);
+      // The card carries the LOOK key ("Flexbone|trips"), so a situational
+      // package pins the dressed look, not just the formation family.
+      const raw = card.dataset.sitfc || "";
+      const bar = raw.indexOf("|");
+      const fid = bar < 0 ? raw : raw.slice(0, bar);
+      const vk = bar < 0 ? null : raw.slice(bar + 1);
+      const idx = cell.offFormations.findIndex((f) => f.id === fid && (f.variation || null) === vk);
       if (idx >= 0) {
         if (cell.offFormations.length > 1) cell.offFormations.splice(idx, 1);
       } else {
         if (cell.offFormations.length >= 5) cell.offFormations.pop();
-        cell.offFormations.push({ id: fid, weight: 33 });
+        cell.offFormations.push(vk ? { id: fid, weight: 33, variation: vk } : { id: fid, weight: 33 });
         rebalanceWeights(cell.offFormations);
       }
       commitSits();

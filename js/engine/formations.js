@@ -308,6 +308,20 @@ function normalizeFrontMix(mix) {
   }
   return [];
 }
+// The defensive twin of carriedOffLooks: which FRONTS does this team carry?
+// 2026-08-19 — the Depth Chart's defense tab offered every front in the game
+// (`Object.keys(DEF_FIELD_LAYOUTS)`), so you could pin a lineup into a front
+// your defbook never calls. The identity front is ALWAYS included even if the
+// mix somehow omits it: it is what selectDefFront falls back to, so it always
+// takes the field and must always be pinnable.
+function carriedDefFronts(gp) {
+  const out = [];
+  const push = (id) => { if (id && DEF_FRONT_COUNTS[id] && !out.includes(id)) out.push(id); };
+  const identity = gp && gp.defFront && gp.defFront !== "auto" ? gp.defFront : gp && gp.defBaseFront;
+  push(identity || "4-3");
+  for (const f of normalizeFrontMix(gp && gp.defFrontMix)) push(f.id);
+  return out;
+}
 function rollFrontMix(mix, base) {
   const live = normalizeFrontMix(mix);
   if (!live.length) return base;
@@ -471,4 +485,4 @@ SUB_CHAIN = {
   P: ["K"]
 };
 
-export { normalizeFrontMix, FRONT_PRESSURE_SIGNATURE, FRONT_SIG_LABEL, PERSONNEL_CLASSES, defUnitStrengthSchemeFit, formationVariation, getDefWeights, getMatchupEdge, getOffWeights, getSituationalMod, offPersonnelClass, offPersonnelOf, offUnitStrengthRoles, pickedVariation, resolveDefPersonnel, resolvePersonnel, rollFormation, rollFormationEntry, schemeAdjustedOVR, selectDefFront, variationPassLeanDelta, variedPackage };
+export { normalizeFrontMix, carriedDefFronts, FRONT_PRESSURE_SIGNATURE, FRONT_SIG_LABEL, PERSONNEL_CLASSES, defUnitStrengthSchemeFit, formationVariation, getDefWeights, getMatchupEdge, getOffWeights, getSituationalMod, offPersonnelClass, offPersonnelOf, offUnitStrengthRoles, pickedVariation, resolveDefPersonnel, resolvePersonnel, rollFormation, rollFormationEntry, schemeAdjustedOVR, selectDefFront, variationPassLeanDelta, variedPackage };

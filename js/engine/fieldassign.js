@@ -142,6 +142,20 @@ function resolveSlots(slots, assignments, activeDepth, ratingById = null, player
   }
   return { bySlot, byPos };
 }
+// The variation-resolved slot list for a look — THE one place that answers
+// "what does this formation look like when it's dressed as <variation>?".
+// 2026-08-19: extracted out of resolveOffField because the Depth Chart needs
+// the same answer to DRAW the look and to decide who the picker may offer for
+// a slot. It had been drawing the BASE slots while the sim fielded the
+// variation's, so a re-dressed body (Flexbone Trips' slot receiver, Power-I
+// Big's third TE) showed one job on the screen and played another on Saturday
+// — a straight breach of the depth-chart↔field↔sim agreement in CLAUDE.md.
+function offFieldSlots(formationId, variation) {
+  const layout = OFF_FIELD_LAYOUTS[formationId];
+  if (!layout) return null;
+  const vd = variation && !globalThis.__noVarPkg ? (FORMATION_VARIATIONS[aliasFormation(formationId)] || {})[variation] : null;
+  return (vd && variationLayoutSlots(layout.slots, vd.layout)) || layout.slots;
+}
 function resolveOffField(formationId, assignments, shares, activeDepth, ratingById = null, playerPos = null, playerById = null, variation = null) {
   const layout = OFF_FIELD_LAYOUTS[formationId];
   if (!layout) return null;
@@ -153,8 +167,7 @@ function resolveOffField(formationId, assignments, shares, activeDepth, ratingBy
   // never change, so hand-picked pins and target shares ride across looks.
   // variation null (every base look, every AI plan) = the base slots exactly
   // as before. __noVarPkg restores the old base-personnel fielding for A/Bs.
-  const vd = variation && !globalThis.__noVarPkg ? (FORMATION_VARIATIONS[aliasFormation(formationId)] || {})[variation] : null;
-  const slots = (vd && variationLayoutSlots(layout.slots, vd.layout)) || layout.slots;
+  const slots = offFieldSlots(formationId, variation) || layout.slots;
   const { bySlot, byPos } = resolveSlots(slots, assignments, activeDepth, ratingById, playerPos, playerById);
   const fbSlotIds = new Set(slots.filter((s) => s.role === "FB-Lead").map((s) => s.id));
   const fbFromSlots = [];
@@ -349,7 +362,7 @@ MESH_AUTO_POOL = {
   SPACE: (d) => [...d.S || [], ...d.LB || [], ...d.CB || []]
 };
 
-export { defaultShareFor, ensureFieldAssignments, resolveDefField, resolveOffField };
+export { defaultShareFor, ensureFieldAssignments, offFieldSlots, resolveDefField, resolveOffField };
 
 // additional exports consumed by tools/ probes and the depth-chart picker —
 // the picker, the resolver and the probe all read the SAME eligibility table

@@ -120,6 +120,51 @@ function fittingConceptsForFormation(formationId, variation) {
   if (vpkg) Object.assign(pkg, vpkg);
   return filterConceptsForPersonnel(FORMATION_PLAYBOOK[fid] || [], pkg);
 }
+// ── "Which LOOKS does this team actually carry?" ────────────────────────────
+// 2026-08-19. The ONE answer, so the Depth Chart, the Situations editor and
+// anything else that offers a formation stop each inventing their own.
+//
+// Before this, the Depth Chart offered `Object.keys(OFF_FIELD_LAYOUTS)` — every
+// formation in the game — while its own empty-state text said "Pick your
+// package on the Game Plan screen first". The Situations picker offered
+// `Object.keys(FORMATIONS)` and had no concept of a variation at all. Both
+// predate the playbook, and neither ever learned that a team carries LOOKS
+// (formation + variation), not formations.
+//
+// A look is identified by lookSheetKey(id, variation) — the same key the book's
+// call sheets use, so the depth chart and the call sheet name the same thing.
+// Deduped, order preserved, zero-weight entries dropped (a look you've dialled
+// to 0 is a look you don't run). `all` keeps every carried entry even at zero
+// weight — the Game Plan screen still wants to show you what you own.
+function carriedOffLooks(gp, opts) {
+  const all = !!(opts && opts.all);
+  const src = Array.isArray(gp && gp.offFormations) && gp.offFormations.length
+    ? gp.offFormations
+    : [{ id: (gp && gp.offFormation) || "Single Back", weight: 100 }];
+  const seen = new Set();
+  const out = [];
+  for (const f of src) {
+    if (!f || !f.id) continue;
+    if (!all && !((f.weight || 0) > 0)) continue;
+    const fid = aliasFormation(f.id);
+    if (!FORMATION_PACKAGES[fid]) continue;
+    const vset = FORMATION_VARIATIONS[fid] || {};
+    // A variation the data no longer defines is not a look — fall back to base
+    // rather than offering a ghost (old saves, renamed variations).
+    const vk = f.variation && vset[f.variation] ? f.variation : null;
+    const key = lookSheetKey(fid, vk);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      key,
+      id: fid,
+      variation: vk,
+      weight: f.weight || 0,
+      label: vk ? `${fid} · ${(vset[vk] && vset[vk].label) || vk}` : fid
+    });
+  }
+  return out;
+}
 function isFormation(formationId) {
   return !!FORMATION_PACKAGES[aliasFormation(formationId)];
 }
@@ -268,4 +313,4 @@ function repairPlaybook(pb) {
   return { pb: out, changes, ok: validatePlaybook(out).ok };
 }
 
-export { PLAYBOOK_SCHEMA_VERSION, legalConceptsForFormation, filterConceptsForPersonnel, fittingConceptsForFormation, lookSheetKey, splitSheetKey, resolveLookSheet, emptyPlaybook, validatePlaybook, applyPlaybookToGameplan, playbookFromGameplan, repairPlaybook };
+export { PLAYBOOK_SCHEMA_VERSION, carriedOffLooks, legalConceptsForFormation, filterConceptsForPersonnel, fittingConceptsForFormation, lookSheetKey, splitSheetKey, resolveLookSheet, emptyPlaybook, validatePlaybook, applyPlaybookToGameplan, playbookFromGameplan, repairPlaybook };

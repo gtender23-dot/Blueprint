@@ -5254,3 +5254,63 @@ record_call · save_migration · ai_book_name · plan_side — all green, key se
 standing flags; rush yds (150.2) and team INT% (1.90) now read OK, so nothing
 new is off. Playwright tier unavailable in this container as always — the
 browser probes and `_gate.mjs core` are owed on the owner's machine. NOT pushed.
+
+## 2026-08-19 — THE SCREENS OFFER WHAT THE TEAM CARRIES (owner: "limit them to only selected formation variation in their playbooks offense and defense and then same thing for situations")
+
+Three surfaces offered formations from GLOBAL tables instead of the coach's
+plan. All three predate the playbook and never learned that a team carries
+**looks** (formation + variation), not formations:
+
+| surface | what it offered |
+|---|---|
+| Depth Chart offense | `Object.keys(OFF_FIELD_LAYOUTS)` — every formation in the game, while the screen's own empty-state said "Pick your package on the Game Plan screen first". The intent was always the carried set; the filter just never did it. |
+| Depth Chart defense | `Object.keys(DEF_FIELD_LAYOUTS)` — every front, so you could pin an eleven into a front your defbook never calls. |
+| Situations | `Object.keys(FORMATIONS)` — every formation, and **no concept of a variation at all**. |
+
+**The worse bug underneath.** `resolveOffField` takes a `variation` argument
+and the SIM passes it (`offVar`, sim.js). **All four Depth Chart call sites
+omitted it.** So for a re-dressed look the screen resolved and drew BASE
+personnel while the game fielded the variation's. Flexbone Trips dresses
+`RB_H` from **ABACK/A → SLOT/SL** — the depth chart was offering A-backs for a
+slot the sim fields as a receiver, and badging the man with the wrong job.
+Straight breach of the depth-chart↔field↔sim agreement in CLAUDE.md: hop 1
+(who the picker offers) and hop 3 (who the sim fields) disagreed. 13 variations
+re-dress a body, so this was never a Flexbone-only problem.
+
+**Shape of the fix — one answer per question, no third copies:**
+
+- `carriedOffLooks(gp, {all})` in `playbook.js` — the look set, keyed by
+  `lookSheetKey`, so the depth chart and the call sheet name the same thing.
+  Dedupes, drops zero-weight looks, drops unknown formations, and falls back to
+  BASE for a variation the data no longer defines (old saves).
+- `carriedDefFronts(gp)` in `formations.js` — identity front first (it is what
+  `selectDefFront` falls back to, so it must always be pinnable), then the mix.
+- `offFieldSlots(fid, variation)` extracted OUT of `resolveOffField` in
+  `fieldassign.js` — the one place that answers "what does this formation look
+  like dressed as <variation>?". The screen now draws, offers and resolves from
+  the same list the sim fields.
+
+**No save migration, and the probe pins why:** `variationLayoutSlots` never
+changes slot IDs or catch eligibility, so `fieldAssignments` stays keyed by
+formation and a pin rides every look of that formation. (That stability is also
+why the target-share handlers may keep reading the base slots.)
+
+**Situational pins now name a LOOK**, and it is not decoration — sim.js takes
+the variation off the formation entry that won the roll, so a situation pinning
+"Flexbone · Trips" fields Trips.
+
+**Deliberately left broad:** `applySimplePlan` still walks every formation for
+its auto target-shares — narrowing it would strand stale splits on a look a
+coach later picks up. What was fixed there is that each formation now resolves
+under the variation the team carries it in.
+
+**Gates.** Clean build from a temp copy outside the mount (`cfb-dynasty-d9d5a127fb`)
+— the build is part of this gate, per the `const gp` lesson. New CORE probe
+`carried_look_probe.mjs` (30 checks, registered in `_gate_manifest.mjs`) ×3,
+plus bench · card_lint · draw_up · record_call · playbook_root · plan_cohesion
+(97/0) · plan_side · starter_hold · dead_surface · formation_compose ·
+save_migration · live_book_call · play_fidelity — all green, key set ×3.
+`stat_realism_harness` N=500: only comp% flags (standing); rush 152.6 and INT%
+2.02 both OK, nothing new off. Playwright tier unavailable in this container as
+always. **Owner still owes the browser eyeball on this one** — the pill strips
+and the situations grid are visual changes. NOT pushed.

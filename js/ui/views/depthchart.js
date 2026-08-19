@@ -1,6 +1,8 @@
 import { DEF_BLITZ_ELIGIBLE, DEF_DROP_ELIGIBLE, DEF_FIELD_LAYOUTS, OFF_FIELD_LAYOUTS } from '../../constants_field.js';
 import { C, FORMATIONS, FORMATION_PLAYBOOK, SLOT_ELIGIBILITY, STARTER_COUNTS } from '../../constants.js';
-import { defaultShareFor, ensureFieldAssignments, resolveDefField, resolveOffField, SLOT_ELIGIBLE_POS } from '../../engine/fieldassign.js';
+import { defaultShareFor, ensureFieldAssignments, offFieldSlots, resolveDefField, resolveOffField, SLOT_ELIGIBLE_POS } from '../../engine/fieldassign.js';
+import { carriedOffLooks } from '../../engine/playbook.js';
+import { carriedDefFronts } from '../../engine/formations.js';
 import { bridgeCoversSlot, bridgeOf, sizeFitForSlot } from '../../engine/traits.js';
 import { derivedArchetype, posAdjust, roleRating } from '../../engine/player.js';
 import { buildDepthChart, buildRoleSortedDepthOrder } from '../../engine/world.js';
@@ -14,6 +16,10 @@ var depthTab = "offense";
 // editing. null = the school's identity front (hard dial, else base front).
 var defFrontTab = null;
 var activeOffFormation = null;
+// 2026-08-19: the active look's VARIATION. The screen used to know only the
+// formation, so it drew and resolved base personnel while the sim fielded the
+// variation's — see offFieldSlots.
+var activeOffVariation = null;
 var depthSecOpen = {};
 var depthPosTab = {};
 var picker = null;
@@ -56,16 +62,27 @@ function renderUniqSwapPicker(school) {
   </div>
 `;
 }
+function lookKeyOf(fid, variation) { return variation ? `${fid}|${variation}` : fid; }
 function renderDepthChart(embed = false) {
   const school = getPlayerSchool();
   const gp = (school == null ? void 0 : school.gameplan) || {};
   ensureFieldAssignments(gp);
   if (gameplanIsSimple() && school) applySimplePlan(school);
-  const selectedOff = Object.keys(OFF_FIELD_LAYOUTS).filter((_fid) => FORMATIONS[_fid]);
-  if (!activeOffFormation || !selectedOff.includes(activeOffFormation)) {
-    activeOffFormation = selectedOff[0] || "Single Back";
+  // THE LOOKS THIS TEAM CARRIES — not every formation in the game. The old
+  // line read Object.keys(OFF_FIELD_LAYOUTS) while the empty-state below it
+  // already said "Pick your package on the Game Plan screen first"; the intent
+  // was always the carried set, the filter just never did it (2026-08-19).
+  const offLooks = carriedOffLooks(gp);
+  const activeKey = activeOffFormation ? lookKeyOf(activeOffFormation, activeOffVariation) : null;
+  if (!activeKey || !offLooks.some((l) => l.key === activeKey)) {
+    activeOffFormation = offLooks[0] ? offLooks[0].id : "Single Back";
+    activeOffVariation = offLooks[0] ? offLooks[0].variation : null;
   }
   const baseFront = gp.defBaseFront || "4-3";
+  // A front tab left over from a plan that no longer carries it would pin an
+  // eleven the defense never fields — drop back to the identity front.
+  const defFronts = carriedDefFronts(gp);
+  if (defFrontTab && !defFronts.includes(defFrontTab)) defFrontTab = null;
   return `
   <div class="view-depthchart">
     ${embed ? `<div class="view-header embed-actions">
@@ -89,26 +106,30 @@ function renderDepthChart(embed = false) {
       <button class="rec-tab${depthTab === "st" ? " active" : ""}" data-dtab="st">Special Teams</button>
     </div>
 
-    ${depthTab === "offense" ? renderOffense(school, gp, selectedOff) : ""}
-    ${depthTab === "defense" ? renderDefense(school, gp, defFrontTab || (gp.defFront && gp.defFront !== "auto" ? gp.defFront : baseFront)) : ""}
+    ${depthTab === "offense" ? renderOffense(school, gp, offLooks) : ""}
+    ${depthTab === "defense" ? renderDefense(school, gp, defFrontTab || (gp.defFront && gp.defFront !== "auto" ? gp.defFront : baseFront), defFronts) : ""}
     ${depthTab === "st" ? renderST(school) : ""}
 
     ${picker ? renderPicker2(school) : ""}
     ${uniqSwap ? renderUniqSwapPicker(school) : ""}
-    ${formationInfoOpen && depthTab === "offense" ? renderFormationInfo(activeOffFormation, OFF_FIELD_LAYOUTS[activeOffFormation]) : ""}
+    ${formationInfoOpen && depthTab === "offense" ? renderFormationInfo(activeOffFormation, { slots: offFieldSlots(activeOffFormation, activeOffVariation) || [] }) : ""}
   </div>
 `;
 }
-function renderOffense(school, gp, selectedOff) {
-  if (selectedOff.length === 0) {
+function renderOffense(school, gp, offLooks) {
+  if (offLooks.length === 0) {
     return `<div class="card"><div class="empty-hint">No offensive formations selected. Pick your package on the <a data-nav="gameplan" class="link">Game Plan</a> screen first.</div></div>`;
   }
   const fid = activeOffFormation;
-  const layout = OFF_FIELD_LAYOUTS[fid];
+  const vk = activeOffVariation;
+  // The look's DRESSED slots — the same list resolveOffField fields and the
+  // play cards draw. Assignments stay keyed by formation (slot IDs never change
+  // across variations), so a pin rides every look of the same formation.
+  const layout = { ...OFF_FIELD_LAYOUTS[fid], slots: offFieldSlots(fid, vk) || OFF_FIELD_LAYOUTS[fid].slots };
   const entry = gp.fieldAssignments.offense[fid] || { slots: {}, shares: {} };
   const activeDepth = buildActiveDepth(school);
   const ratingById = buildRatingById(school);
-  const resolved = resolveOffField(fid, entry.slots, entry.shares, activeDepth, ratingById, posById(school), byId(school));
+  const resolved = resolveOffField(fid, entry.slots, entry.shares, activeDepth, ratingById, posById(school), byId(school), vk);
   const bySlot = (resolved == null ? void 0 : resolved.bySlot) || {};
   const catchSlots = layout.slots.filter((s) => s.catch);
   if (!entry.shares) entry.shares = {};
@@ -116,9 +137,10 @@ function renderOffense(school, gp, selectedOff) {
   const shareTotal = 100;
   return `
   <div class="fielded-formation-picker ff-strip">
-    ${selectedOff.map((id) => `
-      <button class="ff-pill${id === fid ? " active" : ""}" data-off-formation="${id}">${escapeHtml(id)}</button>
+    ${offLooks.map((l) => `
+      <button class="ff-pill${l.key === lookKeyOf(fid, vk) ? " active" : ""}" data-off-look="${escapeHtml(l.key)}">${escapeHtml(l.label)}</button>
     `).join("")}
+    <span class="ff-hint">These are the looks your playbook carries · change them on the <a data-nav="gameplan" class="link">Game Plan</a> screen</span>
   </div>
 
   <div class="formation-info-row">
@@ -298,11 +320,19 @@ function applySimplePlan(school) {
   const roster = school.roster || [];
   const activeDepth = buildActiveDepth(school);
   const ratingById = buildRatingById(school);
+  // Simple mode's auto target-shares. This still walks EVERY formation on
+  // purpose — the shares are bookkeeping a coach may inherit if he later
+  // carries a look, and narrowing it would leave stale splits behind. What DID
+  // need fixing: a carried look's shares were computed off base personnel, so
+  // a re-dressed body got weighted as the wrong kind of receiver. Resolve each
+  // formation under the variation the team actually carries it in.
+  const varByFid = {};
+  for (const l of carriedOffLooks(gp, { all: true })) if (l.variation) varByFid[l.id] = l.variation;
   for (const fid of Object.keys(OFF_FIELD_LAYOUTS).filter((_fid) => FORMATIONS[_fid])) {
-    const layout = OFF_FIELD_LAYOUTS[fid];
+    const layout = { slots: offFieldSlots(fid, varByFid[fid] || null) || OFF_FIELD_LAYOUTS[fid].slots };
     const e = gp.fieldAssignments.offense[fid] || (gp.fieldAssignments.offense[fid] = { slots: {}, shares: {} });
     if (!e.shares) e.shares = {};
-    const resolved = resolveOffField(fid, e.slots, e.shares, activeDepth, ratingById, posById(school), byId(school));
+    const resolved = resolveOffField(fid, e.slots, e.shares, activeDepth, ratingById, posById(school), byId(school), varByFid[fid] || null);
     const bySlot = resolved && resolved.bySlot || {};
     const catchSlots = layout.slots.filter((s) => s.catch);
     const wById = {};
@@ -455,10 +485,14 @@ function slotLabelsByPlayer(school, side) {
   try {
     if (side === "offense") {
       const fid = activeOffFormation;
-      const layout = OFF_FIELD_LAYOUTS[fid];
+      const baseLayout = OFF_FIELD_LAYOUTS[fid];
       const entry = (_b = (_a = gp == null ? void 0 : gp.fieldAssignments) == null ? void 0 : _a.offense) == null ? void 0 : _b[fid];
-      if (!layout) return out;
-      const r = resolveOffField(fid, entry == null ? void 0 : entry.slots, entry == null ? void 0 : entry.shares, buildActiveDepth(school), buildRatingById(school), posById(school), byId(school));
+      if (!baseLayout) return out;
+      // Dressed slots + the variation, so the badge on a player's card names
+      // the job he holds in THIS look (Trips' RB_H is a slot receiver, not an
+      // A-back) rather than the base formation's job.
+      const layout = { slots: offFieldSlots(fid, activeOffVariation) || baseLayout.slots };
+      const r = resolveOffField(fid, entry == null ? void 0 : entry.slots, entry == null ? void 0 : entry.shares, buildActiveDepth(school), buildRatingById(school), posById(school), byId(school), activeOffVariation);
       for (const s of layout.slots) {
         const pid = (_c = r == null ? void 0 : r.bySlot) == null ? void 0 : _c[s.id];
         if (pid) out[pid] = { label: s.label, pos: s.pos, role: s.role };
@@ -482,7 +516,13 @@ function formationRoleFor(pos, side, school, slotOf, playerId) {
   var _a, _b;
   const hit = slotOf[playerId];
   if ((hit == null ? void 0 : hit.pos) === pos && hit.role) return hit.role;
-  const layout = side === "offense" ? OFF_FIELD_LAYOUTS[activeOffFormation] : DEF_FIELD_LAYOUTS[((_a = school.gameplan) == null ? void 0 : _a.defBaseFront) || "4-3"];
+  // Dressed slots on offense: a variation may re-dress a body's ROLE, and this
+  // is the fallback that names the role. (The target-share handlers below still
+  // read the base slots on purpose — variationLayoutSlots never changes slot
+  // IDs or catch eligibility, so the catch list is identical either way.)
+  const layout = side === "offense"
+    ? { slots: offFieldSlots(activeOffFormation, activeOffVariation) || [] }
+    : DEF_FIELD_LAYOUTS[((_a = school.gameplan) == null ? void 0 : _a.defBaseFront) || "4-3"];
   return ((_b = ((layout == null ? void 0 : layout.slots) || []).find((s) => s.pos === pos)) == null ? void 0 : _b.role) || null;
 }
 function renderDepthOrder(school, side) {
@@ -586,7 +626,7 @@ function renderDepthOrder(school, side) {
   </div>
 `;
 }
-function renderDefense(school, gp, front) {
+function renderDefense(school, gp, front, defFronts) {
   const baseFront = front;
   const layout = DEF_FIELD_LAYOUTS[baseFront];
   if (!layout) return `<div class="card"><div class="empty-hint">Unknown front.</div></div>`;
@@ -603,9 +643,9 @@ function renderDefense(school, gp, front) {
   const simple = gameplanIsSimple();
   return `
   <div class="fielded-formation-picker ff-strip">
-    ${Object.keys(DEF_FIELD_LAYOUTS).map((fid) => `
+    ${(defFronts && defFronts.length ? defFronts : [baseFront]).filter((fid) => DEF_FIELD_LAYOUTS[fid]).map((fid) => `
       <button class="ff-pill${fid === baseFront ? " active" : ""}" data-dfront="${fid}">${fid}${fid === identityFront ? " \u2605" : ""}</button>`).join("")}
-    <span class="ff-hint">\u2605 = your identity front \xB7 pins here apply whenever this front takes the field \xB7 situational subs are automatic</span>
+    <span class="ff-hint">\u2605 = your identity front \xB7 these are the fronts your defensive book calls \xB7 pins here apply whenever this front takes the field \xB7 situational subs are automatic</span>
   </div>
 
   <details class="dc-tip"${depthSecOpen["tip:defense"] ? " open" : ""} data-do-sec="tip:defense">
@@ -1000,13 +1040,15 @@ function renderShareBar(catchSlots, shares, shareTotal, school, bySlot, gp, fid)
 }
 function renderPicker2(school) {
   const roster = (school == null ? void 0 : school.roster) || [];
-  const { side, containerId, slotId, pos, label } = picker;
-  const layout = side === "offense" ? OFF_FIELD_LAYOUTS[containerId] : DEF_FIELD_LAYOUTS[containerId];
-  const slot = layout == null ? void 0 : layout.slots.find((s) => s.id === slotId);
+  const { side, containerId, slotId, pos, label, variation } = picker;
+  const slots = side === "offense"
+    ? (offFieldSlots(containerId, variation) || [])
+    : ((DEF_FIELD_LAYOUTS[containerId] || {}).slots || []);
+  const slot = slots.find((s) => s.id === slotId);
   const entry = side === "offense" ? school.gameplan.fieldAssignments.offense[containerId] : school.gameplan.fieldAssignments.defense[containerId];
   const activeDepth = buildActiveDepth(school);
   const ratingById = buildRatingById(school);
-  const resolved = side === "offense" ? resolveOffField(containerId, entry.slots, entry.shares, activeDepth, ratingById, posById(school), byId(school)) : resolveDefField(containerId, entry.slots, entry.blitzShares || {}, activeDepth, ratingById, posById(school), byId(school));
+  const resolved = side === "offense" ? resolveOffField(containerId, entry.slots, entry.shares, activeDepth, ratingById, posById(school), byId(school), variation) : resolveDefField(containerId, entry.slots, entry.blitzShares || {}, activeDepth, ratingById, posById(school), byId(school));
   const bySlot = (resolved == null ? void 0 : resolved.bySlot) || {};
   const currentId = bySlot[slotId] || null;
   const takenElsewhere = new Set(
@@ -1323,9 +1365,15 @@ function setupListeners9() {
       rerender();
     });
   });
-  document.querySelectorAll("[data-off-formation]").forEach((btn) => {
+  document.querySelectorAll("[data-off-look]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      activeOffFormation = btn.dataset.offFormation;
+      // The pill carries the LOOK key (lookSheetKey shape: "Flexbone|trips"),
+      // so picking a look sets the variation too — the screen then draws and
+      // resolves the dressed personnel the sim actually fields.
+      const raw = btn.dataset.offLook || "";
+      const bar = raw.indexOf("|");
+      activeOffFormation = bar < 0 ? raw : raw.slice(0, bar);
+      activeOffVariation = bar < 0 ? null : raw.slice(bar + 1);
       formationInfoOpen = false;
       rerender();
     });
@@ -1354,9 +1402,17 @@ function setupListeners9() {
       const containerId = slotEl.dataset.container;
       const slotId = slotEl.dataset.slotId;
       const pos = slotEl.dataset.slotPos;
-      const layout = side === "offense" ? OFF_FIELD_LAYOUTS[containerId] : DEF_FIELD_LAYOUTS[containerId];
-      const label = ((_a2 = layout == null ? void 0 : layout.slots.find((s) => s.id === slotId)) == null ? void 0 : _a2.label) || slotId;
-      picker = { side, containerId, slotId, pos, label };
+      // The picker must be opened against the DRESSED slot: `pos` comes off the
+      // rendered slot, and for a re-dressed body (Trips' RB_H reads SLOT, not
+      // ABACK) that is what decides which room we offer. Carrying the variation
+      // keeps the offer (hop 1) and the resolver's gate (hop 2) speaking about
+      // the same slot.
+      const variation = side === "offense" ? activeOffVariation : null;
+      const slots = side === "offense"
+        ? (offFieldSlots(containerId, variation) || [])
+        : ((DEF_FIELD_LAYOUTS[containerId] || {}).slots || []);
+      const label = ((_a2 = slots.find((s) => s.id === slotId)) == null ? void 0 : _a2.label) || slotId;
+      picker = { side, containerId, slotId, pos, label, variation };
       rerender();
     });
   });
