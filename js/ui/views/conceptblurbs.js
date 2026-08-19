@@ -78,7 +78,8 @@ var CONCEPT_BLURBS = {
   "Reverse": "The sweep hands off backward against the grain · the defense's pursuit becomes the blocking · if the backside stays home it's a huge loss.",
   "Jet Sweep": "A receiver at full sprint takes the snap-second handoff · the edge is attacked before the defense can set it · easy to chase down from behind if the seal slips.",
   "Triple Option": "Dive, keep, or pitch — read men, don't block them · the unblocked defenders are always wrong · every exchange is a fumble waiting on a mistake.",
-  "Speed Option": "The QB attacks the edge with a pitch man in tow · one edge defender is made to choose, then punished · a slow decision and the pitch dies on the ground."
+  "Speed Option": "The QB attacks the edge with a pitch man in tow · one edge defender is made to choose, then punished · a slow decision and the pitch dies on the ground.",
+  "Midline Option": "The read moves inside — an interior lineman is left alone and made to pick · the dive hits straight downhill, the keep cuts up behind him · no pitch to bail you out if the read is wrong."
 };
 
 // The composer's authored pieces get their line assembled from the design —

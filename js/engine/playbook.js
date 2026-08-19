@@ -78,7 +78,26 @@ function filterConceptsForPersonnel(list, pkg, { custom = false } = {}) {
     const rc = RUN_CONCEPTS[nm];
     if (rc) {
       if (custom && (nm === "Wildcat Power" || nm === "Jet Sweep")) return false; // need slots/motion structure customs don't author
-      if ((nm === "Triple Option" || nm === "Speed Option") && backs < 2) return false;
+      // 2026-08-18 — TWO RULES THAT CONTRADICTED THE ENGINE:
+      // (1) TRIPLE option needs two backs (a dive man AND a pitch man). SPEED
+      //     option does not: it is QB-and-pitch-man with no dive, which is why
+      //     resolveOptionPlay's speed branch only rolls keep/pitch. The old
+      //     rule lumped them together at backs<2, so every one-back formation
+      //     was refused the play — while SPEED_OPTION in sim.js runs it
+      //     organically from Spread, Pistol/RPO and Trips/Bunch anyway. The
+      //     engine played a call the book was not allowed to carry.
+      if (nm === "Triple Option" && backs < 2) return false;
+      if (nm === "Speed Option" && backs < 1) return false;
+      // (2) JET SWEEP is motion by a RECEIVER, not a handoff to a back. It fell
+      //     through to the generic "needs a back" rule, so EMPTY could not carry
+      //     it — even though JET_CAPABLE["Empty"] is 0.1 and JET_SLOTS["Empty"]
+      //     names the two slots that run it. Same contradiction, other play.
+      // A jet needs SOMEBODY to put in motion — a receiver or a back in a wing.
+      // wide>=1 alone was too strict: WILDCAT carries no receiver in its package
+      // and motions RB_2, and it has the highest jet rate in the game
+      // (JET_CAPABLE 0.35). Runtime still decides WHO takes it and refuses a
+      // body the look has dressed as a blocker (_jetCandidates).
+      if (nm === "Jet Sweep") return wide >= 1 || backs >= 1;
       // M3: the authored family's personnel truths — the QB runs need no
       // back (Empty QB Draw is real football), the bubble needs a second
       // wide body to throw to, the reads need a back to option off.

@@ -3138,6 +3138,10 @@ var CONCEPT_ROUTE_ART = {
   "QB Sneak": ["M50 49 L50 29"],
   "Triple Option": ["M50 49 L50 34 L70 34 L89 18", "M50 49 L39 34 L28 18"],
   "Speed Option": ["M50 49 L69 39 L90 19"],
+  // Midline: both paths stay INSIDE — the dive straight down the A gap, the
+  // keep cutting up behind it through B. Deliberately unlike Triple Option's
+  // art, which flares one arrow to the pitch; midline has no pitch phase.
+  "Midline Option": ["M50 49 L46 30 L46 15", "M50 49 L58 36 L61 17"],
   "Jet Sweep": ["M18 43 L50 43 L72 34 L91 20"],
   "QB Power": ["M50 51 L41 40 L57 18"],
   "Draw": ["M50 49 L50 38 L55 28 L50 17"],

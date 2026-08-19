@@ -86,7 +86,11 @@ hdr('F2 — the fixed rulebook');
   const archBook = new Set(FORMATION_PLAYBOOK[c.archetype]);
   check(c.playbook.length > 20 && c.playbook.every((nm) => archBook.has(nm)), `call list is a strict subset of the ${c.archetype} book (${c.playbook.length}/${archBook.size})`);
   check(!c.playbook.includes('Wildcat Power') && !c.playbook.includes('Jet Sweep'), 'no structure-borrowing gadgets');
-  check(!c.playbook.includes('Triple Option') && !c.playbook.includes('Speed Option'), 'options need two backs');
+  // 2026-08-18: TRIPLE needs two backs (dive man + pitch man); SPEED needs one
+  // (QB and pitch man, no dive). A 1-back spread custom gets speed option for
+  // the same reason the built-in Spread does — the sim already ran it there.
+  check(!c.playbook.includes('Triple Option'), 'Triple Option needs two backs');
+  check(c.playbook.includes('Speed Option'), 'Speed Option rides on one back — same rule as the built-in spread looks');
   const arch = FORMATIONS[c.archetype];
   check(c.formationsRow.passLean === arch.passLean && c.formationsRow.runIn === arch.runIn && c.formationsRow.identity === arch.identity, 'identity/leans inherited from the archetype verbatim');
   const slots = c.layout.slots;

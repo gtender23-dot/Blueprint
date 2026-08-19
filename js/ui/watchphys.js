@@ -530,7 +530,7 @@ var RUN_SCHEMES = {
   // QB Counter: the pulled kick-out, off tackle with a misdirection step.
   "QB Counter": { gap: 11, pull: "lead", press: 2, wide: true, misdir: true }
 };
-var RUN_ALIAS = { "Wildcat Power": "Power", "Triple Option": "Inside Zone", "Speed Option": "Outside Zone", "Reverse": "Outside Zone" };
+var RUN_ALIAS = { "Wildcat Power": "Power", "Triple Option": "Inside Zone", "Midline Option": "Inside Zone", "Speed Option": "Outside Zone", "Reverse": "Outside Zone" };
 function buildPlayScript(p, offSlotsRaw, defSlotsRaw) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
   const t = String((p == null ? void 0 : p.type) || "");

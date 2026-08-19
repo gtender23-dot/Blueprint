@@ -163,9 +163,22 @@ hdr('B9 — the ONE shared fits-function');
   const emptyFit = fittingConceptsForFormation('Empty');
   const backNeedy = ['Slip Screen', 'RB Screen', 'Flea Flicker', 'HB Pass', 'Triple Option', 'Speed Option'];
   check(backNeedy.every((c) => !emptyFit.includes(c)), 'Empty (no backs) never offers back-built plays or options');
-  // options need two backs — via a live pkg override where one exists
+  // 2026-08-18 — THE TWO OPTIONS PART WAYS. This used to assert that ONE back
+  // filtered BOTH options out. That was wrong for speed option and the engine
+  // knew it: SPEED_OPTION in sim.js runs the play organically from Spread,
+  // Pistol/RPO and Trips/Bunch, none of which carries two backs. Triple needs
+  // a dive man AND a pitch man; speed is QB-and-pitch-man with no dive, which
+  // is why the resolver's speed branch only rolls keep/pitch. Pin the split.
   const oneBack = filterConceptsForPersonnel(['Triple Option', 'Speed Option', 'Inside Zone'], { RB: 1, WR: 3, TE: 1 });
-  check(!oneBack.includes('Triple Option') && !oneBack.includes('Speed Option') && oneBack.includes('Inside Zone'), 'one back: options filtered, base runs stay');
+  check(!oneBack.includes('Triple Option') && oneBack.includes('Speed Option') && oneBack.includes('Inside Zone'),
+    'one back: TRIPLE filtered (no dive man), SPEED stays, base runs stay');
+  const noBack = filterConceptsForPersonnel(['Triple Option', 'Speed Option', 'Inside Zone'], { RB: 0, WR: 5, TE: 0 });
+  check(!noBack.includes('Triple Option') && !noBack.includes('Speed Option'), 'no backs: BOTH options filtered — nobody to pitch to');
+  // Jet is receiver motion, not a handoff to a back: Empty carries it (the sim
+  // has always run it there — JET_CAPABLE/JET_SLOTS name the two slots), and
+  // Wildcat carries it off a back because Wildcat dresses no receiver at all.
+  check(fittingConceptsForFormation('Empty').includes('Jet Sweep'), 'Empty carries Jet Sweep — the book agrees with JET_CAPABLE');
+  check(fittingConceptsForFormation('Wildcat').includes('Jet Sweep'), 'Wildcat carries Jet Sweep — its jet man is a back');
   const cf = compileFormation(emptyCustomFormation('Bench Look Test'));
   check(!cf.playbook.includes('Wildcat Power') && !cf.playbook.includes('Jet Sweep'), 'customs never offer Wildcat/Jet (the customs-only exclusion)');
   check(cf.playbook.every((c) => (FORMATION_PLAYBOOK[cf.archetype] || []).includes(c)), 'a custom call list stays a strict subset of its archetype book');

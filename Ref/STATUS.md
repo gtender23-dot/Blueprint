@@ -5194,3 +5194,63 @@ no longer owner-blocked** — dispatchability is now governed only by the
 dependency table in `Ref/COHESION_DISPATCH_2026-08-18.md`. Deliberately-left
 files remain uncommitted (~39 PNGs, `_night_full_log.txt`,
 `test_notes_8-16.txt`). NOT pushed.
+
+## 2026-08-19 — PLAY↔FORMATION FIT AUDIT (owner question: "are there any other plays that don't make sense for the formations that allow them?")
+
+Audited every entry of `FORMATION_PLAYBOOK` against
+`fittingConceptsForFormation`, base looks first and then all variations.
+Three findings; the same shape as the front-mix bug — **the engine and the
+book disagreed about what a formation can run, and the book lost.**
+
+1. **Speed option was refused to every one-back look.**
+   `filterConceptsForPersonnel` lumped it with Triple at `backs < 2`. Triple
+   needs a dive man AND a pitch man; speed option is QB-and-pitch-man with no
+   dive, which is exactly why `resolveOptionPlay`'s speed branch only rolls
+   keep/pitch. Meanwhile `SPEED_OPTION` in `sim.js` runs the play organically
+   from Spread, Pistol/RPO and Trips/Bunch — none of which carries two backs.
+   So the sim called a play the book was forbidden to carry. Split the rule:
+   Triple `backs < 2`, Speed `backs < 1`.
+
+2. **Jet Sweep was refused to Empty.** It fell through to the generic "needs a
+   back" rule, but a jet is motion by a RECEIVER. `JET_CAPABLE["Empty"]` is
+   0.1 and `JET_SLOTS["Empty"]` names the two slots that run it. Rule is now
+   "somebody to put in motion" (`wide >= 1 || backs >= 1`) — the `||backs`
+   half matters for **Wildcat**, which dresses no receiver at all and yet has
+   the highest jet rate in the game, motioning `RB_2`. Runtime still decides
+   WHO takes it and still refuses a body the look has dressed as a blocker.
+
+3. **Slip Screen sat in Empty's playbook** — a running-back screen in a
+   formation with no running back. Genuine data error; removed. (The filter
+   had been silently stripping it, so no behaviour changed for the AI; it was
+   the legal-call list that lied.)
+
+**The 32 variation-level exclusions are the system working, not bugs** — Air
+Raid Empty correctly refuses Inside Zone and the RB screens, Single Back Heavy
+(13 personnel, one receiver) correctly refuses the spread passing tree, the
+two-TE looks correctly refuse Four Verts. Verified each against the MERGED
+package (`{...base, ...v.pkg}`, the same merge `formations.js` does).
+
+**Two defects in this session's own midline work, caught by the gate:**
+
+- `play_fidelity_probe` — a called **Midline Option** was recorded as "Triple
+  Option". The concept-rename ternary in `sim.js` knew only speed-vs-triple.
+  Straight breach of the CALL IS THE PLAY mandate; fixed.
+- `card_lint_probe` — Midline Option shipped with no purpose blurb, no card
+  art and no viewer run alias. All three added: the art deliberately keeps
+  BOTH arrows inside (Triple's art flares one to the pitch; midline has no
+  pitch phase), and `RUN_ALIAS` maps it to Inside Zone like Triple.
+
+**Pins moved WITH the fixes** (tripwire convention): `bench_probe` "one back:
+options filtered" → the triple/speed split, plus new pins that Empty and
+Wildcat both carry Jet Sweep; `formation_compose_probe` "options need two
+backs" → Triple needs two, Speed rides on one (a 1-back spread CUSTOM now gets
+speed option for the same reason the built-in Spread does).
+
+**Gates.** Clean build from a temp copy outside the mount. bench · card_lint ·
+formation_compose · option · playbook_root · plan_cohesion (97/0) ·
+play_fidelity · draw_up · help_rule · dead_surface · live_book_call ·
+record_call · save_migration · ai_book_name · plan_side — all green, key set
+×3. `stat_realism_harness` N=500: **only comp% flags**, one of the three
+standing flags; rush yds (150.2) and team INT% (1.90) now read OK, so nothing
+new is off. Playwright tier unavailable in this container as always — the
+browser probes and `_gate.mjs core` are owed on the owner's machine. NOT pushed.

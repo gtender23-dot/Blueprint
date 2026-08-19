@@ -5781,7 +5781,7 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
         covMem.fams[fam] = (covMem.fams[fam] || 0) + 1;
         if (playResult.blitzFired) covMem.blitz++;
       }
-      playResult.concept = playResult.gadget === "reverse" ? "Reverse" : playResult.gadget === "fleaflicker" ? "Flea Flicker" : playResult.gadget === "hbpass" ? "HB Pass" : playResult.optionPhase === "jet" ? "Jet Sweep" : playResult.optionPhase === "draw" ? "Draw" : playResult.optionPhase === "wildcat" ? "Wildcat Power" : ["dive", "keep", "pitch"].includes(playResult.optionPhase) ? optionStyle === "speed" ? "Speed Option" : "Triple Option" : concept.name;
+      playResult.concept = playResult.gadget === "reverse" ? "Reverse" : playResult.gadget === "fleaflicker" ? "Flea Flicker" : playResult.gadget === "hbpass" ? "HB Pass" : playResult.optionPhase === "jet" ? "Jet Sweep" : playResult.optionPhase === "draw" ? "Draw" : playResult.optionPhase === "wildcat" ? "Wildcat Power" : ["dive", "keep", "pitch"].includes(playResult.optionPhase) ? optionStyle === "speed" ? "Speed Option" : optionStyle === "midline" ? "Midline Option" : "Triple Option" : concept.name;
     }
     if (fakeSurprise) playResult.stFake = true;
     fakeSurprise = false;
