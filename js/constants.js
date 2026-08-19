@@ -17,6 +17,15 @@ C = {
   // that table is an EFFICIENCY multiplier, and letting it drive call rate too
   // would double-count (called more often AND better, compounding). [TUNE]
   GOAL_LINE_HEAVY_SHARE: 0.6,
+  // Where a route is CENTRED as a share of the room to the back of the end
+  // zone. The catch point sits in front of the boundary — a fade goes to the
+  // pylon, not to the back line. Only binds near the goal line; at midfield the
+  // room dwarfs every route band and the draw is untouched. [TUNE]
+  REDZONE_ROUTE_CEIL: 0.7,
+  // The over-the-shoulder deep ball needs grass behind the defender. Inside
+  // this much room there is none, so the vdeep band cannot open. [TUNE]
+  VDEEP_MIN_ROOM: 30,
+
   // per-division prestige ceiling (Chunk 5 rescale)
   // Tier-based talent generation (tier: 1=D3, 2=D2, 3=D1)
   // Arrival rebalance: players START ~7 lower than before while POTENTIAL_BAND

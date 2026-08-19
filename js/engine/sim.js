@@ -2871,12 +2871,35 @@ function resolvePassPlay(playType, offPersonnel, defPersonnel, offRoster, defRos
   }
   // identity stage 3: Deep Tracker widens who owns the over-the-shoulder ball
   // (the trait, not just the WR-Deep archetype, opens the vdeep band) —
-  const useVdeep = passDepthKey === "deep" && sep > C.VDEEP_SEP_THRESHOLD && (receiverObj._gameArch === "WR-Deep" || traitLv(receiverObj, "deepTracker") > 0) && Math.random() < C.VDEEP_PROB * (receiverObj._gameArch === "WR-Deep" ? 1 : 0.4 * traitLv(receiverObj, "deepTracker")) && !(!globalThis.__noCovFamilies && (defPlan == null ? void 0 : defPlan.covFamilyEff) === "Prevent");
+  const useVdeep = passDepthKey === "deep" && sep > C.VDEEP_SEP_THRESHOLD && (receiverObj._gameArch === "WR-Deep" || traitLv(receiverObj, "deepTracker") > 0) && Math.random() < C.VDEEP_PROB * (receiverObj._gameArch === "WR-Deep" ? 1 : 0.4 * traitLv(receiverObj, "deepTracker")) && !(!globalThis.__noCovFamilies && (defPlan == null ? void 0 : defPlan.covFamilyEff) === "Prevent") && (100 - fieldPos) + 10 >= C.VDEEP_MIN_ROOM;
   const depthBand = useVdeep ? "vdeep" : passDepthKey === "short" ? "short" : passDepthKey === "medium" ? "medium" : "deep";
-  const routeYds = Math.max(0, Math.round(randNorm(
-    C.PASS_YARDS[depthBand].mean,
-    C.PASS_YARDS[depthBand].sd
-  )));
+  // ── THE FIELD SHRINKS (2026-08-19) ───────────────────────────────────────
+  // routeYds was drawn from C.PASS_YARDS with no idea where the ball was, so
+  // the route tree at the 3-yard line was statistically IDENTICAL to the one
+  // at midfield (deep attempts 10% inside the 5 vs 11% at 51+). Measured
+  // consequence: 12.5% of throws inside the 10 travelled past the BACK of the
+  // end zone — and every single one of them was completed, i.e. caught out of
+  // bounds. The longest completion from inside the 5 flew 31 air yards, some
+  // eighteen yards beyond the back line.
+  //
+  // The honest model is not a clamp — a clamp would pile every deep call up
+  // against the boundary. Real coordinators do not call routes the field
+  // cannot hold; the tree itself compresses, which is why the red-zone game is
+  // fades, slants and picks. So the DISTRIBUTION is compressed before the draw
+  // and the physical boundary is enforced after it. Away from the goal line
+  // roomToBackLine is large and none of this binds — a midfield snap draws
+  // exactly as it always did.
+  //
+  // The end zone is TEN yards deep, so a legal catch reaches (100 - fieldPos)
+  // + 10. Routes are centred well in front of that: you throw the fade to the
+  // pylon, not to the back line.
+  const roomToBackLine = (100 - fieldPos) + 10;
+  const _bandMean = C.PASS_YARDS[depthBand].mean;
+  const _bandSd = C.PASS_YARDS[depthBand].sd;
+  const routeYds = Math.max(0, Math.min(roomToBackLine, Math.round(randNorm(
+    Math.min(_bandMean, roomToBackLine * C.REDZONE_ROUTE_CEIL),
+    Math.min(_bandSd, Math.max(1, roomToBackLine * 0.25))
+  ))));
   const pursuitDefs = (defPersonnel.LB || []).concat(defPersonnel.DB || []).map((id) => defRoster.find((p) => p.id === id)).filter(Boolean);
   const { yacYds, tacklerId, assistId } = geoYAC(receiverObj, coveringDef, pursuitDefs, sep, null, passDepthKey);
   result.complete = true;

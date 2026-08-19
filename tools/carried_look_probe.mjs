@@ -323,6 +323,50 @@ hdr('L8 — GOAL TO GO: you never need more yards than the end zone is away');
     `${heavyUnmatched}/${heavyTot} unmatched`);
 }
 
+// ── §9 the field shrinks ────────────────────────────────────────────────────
+hdr('L9 — the route tree cannot outrun the end zone');
+{
+  // routeYds was drawn from C.PASS_YARDS with no idea where the ball was, so
+  // the tree at the 3 was statistically IDENTICAL to the one at midfield
+  // (deep attempts 10% inside the 5 vs 11% at 51+). Measured consequence:
+  // 12.5% of throws inside the 10 flew past the BACK of the end zone and every
+  // one was completed — caught out of bounds. Longest from inside the 5: 31
+  // air yards, eighteen beyond the back line.
+  const sim = src('js/engine/sim.js');
+  check(/roomToBackLine/.test(sim), 'the pass resolver knows how much field is left');
+  check(/\(100 - fieldPos\) \+ 10/.test(sim), 'the boundary is the BACK of the end zone — ten yards deep, not the goal line');
+  check(/VDEEP_MIN_ROOM/.test(sim), 'the over-the-shoulder deep ball needs grass to exist');
+
+  const { ROSTER_TARGETS, CLASS_YEARS } = await import('../js/constants.js');
+  const { createPlayer } = await import('../js/engine/player.js');
+  const { buildDepthChart, defaultGameplan } = await import('../js/engine/world.js');
+  const { simulateGame } = await import('../js/engine/sim.js');
+  const realRnd = Math.random;
+  const mul = (sd) => { let t = sd >>> 0; return () => { t += 0x6D2B79F5; let r = Math.imul(t ^ t >>> 15, 1 | t); r = r + Math.imul(r ^ r >>> 7, 61 | r) ^ r; return ((r ^ r >>> 14) >>> 0) / 4294967296; }; };
+  const rost = (id) => { const r = []; for (const [ps, c] of Object.entries(ROSTER_TARGETS)) for (let i = 0; i < c; i++) { const x = createPlayer(ps, CLASS_YEARS[i % 4], 1); x.schoolId = id; r.push(x); } return r; };
+  let atts = 0, past = 0, maxAir = 0;
+  for (let i = 0; i < 25; i++) {
+    Math.random = mul(6200 + i);
+    try {
+      const rH = rost('H'), rA = rost('A');
+      const gpH = { ...defaultGameplan() }, gpA = { ...defaultGameplan() };
+      const res = simulateGame({ id: 'H' }, { id: 'A' }, rH, rA, buildDepthChart(rH, gpH), buildDepthChart(rA, gpA), gpH, gpA);
+      for (const d of res.drives || []) for (const pl of d.plays || []) {
+        if (pl.fieldPos == null || !pl.offFormation || !(pl.down >= 1 && pl.down <= 4)) continue;
+        if (!(pl.type || '').startsWith('pass') || pl.airYds == null) continue;
+        const ytg = 100 - pl.fieldPos;
+        if (ytg > 10) continue;
+        atts++;
+        if (pl.airYds > ytg + 10) past++;
+        if (ytg <= 5) maxAir = Math.max(maxAir, pl.airYds);
+      }
+    } finally { Math.random = realRnd; }
+  }
+  check(atts > 20, `sampled throws inside the 10 (${atts})`);
+  check(past === 0, 'NO throw is caught past the back of the end zone', `${past}/${atts}`);
+  check(maxAir === 0 || maxAir <= 15, 'the longest throw from inside the 5 fits the field', `${maxAir} air yds`);
+}
+
 console.log(`\nCARRIED LOOK PROBE — ${pass} pass, ${fail} fail`);
 console.log(fail ? 'CARRIED LOOK PROBE FAIL' : 'CARRIED LOOK PROBE PASS');
 process.exit(fail ? 1 : 0);

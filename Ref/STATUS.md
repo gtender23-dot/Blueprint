@@ -5487,3 +5487,72 @@ metric circular. Filter to snaps with a real down and an offensive formation.)
 play_fidelity · plan_cohesion (97/0) · bench · convert_brain · stage4 ·
 viewer_pace · card_lint · record_call · save_migration · live_book_call ·
 option · def_stress all green; clean build. NOT pushed.
+
+### 2026-08-19 — THE SHRINKING FIELD, part 1: the route tree (owner: "does this sim account for the shrinking field and the pass game in the redzone")
+
+**Answer was: almost not at all.** One mechanism existed in the whole engine —
+screen YAC collapses inside the 20. Nothing else.
+
+**The pass defect, measured.** `routeYds` is drawn from `C.PASS_YARDS` with no
+knowledge of field position, so the route tree at the 3-yard line was
+statistically IDENTICAL to the one at midfield (deep attempts 10% inside the 5
+vs 11% at 51+; completion 48.7% vs 53.4%). Consequence: **54 of 431 throws
+inside the 10 (12.5%) travelled past the BACK of the end zone, and all 54 were
+completed** — caught out of bounds. Longest completion from inside the 5 flew
+**31 air yards**, eighteen beyond the back line.
+
+*(Measurement trap, recorded: the first pass at this flagged 234 violations
+using `airYds > yardsToGoal`. Wrong — the end zone is TEN yards deep, so
+throwing past the goal line is legal. The real boundary is `ytg + 10`, which
+gives 54. Same bug, a quarter the size.)*
+
+**FIXED — the tree compresses, it does not clamp.** A clamp would pile every
+deep call against the boundary; real coordinators don't call routes the field
+can't hold. The distribution is compressed before the draw
+(`C.REDZONE_ROUTE_CEIL`, centred at 70% of the room to the back line) and the
+physical boundary enforced after it. The over-the-shoulder vdeep band now needs
+real grass (`C.VDEEP_MIN_ROOM`) — its room check is appended at the END of the
+`&&` chain on purpose, so the `Math.random()` above it is still drawn exactly
+when it was and seeded worlds do not shift. Result: **throws past the back line
+54 → 0**; longest from inside the 5 **31 → 14** air yards.
+
+**But it is only ~3 points of the ~15-point gap:** drive-level TD inside the 5
+went 88.5% → 85.4%. The run game is the driver (run 62.6% TD inside the 5 vs
+pass 47.1%), exactly as the split predicted. **Measuring between the two halves
+was worth it** — tuning the run first would have been tuning against a number
+about to move.
+
+**THREE RUN LEVERS TRIED AND REVERTED — none of them works, and the reasons
+are the useful part.** Nothing balance-related shipped without numbers.
+
+1. **`compressedBox` multiplier on offensive unit strength.** Moved the
+   goal-line stuff rate 18% → 17%. At THREE TIMES the magnitude (0.3 → 0.9) it
+   reached 20%. Reason: `offUnit` only touches the run through
+   `contextBoost = (offUnit - defUnit) / C.K_CONTEXT`, and K_CONTEXT is **145** —
+   a 30% cut to offUnit is a ~0.12 logistic nudge. Near-placebo. Removed.
+2. **Safeties joining the existing box count.** The engine DOES model box count
+   (`excessInBox = boxDefenders - blockers - 1` → `boxAdj` → `laneQuality`) but
+   counts only DL + LB, so safeties never join no matter where the ball is.
+   Adding them changed nothing — **even at six safeties**. Reason: goal-line
+   offenses field HEAVY personnel, and Jumbo brings 5 OL + 3 TE + FB = 9
+   blockers against a 9-man box, so the count is never actually stacked. Good
+   football logic, wrong lever. Also checked the case it was built for (LIGHT
+   personnel, inside runs near the goal): 13% vs 14% stuffed, ypc 2.88 both
+   ways — inert there too. Reverted, including its per-snap context channel.
+3. (implicit) **`FORMATION_SITUATIONAL`** — still not repurposed to drive call
+   rate; it is an efficiency table and doing so would double-count.
+
+**WHERE THE REMAINING GAP LIVES — start here next session.** Not in unit
+strength, not in box count. The goal-line run outcome is decided inside
+`runFit(...)` via `laneQuality` and the level lists, and `BOXCOUNT_CAP` (0.18)
+bounds what the count can ever do. The gap to close, against real per-snap
+rates: from the 1 **62.5% vs 53.5%**, from the 2 **56.5% vs 42.4%**, and the
+SHAPE — real football falls 11.1 points from the 1 to the 2, the sim falls ~5.
+Compressing the yardage DISTRIBUTION reproduces that steepness for free;
+a flat penalty never will.
+
+**Gates.** Clean build; `carried_look_probe` grown to §9 / 66 checks, green ×3;
+play_fidelity · plan_cohesion (97/0) · bench · viewer_pace · viewer_throwcatch ·
+card_lint · record_call · save_migration · convert_brain · stage4 · option all
+green. Bands N=500: points 26.7, rush **155.2 OK**, INT% 1.92, only the standing
+comp% flag — nothing new off, and rush came back inside. NOT pushed.
