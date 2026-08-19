@@ -4,6 +4,7 @@ import { FRONT_PRESSURE_SIGNATURE } from './formations.js';
 import { derivedArchetype } from './player.js';
 import { defaultWeeklyPlan } from './situations.js';
 import { buildDepthChart } from './world.js';
+import { adoptPlan, setOverlay } from './teamplan.js';
 import { clamp2, randInt3, randNorm } from '../utils.js';
 
 function pickFormations(bucket, mobile, wrDeepBias) {
@@ -276,7 +277,14 @@ function setAIGameplan(school) {
   // function — and widen the spread into bend/house, which the old path never
   // produced. That is a tuning change, not a writer retirement.)
   const aiAggrStop = aggrStopFromBlitzPct(15 + Math.round(Math.random() * 20));
-  school.gameplan = __spreadProps(__spreadValues({
+  // ── D17 BATCH B: the staff AUTHORS A BOOK, it does not scribble on the bag ──
+  // This was the single biggest wholesale write in the game: one assignment
+  // replacing school.gameplan outright, for every school in the world, with the
+  // books left to be re-derived from it later by state.js's trailing
+  // synthesizeLeaguePlans. The plan is authored exactly as before — same fields,
+  // same order, same RNG draws — and then adopted as book + defbook + overlay,
+  // so the parts ARE the staff's authorship rather than a snapshot of it.
+  const _aiPlan = __spreadProps(__spreadValues({
     offFormations,
     defBaseFront,
     tendency,
@@ -366,8 +374,10 @@ function setAIGameplan(school) {
   // [Playbook-Root Stage 2] Name the staff's books from the scheme it just
   // authored. Deterministic + metadata-only (see aiOffenseSchemeName). Synthesis
   // (teamplan.js) reads these into school.book.name / school.defbook.name.
-  school.gameplan._playbookName = aiOffenseSchemeName(primaryFormation, bucket);
-  school.gameplan._defbookName = aiDefenseSchemeName(defBaseFront, school.gameplan.coverageScheme);
+  _aiPlan._playbookName = aiOffenseSchemeName(primaryFormation, bucket);
+  _aiPlan._defbookName = aiDefenseSchemeName(defBaseFront, _aiPlan.coverageScheme);
+  // One split, one compile — cheaper than the synthesis pass it replaces.
+  adoptPlan(school, _aiPlan, { source: "staff" });
 }
 // PASS 2 (Aug 2026): AI coordinators author SIGNATURE CALLS — two named
 // packages built from the staff's base front and temperament, weighted onto
@@ -469,12 +479,19 @@ function ensureAISituations(school) {
   const lean = (_a = PASS_TENDENCY[gp.tendency || "Balanced"]) != null ? _a : 0.5;
   const bucket = lean <= 0.35 ? "runHeavy" : lean <= 0.44 ? "run" : lean >= 0.65 ? "passHeavy" : lean >= 0.56 ? "pass" : "balanced";
   const agg = (_d = (_c = (_b = school.coach) == null ? void 0 : _b.personality) == null ? void 0 : _c.aggression) != null ? _d : 0.5;
-  gp.situations = buildAISituations(bucket, gp.offFormations || [{ id: "Single Back", weight: 100 }], agg);
+  // D17 BATCH B: situations are a TEAM field, so they belong to the controller
+  // overlay rather than being poked onto the flat bag.
+  setOverlay(school, { situations: buildAISituations(bucket, gp.offFormations || [{ id: "Single Back", weight: 100 }], agg) });
 }
 function aiSetWeeklyReaction(school, opponent, iq = "varsity") {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i;
   if (!(school == null ? void 0 : school.gameplan)) return;
   ensureAISituations(school);
+  // D17 BATCH B: the two WEEKLY plan fields this function sets (surpriseOnside,
+  // _gadgetWk) are collected here and written through setOverlay ONCE at the
+  // end. Batched deliberately: each setOverlay recompiles the plan, and this
+  // runs for every school every week, so one write per call instead of two.
+  const _wkOverlay = {};
   const wp = defaultWeeklyPlan();
   const IQ = (_a = COACH_IQ[iq != null ? iq : "varsity"]) != null ? _a : COACH_IQ.varsity;
   if (IQ.skip && Math.random() < IQ.skip) {
@@ -497,7 +514,7 @@ function aiSetWeeklyReaction(school, opponent, iq = "varsity") {
   // stale arm never lingers; everyone else stays "never" — today's game.
   {
     const _pGap = ((opponent == null ? void 0 : opponent.prestige) || 1) - ((school == null ? void 0 : school.prestige) || 1);
-    school.gameplan.surpriseOnside = _pGap >= 2 && agg > 0.62 && Math.random() < 0.15 ? "arm" : "never";
+    _wkOverlay.surpriseOnside = _pGap >= 2 && agg > 0.62 && Math.random() < 0.15 ? "arm" : "never";
   }
   // PASS 6 (trick-play brain, weekly layer): a gambler staff facing an
   // aggressive defense — heavy blitz numbers or a hot-headed DC — dials up a
@@ -507,7 +524,7 @@ function aiSetWeeklyReaction(school, opponent, iq = "varsity") {
     var _oaggA, _oaggB, _oaggC;
     const _oppAgg = (_oaggC = (_oaggB = (_oaggA = opponent == null ? void 0 : opponent.coach) == null ? void 0 : _oaggA.personality) == null ? void 0 : _oaggB.aggression) != null ? _oaggC : 0.5;
     const _oppBlitz = ((opponent == null ? void 0 : opponent.gameplan) == null ? void 0 : opponent.gameplan.blitzPct) || 20;
-    school.gameplan._gadgetWk = agg > 0.6 && (_oppAgg > 0.6 || _oppBlitz >= 30) ? randInt3(2, 4) * IQ.mult : 0;
+    _wkOverlay._gadgetWk = agg > 0.6 && (_oppAgg > 0.6 || _oppBlitz >= 30) ? randInt3(2, 4) * IQ.mult : 0;
   }
   if (lean >= 0.65 && agg > 0.6) wp.blitzShift = Math.round(8 * IQ.mult);
   const oppOptShare = (((_g = opponent == null ? void 0 : opponent.gameplan) == null ? void 0 : _g.offFormations) || []).filter((f) => f.id === "Wishbone" || f.id === "Flexbone").reduce((s, f) => s + (f.weight || 0), 0);
@@ -524,6 +541,7 @@ function aiSetWeeklyReaction(school, opponent, iq = "varsity") {
   if (oppMotionShare >= 60 || oppOptShare >= 25 || oppQBRun >= 15) wp.covStyle = "zone";
   if (!wp.optionKey && oppQBRun >= 15) wp.optionKey = "qb";
   else if (lean >= 0.56 && agg > 0.5 && Math.random() < 0.5) wp.covStyle = "man";
+  if (Object.keys(_wkOverlay).length) setOverlay(school, _wkOverlay);
   school.weeklyPlan = wp;
 }
 function avgRating(roster, pos) {

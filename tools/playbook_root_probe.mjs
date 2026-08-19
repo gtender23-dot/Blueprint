@@ -171,13 +171,18 @@ function twoArms(seedIdx) {
   const mergedA = applyPlaybookToGameplan(loadPb, a.gameplan);
   const mergedB = applyPlaybookToGameplan(loadPb, b.gameplan);
   ok(sameGP(mergedA, mergedB), 'BATCH A: the two arms start from identical merges');
+  // Snapshot the book BEFORE either arm loads, so "stale" can be stated exactly
+  // as "unchanged" rather than "does not happen to equal the loaded book" — an
+  // AI staff sometimes already runs the formation being loaded, and the looser
+  // form of this pin failed on that coincidence roughly one run in three.
+  const bookBefore = JSON.parse(JSON.stringify(a.book.plan.offFormations));
   const oldGp = JSON.parse(JSON.stringify(oldWriterIdiom(a, mergedA)));
   const newGp = JSON.parse(JSON.stringify(adoptOffPlan(b, mergedB)));
   ok(sameGP(oldGp, newGp), 'BATCH A: offense load — new path ≡ old wipe-and-assign path');
   ok(sameGP(newGp, mergedB), 'BATCH A: offense load — the compiled plan ≡ the merge it was given');
-  // THE BUG THE BATCH EXISTS TO FIX: the old path left the book stale.
-  ok(a.book.plan.offFormations[0].id !== 'Trips/Bunch',
-    'BATCH A: the OLD path left school.book STALE (the defect being retired)');
+  // THE BUG THE BATCH EXISTS TO FIX: the old path left the book untouched.
+  ok(sameGP(a.book.plan.offFormations, bookBefore),
+    'BATCH A: the OLD path left school.book UNCHANGED by the load (the defect being retired)');
   ok(b.book.plan.offFormations[0].id === 'Trips/Bunch',
     'BATCH A: the NEW path re-points school.book at what was actually loaded');
   ok(sameGP(compileTeamPlan(b), b.gameplan), 'BATCH A: compile ≡ gameplan after an offense load');

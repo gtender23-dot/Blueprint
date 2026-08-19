@@ -486,6 +486,88 @@ D16's `_liveTempo` hunks in the same file deliberately left unstaged**) ·
 `tools/plan_cohesion_probe.mjs` (**partial-staged — §2 only; D13/D16 own §5 and
 the import line**) · `Ref/STATUS.md` (this entry + the header). NOT pushed.
 
+## 2026-08-18 — D17 · BATCH B: THE AI AUTHORS A BOOK (the biggest wholesale write retired)
+## NODE-GATED ×3 · BAND-CHECKED · ⚠ `_equiv_walk` vs the Batch A build is OWED-LOCAL
+
+Second batch of the writer-graph collapse. Batch A converted the LOAD paths;
+this converts the AI, which is the largest writer in the game by volume — it
+authors a plan for every school in the world (342 in a default league) and
+adjusts two fields for every school every week.
+
+**What changed:**
+1. **`setAIGameplan` authors a BOOK, not a bag.** The single wholesale
+   `school.gameplan = {…}` assignment is gone: the staff builds the same plan —
+   same fields, same order, same RNG draws — into a local, then adopts it as
+   book + defbook + overlay via the new **`adoptPlan`** verb. The books ARE the
+   staff's authorship now instead of a snapshot re-derived from the bag
+   afterwards.
+2. **`ensureAISituations` → `setOverlay`.** Situations are a TEAM field, so
+   they belong to the controller overlay.
+3. **`aiSetWeeklyReaction` → one batched `setOverlay`.** Its two plan fields
+   (`surpriseOnside`, `_gadgetWk`) are collected and written once at the end.
+   Batched on purpose — each `setOverlay` recompiles, and this runs per school
+   per week (see the cost note below).
+4. **`state.js`'s trailing `synthesizeLeaguePlans` is now a GUARD**, kept one
+   release. It *was* the gameplan→book inversion performed in bulk. Every
+   school now arrives already carrying its parts, so `synthesizeTeamPlan`
+   returns early and the call is a no-op; it stays as a safety net for the
+   writers Batches C/D haven't converted. **Deliberately still not forced** —
+   forcing would re-split the flat bag and overwrite the authored books with a
+   snapshot of themselves, which is precisely the inversion being retired.
+
+**`adoptPlan` (new, teamplan.js):** the whole-plan twin of Batch A's two
+helpers — one split, ONE compile, for a writer that authors an entire plan at
+once. Used by the AI here; the whole-plan library snapshot could fold into it
+later.
+
+**COST, MEASURED (not assumed).** Every `setOverlay` deep-clones the plan
+(`_clone` is `JSON.parse(JSON.stringify)`), and the weekly writers run league-
+wide, so this was checked before converting rather than after: an AI plan is
+**2.3 KB**, a recompile is **0.07 ms**, and a full league's weekly overlay
+writes add **~0.36 s per simulated season** (342 schools × 15 weeks). Authoring
+the whole league costs 109 ms and the synthesis pass it replaces cost 24 ms.
+Acceptable. Worth re-measuring in Batch C, where the PLAYER's plan — which
+carries full formation sheets and is far larger than an AI's — gets recompiled
+on every dial write.
+
+**Gates (node):** `playbook_root_probe` **×8 green** · `plan_side_probe` ×3 ·
+`plan_cohesion_probe` ×3 (87/0) · `save_migration_check` ×3 ·
+`book_update_probe` · `worldgen_check` · `tendency_probe` · `defbook_probe` ·
+`defsheet_probe` · `multicoach_week_probe` 16/0 · `commit_rate_test` exit 0 ·
+clean build (13/13, cache `cfb-dynasty-60e5859b56`) · **`stat_realism` N=250 at
+AI mix: comp% standing flag only, nothing new** (rush 150.4 OK, INT 2.11 OK,
+pts 26.5 OK) — the band check matters here because these plans drive every
+simulated game in the world.
+
+**⚠ A PROBE PIN OF MINE WAS WRONG, AND FLAKED ~1 RUN IN 3.** §10's stale-book
+pin asserted the old path's book "is not the formation we loaded". But an AI
+staff sometimes *already* runs that formation, so the pin failed on
+coincidence — nothing to do with the product. It now states the exact claim:
+the old path leaves the book **unchanged** (snapshot compared before/after).
+Green ×8 since. Flagging it because it landed inside the Batch A commit too:
+if a Batch A gate run reds on that one line, this is why.
+
+**⚠ OWED-LOCAL — the defining gate.** Batch B is a pure refactor and must be
+byte-identical. Regenerate the baseline from the Batch A build first (the old
+`walk-head.txt` predates the coordinator dossier), then walk and compare.
+**Expect diffs on the build-id snapshots ONLY.**
+
+**OWNER CHECKLIST (D17 Batch B):**
+- [ ] `Copy-Item walk-A.txt walk-head.txt` (refresh the baseline), then
+  `node tools/build.mjs`, `node tools/_equiv_walk.mjs dist/index.html > walk-B.txt`,
+  `Compare-Object (Get-Content walk-head.txt) (Get-Content walk-B.txt)`.
+- [ ] `node tools/_gate.mjs core`, and a **night** run before any deploy — the
+  night giants exercise AI plans hardest.
+- [ ] Browser: play a season and confirm opponents still vary — different
+  fronts, tempos and call sheets week to week. Batch B rewrote how every AI
+  staff's plan is stored, so "do the other teams still feel different from each
+  other" is the human version of this gate.
+- [ ] Batches C (every Game Plan dial — the inversion flip) and D (stragglers)
+  are NOT started.
+
+**Commit scoped to:** `js/engine/teamplan.js` · `js/engine/ai.js` ·
+`js/state.js` · `tools/playbook_root_probe.mjs` · `Ref/STATUS.md`. NOT pushed.
+
 ## 2026-08-18 — D17 · BATCH A: THE LOAD PATHS ROUTE THROUGH THE VERBS (the stale-book bug fixed)
 ## NODE-GATED ×3 · ✅ **WALK-GATED — BYTE-IDENTICAL (owner ran it, see below)**
 

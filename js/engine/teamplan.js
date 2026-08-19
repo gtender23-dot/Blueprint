@@ -365,6 +365,20 @@ function setOverlay(school, patch) {
 // setOverlay MERGES its patch, which is safe here precisely because both
 // loaders start from a clone of the current plan and only ever ADD or overwrite
 // keys — neither removes one, so there is nothing for a merge to strand.
+// D17 Batch B: the WHOLE-PLAN twin of the two above. A writer that authors an
+// entire plan in one go — the AI staff, a full library snapshot — sets all
+// three parts from it. One split and ONE compile rather than two of each, which
+// matters here: this runs for every school in a world (342 in a default league)
+// and again whenever a staff re-authors.
+function adoptPlan(school, plan, opts = {}) {
+  if (!school) return {};
+  const parts = splitTeamPlan(plan, { schoolName: school.name || null, ...opts });
+  school.book = parts.book;
+  school.defbook = parts.defbook;
+  school.planOverlay = parts.overlay;
+  school.gameplan = compilePlanParts(parts.book, parts.defbook, parts.overlay);
+  return school.gameplan;
+}
 function adoptOffPlan(school, merged, opts = {}) {
   if (!school) return {};
   const parts = splitTeamPlan(merged, { schoolName: school.name || null, ...opts });
@@ -396,6 +410,7 @@ export {
   TEAMPLAN_SCHEMA_VERSION,
   OFF_FIELDS,
   DEF_FIELDS,
+  adoptPlan,
   adoptOffPlan,
   adoptDefPlan,
   splitTeamPlan,

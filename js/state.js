@@ -288,11 +288,20 @@ function finishNewGame(world, school, first, last, custom) {
       initBudget(s.coach, slots, 0, s);
     }
   }
-  // [Playbook-Root Stage 1] Every school now carries the named object model —
-  // book / defbook / planOverlay — synthesized from its finalized gameplan. This
-  // is byte-neutral: the gameplan object each writer produced is untouched, and
-  // compileTeamPlan(school) deep-equals it by construction. Run last, after every
-  // gameplan writer (AI, wizard, applyStart) has settled.
+  // [Playbook-Root Stage 1 → D17 Batch B] This was the pass that gave every
+  // school its named object model, by re-deriving book/defbook/overlay FROM the
+  // flat gameplan each writer had produced — i.e. the gameplan→book inversion,
+  // performed in bulk, once per world.
+  //
+  // It is now a GUARD, not the mechanism: `setAIGameplan` adopts its authored
+  // plan as the parts directly (adoptPlan), and every load path adopts its own
+  // (Batch A), so by the time control reaches here every school already carries
+  // its parts and `synthesizeTeamPlan` returns early — this call is a no-op for
+  // them. It stays one release as a safety net for any writer not yet converted
+  // (Batches C/D) and for worlds built by paths this refactor hasn't walked yet.
+  // NOTE it is deliberately NOT forced: forcing would re-split the flat bag and
+  // overwrite the authored books with a snapshot of themselves, which is exactly
+  // the inversion being retired.
   try {
     synthesizeLeaguePlans(world);
   } catch (e) {
