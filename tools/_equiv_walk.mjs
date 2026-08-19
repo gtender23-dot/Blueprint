@@ -57,8 +57,20 @@ const OPTIONS = ['[data-ob-state]', '[data-ob-school]',
 const NEXT_IDS = ['ob-next-0', 'ob-next-2', 'ob-next-3', 'ob-next-4', 'ob-start'];
 // Screens to visit once the dynasty exists, exercising the reconciled views.
 // Ordered so each group is entered before its sub-tabs are asked for.
-const TOUR = ['team', 'roster', 'depthchart', 'practice',
-              'program', 'coachoffice', 'schedule', 'standings',
+// 2026-08-18: three entries were naming controls that do not exist, so three
+// screens were being SKIPPED with a "(no nav control)" line that reads like a
+// note and is actually a hole in the gate. The sidebar renders
+// `data-nav="${item.navTo || item.id}"` (app.js NAV_ITEMS), so the live names
+// are the navTo targets, not the item ids:
+//   'team'       → the item's navTo is "roster" (already toured separately),
+//                  so the entry was a duplicate that could never match.
+//   'coachoffice'→ the screen is "program" (label "Coach's Office").
+//   'standings'  → NOT a sidebar destination at all; it exists as a link on the
+//                  DASHBOARD (dashboard.js "Full →" / "Standings"), so it is
+//                  only clickable from there — hence the hop below.
+const TOUR = ['roster', 'depthchart', 'practice',
+              'program', 'schedule',
+              'dashboard', 'standings',
               'statsgroup', 'stats', 'awards', 'history',
               'gameplan', 'recruiting', 'settings'];
 
