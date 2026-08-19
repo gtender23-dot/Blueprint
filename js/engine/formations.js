@@ -69,6 +69,41 @@ function resolvePersonnel(formationId, depthChart, varKey = null) {
   }
   return personnel;
 }
+// ── THE RUSH BACKER (the "Jack") — 2026-08-19 ───────────────────────────────
+// A 3-4 rushes FOUR: three down linemen and ONE designated rush backer. The
+// other outside backer drops. The engine had no such concept — it folded BOTH
+// OLBs into the rush group and relied on each independently rolling the 18%
+// fire-zone bail, so the front sent five on 69% of snaps with nothing called
+// (measured; Ref/PRESSURE_REDESIGN_2026-08-19.md finding 8). "Blitz = 5+
+// rushers", the premise of the whole pressure model, was therefore FALSE for
+// 3-4 and Penny.
+//
+// The front's OWN role list is the source of truth — FRONT_ROLES[front].OLB
+// now reads ["OLB-Rush","OLB-Cover"], so the DATA says who rushes and no new
+// table is needed. This knowledge used to be restated in THREE places (sim.js
+// composedFrontRoles, fieldassign.js resolveDefField, and RUSH_SLOTS below);
+// all three now derive from here.
+function rushOlbCount(frontId) {
+  const roles = (FRONT_ROLES[frontId] || {}).OLB || [];
+  // ONLY "OLB-Rush" is a down rusher. "OLB-Blitz" is a COVERAGE backer who is a
+  // blitz candidate — a different job, and precisely the distinction this whole
+  // redesign turns on. Conflating them made the 4-3 rush five (measured).
+  return roles.filter((r) => /^OLB-Rush$/i.test(r)).length;
+}
+// Split a front's OLBs into the men who RUSH and the men who DROP. The Jack is
+// the better pass rusher on the field — what a real staff does — so it needs no
+// coach input, and a blitzer list can override it by name later.
+function splitRushOlbs(frontId, olbIds, playerOf) {
+  const ids = olbIds || [];
+  const n = rushOlbCount(frontId);
+  if (!n) return { jacks: [], cover: [...ids] };
+  if (ids.length <= n) return { jacks: [...ids], cover: [] };
+  const scored = ids.map((id) => {
+    const pl = playerOf ? playerOf(id) : null;
+    return { id, v: pl ? roleRating(pl, "OLB-Rush") : 0 };
+  }).sort((a, b) => b.v - a.v || String(a.id).localeCompare(String(b.id)));
+  return { jacks: scored.slice(0, n).map((x) => x.id), cover: scored.slice(n).map((x) => x.id) };
+}
 function resolveDefPersonnel(frontId, depthChart, roster = null) {
   // Per-front position counts moved to constants.js (DEF_FRONT_COUNTS,
   // scheme-aware-roles pass Aug 2026) so the role/recruiting helpers read the
@@ -141,7 +176,12 @@ function resolveDefPersonnel(frontId, depthChart, roster = null) {
   };
   const DE = fill("DE"), DT = fill("DT"), OLB = fill("OLB"), ILB = fill("LB"), CB = fill("CB"), S = fill("S");
   const rushSlots = RUSH_SLOTS[frontId] || RUSH_SLOTS["4-3"];
-  const slotMap2 = { DE, DT, OLB, LB: ILB, CB, S };
+  // Only the JACK rushes — the other OLB is a coverage backer. RUSH_SLOTS still
+  // says a 3-4 rushes its OLBs; HOW MANY comes from the front's role list.
+  const _rp = roster ? (id) => roster.find((x) => x.id === id) || null : null;
+  const _split = splitRushOlbs(frontId, OLB, _rp);
+  const _coverOlb = rushSlots.includes("OLB") ? _split.cover : [];
+  const slotMap2 = { DE, DT, OLB: _split.jacks, LB: ILB, CB, S };
   const DL = rushSlots.flatMap((k) => slotMap2[k]);
   return {
     // Granular positions (UI, roles, future features):
@@ -154,8 +194,10 @@ function resolveDefPersonnel(frontId, depthChart, roster = null) {
     // Composed units (consumed by sim logic — DO NOT REMOVE):
     // LB keeps its historical semantic: ALL coverage backers on the field
     // (true LBs first so box-fit logic prefers thumpers; non-rushing OLBs
-    // join them). In the 3-4 the OLBs rush, so LB = the two ILBs.
-    LB: rushSlots.includes("OLB") ? ILB : [...ILB, ...OLB],
+    // join them). 2026-08-19: in a 3-4 only the JACK rushes, so the OTHER
+    // outside backer belongs here — he is a coverage player, and that is what
+    // makes the front a four-man rush instead of a permanent five.
+    LB: rushSlots.includes("OLB") ? [...ILB, ..._coverOlb] : [...ILB, ...OLB],
     DL,
     // pass-rush unit (front-dependent: 3-4 includes OLBs)
     DB: [...CB, ...S]
@@ -494,4 +536,4 @@ SUB_CHAIN = {
   P: ["K"]
 };
 
-export { normalizeFrontMix, carriedDefFronts, FRONT_PRESSURE_SIGNATURE, FRONT_SIG_LABEL, PERSONNEL_CLASSES, defUnitStrengthSchemeFit, formationVariation, getDefWeights, getMatchupEdge, getOffWeights, getSituationalMod, offPersonnelClass, offPersonnelOf, offUnitStrengthRoles, pickedVariation, resolveDefPersonnel, resolvePersonnel, rollFormation, rollFormationEntry, schemeAdjustedOVR, selectDefFront, variationPassLeanDelta, variedPackage };
+export { normalizeFrontMix, carriedDefFronts, rushOlbCount, splitRushOlbs, FRONT_PRESSURE_SIGNATURE, FRONT_SIG_LABEL, PERSONNEL_CLASSES, defUnitStrengthSchemeFit, formationVariation, getDefWeights, getMatchupEdge, getOffWeights, getSituationalMod, offPersonnelClass, offPersonnelOf, offUnitStrengthRoles, pickedVariation, resolveDefPersonnel, resolvePersonnel, rollFormation, rollFormationEntry, schemeAdjustedOVR, selectDefFront, variationPassLeanDelta, variedPackage };

@@ -2069,7 +2069,7 @@ FRONT_ROLES = {
   // its own layout labels the second slot NT); sub-package interiors are
   // DT-Quick penetrators (pass-rush specialists), not base-down anchors.
   "4-3": { DE: ["DE-Speed", "DE-Power"], DT: ["DT-3tech", "DT-NT"], OLB: ["OLB-Blitz", "OLB-Cover"], LB: ["LB-Thumper"], CB: ["CB-Press", "CB-Press"], S: ["S-Free", "S-Strong"] },
-  "3-4": { DE: ["DE-Power", "DE-Power"], DT: ["DT-NT"], OLB: ["OLB-Rush", "OLB-Rush"], LB: ["LB-Thumper", "LB-Cover"], CB: ["CB-Press", "CB-Press"], S: ["S-Free", "S-Strong"] },
+  "3-4": { DE: ["DE-Power", "DE-Power"], DT: ["DT-NT"], OLB: ["OLB-Rush", "OLB-Cover"], LB: ["LB-Thumper", "LB-Cover"], CB: ["CB-Press", "CB-Press"], S: ["S-Free", "S-Strong"] },
   "Nickel": { DE: ["DE-Speed", "DE-Power"], DT: ["DT-3tech", "DT-Quick"], OLB: ["OLB-Cover"], LB: ["LB-Cover"], CB: ["CB-Press", "CB-Press", "CB-Nickel"], S: ["S-Free", "S-Strong"] },
   "Dime": { DE: ["DE-Speed", "DE-Speed"], DT: ["DT-Quick", "DT-Quick"], OLB: [], LB: ["LB-Cover"], CB: ["CB-Press", "CB-Press", "CB-Nickel"], S: ["S-Free", "S-Strong", "S-Ball"] },
   // [BUGFIX Aug 2026] The 46 fielded TEN men — one safety, no free safety on
@@ -2091,7 +2091,7 @@ FRONT_ROLES = {
   "Tite": { DE: ["DE-Power", "DE-Power"], DT: ["DT-NT"], OLB: ["OLB-Cover", "OLB-Blitz"], LB: ["LB-Thumper", "LB-Cover"], CB: ["CB-Press", "CB-Press"], S: ["S-Free", "S-Strong"] },
   "4-4": { DE: ["DE-Speed", "DE-Power"], DT: ["DT-3tech", "DT-NT"], OLB: ["OLB-Blitz", "OLB-Cover"], LB: ["LB-Thumper", "LB-Hybrid"], CB: ["CB-Press", "CB-Press"], S: ["S-Free"] },
   "Big Nickel": { DE: ["DE-Speed", "DE-Power"], DT: ["DT-3tech", "DT-Quick"], OLB: ["OLB-Cover"], LB: ["LB-Cover"], CB: ["CB-Press", "CB-Press"], S: ["S-Free", "S-Strong", "S-Hybrid"] },
-  "Penny": { DE: ["DE-Power", "DE-Power"], DT: ["DT-NT"], OLB: ["OLB-Rush", "OLB-Rush"], LB: ["LB-Thumper"], CB: ["CB-Press", "CB-Press", "CB-Nickel"], S: ["S-Free", "S-Strong"] }
+  "Penny": { DE: ["DE-Power", "DE-Power"], DT: ["DT-NT"], OLB: ["OLB-Rush", "OLB-Cover"], LB: ["LB-Thumper"], CB: ["CB-Press", "CB-Press", "CB-Nickel"], S: ["S-Free", "S-Strong"] }
 };
 OUT_OF_POS = {
   MEASURED_KEEP: 0.94,

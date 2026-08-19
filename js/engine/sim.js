@@ -19,10 +19,21 @@ import { clamp2, logistic, randNorm } from '../utils.js';
 
 function composedFrontRoles(frontId) {
   const fr = FRONT_ROLES[frontId] || FRONT_ROLES["4-3"] || {};
-  const olbRush = frontId === "3-4" || frontId === "Penny";
+  // 2026-08-19: the front's own role list decides which outside backers rush.
+  // A 3-4 reads ["OLB-Rush","OLB-Cover"] — one Jack, one coverage backer — so
+  // the DL role list is 3 down + 1, matching a real four-man rush. This used to
+  // be a hardcoded `frontId === "3-4" || "Penny"` fold that put BOTH OLBs in
+  // the rush group, and the ROLE names are what the rushers are graded on, so
+  // the list length and the personnel list must agree.
+  const _olb = fr.OLB || [];
+  // ONLY "OLB-Rush" is a down rusher; "OLB-Blitz" is a coverage backer who
+  // blitzes. Conflating them put the 4-3's blitz backer in the rush group and
+  // made it a five-man rush (caught by measurement, not by review).
+  const _rushOlb = _olb.filter((r) => /^OLB-Rush$/i.test(r));
+  const _coverOlb = _olb.filter((r) => !/^OLB-Rush$/i.test(r));
   return {
-    DL: olbRush ? [...fr.DE || [], ...fr.DT || [], ...fr.OLB || []] : [...fr.DE || [], ...fr.DT || []],
-    LB: olbRush ? [...fr.LB || []] : [...fr.LB || [], ...fr.OLB || []],
+    DL: [...fr.DE || [], ...fr.DT || [], ..._rushOlb],
+    LB: [...fr.LB || [], ..._coverOlb],
     DB: [...fr.CB || [], ...fr.S || []],
     DE: fr.DE || [],
     DT: fr.DT || [],
@@ -1481,12 +1492,27 @@ function resolvePassPlay(playType, offPersonnel, defPersonnel, offRoster, defRos
   // render, resolveDefField would populate dropShareByPlayerId — and this line
   // would silently ignore all of it. Read the table.
   const _dropFront = (DEF_DROP_ELIGIBLE[frontId] || []).length > 0;
+  // 2026-08-19: the coverage OLB — the one who is NOT the Jack. He is the man
+  // who comes when the rush backer drops.
+  const _coverOlbIds = (defPersonnel.OLB || []).filter((id) => !dlIds.includes(id));
+  let _swapIdx = 0;
   for (let i = 0; i < dlIds.length; i++) {
     const id = dlIds[i];
     if (_dropFront && olbSet.has(id)) {
       const dropP = ((_k = dropShareById == null ? void 0 : dropShareById[id]) != null ? _k : C.FZ_NATIVE_DROP_PCT) / 100;
       if (Math.random() < dropP) {
         droppedIds.push(id);
+        // A FIRE ZONE IS AN EXCHANGE, NOT A SUBTRACTION. Before the Jack
+        // existed, both OLBs were in the rush group and one bailing still left
+        // four coming. Now that exactly ONE outside backer rushes, letting him
+        // bail unanswered would drop the front to a three-man rush on 16% of
+        // snaps (measured) — which is not a fire zone, it is just fewer
+        // rushers. The rusher drops and a backer comes behind him.
+        const _sub = _coverOlbIds[_swapIdx++];
+        if (_sub) {
+          const _sp = defRoster.find((pl) => pl.id === _sub);
+          if (_sp) passRushers.push({ player: _sp, role: "OLB-Blitz" });
+        }
         continue;
       }
     }

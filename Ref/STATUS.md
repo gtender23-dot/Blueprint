@@ -5750,3 +5750,58 @@ redesign rather than a separate ticket. Wants its OWN A/B: removing ~0.66
 rushers from two fronts moves sacks, and sacks/team is 2.07 in a 1.8-2.3 band.
 
 Still design-only. Nothing built. NOT pushed.
+
+## 2026-08-19 — PRESSURE BATCH 1: the rush backer (the "Jack")
+
+First build step of `Ref/PRESSURE_REDESIGN_2026-08-19.md`. Fixes finding 8.
+Ordered FIRST on purpose: it corrects the BASELINE that batches 2 and 3 will be
+measured against, so their A/Bs are clean.
+
+**Probe first, in parallel.** `tools/pressure_cohesion_probe.mjs` was written by
+a delegated agent constrained to ONE new file and NO git commands (no shared
+files, no lock contention). It pinned the DEFECT — 43 checks, all green against
+the broken tree — and then went red on exactly the 10 checks the fix was
+supposed to flip. Tripwire worked as designed.
+
+**The fix.** `FRONT_ROLES["3-4"].OLB` / `["Penny"].OLB` now read
+`["OLB-Rush","OLB-Cover"]` — the DATA says who rushes, so no new table was
+needed. The "both OLBs rush" fact had been restated in THREE places (sim.js
+`composedFrontRoles`, fieldassign.js `resolveDefField`, `RUSH_SLOTS` in
+formations.js); all three now derive from one shared selector
+(`rushOlbCount` / `splitRushOlbs`, beside `roleRating`). The Jack is the better
+pass rusher on the field — no coach input needed, and a blitzer list can
+override it by name in batch 3.
+
+**Two corrections the MEASUREMENT caught that review did not:**
+
+1. **`OLB-Blitz` is not a down rusher.** My first filter was `/Rush|Blitz/`,
+   which swept the 4-3's blitz backer into the rush group and made the **4-3
+   rush five** (measured 5.00 avg). `OLB-Blitz` means a COVERAGE backer who is a
+   blitz candidate — exactly the distinction this redesign turns on. Only
+   `^OLB-Rush$` counts.
+2. **A fire zone is an EXCHANGE, not a subtraction.** With only one OLB rushing,
+   his 18% native bail dropped the front to a THREE-man rush on 16% of snaps.
+   Now when the Jack bails the coverage OLB comes behind him — which is what a
+   fire zone actually is.
+
+**Result — every front rushes four with nothing called:**
+
+| front | before | after |
+|---|---|---|
+| 4-3 / Nickel | 4.00 | 4.00 |
+| **3-4 / Penny** | **4.66** (5 on 69%) | **4.00** (5 on 0%) |
+
+Also: `DEF_BLITZ_ELIGIBLE` now includes the OLB slots for 3-4/Penny — the man
+who is not the Jack is a coverage player, and a coverage player who can come IS
+a blitzer. Naming the Jack is a harmless no-op since he already rushes.
+
+**Bands hold.** N=500: points 26.1, rush 150.9 OK, INT% 2.01 OK, **sacks 2.06
+(from 2.07 — essentially unchanged)**, only the standing comp% flag. Sacks
+barely moved because the exchange keeps the count at four rather than
+subtracting a rusher.
+
+**Gates.** Clean build; `pressure_cohesion_probe` 44/0 ×3 (registered CORE);
+plan_cohesion (97/0) ×3 · blitz_pie · bench · play_fidelity · scheme_role all
+green. Owner still owes `covfam_probe` (container caps at ~178s), the Playwright
+tier and `_gate.mjs core`. Batch 2 (`bring` → seats) is next and needs its own
+A/B. NOT pushed.

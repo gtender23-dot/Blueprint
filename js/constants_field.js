@@ -368,7 +368,11 @@ DEF_BLITZ_ELIGIBLE = {
   "4-3": ["OLB_W", "LB_M", "OLB_S", "S_SS", "S_FS", "CB_L", "CB_R"],
   // [Fire zones, Jul 2026] 3-4 OLBs are RUSHERS — a blitz dial on them was a
   // silent no-op (already rushing). Their dial is now the DROP share below.
-  "3-4": ["LB_I1", "LB_I2", "S_SS", "S_FS", "CB_L", "CB_R"],
+  // 2026-08-19: the OLB slots join the blitz-eligible set. Only ONE outside
+  // backer now rushes (the Jack); the other is a COVERAGE player, and a
+  // coverage player who can come is the definition of a blitzer. Naming the
+  // Jack is a harmless no-op — he is already rushing.
+  "3-4": ["OLB_L", "OLB_R", "LB_I1", "LB_I2", "S_SS", "S_FS", "CB_L", "CB_R"],
   // Sub packages + heavy fronts (Aug 2026): the nickelback is the modern
   // blitz weapon (the slot pressure nobody picks up); the 46's whole identity
   // is that JACK/CHARLIE and the walked-down SS all threaten.
@@ -382,7 +386,7 @@ DEF_BLITZ_ELIGIBLE = {
   "4-4": ["OLB_S", "LB_I1", "LB_I2", "OLB_B", "S_FS", "CB_L", "CB_R"],
   "Big Nickel": ["OLB_W", "LB_M", "S_R", "S_SS", "S_FS", "CB_L", "CB_R"],
   // Penny EDGEs already rush — their dial is the DROP share below.
-  "Penny": ["LB_M", "NB", "S_SS", "S_FS", "CB_L", "CB_R"]
+  "Penny": ["OLB_L", "OLB_R", "LB_M", "NB", "S_SS", "S_FS", "CB_L", "CB_R"]
 };
 DEF_DROP_ELIGIBLE = {
   "4-3": [],

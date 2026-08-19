@@ -1,6 +1,7 @@
 import { DEF_DROP_ELIGIBLE, DEF_FIELD_LAYOUTS, OFF_FIELD_LAYOUTS, variationLayoutSlots } from '../constants_field.js';
 import { FORMATIONS, FORMATION_VARIATIONS, SLOT_ELIGIBILITY, aliasFormation } from '../constants.js';
 import { bridgeCoversSlot, sizeFitForSlot } from './traits.js';
+import { splitRushOlbs } from './formations.js';
 
 // playerById (identity stage 2, optional): id → player OBJECT, so bridge
 // traits and size windows can reach the resolver. Callers that don't thread
@@ -227,7 +228,12 @@ function resolveDefField(frontId, assignments, blitzShares, activeDepth, ratingB
   if (!layout) return null;
   const { bySlot, byPos } = resolveSlots(layout.slots, assignments, activeDepth, ratingById, playerPos, playerById);
   const DE = byPos.DE || [], DT = byPos.DT || [], OLB = byPos.OLB || [], LB = byPos.LB || [], CB = byPos.CB || [], S = byPos.S || [];
-  const olbRush = frontId === "3-4" || frontId === "Penny";
+  // 2026-08-19: only the JACK rushes. Which OLB that is comes from the shared
+  // selector (the better pass rusher on the field), so this file, sim.js and
+  // resolveDefPersonnel can no longer disagree about who is in the rush group.
+  const _pOf = typeof playerById === "function" ? playerById : playerById ? (id) => playerById[id] : null;
+  const _olbSplit = splitRushOlbs(frontId, OLB, _pOf);
+  const olbRush = _olbSplit.jacks.length > 0;
   const blitzShareByPlayerId = {};
   const dropShareByPlayerId = {};
   const dropSlots = new Set(DEF_DROP_ELIGIBLE[frontId] || []);
@@ -248,8 +254,8 @@ function resolveDefField(frontId, assignments, blitzShares, activeDepth, ratingB
       CB,
       S,
       // LB = coverage backers (historical semantic; see resolveDefPersonnel)
-      LB: olbRush ? LB : [...LB, ...OLB],
-      DL: olbRush ? [...DE, ...DT, ...OLB] : [...DE, ...DT],
+      LB: olbRush ? [...LB, ..._olbSplit.cover] : [...LB, ...OLB],
+      DL: olbRush ? [...DE, ...DT, ..._olbSplit.jacks] : [...DE, ...DT],
       DB: [...CB, ...S]
     },
     blitzShareByPlayerId,
