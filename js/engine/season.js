@@ -13,6 +13,7 @@ import { ensureTree, refreshAgenda, lockstepBlock, treeSeasonTick, syncActiveSlo
 import { computeClassRankings, computeDivisionPoll, computeSOS, rankMap } from './rankings.js';
 import { actionCost, applyAIWeeklySpend, applyWeeklyContact, buildFunnelPool, createBoardEntry, distanceTier, divisionRank, fillRemainingSlots, initBudget, resolveFunnel, resolveRooms, setContactAlloc, setRecruitDifficulty, takeAction } from './recruiting.js';
 import { finishInteractiveGame, midGameReport, pinnedFirst, resumeFromCall, resumeFromDecision, setAutoCounter, simulateFirstHalf, simulateGame, simulateSecondHalf, stepSecondHalf } from './sim.js';
+import { adoptPlan, setPlanFields } from './teamplan.js';
 import { defaultWeeklyPlan } from './situations.js';
 import { coordRatingAvg, generateCoordinator, growHCMastery, growStaffSchemeIQ, rollCoordinatorPoach, writeStaffLedger } from './staff.js';
 import { onStartLeash } from './starts.js';
@@ -276,7 +277,8 @@ function advanceDay(state2, dispatch2) {
   }
   {
     const mine = state2.world.schools.find((s) => s.id === state2.playerSchoolId);
-    if (mine == null ? void 0 : mine.gameplan) mine.gameplan._aiScheme = false;
+    // D17 BATCH D: _aiScheme is an underscore marker → the overlay.
+    if (mine == null ? void 0 : mine.gameplan) setPlanFields(mine, { _aiScheme: false });
   }
   if (((_f = state2.playerCoach) == null ? void 0 : _f.status) === "unemployed") {
     return [{ type: "warning", text: "You must accept a new job before continuing." }];
@@ -2511,7 +2513,11 @@ function acceptJob(state2, newSchoolId) {
     delete carried.rbCarryShares;
     delete carried._aiScheme;
     delete carried._nextPlay;
-    newSchool.gameplan = Object.assign(newSchool.gameplan || {}, carried);
+    // D17 BATCH D: a coach carrying his scheme to a new job is a WHOLE-PLAN
+    // adoption — his book, his defbook, his controller move with him. The old
+    // Object.assign merged onto the new school's flat bag and left that
+    // school's BOOKS describing the staff plan he just replaced.
+    adoptPlan(newSchool, Object.assign({}, newSchool.gameplan || {}, carried), { source: "coach" });
     try {
       newSchool.depthChart = buildDepthChart(newSchool.roster, newSchool.gameplan, newSchool.depthOrder || {});
     } catch (e) {

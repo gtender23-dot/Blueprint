@@ -486,6 +486,69 @@ D16's `_liveTempo` hunks in the same file deliberately left unstaged**) ·
 `tools/plan_cohesion_probe.mjs` (**partial-staged — §2 only; D13/D16 own §5 and
 the import line**) · `Ref/STATUS.md` (this entry + the header). NOT pushed.
 
+## 2026-08-18 — D17 · BATCH D: THE STRAGGLERS — **THE WRITER-GRAPH COLLAPSE IS COMPLETE**
+## NODE-GATED ×3 · BAND-CHECKED · ⚠ WALK + BROWSER OWED
+
+The last writers outside the Game Plan screen. With these, **every production
+path that authors a team's plan goes through the verbs.**
+
+**Converted:**
+- **`world.js applyIdentityToSchool`** — the roster shaper set `defBaseFront`
+  (the defbook's) and `offFormations`/`tendency` (the book's) on the flat plan,
+  so a shaped team's BOOKS still described the team before its identity was
+  applied. Now one routed write.
+- **`season.js` coach-move carry** — a coach taking his scheme to a new job is a
+  WHOLE-PLAN adoption: his book, defbook and controller move with him. The old
+  `Object.assign` merged onto the new school's bag and left THAT school's books
+  describing the staff plan he had just replaced.
+- **`season.js` `_aiScheme`** — an underscore marker, so the overlay.
+- **`playnow.js` ×2** — both forced re-syntheses (found while closing C-3) are
+  now unforced guards: `setAIGameplan` adopts since Batch B, so forcing here
+  re-derived the books from the bag. `ensureFieldAssignments` still fills the
+  flat plan (roster-bound, unlisted in the manifest → overlay) and its result is
+  now committed rather than left where the next compile would drop it.
+- **The quick-plan A/B/C slot swap** — a whole-plan adoption, so the books
+  follow the slot. **MERGE semantics preserved deliberately**: this has always
+  been an `Object.assign` with no wipe, so a field present now and absent in the
+  saved slot LINGERS. That is arguably wrong, but changing it would make dials
+  silently vanish on a slot swap — a behaviour change that deserves its own
+  decision rather than riding in on a refactor.
+
+**THE END STATE (the thing D17 was for).** At the audit: `assignBook` /
+`assignDefBook` / `setOverlay` had **ZERO production callers**, and 26 writers
+across 9 files scribbled on `school.gameplan` directly — 17 without any
+re-synthesis, so the books were a stale view of a bag anyone could edit. Now:
+- **41 production calls** through the seam across **7 files** (ai, bookpush,
+  season, world, gameplan, newgame, playnow);
+- **zero** forced re-syntheses outside the verbs' own "this school has no parts
+  yet" guard — the gameplan→book inversion is **gone**;
+- the books are the truth, and the flat plan the sim reads is compiled FROM
+  them.
+
+**Gates:** `playbook_root_probe` ×3 (47/0) · `plan_cohesion_probe` ×3 (87/0) ·
+`plan_side_probe` · `book_update_probe` · `save_migration_check` ×3 ·
+`worldgen_check` · `multicoach_week_probe` 16/0 · `coach_age_probe` 19/19 ·
+`commit_rate_test` exit 0 · `tendency_probe` exit 0 · **`stat_realism` N=250:
+comp% standing flag only, nothing new** (pts 26.9, rush 152.4, INT 1.89 — the
+band matters here because worldgen and coach moves both changed) · clean build
+(13/13, cache `cfb-dynasty-d67960d6b7`).
+
+**OWNER CHECKLIST (D17 Batch D):**
+- [ ] Walk vs the C-3 build — build-id diffs only.
+- [ ] **Browser:** the two paths only a human can drive — (1) **change jobs**
+  (take another program at the end of a season) and confirm your scheme comes
+  with you AND that Edit playbook/defense opens YOUR book at the new school;
+  (2) **quick-plan slots** — set up plan A, switch to B, change dials, switch
+  back to A, confirm A is intact.
+- [ ] `node tools/_gate.mjs core` + a **night** run before deploy.
+- [ ] **D17 is code-complete.** What remains is judgement, not conversion: the
+  quick-plan MERGE semantics above, and whether `synthesizeLeaguePlans` in
+  state.js (a no-op guard since Batch B) comes out next release as planned.
+
+**Commit scoped to:** `js/engine/world.js` · `js/engine/season.js` ·
+`js/ui/views/playnow.js` · `js/ui/views/gameplan.js` · `Ref/STATUS.md`.
+NOT pushed.
+
 ## 2026-08-18 — D17 · BATCH C-3: THE STRUCTURAL SURFACES — **AND THE BRIDGE IS OUT**
 ## NODE-GATED ×3 · ⚠ WALK + A REAL BROWSER PASS OWED (this batch touches authoring, not just dials)
 

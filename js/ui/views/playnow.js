@@ -1,6 +1,6 @@
 import { C } from '../../constants.js';
 import { setAIGameplan } from '../../engine/ai.js';
-import { synthesizeTeamPlan } from '../../engine/teamplan.js';
+import { setPlanFields, synthesizeTeamPlan } from '../../engine/teamplan.js';
 import { deleteSavedTeam, instantiateSavedTeam, listSavedTeams } from '../../engine/coachprofile.js';
 import { listCreations, loadCreationData } from '../../engine/creator.js';
 import { ensureFieldAssignments } from '../../engine/fieldassign.js';
@@ -29,12 +29,20 @@ function makeTeam(side) {
     setAIGameplan(school);
   } catch (e) {
   }
+  // D17 BATCH D: setAIGameplan now ADOPTS its plan (Batch B), so the school
+  // already carries book/defbook/overlay — a FORCED re-synthesis here would
+  // re-derive those books from the flat bag, which is the inversion D17 exists
+  // to end. Unforced, it is a guard for a school that somehow has no parts.
   try {
-    synthesizeTeamPlan(school, { force: true });
+    synthesizeTeamPlan(school);
   } catch (e) {
   }
   try {
     ensureFieldAssignments(school.gameplan);
+    // fieldAssignments is roster-bound and unlisted in the manifest, so it
+    // belongs to the overlay; commit it rather than leaving it on the bag
+    // where the next compile would drop it.
+    setPlanFields(school, { fieldAssignments: school.gameplan.fieldAssignments });
   } catch (e) {
   }
   return school;
@@ -63,8 +71,11 @@ function makeCreatorTeam(id, side) {
   if (Array.isArray(c.stars) && c.stars.length) { try { applyTeamStars(school, c.stars); } catch (e) {} }
   school._creatorTeam = true;
   try { setAIGameplan(school); } catch (e) {}
-  try { synthesizeTeamPlan(school, { force: true }); } catch (e) {}
-  try { ensureFieldAssignments(school.gameplan); } catch (e) {}
+  try { synthesizeTeamPlan(school); } catch (e) {}   // guard, not a re-derive (see makeTeam)
+  try {
+    ensureFieldAssignments(school.gameplan);
+    setPlanFields(school, { fieldAssignments: school.gameplan.fieldAssignments });
+  } catch (e) {}
   return school;
 }
 function savedKey(team) {

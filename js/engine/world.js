@@ -5,6 +5,7 @@ import { generateProgramLore, generateRivalries } from './lore.js';
 import { createPlayer, createRecruit, derivedArchetype } from './player.js';
 import { buildAIRecruiting, seedFunnelData } from './recruiting.js';
 import { defaultWeeklyPlan } from './situations.js';
+import { setPlanFields } from './teamplan.js';
 import { registerCoachName, resetCoachNames, rollCoachName, staffFor } from './staff.js';
 import { distanceMiles, randInt3, randomLocation, shuffle, uuid } from '../utils.js';
 
@@ -923,7 +924,10 @@ function applyIdentityToSchool(school, qbPref, defFront, tier = null, pBonus = n
   } else if (defFront === "4-3") {
     shapePos("DE", "DE-Speed", 2);
   }
-  school.gameplan.defBaseFront = defFront || "4-3";
+  // D17 BATCH D: the identity shaper writes through the seam — defBaseFront is
+  // the DEFBOOK's field and offFormations/tendency are the BOOK's, so poking
+  // them onto the flat plan left the books describing the pre-identity team.
+  const _identityPatch = { defBaseFront: defFront || "4-3" };
   const OFF_BY_QB = {
     "QB-Scrambler": { formations: [{ id: "Pistol/RPO", weight: 55 }, { id: "Spread", weight: 30 }, { id: "Power-I", weight: 15 }], tendency: "Balanced" },
     "QB-Gunslinger": { formations: [{ id: "Air Raid", weight: 45 }, { id: "Spread", weight: 40 }, { id: "Single Back", weight: 15 }], tendency: "Heavy Pass" },
@@ -932,9 +936,10 @@ function applyIdentityToSchool(school, qbPref, defFront, tier = null, pBonus = n
   };
   const off = OFF_BY_QB[qbPref];
   if (off) {
-    school.gameplan.offFormations = off.formations;
-    school.gameplan.tendency = off.tendency;
+    _identityPatch.offFormations = off.formations;
+    _identityPatch.tendency = off.tendency;
   }
+  setPlanFields(school, _identityPatch);
   school.depthOrder = buildRoleSortedDepthOrder(school.roster);
   school.depthChart = buildDepthChart(school.roster, school.gameplan, school.depthOrder);
 }

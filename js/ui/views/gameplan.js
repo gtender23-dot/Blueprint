@@ -12,7 +12,7 @@ import { repairCreation } from '../../engine/creatorrepair.js';
 import { DEFAULT_OFF_BOOKS, DEFAULT_DEF_BOOKS, defaultOffBook, defaultDefBook } from '../../engine/defaultbooks.js';
 import { applyPlaybookToGameplan, playbookFromGameplan, lookSheetKey, splitSheetKey, resolveLookSheet } from '../../engine/playbook.js';
 import { applyDefBookToGameplan, defBookFromGameplan, emptyDefBook, pruneCallSheet } from '../../engine/defbook.js';
-import { applyControllerOverlay, adoptDefPlan, adoptOffPlan, controllerOverlayOf, setPlanFields, synthesizeTeamPlan } from '../../engine/teamplan.js';
+import { adoptPlan, applyControllerOverlay, adoptDefPlan, adoptOffPlan, controllerOverlayOf, setPlanFields, synthesizeTeamPlan } from '../../engine/teamplan.js';
 import { renderPlaybooksTab, playbooksListeners } from './creatorplaybook.js';
 import { renderDefTab, defListeners } from './creatordef.js';
 import { tipTerm } from '../manual/tips.js';
@@ -3053,7 +3053,16 @@ function setupListeners() {
       const target = btn.dataset.planSlot;
       if (target === q.active) return;
       q[q.active] = JSON.parse(JSON.stringify(school2.gameplan));
-      if (q[target]) Object.assign(school2.gameplan, JSON.parse(JSON.stringify(q[target])));
+      // D17 BATCH D: swapping quick-plan slots is a WHOLE-PLAN adoption, so the
+      // books follow the slot instead of the flat bag changing under them.
+      // MERGE semantics are preserved deliberately: this has always been an
+      // Object.assign with no wipe, so a field present now and absent in the
+      // saved slot LINGERS. That is arguably wrong, but changing it would make
+      // dials silently disappear on a slot swap — a behaviour change that wants
+      // its own decision, not a refactor's side effect.
+      if (q[target]) {
+        adoptPlan(school2, Object.assign({}, school2.gameplan, JSON.parse(JSON.stringify(q[target]))), { source: "quickplan" });
+      }
       q.active = target;
       notify(`Game plan ${target} active`, "success");
       rerender();
