@@ -487,7 +487,16 @@ D16's `_liveTempo` hunks in the same file deliberately left unstaged**) ·
 the import line**) · `Ref/STATUS.md` (this entry + the header). NOT pushed.
 
 ## 2026-08-18 — D17 · BATCH B: THE AI AUTHORS A BOOK (the biggest wholesale write retired)
-## NODE-GATED ×3 · BAND-CHECKED · ⚠ `_equiv_walk` vs the Batch A build is OWED-LOCAL
+## NODE-GATED ×3 · BAND-CHECKED · ✅ **WALK-GATED — BYTE-IDENTICAL, build id only**
+
+**✅ THE DEFINING GATE IS DISCHARGED, and cleanly.** The owner refreshed the
+baseline from the Batch A build, walked the Batch B build and compared: the
+ONLY diffs are snapshots **00–03**, the main menu printing its 10-char build
+id. Nothing else — the whole wizard and all thirteen tour screens are
+byte-identical. This is the textbook outcome for a pure refactor, and a
+stronger result than Batch A's (whose comparison also carried the coordinator
+dossier from a stale baseline). Every AI staff in the world now has its plan
+stored a different way, and not one rendered pixel of it moved.
 
 Second batch of the writer-graph collapse. Batch A converted the LOAD paths;
 this converts the AI, which is the largest writer in the game by volume — it
