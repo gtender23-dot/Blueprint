@@ -590,3 +590,30 @@ F1. **The Flexbone Offense: An In-Depth Guide** — Throw Deep Publishing,
     *"3-4 yards away"* from the QB; the **rocket toss** pitches to an A-back in
     motion (so a wide man carrying on a toss is right); base looks expect
     pre-snap A-back motion, and good staffs counter it with counter-motion.
+
+F2. **The Midline Option: The Complete Guide** — Throw Deep Publishing,
+    AJ Forbes, 2023-07-02 —
+    `throwdeeppublishing.com/blogs/football-glossary/the-midline-option-the-complete-guide`
+    Read 2026-08-18. BUILT FROM THIS (concept `Midline Option`, resolver
+    `option-midline`): *"an option play where the Quarterback reads an interior
+    Defensive Lineman… The play hits downhill to a dive back hitting the A-gap
+    or if the QB keeps the ball, through the B-gap."* Three engine consequences,
+    all probe-pinned in `tools/option_probe.mjs`:
+    - the read key is the first DL **on or outside the guard** (a 3-tech), NOT
+      an edge defender — that is what separates midline from veer/triple;
+    - **no pitch phase** — two outcomes, give or keep;
+    - the keep is **downhill through the B-gap** behind an inserting wingback,
+      where a veer keep bends to the perimeter.
+    The read direction matched what the engine already did for triple and is
+    now commented at the site: *"If the dive key crashes toward the FB, keep the
+    ball… if the dive key expands or runs upfield, hand the ball off."*
+    NOT yet modelled, logged as candidates: the **"Follow"** tag (the second
+    wingback comes downhill as an extra lead blocker for the keep — Army/Navy/
+    Air Force short yardage); midline's twirl motion as deliberate *eye candy*
+    that pulls linebackers and safeties to the perimeter while the ball goes up
+    the gut; and the source's stated weakness — the QB "taking a lot of hits"
+    running into the teeth of the defense, which today falls out only indirectly
+    from routing his keep inside.
+    **Rate gap:** the source establishes midline as a COMPLEMENT to a veer-based
+    option offense but gives no call frequency, so `MIDLINE_SHARE = 0.22` is a
+    provisional band, not a sourced one.

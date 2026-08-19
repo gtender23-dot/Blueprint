@@ -54,7 +54,7 @@ the rule-level mechanics blitzology gives. Weigh accordingly — probes still de
 - The Pin and Pull Run Play — `the-pin-and-pull-run-play-the-complete-guide`
 - The Wham Play — `the-wham-play-the-complete-guide`
 - The Iso Play — `the-iso-play-everything-you-need-to-know`
-- The Midline Option — `the-midline-option-the-complete-guide`
+- The Midline Option — `the-midline-option-the-complete-guide`  **[READ 2026-08-18 — BUILT: concept + resolver + option_probe]**
 ### Run defense
 - Run Fits in Football: The Complete Guide — `run-fits-in-football-the-complete-guide`
 

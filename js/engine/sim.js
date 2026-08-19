@@ -141,6 +141,7 @@ function pickRunConcept(playType, offPersonnel, offRoster, defEff, weights = nul
   const skill = execSkill(c.exec || {}, offRoster, offPersonnel);
   return { name, mod: base * clamp2(1 + (skill - 50) / 100, 0.6, 1.4) };
 }
+var MIDLINE_SHARE = 0.22;
 function conceptGroups() {
   const g = { quick: [], dropback: [], shots: [], inside: [], perimeter: [], gadgets: [] };
   for (const [nm, c] of Object.entries(PASS_CONCEPTS)) {
@@ -2946,6 +2947,15 @@ function rpoConflictRead(qb, conflictDef, opts = {}) {
 function resolveOptionPlay(playType, offPersonnel, defPersonnel, offRoster, defRoster, offUnit, defUnit, gameplan, defPlan, frontId, formationId, qb, rbShares = null, rbPool = null, style = "triple") {
   var _a, _b, _c, _d, _e, _f, _g;
   const speed = style === "speed";
+  // ── MIDLINE OPTION (2026-08-18, sourced) ──────────────────────────────────
+  // Throw Deep, "The Midline Option: The Complete Guide": *"an option play where
+  // the Quarterback reads an INTERIOR Defensive Lineman to determine whether to
+  // hand the ball off or keep it himself. The play hits downhill to a dive back
+  // hitting the A-gap or if the QB keeps the ball, through the B-gap."* The
+  // read is "the first Defensive Lineman on or outside the RG" — a 3-tech in an
+  // even front — which is what separates it from veer/triple, where the key is
+  // an edge defender. There is NO pitch phase: two outcomes, give or keep.
+  const midline = style === "midline";
   const find = (id) => offRoster.find((p) => p.id === id);
   const dfind = (id) => defRoster.find((p) => p.id === id);
   const fbIds = offPersonnel.FB || [], rbIds = offPersonnel.RB || [];
@@ -2972,7 +2982,10 @@ function resolveOptionPlay(playType, offPersonnel, defPersonnel, offRoster, defR
       rbPool
     );
   }
-  const diveKey = dfind((defPersonnel.DE || [])[0]) || dfind((defPersonnel.DL || [])[0]) || null;
+  // Midline reads INSIDE (DT/NT first); veer/triple read the edge (DE first).
+  const diveKey = midline
+    ? dfind((defPersonnel.DT || [])[0]) || dfind((defPersonnel.NT || [])[0]) || dfind((defPersonnel.DL || [])[0]) || dfind((defPersonnel.DE || [])[0]) || null
+    : dfind((defPersonnel.DE || [])[0]) || dfind((defPersonnel.DL || [])[0]) || null;
   const forceDef = dfind((defPersonnel.OLB || [])[0]) || dfind((defPersonnel.S || [])[0]) || dfind((defPersonnel.LB || [])[0]) || null;
   const mix = gameplan.optionMix || { dive: 40, keep: 30, pitch: 30 };
   const mixTot = (mix.dive || 0) + (mix.keep || 0) + (mix.pitch || 0) || 100;
@@ -2990,15 +3003,20 @@ function resolveOptionPlay(playType, offPersonnel, defPersonnel, offRoster, defR
     );
   };
   if (Math.random() < 0.35) {
-    const cMixTot = speed ? (mix.keep || 0) + (mix.pitch || 0) || 100 : mixTot;
+    const cMixTot = speed ? (mix.keep || 0) + (mix.pitch || 0) || 100
+      : midline ? (mix.dive || 0) + (mix.keep || 0) || 100 : mixTot;
     let roll = Math.random() * cMixTot, called;
     if (speed) called = roll - (mix.keep || 0) < 0 ? "keep" : "pitch";
+    else if (midline) called = roll - (mix.dive || 0) < 0 ? "dive" : "keep";
     else {
       called = "dive";
       if ((roll -= mix.dive || 0) >= 0) called = roll - (mix.keep || 0) < 0 ? "keep" : "pitch";
     }
     const cCarrier = called === "dive" ? diveBack || pitchBack : called === "keep" ? qb : pitchBack || diveBack;
-    const cType = called === "dive" ? "run_inside" : "run_outside";
+    // Midline is a downhill play both ways — the dive hits the A-gap and the
+    // keep follows the inserting wingback through the B-gap, so the QB keep is
+    // an INSIDE run here, not the perimeter keep of a veer.
+    const cType = called === "dive" || (midline && called === "keep") ? "run_inside" : "run_outside";
     if (called === "pitch" && cCarrier && cCarrier !== qb) {
       const secure = (cCarrier.attributes.HND || 50) * 0.5 + (cCarrier.attributes.SEC || 50) * 0.5;
       const muffP = clamp2((0.03 - (qb.attributes.TEC - 55) * 35e-5 - (secure - 55) * 3e-4 + pitchAggr * 0.014) * 0.5, 3e-3, 0.04) * flawMult(cCarrier, "muffs", 0.2);
@@ -3051,6 +3069,9 @@ function resolveOptionPlay(playType, offPersonnel, defPersonnel, offRoster, defR
   const keyCrashes = Math.random() < crashBase;
   const read1Won = Math.random() < readWinP(diveKey);
   let phase, carrier, effType, laneShift = 0, forcePenetrator = null;
+  // "If the dive key crashes toward the FB, keep the ball. If the dive key
+  // expands or runs upfield, hand the ball off" — the read the engine already
+  // modelled for triple, and it is the same read on midline.
   const decideGive = !speed && (read1Won ? !keyCrashes : Math.random() < clamp2(diveLean * 1.3, 0.2, 0.75));
   if (decideGive && diveBack) {
     phase = "dive";
@@ -3065,7 +3086,10 @@ function resolveOptionPlay(playType, offPersonnel, defPersonnel, offRoster, defR
     const read2Won = Math.random() < readWinP(forceDef);
     const forceTakesQB = optionKey === "qb" ? Math.random() < 0.7 : optionKey === "pitch" ? Math.random() < 0.3 : Math.random() < 0.42 + pitchAggr * 0.16;
     const pitchLean = (mix.pitch || 0) / ((mix.keep || 0) + (mix.pitch || 0) || 1);
-    const decidePitch = read2Won ? forceTakesQB : Math.random() < clamp2(pitchLean * (0.8 + pitchAggr * 0.5), 0.15, 0.85);
+    // MIDLINE HAS NO PITCH PHASE (source): the QB keeps through the B-gap
+    // behind the inserting wingback, or he has already given.
+    const decidePitch = midline ? false
+      : read2Won ? forceTakesQB : Math.random() < clamp2(pitchLean * (0.8 + pitchAggr * 0.5), 0.15, 0.85);
     if (decidePitch && pitchBack) {
       phase = "pitch";
       carrier = pitchBack;
@@ -3107,7 +3131,9 @@ function resolveOptionPlay(playType, offPersonnel, defPersonnel, offRoster, defR
     } else {
       phase = "keep";
       carrier = qb;
-      effType = "run_outside";
+      // Midline's keep is downhill through the B-gap; a veer/triple keep bends
+      // to the perimeter.
+      effType = midline ? "run_inside" : "run_outside";
       if (read2Won && !forceTakesQB) laneShift = 0.1;
       else if (!read2Won && forceTakesQB) {
         laneShift = -0.15;
@@ -4885,6 +4911,11 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
       } else if (nm === "Speed Option") {
         playType = "run_outside";
         forcedGadget = "speed";
+      } else if (nm === "Midline Option") {
+        // Downhill both ways — the dive is an A-gap give, the keep a B-gap
+        // insert, so midline enters as an INSIDE run.
+        playType = "run_inside";
+        forcedGadget = "midline";
       } else if (nm === "Wildcat Power") {
         playType = "run_inside";
         if (offFormationId === "Wildcat") forcedGadget = "wildcat";
@@ -5253,10 +5284,26 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     } else if (forcedGadget === "speed" && qb) {
       optionSnap = true;
       optionStyle = "speed";
+    } else if (forcedGadget === "midline" && qb) {
+      optionSnap = true;
+      optionStyle = "midline";
     } else if (playType.startsWith("run") && qb && !coachCalled && !_m3Authored) {
       if (OPTION_CAPABLE[offFormationId] != null) {
         const optShare = offPlanEff.optionRate != null ? clamp2(offPlanEff.optionRate / 100, 0, 1) : OPTION_CAPABLE[offFormationId];
         optionSnap = Math.random() < optShare;
+        // MIDLINE (2026-08-18, sourced): "an excellent complement to any option
+        // offense that majors in inside and outside veer" — so a share of an
+        // option team's snaps are midline rather than veer, but ONLY if the
+        // formation actually carries the play in its book (the same
+        // playbook-gate the trick roll uses). The share is a provisional band:
+        // no rate source has been found for how often midline is called, so it
+        // is deliberately modest and isolated behind __noMidline for A/Bs.
+        if (optionSnap && !globalThis.__noMidline
+          && (FORMATION_PLAYBOOK[offFormationId] || []).includes("Midline Option")
+          && Math.random() < MIDLINE_SHARE) {
+          optionStyle = "midline";
+          playType = "run_inside";
+        }
       } else if (SPEED_OPTION[offFormationId] != null) {
         const optShare = SPEED_OPTION[offFormationId] * clamp2(((_oa = offPlanEff.optionRate) != null ? _oa : 70) / 70, 0, 1.5);
         if (Math.random() < optShare) {

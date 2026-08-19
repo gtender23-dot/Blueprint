@@ -481,6 +481,14 @@ RUN_CONCEPTS = {
   // Named pointers to existing mechanics (resolver: unchanged):
   "Triple Option": { resolver: "option" },
   "Speed Option": { resolver: "option-speed" },
+  // MIDLINE OPTION (2026-08-18, from Throw Deep's complete guide). Distinct
+  // from triple/veer in three ways the resolver honours: the read key is an
+  // INTERIOR lineman (the first DL on or outside the guard) rather than an edge
+  // defender; there is NO pitch phase; and both outcomes are downhill — the FB
+  // dives the A-gap, the QB keeps through the B-gap behind an inserting
+  // wingback. Its weakness is the QB taking hits "into the teeth of the
+  // defense", which falls out naturally from routing his keep inside.
+  "Midline Option": { resolver: "option-midline" },
   "Jet Sweep": { resolver: "jet" },
   "Draw": { resolver: "draw" },
   "Wildcat Power": { resolver: "wildcat" },
