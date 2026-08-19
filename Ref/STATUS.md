@@ -486,6 +486,92 @@ D16's `_liveTempo` hunks in the same file deliberately left unstaged**) ·
 `tools/plan_cohesion_probe.mjs` (**partial-staged — §2 only; D13/D16 own §5 and
 the import line**) · `Ref/STATUS.md` (this entry + the header). NOT pushed.
 
+## 2026-08-18 — THE FRONT MIX NEVER ROLLED (a live sim bug) + the Defense tab rebuilt in the offense's language
+## NODE-GATED ×3 (plan_cohesion 97/0) · BAND-CHECKED · ⚠ BROWSER OWED
+
+Owner question: *"why do we still have the defensive front and front mix option
+in the defensive tab and the separate playbook?"* Answering it turned up a live
+bug underneath the duplication.
+
+**⚠ THE BUG: every shipped defense's front mix has never reached the field.**
+A defensive BOOK stores its mix as a MAP — `{ "3-4": 60, "Nickel": 40 }`, which
+is what `validateDefBook` requires. `rollFrontMix` only ever understood the
+ARRAY shape the Game Plan's sliders wrote, so for any book-carrying team
+`Array.isArray` was false, no fronts were live, and **the roll returned the base
+front every snap.** Measured on Attack 3-4, a book written to play 40% Nickel on
+standard downs: **4000/4000 standard downs in the 3-4**; after the fix, 60/40 as
+the book says. The window is not small — the mix decides the front on **~63% of
+snaps** at the default sub philosophy and **~93% on "Base"** (measured over real
+snaps; the situation overrides the rest — spread personnel 198, 3rd-and-long 42,
+3rd-and-short 41, 3rd-and-medium 35). The same `Array.isArray` check made the
+Game Plan's Front Mix panel render EMPTY for those teams, which is why the
+duplicate picker underneath it looked like the real control.
+
+**A SECOND BUG in the same mismatch:** `defBookFromGameplan` spread the ARRAY
+shape into `{"0":{id,weight},"1":{…}}` — so "save my defense as a book" emitted
+an **invalid book** ("unknown front 0") whenever the coach had touched the Game
+Plan's front sliders.
+
+**A THIRD:** a 7-front subset (`DEF_FRONTS2`) gated the base front while the mix
+picker offered 11, so a coach could pin Dime / 46 Bear / Penny / 5-2 in a
+situation and find that *"make this my default"* **silently did nothing** — the
+promotion validated against the short list. `DEF_FRONTS2` is retired; the
+11-front `PIN_FRONTS` is the single list, and a probe pins that it covers every
+front the engine defines.
+
+**A FOURTH, and it was MINE:** the OFFENSIVE formation-usage slider rebalanced
+the live plan IN PLACE and never committed. That was harmless only while C-1's
+transitional bridge re-split on every render — **C-3 removed that bridge**, so
+an uncommitted write here would have been discarded by the next recompile (drag
+your usage, touch any other dial, watch it snap back). Found by reading the
+neighbouring handler while building the defensive twin. **No probe caught it,
+because none of them execute UI handlers** — the same blind spot that let the
+`const` rebinding through in C-3.
+
+**The fix:** `normalizeFrontMix` (formations.js) is now the ONE place that knows
+both shapes; `rollFrontMix`, the Game Plan panel and `defBookFromGameplan` all
+route through it, and the canonical stored shape is the MAP the book schema
+requires.
+
+**THE UI, rebuilt to match the offense (the owner's ask).** The Defense tab's
+front section is now the same card grid as Formation Usage: one card per front
+with its personnel line, a usage slider, the stacked share bar, and a
+show/hide diagrams toggle. The BASE front is a tag on its card rather than a
+second picker. **Removed:** the base-front picker and the front add/remove
+chips — the defensive playbook owns WHICH fronts you carry and which is base,
+exactly as the offensive playbook has since 2026-08-15. Per DPB2's law the
+removal is disclosed in place: the panel now says the book owns the fronts and
+points at ✏️ Edit defense.
+
+**Gates:** `plan_cohesion_probe` ×3 **97/0** with a new §8 pinning all four
+findings (the map rolls; map and array agree within 5 pts; `normalizeFrontMix`
+is the one place; both shapes emit a VALID book; `DEF_FRONTS2` retired;
+`PIN_FRONTS` covers the engine's fronts; both usage sliders commit) ·
+`defbook_probe` · `defsheet_probe` · `playbook_root_probe` · `plan_side_probe` ·
+`book_update_probe` · `save_migration_check` · `worldgen_check` ·
+`covfam_probe` N=90 17/0 · `defcall_probe` 32/0 · clean build (13/13, cache
+`cfb-dynasty-4c1259cf19`) · **`stat_realism` N=250: the three standing flags
+only, nothing new** (the AI carries no front mix, so the harness's AI-vs-AI
+mix is expected to be unmoved — the teams this fix frees are the ones carrying
+BOOKS, i.e. yours).
+
+**OWNER CHECKLIST:**
+- [ ] **The bug, visible:** start a dynasty with Attack 3-4 (or any starter
+  defense), play a game, and watch the front on standard downs — you should now
+  see the book's second front appear. Before this it was your base front, always.
+- [ ] **The rebuilt panel:** Game Plan → Defense → Front. It should read like
+  the offensive Formation Usage card — front cards with sliders, a BASE tag, a
+  share bar, diagrams on demand. Confirm the sliders stick after leaving and
+  returning, and that the base front and the add/remove chips are gone with the
+  book pointed to in their place.
+- [ ] **The promotion fix:** pin Dime in a situation cell, then "make this my
+  default" — it should now actually take (it silently no-op'd before).
+- [ ] Walk + `node tools/_gate.mjs core`.
+
+**Commit scoped to:** `js/engine/formations.js` · `js/engine/defbook.js` ·
+`js/ui/views/gameplan.js` · `tools/plan_cohesion_probe.mjs` · `Ref/STATUS.md`.
+NOT pushed.
+
 ## 2026-08-18 — D17 · BATCH D: THE STRAGGLERS — **THE WRITER-GRAPH COLLAPSE IS COMPLETE**
 ## NODE-GATED ×3 · BAND-CHECKED · ⚠ WALK + BROWSER OWED
 

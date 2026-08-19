@@ -44,13 +44,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import url from 'node:url';
-import { ROSTER_TARGETS, CLASS_YEARS, COV_FAMILY, aggrStopFromBlitzPct } from '../js/constants.js';
+import { ROSTER_TARGETS, CLASS_YEARS, COV_FAMILY, DEF_FRONTS as DEF_FRONTS_CAT, aggrStopFromBlitzPct } from '../js/constants.js';
 import { createPlayer } from '../js/engine/player.js';
-import { buildDepthChart } from '../js/engine/world.js';
+import { buildDepthChart, defaultGameplan } from '../js/engine/world.js';
+import { selectDefFront } from '../js/engine/formations.js';
 import { simulateGame } from '../js/engine/sim.js';
 import {
   cardToDefCall, cardToCell, cardToFormCheck, emptyDefCard,
-  DEF_COVERAGE_SCHEMES, validateDefBook, CARD_EXTRA_ENUMS, CARD_EXTRA_LEGACY, CARD_VOCAB
+  DEF_COVERAGE_SCHEMES, validateDefBook, CARD_EXTRA_ENUMS, CARD_EXTRA_LEGACY, CARD_VOCAB,
+  applyDefBookToGameplan, defBookFromGameplan
 } from '../js/engine/defbook.js';
 import { DEFAULT_DEF_BOOKS } from '../js/engine/defaultbooks.js';
 
@@ -412,6 +414,63 @@ console.log('\n— 6. D16 retirements, disclosed (OD-5/OD-8/OD-9 ratified 2026-0
   // Fixture hygiene.
   check('bench.js fixtures no longer carry defFormation/clockMgmt (inert keys)',
     !/defFormation:/.test(BENCH_SRC) && !/clockMgmt:/.test(BENCH_SRC));
+}
+
+console.log('\n— 8. the FRONT MIX shape (2026-08-18: it never rolled for a book) —\n');
+{
+  const FM_SRC = fs.readFileSync(path.join(__dir, '../js/engine/formations.js'), 'utf8');
+  const DB_UI = fs.readFileSync(path.join(__dir, '../js/ui/views/gameplan.js'), 'utf8');
+  // THE BUG: a defensive BOOK stores frontMix as a MAP; rollFrontMix only
+  // understood the ARRAY the Game Plan's sliders wrote, so Array.isArray was
+  // false for every book-carrying team, no fronts were live, and the roll
+  // returned the BASE every snap. All six starter defenses shipped a mix that
+  // never reached the field.
+  const bookGp = applyDefBookToGameplan(DEFAULT_DEF_BOOKS.find(b => b.name === 'Attack 3-4'), defaultGameplan());
+  check('the book stores frontMix as a MAP (what validateDefBook requires)',
+    bookGp.defFrontMix && !Array.isArray(bookGp.defFrontMix) && typeof bookGp.defFrontMix === 'object',
+    JSON.stringify(bookGp.defFrontMix));
+  const seen = {};
+  for (let i = 0; i < 3000; i++) {
+    const f = selectDefFront(bookGp.defBaseFront, 1, 10, 900, 1, 0, 'Single Back', 'auto', bookGp.defFrontMix);
+    seen[f] = (seen[f] || 0) + 1;
+  }
+  check('a BOOK-loaded mix actually ROLLS on standard downs (was 100% base)',
+    Object.keys(seen).length > 1, JSON.stringify(seen));
+  // both shapes must agree
+  const asArray = Object.entries(bookGp.defFrontMix).map(([id, weight]) => ({ id, weight }));
+  const seenArr = {};
+  for (let i = 0; i < 3000; i++) {
+    const f = selectDefFront(bookGp.defBaseFront, 1, 10, 900, 1, 0, 'Single Back', 'auto', asArray);
+    seenArr[f] = (seenArr[f] || 0) + 1;
+  }
+  const share = (o, k) => (o[k] || 0) / 3000;
+  check('MAP and ARRAY shapes roll the same distribution (±5pts)',
+    Object.keys(seen).every(k => Math.abs(share(seen, k) - share(seenArr, k)) < 0.05),
+    `map ${JSON.stringify(seen)} vs array ${JSON.stringify(seenArr)}`);
+  check('normalizeFrontMix is the ONE place that knows both shapes',
+    /function normalizeFrontMix\(mix\)/.test(FM_SRC) && /const live = normalizeFrontMix\(mix\);/.test(FM_SRC));
+  // THE SECOND BUG: saving a book from an ARRAY-shaped gameplan spread the array
+  // into {"0":{…},"1":{…}} — an INVALID book.
+  for (const [label, mix] of [['array', [{ id: '4-3', weight: 60 }, { id: 'Nickel', weight: 40 }]],
+                              ['map', { '4-3': 60, 'Nickel': 40 }]]) {
+    const db = defBookFromGameplan({ defBaseFront: '4-3', defFrontMix: mix }, 'T');
+    check(`defBookFromGameplan(${label} mix) emits a VALID book`,
+      validateDefBook(db).ok && db.frontMix['4-3'] === 60 && db.frontMix.Nickel === 40,
+      JSON.stringify(db.frontMix));
+  }
+  // THE THIRD: one front list, not three. The base-front subset is retired.
+  check('DEF_FRONTS2 (the 7-front subset that gated promotion) is RETIRED',
+    !/^DEF_FRONTS2 = \[/m.test(DB_UI));
+  check('the Game Plan front list covers every front the engine defines',
+    (DB_UI.match(/^PIN_FRONTS = \[([^\]]*)\]/m) || [])[1] !== undefined
+    && Object.keys(DEF_FRONTS_CAT).every(f => (DB_UI.match(/^PIN_FRONTS = \[([^\]]*)\]/m) || [])[1].includes(`"${f}"`)),
+    Object.keys(DEF_FRONTS_CAT).join(','));
+  // THE FOURTH: the offensive usage slider must COMMIT (it rebalanced in place,
+  // which only worked while the C-1 bridge re-split on every render).
+  check('the offensive formation-usage slider commits through the seam',
+    /writeDial\(\{ offFormations: _looks \}\);/.test(DB_UI));
+  check('the defensive front slider writes the canonical MAP',
+    /writeDial\(\{ defFrontMix: Object\.fromEntries/.test(DB_UI));
 }
 
 console.log(`\n${fail === 0 ? 'ALL PASS' : 'FAILURES'}  (${pass} pass, ${fail} fail)`);

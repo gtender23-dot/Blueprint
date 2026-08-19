@@ -1,8 +1,8 @@
 import { __spreadProps, __spreadValues } from '../../_spread.js';
 import { PASS_CONCEPTS, RUN_CONCEPTS } from '../../concepts.js';
-import { C, FORMATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, FORMATION_VARIATIONS, PASS_TENDENCY, aggrStopFromBlitzPct } from '../../constants.js';
+import { C, DEF_FRONTS, FORMATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, FORMATION_VARIATIONS, PASS_TENDENCY, aggrStopFromBlitzPct } from '../../constants.js';
 import { getCoach, saveGameplanToLibrary, saveTeamToLibrary } from '../../engine/coachprofile.js';
-import { FRONT_PRESSURE_SIGNATURE, FRONT_SIG_LABEL } from '../../engine/formations.js';
+import { FRONT_PRESSURE_SIGNATURE, FRONT_SIG_LABEL, normalizeFrontMix } from '../../engine/formations.js';
 import { SITUATION_KEYS, SITUATION_LABELS } from '../../engine/situations.js';
 import { getPlayerSchool, navigate, notify, rerender, state } from '../../state.js';
 import { renderFormationDiagram } from './routeart.js';
@@ -161,7 +161,7 @@ function renderDefIdentityCard(gp) {
   const front = gp.defBaseFront || "4-3";
   // defFrontMix rides in two shapes: the Game Plan writes an ARRAY of
   // {id, weight}; a loaded defbook compiles an OBJECT map. Read both.
-  const mix = Array.isArray(gp.defFrontMix) ? gp.defFrontMix.filter((f) => f && f.id && (f.weight || 0) > 0) : gp.defFrontMix && typeof gp.defFrontMix === "object" ? Object.entries(gp.defFrontMix).filter(([, w]) => (w || 0) > 0).map(([id, weight]) => ({ id, weight })) : [];
+  const mix = normalizeFrontMix(gp.defFrontMix);
   const mixWord = mix.length > 1 ? `multiple (${mix.map((f) => f.id).join(", ")})` : `${front} nearly every standard down`;
   const aggr = aggrOf(gp);
   const aggrWord = ((_a = C.AGGRESSION.labels) == null ? void 0 : _a[aggr]) || aggr || "balanced";
@@ -1251,7 +1251,10 @@ function renderHalftimeAdjust(gp) {
 function renderDefenseDefaults(gp) {
   var _a, _b, _c, _d, _e;
   const defBaseFront = gp.defBaseFront || "4-3";
-  const frontMix = Array.isArray(gp.defFrontMix) ? gp.defFrontMix.filter((f) => f && PIN_FRONTS.includes(f.id)) : [];
+  // 2026-08-18: read BOTH shapes. A loaded defensive book stores the map
+  // { "3-4": 60, … }; this panel only understood the array the sliders wrote,
+  // so it rendered EMPTY for every book-carrying team — which is most of them.
+  const frontMix = normalizeFrontMix(gp.defFrontMix);
   const covScheme = gp.coverageScheme || "balanced";
   const COV_TIPS = {
     balanced: "\u25B8 Everyone covers his own man by alignment. No strengths, no holes \u2014 the safe default.",
@@ -1274,45 +1277,30 @@ function renderDefenseDefaults(gp) {
           <summary class="gp-section-hdr">THE FRONT <span class="gp-section-sub">bodies &amp; the box</span></summary>
 
           <div class="gp-row">
-            <label class="gp-label">${tipTerm("base-front", "Base Front")}</label>
-            <div class="gp-options">
-              ${DEF_FRONTS2.map((front) => `
-                <button class="gp-option${defBaseFront === front ? " active" : ""}"
-                        data-gp-set="defBaseFront" data-gp-val="${front}">
-                  ${front}
-                  <span class="gp-option-sub">${DEF_FRONT_DESCS[front] || ""}</span>
-                </button>
-              `).join("")}
-            </div>
-            <div class="gp-tip tip-info">
-              \u25B8 Your default look \u2014 the sim auto-subs Nickel and Dime on passing downs and 46/Bear in short yardage, so you're picking an identity, not micromanaging packages.
-            </div>
-            <div class="gp-tip tip-info">
-              \u25B8 Scheme fit: ${DEF_FRONT_NEEDS[defBaseFront] || ""} Recruit players whose archetype matches your front and they play to their full rating.
-            </div>
-          </div>
-
-          <div class="gp-row">
-            <label class="gp-label">Front Mix <span class="gp-hint">(standard downs \u2014 pick up to 5)</span></label>
-            <div class="gp-options">
-              ${PIN_FRONTS.map((fid) => {
-    const inMix = frontMix.some((f) => f.id === fid);
-    return `<button class="gp-option gp-option-sm${inMix ? " active" : ""}" data-dfmix-front="${fid}">${fid}</button>`;
+            <label class="gp-label">${tipTerm("base-front", "Front")} Usage <span class="gp-hint">from ${gp._defbookName ? `\u201C${escapeHtml(gp._defbookName)}\u201D` : "your staff's opening defense"}</span>
+              <button type="button" class="btn-ghost btn-sm gp-lookart-toggle" data-gp-frontart="1">${state.ui.gpFrontArt ? "Hide diagrams \u25B4" : "Show diagrams \u25BE"}</button></label>
+            <div class="formation-grid pb-look-grid">
+              ${(frontMix.length ? frontMix : [{ id: defBaseFront, weight: 100 }]).map((entry, i) => {
+    const p = DEF_FRONTS[entry.id] || { DL: 0, LB: 0, DB: 0 };
+    const isBase = entry.id === defBaseFront;
+    return `
+                <div class="formation-card selected pb-look-card${state.ui.gpFrontArt ? "" : " pb-look-compact"}">
+                  ${state.ui.gpFrontArt ? `<div class="pb-look-dia">${renderFrontDiagram(entry.id, { w: 150, h: 96 })}</div>` : ""}
+                  <div class="fc-header"><span class="fc-name">${escapeHtml(entry.id)}${isBase ? ` <span class="def-base-tag">BASE</span>` : ""}</span></div>
+                  <div class="fc-personnel muted">${p.DL} DL \xB7 ${p.LB} LB \xB7 ${p.DB} DB</div>
+                  <div class="fw-row">
+                    <input class="gp-slider dfw-slider" type="range" data-dfw-index="${i}" min="5" max="95" value="${entry.weight}" aria-label="Usage for ${escapeHtml(entry.id)}" />
+                    <span class="fw-pct" id="dfw-pct-${i}">${Math.round(entry.weight)}%</span>
+                  </div>
+                </div>`;
   }).join("")}
             </div>
-            ${frontMix.length ? `
-            <div class="formation-weights">
-              ${frontMix.map((entry, i) => `
-                <div class="fw-row">
-                  <span class="fw-label">${escapeHtml(entry.id)}</span>
-                  <input class="gp-slider dfw-slider" type="range" data-dfw-index="${i}" min="5" max="95" value="${entry.weight}" />
-                  <span class="fw-pct" id="dfw-pct-${i}">${Math.round(entry.weight)}%</span>
-                </div>`).join("")}
-              <div class="fw-bar">
-                ${frontMix.map((e, i) => `<div class="fw-seg" style="width:${e.weight}%;background:var(--team-1);opacity:${0.4 + i * 0.2}"></div>`).join("")}
-              </div>
-            </div>` : `
-            <div class="gp-tip tip-info">\u25B8 Empty = you line up in your base front every standard down. Add fronts to roll a weighted mix \u2014 the defensive mirror of your offensive formation weights. Short-yardage walls and obvious-pass subs still override on top.</div>`}
+            <div class="fw-bar">
+              ${(frontMix.length ? frontMix : [{ id: defBaseFront, weight: 100 }]).map((e, i) => `<div class="fw-seg" style="width:${e.weight}%;background:var(--team-1);opacity:${0.4 + i * 0.2}"></div>`).join("")}
+            </div>
+            <div class="gp-tip tip-info">\u25B8 Your defensive playbook decides WHICH fronts you carry and which one is your base \u2014 the sliders decide how often you line up in each this week. To change the fronts themselves, hit \u270F\uFE0F Edit defense on your book card above, or load a different defense from \u201CLoad a plan\u2026\u201D.</div>
+            <div class="gp-tip tip-info">\u25B8 Short-yardage walls and obvious-pass subs still override the mix on top \u2014 you are setting the standard-down identity, not micromanaging packages. Your Sub Philosophy decides how much of that the sim takes out of your hands.</div>
+            <div class="gp-tip tip-info">\u25B8 Scheme fit: ${DEF_FRONT_NEEDS[defBaseFront] || ""} Recruit players whose archetype matches your front and they play to their full rating.</div>
           </div>
 
           <div class="gp-row">
@@ -1622,34 +1610,28 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
   }
   // The formation add/remove picker is gone (owner call, 2026-08-15): the
   // playbook owns WHICH formations you carry; this screen only re-weights them.
+  root.querySelectorAll("[data-gp-frontart]").forEach((btn) => {
+    btn.addEventListener("click", () => { state.ui.gpFrontArt = !state.ui.gpFrontArt; rerender(); });
+  });
   root.querySelectorAll("[data-gp-workshop]").forEach((btn) => {
     btn.addEventListener("click", () => { state.ui.creatorTab = null; navigate("creator"); });
   });
-  root.querySelectorAll("[data-dfmix-front]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      // D17 C-2: edit a LOCAL copy of the mix, commit once through the seam
-      // (defFrontMix is a def-side field, so it belongs to the defbook).
-      const _mix = Array.isArray(gp.defFrontMix) ? JSON.parse(JSON.stringify(gp.defFrontMix)) : [];
-      const fid = btn.dataset.dfmixFront;
-      const idx = _mix.findIndex((f) => f.id === fid);
-      if (idx >= 0) _mix.splice(idx, 1);
-      else {
-        if (_mix.length >= 5) _mix.pop();
-        _mix.push({ id: fid, weight: 33 });
-      }
-      if (_mix.length) rebalanceWeights(_mix);
-      writeDial({ defFrontMix: _mix });
-      rerender();
-    });
-  });
+  // 2026-08-18: the front ADD/REMOVE chips are gone from this screen — the
+  // defensive playbook owns WHICH fronts you carry, exactly as the offensive
+  // playbook owns which formations you carry (owner call, 2026-08-15). Their
+  // handler went with them; the base-front picker did too. Both live on the
+  // book now, reachable from "Edit defense" on the book card above.
   root.querySelectorAll(".dfw-slider").forEach((slider) => {
     slider.addEventListener("input", () => {
       const i = parseInt(slider.dataset.dfwIndex);
-      if (!Array.isArray(gp.defFrontMix) || !gp.defFrontMix[i]) return;
-      const _mix = JSON.parse(JSON.stringify(gp.defFrontMix));
+      // 2026-08-18: normalize on read (a loaded book stores the MAP), rebalance
+      // a local copy, and write back the canonical MAP — which is the shape the
+      // book schema requires, so "save this defense as a book" stays valid.
+      const _mix = normalizeFrontMix(gp.defFrontMix);
+      if (!_mix[i]) return;
       holdAndRebalance(_mix, i, parseInt(slider.value));
-      writeDial({ defFrontMix: _mix });
-      gp.defFrontMix.forEach((f, j) => {
+      writeDial({ defFrontMix: Object.fromEntries(_mix.map((f) => [f.id, f.weight])) });
+      _mix.forEach((f, j) => {
         const sl = root.querySelector(`.dfw-slider[data-dfw-index="${j}"]`);
         if (sl && j !== i) sl.value = f.weight;
         const pctEl = root.querySelector(`#dfw-pct-${j}`);
@@ -1660,9 +1642,19 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
   root.querySelectorAll(".fw-slider").forEach((slider) => {
     slider.addEventListener("input", () => {
       const i = parseInt(slider.dataset.fwIndex);
-      if (!gp.offFormations[i]) return;
-      holdAndRebalance(gp.offFormations, i, parseInt(slider.value));
-      gp.offFormations.forEach((f, j) => {
+      if (!gp.offFormations || !gp.offFormations[i]) return;
+      // 2026-08-18: this was the ONE dial C-2 missed — it rebalanced the live
+      // plan IN PLACE and never committed, which was harmless only while the
+      // transitional bridge re-split on every render. C-3 removed that bridge,
+      // so an uncommitted write here would be discarded by the next recompile:
+      // drag your formation usage, touch any other dial, and the usage snaps
+      // back. Found by reading the neighbouring handler while rebuilding the
+      // defensive twin — worth noting that no probe caught it, because none of
+      // them execute UI handlers.
+      const _looks = JSON.parse(JSON.stringify(gp.offFormations));
+      holdAndRebalance(_looks, i, parseInt(slider.value));
+      writeDial({ offFormations: _looks });
+      _looks.forEach((f, j) => {
         const sl = root.querySelector(`.fw-slider[data-fw-index="${j}"]`);
         if (sl && j !== i) sl.value = f.weight;
         const pctEl = root.querySelector(`#fw-pct-${j}`);
@@ -2519,7 +2511,7 @@ function renderSitPanel(gp, key) {
                 data-sitset-field="defFront" data-sitset-val="${fr}">${fr}</button>`).join("")}
     </div>
     <div class="gp-tip tip-info">\u25B8 Pinned: this front takes EVERY snap in this situation \u2014 no auto-subs.</div>`,
-    DEF_FRONTS2.includes(cell.defFront)
+    PIN_FRONTS.includes(cell.defFront)
   )}
 
   ${group(
@@ -2682,7 +2674,7 @@ function wireSituationListeners(gp, { getOpenKey, setOpenKey, root = document } 
       else if (field === "qbRunPct") _std.qbRunPct = cell.qbRunPct;
       else if (field === "tempo") _std.baseTempo = cell.tempo;
       else if (field === "defFront") {
-        if (DEF_FRONTS2.includes(cell.defFront)) _std.defBaseFront = cell.defFront;
+        if (PIN_FRONTS.includes(cell.defFront)) _std.defBaseFront = cell.defFront;
         else return;
       } else if (field === "defAggression") setAggr(_std, cell.defAggression);
       else if (field === "protIdentity") _std.protIdentity = cell.protIdentity;
@@ -3414,7 +3406,7 @@ function renderPlaybookGroups(gp, opts = null) {
   }).join("")}
 `;
 }
-var gameplanSection, offSubTab, pbFormTab, defSubTab, sitSide, openSitKey, callSheetSit, callSheetPers, callEditName, SIT_DESCS, SIT_NUDGE, SIT_TIPS, PIN_FRONTS, COV_OPTIONS, ALL_FORMATIONS, DEF_FRONTS2, DEF_FRONT_DESCS, DEF_FRONT_NEEDS, SIMPLE_DIALS, SIMPLE_SITS;
+var gameplanSection, offSubTab, pbFormTab, defSubTab, sitSide, openSitKey, callSheetSit, callSheetPers, callEditName, SIT_DESCS, SIT_NUDGE, SIT_TIPS, PIN_FRONTS, COV_OPTIONS, ALL_FORMATIONS, DEF_FRONT_DESCS, DEF_FRONT_NEEDS, SIMPLE_DIALS, SIMPLE_SITS;
 
 gameplanSection = "home";
 offSubTab = "package";
@@ -3464,7 +3456,11 @@ SIT_TIPS = {
 PIN_FRONTS = ["4-3", "3-4", "Tite", "Nickel", "Big Nickel", "3-3-5", "Penny", "Dime", "4-4", "46/Bear", "5-2"];
 COV_OPTIONS = [["balanced", "Balanced"], ["lockTop", "Lock WR1"], ["bracketTop", "Bracket WR1"]];
 ALL_FORMATIONS = Object.keys(FORMATIONS);
-DEF_FRONTS2 = ["4-3", "3-4", "Tite", "Nickel", "Big Nickel", "3-3-5", "4-4"];
+// 2026-08-18: DEF_FRONTS2 is RETIRED. It was a 7-front subset used to gate the
+// base front while the mix picker offered 11, so a coach could pin Dime, 46/Bear,
+// Penny or 5-2 in a situation and then find "make this my default" silently did
+// nothing — the promotion validated against the short list. PIN_FRONTS (all 11,
+// matching the defensive book's own picker) is now the single list.
 DEF_FRONT_DESCS = {
   "4-3": "4 DL \xB7 3 LB \xB7 4 DB \u2014 the balanced base; auto-subs to nickel/dime on passing downs and heavy fronts in short yardage",
   "3-4": "3 DL \xB7 4 LB \xB7 4 DB \u2014 an extra linebacker for a lineman: versatile, easy to disguise the blitz, subs by situation",

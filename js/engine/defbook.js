@@ -1,4 +1,5 @@
 import { DEF_FRONTS, C, COV_FAMILY, aggrStopFromBlitzPct } from '../constants.js';
+import { normalizeFrontMix } from './formations.js';
 
 // ── customDefBook shape (Creativity Tools — the defensive playbook, Aug 2026) ─
 // The defensive twin of playbook.js. Where an offensive playbook is formation +
@@ -433,8 +434,16 @@ function defBookFromGameplan(gameplan, name) {
   const gp = gameplan || {};
   const db = emptyDefBook(name || gp._defbookName || "My Defense");
   if (gp.defBaseFront && isFront(gp.defBaseFront)) db.baseFront = gp.defBaseFront;
-  if (gp.defFrontMix && typeof gp.defFrontMix === "object") db.frontMix = { ...gp.defFrontMix };
-  else db.frontMix = { [db.baseFront]: 100 };
+  // 2026-08-18: the mix rides in two shapes (see formations.js
+  // normalizeFrontMix). Spreading the ARRAY shape here produced
+  // `{"0":{id,weight},"1":{…}}` — a book that FAILS validateDefBook ("unknown
+  // front 0"), so "save my defense as a book" silently emitted an unloadable
+  // book whenever the coach had touched the Game Plan's front sliders.
+  // Normalize to the map the schema requires, whichever shape came in.
+  const _fm = normalizeFrontMix(gp.defFrontMix);
+  db.frontMix = _fm.length
+    ? Object.fromEntries(_fm.map((f) => [f.id, f.weight]))
+    : { [db.baseFront]: 100 };
   db.aggression = gp.defAggression || aggrStopFromBlitzPct(gp.blitzPct);
   // Read the engine's real field; tolerate the legacy dead field on old plans.
   if (gp.pressureIdentity) db.pressIdentity = gp.pressureIdentity;

@@ -281,8 +281,35 @@ FRONT_SIG_LABEL = {
 // overrides (short-yardage walls, obvious-pass subs) and the hard Front dial
 // still outrank it, exactly like the offense's situational brain overlays its
 // formation weights. No mix (every AI plan) = return base, byte-identical.
+// ── THE FRONT MIX SHAPE (fixed 2026-08-18) ──────────────────────────────────
+// The mix rides in TWO shapes and always has: a defensive BOOK stores the map
+// `{ "3-4": 60, "Nickel": 40 }` (what validateDefBook requires), while the Game
+// Plan's sliders wrote an ARRAY of `{ id, weight }`. This function only ever
+// understood the array — so from the moment defensive books started being
+// applied, `Array.isArray` was false for every book-carrying team, `live` came
+// out empty, and the roll returned the BASE FRONT every time.
+//
+// That silently disabled the front mix in all six shipped starter defenses:
+// Attack 3-4 is written to play 40% Nickel on standard downs and played none.
+// Measured before the fix: 4000/4000 standard downs in the 3-4; after, 60/40 as
+// the book says. It is a large window too — the mix decides the front on ~63%
+// of snaps at the default sub philosophy and ~93% on "Base".
+//
+// normalizeFrontMix accepts either shape and is the ONE place that knows both.
+function normalizeFrontMix(mix) {
+  if (Array.isArray(mix)) {
+    return mix.filter((f) => f && f.id && (f.weight || 0) > 0 && DEF_FRONT_COUNTS[f.id])
+      .map((f) => ({ id: f.id, weight: f.weight }));
+  }
+  if (mix && typeof mix === "object") {
+    return Object.entries(mix)
+      .filter(([id, w]) => (w || 0) > 0 && DEF_FRONT_COUNTS[id])
+      .map(([id, weight]) => ({ id, weight }));
+  }
+  return [];
+}
 function rollFrontMix(mix, base) {
-  const live = Array.isArray(mix) ? mix.filter((f) => f && (f.weight || 0) > 0 && DEF_FRONT_COUNTS[f.id]) : [];
+  const live = normalizeFrontMix(mix);
   if (!live.length) return base;
   let r = Math.random() * live.reduce((s, f) => s + f.weight, 0);
   for (const f of live) {
@@ -444,4 +471,4 @@ SUB_CHAIN = {
   P: ["K"]
 };
 
-export { FRONT_PRESSURE_SIGNATURE, FRONT_SIG_LABEL, PERSONNEL_CLASSES, defUnitStrengthSchemeFit, formationVariation, getDefWeights, getMatchupEdge, getOffWeights, getSituationalMod, offPersonnelClass, offPersonnelOf, offUnitStrengthRoles, pickedVariation, resolveDefPersonnel, resolvePersonnel, rollFormation, rollFormationEntry, schemeAdjustedOVR, selectDefFront, variationPassLeanDelta, variedPackage };
+export { normalizeFrontMix, FRONT_PRESSURE_SIGNATURE, FRONT_SIG_LABEL, PERSONNEL_CLASSES, defUnitStrengthSchemeFit, formationVariation, getDefWeights, getMatchupEdge, getOffWeights, getSituationalMod, offPersonnelClass, offPersonnelOf, offUnitStrengthRoles, pickedVariation, resolveDefPersonnel, resolvePersonnel, rollFormation, rollFormationEntry, schemeAdjustedOVR, selectDefFront, variationPassLeanDelta, variedPackage };
