@@ -367,6 +367,57 @@ hdr('L9 — the route tree cannot outrun the end zone');
   check(maxAir === 0 || maxAir <= 15, 'the longest throw from inside the 5 fits the field', `${maxAir} air yds`);
 }
 
+// ── §10 the coverage side of the shrinking field ────────────────────────────
+hdr('L10 — coverage tightens as the field runs out');
+{
+  // Owner: "the closer you get the less ground the defense has to account for
+  // … can't take the top off from 15 yards out anymore."
+  //
+  // §9 fixed the GEOMETRY (where a route may end) but left the model half
+  // built: separation never saw field position, so coverage was exactly as
+  // hard at the 3 as at midfield — the offense lost its vertical threat and
+  // the defense got nothing for it. Measured after wiring it: completion runs
+  // 41.5% inside the 5 / 51.0% from 6-10 / 54.3% from 11-20 / 54.4% in the
+  // open field — a 12.9-point drop, inside the real 10-13 range.
+  const sim = src('js/engine/sim.js');
+  check(/COVER_COMPRESS_START/.test(sim), 'separation knows how much field is behind the defense');
+  check(/_roomBehind/.test(sim) && /sep = clamp2\(sep - C\.COVER_COMPRESS/.test(sim),
+    'the compression is applied to SEPARATION — the defenders squat, the offense is not simply nerfed');
+
+  const { ROSTER_TARGETS, CLASS_YEARS } = await import('../js/constants.js');
+  const { createPlayer } = await import('../js/engine/player.js');
+  const { buildDepthChart, defaultGameplan } = await import('../js/engine/world.js');
+  const { simulateGame } = await import('../js/engine/sim.js');
+  const realRnd = Math.random;
+  const mul = (sd) => { let t = sd >>> 0; return () => { t += 0x6D2B79F5; let r = Math.imul(t ^ t >>> 15, 1 | t); r = r + Math.imul(r ^ r >>> 7, 61 | r) ^ r; return ((r ^ r >>> 14) >>> 0) / 4294967296; }; };
+  const rost = (id) => { const r = []; for (const [ps, c] of Object.entries(ROSTER_TARGETS)) for (let i = 0; i < c; i++) { const x = createPlayer(ps, CLASS_YEARS[i % 4], 1); x.schoolId = id; r.push(x); } return r; };
+  const D = {};
+  for (let i = 0; i < 60; i++) {
+    Math.random = mul(6200 + i);
+    try {
+      const rH = rost('H'), rA = rost('A');
+      const gpH = { ...defaultGameplan() }, gpA = { ...defaultGameplan() };
+      const res = simulateGame({ id: 'H' }, { id: 'A' }, rH, rA, buildDepthChart(rH, gpH), buildDepthChart(rA, gpA), gpH, gpA);
+      for (const d of res.drives || []) for (const pl of d.plays || []) {
+        if (pl.fieldPos == null || !pl.offFormation || !(pl.down >= 1 && pl.down <= 4)) continue;
+        if (!(pl.type || '').startsWith('pass')) continue;
+        const y = 100 - pl.fieldPos;
+        const b = y <= 5 ? 'gl' : y <= 20 ? 'rz' : 'open';
+        D[b] = D[b] || { n: 0, c: 0 };
+        D[b].n++; if (pl.complete) D[b].c++;
+      }
+    } finally { Math.random = realRnd; }
+  }
+  const pct = (b) => D[b] && D[b].n ? 100 * D[b].c / D[b].n : 0;
+  check(D.gl && D.gl.n > 60, `sampled goal-line throws (${D.gl ? D.gl.n : 0})`);
+  check(pct('gl') < pct('open'), 'completion inside the 5 is HARDER than in the open field',
+    `${pct('gl').toFixed(1)}% vs ${pct('open').toFixed(1)}%`);
+  check(pct('gl') < pct('rz') + 1, 'and harder than the rest of the red zone — the squeeze is a gradient, not a cliff',
+    `${pct('gl').toFixed(1)}% vs ${pct('rz').toFixed(1)}%`);
+  // A drop far beyond the real 10-13 points would mean the dial has run away.
+  check(pct('open') - pct('gl') < 22, 'the squeeze stays in a sane band', `${(pct('open') - pct('gl')).toFixed(1)} pts`);
+}
+
 console.log(`\nCARRIED LOOK PROBE — ${pass} pass, ${fail} fail`);
 console.log(fail ? 'CARRIED LOOK PROBE FAIL' : 'CARRIED LOOK PROBE PASS');
 process.exit(fail ? 1 : 0);

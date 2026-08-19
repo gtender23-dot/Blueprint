@@ -25,6 +25,13 @@ C = {
   // The over-the-shoulder deep ball needs grass behind the defender. Inside
   // this much room there is none, so the vdeep band cannot open. [TUNE]
   VDEEP_MIN_ROOM: 30,
+  // Coverage side of the shrinking field. With no grass behind them defenders
+  // squat on everything underneath, so separation collapses as the ball nears
+  // the end zone. Ramps in from COVER_COMPRESS_START yards out — the vertical
+  // threat is already dying well before the goal line, which is the owner's
+  // "can't take the top off from 15 yards out anymore". [TUNE]
+  COVER_COMPRESS_START: 20,
+  COVER_COMPRESS: 0.11,
 
   // per-division prestige ceiling (Chunk 5 rescale)
   // Tier-based talent generation (tier: 1=D3, 2=D2, 3=D1)

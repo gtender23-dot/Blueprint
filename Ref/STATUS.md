@@ -5556,3 +5556,56 @@ play_fidelity · plan_cohesion (97/0) · bench · viewer_pace · viewer_throwcat
 card_lint · record_call · save_migration · convert_brain · stage4 · option all
 green. Bands N=500: points 26.7, rush **155.2 OK**, INT% 1.92, only the standing
 comp% flag — nothing new off, and rush came back inside. NOT pushed.
+
+### 2026-08-19 — THE SHRINKING FIELD, part 2: coverage (owner: "does the sim care about the compressed field for the PASS game … can't take the top off from 15 yards out anymore")
+
+**The owner caught that part 1 was only half the model.** Truncating the route
+tree fixed the GEOMETRY — where a route may end. It did nothing about the
+DEFENSE. Separation never saw field position at all, so coverage was exactly as
+hard at the 3 as at midfield: the offense lost its vertical threat and the
+defense gained nothing in return. Confirmed by measurement — completion inside
+the 5 read 48.8% after part 1 against 48.7% before it, i.e. the truncation
+moved coverage difficulty not at all.
+
+`fieldPos` was referenced exactly TWICE inside `resolvePassPlay`: the screen-YAC
+line and part 1's own truncation. `routeVsCoverage` / `routeDuel` never saw it.
+
+**FIXED at the separation seam,** not by nerfing the offense: with no grass
+behind them, defenders squat on everything underneath and separation collapses.
+`C.COVER_COMPRESS` ramps in from `C.COVER_COMPRESS_START` = 20 yards out, which
+is the owner's "can't take the top off from 15 yards out" — at the 15 the
+squeeze is already a quarter of full.
+
+**Leverage was verified BEFORE tuning** (the lesson from the three reverted run
+levers): wired at a deliberately absurd 0.30 first, which took completion inside
+the 5 to 28.3% while leaving 21-40 and 41+ untouched — live, strong, and
+correctly localized. Then tuned down. Measured at 450 games:
+
+| yards to goal | comp% |
+|---|---|
+| 1-5 | **41.5%** |
+| 6-10 | 51.0% |
+| 11-20 | 54.3% |
+| 21-40 | 56.5% |
+| 41+ | 54.4% |
+
+A clean monotonic gradient and a **12.9-point** drop from open field to the goal
+line, inside the real 10-13 range. `COVER_COMPRESS = 0.11` chosen over 0.14
+(which gave 13.6 pts) as the more conservative of two properly-powered runs,
+since the sim's baseline comp% is already a standing LOW flag.
+
+**Bands.** N=500: points 26.0 (from 26.7), rush 150.3 OK, INT% 2.00 OK,
+comp% 56.1 — only the standing flag, nothing new off.
+
+**Goal-line TD is now 84.7%** against the ~70-75% target. Part 1 bought ~3
+points, part 2 ~0.7. **The run game remains the whole remaining gap**, exactly
+where part 1's STATUS entry said it was — `runFit`'s yardage distribution.
+Owner has agreed the 1/2-yard line is the next piece.
+
+**Gates.** Clean build; `carried_look_probe` grown to §10 / **72 checks**, green
+×3; play_fidelity · plan_cohesion (97/0) · bench · viewer_throwcatch ·
+viewer_pace · card_lint · record_call · save_migration · blitz_pie all green.
+**OWED on the owner's machine: `covfam_probe`** — the coverage-family probe is
+the single most relevant gate for a change to SEPARATION and the cloud container
+caps command time at ~178s, so it could not finish here. Run it before this
+ships. Playwright tier owed as always. NOT pushed.

@@ -1255,6 +1255,21 @@ function assignCoverage(receivers, defPersonnel, defRoster, frontId, isZoneHeavy
       effType,
       rvScheme
     );
+    // ── THE COMPRESSED FIELD, COVERAGE SIDE (2026-08-19) ──────────────────
+    // Owner: "the closer you get the less ground the defense has to account
+    // for … can't take the top off from 15 yards out anymore."
+    //
+    // Truncating the route tree fixed the GEOMETRY — where a route can end —
+    // but left the model half-built: the offense lost its vertical threat and
+    // the defense gained nothing for it. Separation never saw field position
+    // at all, so coverage was exactly as hard at the 3 as at midfield. In
+    // reality that vertical threat is the entire reason a corner plays off and
+    // a safety holds the middle; with no grass behind them they squat on
+    // everything underneath and separation collapses.
+    const _roomBehind = 100 - _snapFieldPos;
+    if (_roomBehind < C.COVER_COMPRESS_START) {
+      sep = clamp2(sep - C.COVER_COMPRESS * (C.COVER_COMPRESS_START - _roomBehind) / C.COVER_COMPRESS_START, 0, 1);
+    }
     let bracketed = false;
     if (coverageScheme === "bracketTop" && receiverId === wr1Id) {
       sep = clamp2(sep - 0.07, 0, 1);
@@ -5337,6 +5352,9 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     const edgeRunMult = defEff.edgePlay === "contain" ? playType === "run_outside" ? 1.04 : playType === "run_inside" ? 0.98 : 1 : defEff.edgePlay === "crash" ? playType === "run_outside" ? 0.96 : playType === "run_inside" ? 1.02 : 1 : 1;
     const oppMem = seenMemory(defCtx);
     _tkStyle = (_ha = (_ga = defEff.tackleStyle) != null ? _ga : defPlan.tackleStyle) != null ? _ha : "balanced";
+    // Where the ball is. assignCoverage is reached without a fieldPos argument,
+    // so this rides the per-snap context channel alongside _tkStyle/_optKey.
+    _snapFieldPos = fieldPos;
     _optKey = (_ja = (_ia = defEff.optionKey) != null ? _ia : defPlan.optionKey) != null ? _ja : "balanced";
     const defAwrFactor = (() => {
       const readers = [...defPersonnel.LB || [], ...defPersonnel.S || []].map((id) => defRoster.find((p) => p.id === id)).filter(Boolean);
@@ -7447,7 +7465,7 @@ function emptyGameStats() {
     twoPtMade: 0
   };
 }
-var QB_RUN_BASE, OPTION_CAPABLE, CALL_CATEGORIES, SPEED_OPTION, JET_CAPABLE, DRAW_DEFAULT, GADGET_DEFAULT, JET_SLOTS, _passCtx, _rpoCtx, _tkStyle, _optKey, _conceptCtx, _situDown, FATIGUE_PHYSICAL, REAL_SLOTS, _rosterByIdCache, _penaltyScale, TYPE_BASELINE, DIFFICULTY_EDGE;
+var QB_RUN_BASE, OPTION_CAPABLE, CALL_CATEGORIES, SPEED_OPTION, JET_CAPABLE, DRAW_DEFAULT, GADGET_DEFAULT, JET_SLOTS, _passCtx, _rpoCtx, _tkStyle, _optKey, _snapFieldPos, _conceptCtx, _situDown, FATIGUE_PHYSICAL, REAL_SLOTS, _rosterByIdCache, _penaltyScale, TYPE_BASELINE, DIFFICULTY_EDGE;
 
 QB_RUN_BASE = {
   "Power-I": 0.04,
@@ -7504,6 +7522,7 @@ _passCtx = { covStyle: "balanced", qbAggr: 50 };
 // at the moment of the throw (stamped by simulateDrive before each dispatch)
 _situDown = 1;
 _tkStyle = "balanced";
+_snapFieldPos = 50;
 _optKey = "balanced";
 _conceptCtx = null;
 _rpoCtx = null;
