@@ -379,9 +379,14 @@ console.log('\n— 6. D16 retirements, disclosed (OD-5/OD-8/OD-9 ratified 2026-0
   }
   check('OD-8: the AI weekly-reaction cell speaks the stop (house/bend), not 45/10',
     /defAggression:\s*"house"/.test(AI_SRC) && !/blitzPct:\s*45/.test(AI_SRC) && !/blitzPct:\s*10/.test(AI_SRC));
+  // D17 C-2 moved Simple mode onto a returned PATCH (the seam commits it), so
+  // the posture now calls setAggr on that patch rather than on the live plan.
+  // The PIN'S INTENT is unchanged and is what still matters: the posture must
+  // go through setAggr — which writes the stop AND its derived blitzPct mirror
+  // together — and must never author a raw 38 again.
   check('OD-8: Simple-mode Defensive Posture routes through setAggr (the stale-pair discard is closed)',
-    /setAggr\(gp,\s*"attacking"\)/.test(GP_UI_SRC) && /setAggr\(gp,\s*"bend"\)/.test(GP_UI_SRC) &&
-    !/gp\.blitzPct\s*=\s*38/.test(GP_UI_SRC));
+    /setAggr\((?:gp|patch),\s*"attacking"\)/.test(GP_UI_SRC) && /setAggr\((?:gp|patch),\s*"bend"\)/.test(GP_UI_SRC) &&
+    !/(?:gp|patch)\.blitzPct\s*=\s*38/.test(GP_UI_SRC));
   check('OD-8: Simple-mode situation cells write cell.defAggression, never a raw cell.blitzPct number',
     /cell\.defAggression\s*=\s*"attacking"/.test(GP_UI_SRC) && !/cell\.blitzPct\s*=\s*38/.test(GP_UI_SRC));
   check('OD-8: the sim\'s normalize/migration shims STAY (old saves keep converting)',

@@ -486,6 +486,65 @@ D16's `_liveTempo` hunks in the same file deliberately left unstaged**) ·
 `tools/plan_cohesion_probe.mjs` (**partial-staged — §2 only; D13/D16 own §5 and
 the import line**) · `Ref/STATUS.md` (this entry + the header). NOT pushed.
 
+## 2026-08-18 — D17 · BATCH C-2: THE REST OF THE DIALS (sliders · mixes · Simple mode)
+## NODE-GATED ×3 · ⚠ WALK + THE DIAL-STICKS BROWSER CHECK OWED · BRIDGE STILL IN PLACE
+
+C-1 landed the seam and the three generic handlers. C-2 converts the rest of the
+turnable dials; what remains after this is structural authoring, and the bridge.
+
+**Converted (all through `setPlanField`/`setPlanFields`, side-routed):**
+- **14 scalar sliders** — screen / RPO / gadget / option rate, pitch aggression,
+  jet, draw, play-action, motion, protection emphasis, QB aggression, wildcat
+  pass rate, run commit, QB run share.
+- **The rebalancing groups** — run direction, option mix, pass depth, target
+  shares, concept weights (+ its reset), and the defensive **front mix**, both
+  the add/remove picker and its weight sliders. Each of these used to rebalance
+  the live plan IN PLACE; they now rebalance a LOCAL copy and commit once, which
+  is both correct under the seam and a smaller write.
+- **Pressure identity**, the pass-depth preset chips, and the **max FG distance**
+  slider in `setupListeners`.
+- **Simple mode.** `applySimpleDial` and `applySimpleSit` no longer mutate the
+  plan: each RETURNS A PATCH and the call site commits it in one compile. This
+  is a better shape than the dial handlers, because a Simple lever moves several
+  fields across all three bags at once — Offensive Identity writes `tendency` +
+  `passDepth` (book), Defensive Posture writes stop + shell + cushion + box
+  (defbook) and `coverageScheme`, Tempo writes `baseTempo` (overlay) — and the
+  seam routes each to its owner in a single write.
+
+**A D16 PIN MOVED WITH THE CHANGE (not around it).** `plan_cohesion_probe`'s
+OD-8 pin asserted the literal source `setAggr(gp, …)`; Simple mode now calls
+`setAggr(patch, …)`. The pin was updated to accept either receiver, and its
+INTENT is unchanged and still enforced: the posture must go through `setAggr` —
+which writes the aggression stop AND its derived `blitzPct` mirror together —
+and must never author a raw 38 again. 87/0 ×3 after.
+
+**Still on the old path (C-3):** the structural authoring surfaces — the named
+`defCalls` library, the matchup `callSheet`, `formChecks`, the per-formation
+`formationPlaybooks` sheets — plus the situations-cell editor, the "make this
+cell my default" copies, and the render-time defaulting (`if (!gp.x) gp.x = …`,
+which mutates the plan as a side effect of rendering). **The bridge covers all
+of them**, which is exactly what it is for.
+
+**Gates:** `playbook_root_probe` ×3 (47/0) · `plan_cohesion_probe` ×3 (87/0,
+pin updated) · `plan_side_probe` ×3 · `save_migration_check` ×3 ·
+`book_update_probe` · `dead_surface_probe` · `defsheet_probe` · clean build
+(13/13, cache `cfb-dynasty-171185c5b3`).
+
+**OWNER CHECKLIST (D17 C-2):**
+- [ ] Walk vs the C-1 build — build-id diffs only.
+- [ ] **Browser — this is the batch where a slider bug would live:** drag
+  several sliders (run commit, QB run %, screen rate), set a pass-depth preset,
+  re-weight the defensive front mix, and re-balance target shares. Leave the
+  screen, return: **every value must have stuck**, and the sliders must still
+  move smoothly (each tick now recompiles the plan — measured at 0.070 ms, so
+  it should feel identical, but this is the first time you can feel it).
+- [ ] **Simple mode:** set Offensive Identity, Defensive Posture and Tempo, then
+  switch to Advanced and confirm each landed on the matching detailed dial.
+- [ ] C-3 (structural surfaces + **BRIDGE REMOVAL**) is NOT started.
+
+**Commit scoped to:** `js/ui/views/gameplan.js` · `tools/plan_cohesion_probe.mjs`
+· `Ref/STATUS.md`. NOT pushed.
+
 ## 2026-08-18 — D17 · BATCH C-1: THE DIAL SEAM (side-routed) + a TEMPORARY BRIDGE
 ## NODE-GATED ×3 · ⚠ WALK + BROWSER OWED — and the walk covers this batch WORST
 

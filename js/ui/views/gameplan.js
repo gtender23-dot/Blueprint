@@ -411,12 +411,15 @@ function renderSimpleSituations(gp) {
     </div>
   </div>`;
 }
+// D17 C-2: RETURNS A PATCH rather than mutating the plan — the caller commits
+// it through the seam. `situations` is a team field, so the patch lands on the
+// overlay; building the next object here keeps that one write atomic.
 function applySimpleSit(gp, sitKey, lever, val) {
-  if (!gp.situations) gp.situations = {};
+  const sits = JSON.parse(JSON.stringify(gp.situations || {}));
   const meta = SIMPLE_SITS.find((s) => s.key === sitKey);
-  if (!meta) return;
+  if (!meta) return null;
   for (const cellKey of meta.cells) {
-    const cell = gp.situations[cellKey] || (gp.situations[cellKey] = {});
+    const cell = sits[cellKey] || (sits[cellKey] = {});
     if (lever === "off") {
       if (val === "auto") cell.tendency = null;
       else cell.tendency = val === "run" ? "Heavy Run" : val === "pass" ? "Heavy Pass" : "Balanced";
@@ -448,18 +451,21 @@ function applySimpleSit(gp, sitKey, lever, val) {
       }
     }
   }
+  return { situations: sits };
 }
+// D17 C-2: also returns a PATCH (see applySimpleSit).
 function applySimpleDial(gp, key, val) {
+  const patch = {};
   if (key === "simpleOffId") {
     // OFFENSE only. runCommit is the DEFENSIVE box (read as defEff.runCommit in
     // sim.js) — it must NOT be written here, or picking "Run First" silently
     // loads your own defense's box and stomps the defensive posture dial
     // (last-button-wins). The offensive lean lives in tendency + passDepth.
-    gp.tendency = val === "run" ? "Heavy Run" : val === "pass" ? "Heavy Pass" : "Balanced";
-    gp.passDepth = val === "pass" ? { short: 30, medium: 40, deep: 30 } : val === "run" ? { short: 50, medium: 38, deep: 12 } : { short: 40, medium: 40, deep: 20 };
+    patch.tendency = val === "run" ? "Heavy Run" : val === "pass" ? "Heavy Pass" : "Balanced";
+    patch.passDepth = val === "pass" ? { short: 30, medium: 40, deep: 30 } : val === "run" ? { short: 50, medium: 38, deep: 12 } : { short: 40, medium: 40, deep: 20 };
   } else if (key === "simpleOffAggr") {
-    gp.fourthDown = val === "aggr" ? "Aggressive" : val === "safe" ? "Conservative" : "Moderate";
-    gp.qbAggr = val === "aggr" ? 68 : val === "safe" ? 34 : 50;
+    patch.fourthDown = val === "aggr" ? "Aggressive" : val === "safe" ? "Conservative" : "Moderate";
+    patch.qbAggr = val === "aggr" ? 68 : val === "safe" ? 34 : 50;
   } else if (key === "simpleDefPosture") {
     // OD-8 (D16, 2026-08-18): the posture writes the stop through setAggr —
     // the old raw gp.blitzPct write never touched defAggression, so whenever a
@@ -467,26 +473,27 @@ function applySimpleDial(gp, key, val) {
     // (the proven stale-pair bug). OD-5 (D16): "aggressive"/"conservative"
     // coverageScheme were placebos (no sim branch) — the posture speaks
     // through the dials the sim reads: stop, shell, cushion, box.
-    gp.coverageScheme = "balanced";
+    patch.coverageScheme = "balanced";
     if (val === "attack") {
-      setAggr(gp, "attacking");
-      gp.covShell = "single";
-      gp.pressLevel = "press";
-      gp.runCommit = 8;
+      setAggr(patch, "attacking");
+      patch.covShell = "single";
+      patch.pressLevel = "press";
+      patch.runCommit = 8;
     } else if (val === "bend") {
-      setAggr(gp, "bend");
-      gp.covShell = "two";
-      gp.pressLevel = "off";
-      gp.runCommit = -6;
+      setAggr(patch, "bend");
+      patch.covShell = "two";
+      patch.pressLevel = "off";
+      patch.runCommit = -6;
     } else {
-      setAggr(gp, "balanced");
-      gp.covShell = "balanced";
-      gp.pressLevel = "balanced";
-      gp.runCommit = 0;
+      setAggr(patch, "balanced");
+      patch.covShell = "balanced";
+      patch.pressLevel = "balanced";
+      patch.runCommit = 0;
     }
   } else if (key === "simpleTempo") {
-    gp.baseTempo = val === "fast" ? "Hurry" : val === "slow" ? "Chew" : "Normal";
+    patch.baseTempo = val === "fast" ? "Hurry" : val === "slow" ? "Chew" : "Normal";
   }
+  return patch;
 }
 // Was SCHEME PROFILE — a read-only card that scored every dial 0-100 and printed
 // the numbers, which breaks the never-print-coefficients rule and duplicated the
@@ -1589,15 +1596,18 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
   });
   root.querySelectorAll("[data-dfmix-front]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      if (!Array.isArray(gp.defFrontMix)) gp.defFrontMix = [];
+      // D17 C-2: edit a LOCAL copy of the mix, commit once through the seam
+      // (defFrontMix is a def-side field, so it belongs to the defbook).
+      const _mix = Array.isArray(gp.defFrontMix) ? JSON.parse(JSON.stringify(gp.defFrontMix)) : [];
       const fid = btn.dataset.dfmixFront;
-      const idx = gp.defFrontMix.findIndex((f) => f.id === fid);
-      if (idx >= 0) gp.defFrontMix.splice(idx, 1);
+      const idx = _mix.findIndex((f) => f.id === fid);
+      if (idx >= 0) _mix.splice(idx, 1);
       else {
-        if (gp.defFrontMix.length >= 5) gp.defFrontMix.pop();
-        gp.defFrontMix.push({ id: fid, weight: 33 });
+        if (_mix.length >= 5) _mix.pop();
+        _mix.push({ id: fid, weight: 33 });
       }
-      if (gp.defFrontMix.length) rebalanceWeights(gp.defFrontMix);
+      if (_mix.length) rebalanceWeights(_mix);
+      writeDial({ defFrontMix: _mix });
       rerender();
     });
   });
@@ -1605,7 +1615,9 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
     slider.addEventListener("input", () => {
       const i = parseInt(slider.dataset.dfwIndex);
       if (!Array.isArray(gp.defFrontMix) || !gp.defFrontMix[i]) return;
-      holdAndRebalance(gp.defFrontMix, i, parseInt(slider.value));
+      const _mix = JSON.parse(JSON.stringify(gp.defFrontMix));
+      holdAndRebalance(_mix, i, parseInt(slider.value));
+      writeDial({ defFrontMix: _mix });
       gp.defFrontMix.forEach((f, j) => {
         const sl = root.querySelector(`.dfw-slider[data-dfw-index="${j}"]`);
         if (sl && j !== i) sl.value = f.weight;
@@ -1661,14 +1673,16 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
   });
   root.querySelectorAll("[data-gp-pressid]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      gp.pressureIdentity = btn.dataset.gpPressid === "auto" ? null : btn.dataset.gpPressid;
+      writeDial({ pressureIdentity: btn.dataset.gpPressid === "auto" ? null : btn.dataset.gpPressid });
       rerender();
     });
   });
   root.querySelectorAll("[data-rundir]").forEach((sl) => {
     sl.addEventListener("input", (e) => {
-      if (!gp.runDirection) gp.runDirection = { left: 33, middle: 34, right: 33 };
-      holdAndRebalanceDist(gp.runDirection, ["left", "middle", "right"], sl.dataset.rundir, parseInt(e.target.value) || 0);
+      // D17 C-2: rebalance a LOCAL copy, then commit once through the seam.
+      const _rd = { ...(gp.runDirection || { left: 33, middle: 34, right: 33 }) };
+      holdAndRebalanceDist(_rd, ["left", "middle", "right"], sl.dataset.rundir, parseInt(e.target.value) || 0);
+      writeDial({ runDirection: _rd });
       root.querySelectorAll("[data-rundir]").forEach((other) => {
         var _a2;
         const k = other.dataset.rundir;
@@ -1679,64 +1693,63 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
     });
   });
   (_a = root.querySelector("#screen-rate")) == null ? void 0 : _a.addEventListener("input", (e) => {
-    gp.screenRate = parseInt(e.target.value);
+    writeDial({ screenRate: parseInt(e.target.value) });
     const el = root.querySelector("#screen-val");
     if (el) el.textContent = `${e.target.value}%`;
   });
   (_b = root.querySelector("#rpo-rate")) == null ? void 0 : _b.addEventListener("input", (e) => {
-    gp.rpoRate = parseInt(e.target.value);
+    writeDial({ rpoRate: parseInt(e.target.value) });
     const el = root.querySelector("#rpo-val");
     if (el) el.textContent = `${e.target.value}%`;
   });
   (_b = root.querySelector("#gadget-rate")) == null ? void 0 : _b.addEventListener("input", (e) => {
-    gp.gadgetRate = parseInt(e.target.value);
+    writeDial({ gadgetRate: parseInt(e.target.value) });
     const el = root.querySelector("#gadget-val");
     if (el) el.textContent = `${e.target.value}%`;
   });
   (_c = root.querySelector("#option-rate")) == null ? void 0 : _c.addEventListener("input", (e) => {
-    gp.optionRate = parseInt(e.target.value);
+    writeDial({ optionRate: parseInt(e.target.value) });
     const el = root.querySelector("#option-rate-val");
     if (el) el.textContent = `${e.target.value}%`;
   });
   (_d = root.querySelector("#pitch-aggr")) == null ? void 0 : _d.addEventListener("input", (e) => {
-    gp.pitchAggr = parseInt(e.target.value);
+    writeDial({ pitchAggr: parseInt(e.target.value) });
     const el = root.querySelector("#pitch-aggr-val");
     if (el) el.textContent = `${e.target.value}`;
   });
   (_e = root.querySelector("#jet-rate")) == null ? void 0 : _e.addEventListener("input", (e) => {
-    gp.jetRate = parseInt(e.target.value);
+    writeDial({ jetRate: parseInt(e.target.value) });
     const el = root.querySelector("#jet-rate-val");
     if (el) el.textContent = `${e.target.value}%`;
   });
   (_f = root.querySelector("#draw-rate")) == null ? void 0 : _f.addEventListener("input", (e) => {
-    gp.drawRate = parseInt(e.target.value);
+    writeDial({ drawRate: parseInt(e.target.value) });
     const el = root.querySelector("#draw-rate-val");
     if (el) el.textContent = `${e.target.value}%`;
   });
   (_g = root.querySelector("#pa-rate")) == null ? void 0 : _g.addEventListener("input", (e) => {
-    gp.paRate = parseInt(e.target.value);
+    writeDial({ paRate: parseInt(e.target.value) });
     const el = root.querySelector("#pa-rate-val");
     if (el) el.textContent = `${e.target.value}%`;
   });
   (_h = root.querySelector("#motion-rate")) == null ? void 0 : _h.addEventListener("input", (e) => {
-    gp.motionRate = parseInt(e.target.value);
+    writeDial({ motionRate: parseInt(e.target.value) });
     const el = root.querySelector("#motion-rate-val");
     if (el) el.textContent = `${e.target.value}%`;
   });
   (_i = root.querySelector("#prot-emph")) == null ? void 0 : _i.addEventListener("input", (e) => {
-    gp.protEmphasis = parseInt(e.target.value);
+    writeDial({ protEmphasis: parseInt(e.target.value) });
     const el = root.querySelector("#prot-emph-val");
     if (el) el.textContent = `${e.target.value}`;
   });
   (_j = root.querySelector("#qb-aggr")) == null ? void 0 : _j.addEventListener("input", (e) => {
-    gp.qbAggr = parseInt(e.target.value);
+    writeDial({ qbAggr: parseInt(e.target.value) });
     const el = root.querySelector("#qb-aggr-val");
     if (el) el.textContent = `${e.target.value}`;
   });
   root.querySelectorAll("input[data-cw]").forEach((sl) => {
     sl.addEventListener("input", (e) => {
-      if (!gp.conceptWeights) gp.conceptWeights = {};
-      gp.conceptWeights[sl.dataset.cw] = parseInt(e.target.value);
+      writeDial({ conceptWeights: { ...(gp.conceptWeights || {}), [sl.dataset.cw]: parseInt(e.target.value) } });
       const grp = root.querySelectorAll(`input[data-cwgrp="${sl.dataset.cwgrp}"]`);
       let tot = 0;
       grp.forEach((g) => {
@@ -1752,7 +1765,7 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
     });
   });
   (_k = root.querySelector("#cw-reset")) == null ? void 0 : _k.addEventListener("click", () => {
-    gp.conceptWeights = {};
+    writeDial({ conceptWeights: {} });
     rerender();
   });
   // Madden pass 2: per-formation playbook editor wiring
@@ -1939,14 +1952,15 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
     });
   });
   (_l = root.querySelector("#wildcat-pass")) == null ? void 0 : _l.addEventListener("input", (e) => {
-    gp.wildcatPassRate = parseInt(e.target.value);
+    writeDial({ wildcatPassRate: parseInt(e.target.value) });
     const el = root.querySelector("#wildcat-pass-val");
     if (el) el.textContent = `${e.target.value}%`;
   });
   root.querySelectorAll("[data-optmix]").forEach((sl) => {
     sl.addEventListener("input", (e) => {
-      if (!gp.optionMix) gp.optionMix = { dive: 40, keep: 30, pitch: 30 };
-      holdAndRebalanceDist(gp.optionMix, ["dive", "keep", "pitch"], sl.dataset.optmix, parseInt(e.target.value) || 0);
+      const _om = { ...(gp.optionMix || { dive: 40, keep: 30, pitch: 30 }) };
+      holdAndRebalanceDist(_om, ["dive", "keep", "pitch"], sl.dataset.optmix, parseInt(e.target.value) || 0);
+      writeDial({ optionMix: _om });
       root.querySelectorAll("[data-optmix]").forEach((other) => {
         var _a2;
         const k = other.dataset.optmix;
@@ -1963,24 +1977,25 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
         balanced: { short: 40, medium: 40, deep: 20 },
         deep: { short: 25, medium: 35, deep: 40 }
       };
-      gp.passDepth = __spreadValues({}, PRESETS[btn.dataset.htDepth]);
+      writeDial({ passDepth: __spreadValues({}, PRESETS[btn.dataset.htDepth]) });
       rerender();
     });
   });
   (_m = root.querySelector("#box-commit")) == null ? void 0 : _m.addEventListener("input", (e) => {
-    gp.runCommit = parseInt(e.target.value);
+    writeDial({ runCommit: parseInt(e.target.value) });
     const el = root.querySelector("#box-val");
     if (el) el.textContent = `${e.target.value > 0 ? "+" : ""}${e.target.value}`;
   });
   (_n = root.querySelector("#qb-run-pct")) == null ? void 0 : _n.addEventListener("input", (e) => {
-    gp.qbRunPct = parseInt(e.target.value);
+    writeDial({ qbRunPct: parseInt(e.target.value) });
     const el = root.querySelector("#qb-run-val");
     if (el) el.textContent = `+${e.target.value}%`;
   });
   root.querySelectorAll("[data-passdepth]").forEach((sl) => {
     sl.addEventListener("input", (e) => {
-      if (!gp.passDepth) gp.passDepth = { short: 40, medium: 40, deep: 20 };
-      holdAndRebalanceDist(gp.passDepth, ["short", "medium", "deep"], sl.dataset.passdepth, parseInt(e.target.value) || 0);
+      const _pd = { ...(gp.passDepth || { short: 40, medium: 40, deep: 20 }) };
+      holdAndRebalanceDist(_pd, ["short", "medium", "deep"], sl.dataset.passdepth, parseInt(e.target.value) || 0);
+      writeDial({ passDepth: _pd });
       root.querySelectorAll("[data-passdepth]").forEach((other) => {
         var _a2;
         const k = other.dataset.passdepth;
@@ -1993,9 +2008,8 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
   root.querySelectorAll("[data-defshare]").forEach((sl) => {
     sl.addEventListener("input", (e) => {
       var _a2;
-      if (!gp.targetShares) gp.targetShares = {};
       const key = sl.dataset.defshare;
-      gp.targetShares[key] = parseInt(e.target.value) || 0;
+      writeDial({ targetShares: { ...(gp.targetShares || {}), [key]: parseInt(e.target.value) || 0 } });
       const v = (_a2 = sl.parentElement) == null ? void 0 : _a2.querySelector(".run-dir-val");
       if (v) v.textContent = `${gp.targetShares[key]}%`;
     });
@@ -3117,13 +3131,16 @@ function setupListeners() {
   });
   document.querySelectorAll("[data-simpledial]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      applySimpleDial(gp, btn.dataset.simpledial, btn.dataset.simpleval);
+      // D17 C-2: Simple mode returns a patch; the seam routes each field to
+      // its owner (tendency/passDepth → book, shell/cushion/box → defbook,
+      // 4th-down/tempo → overlay) in ONE compile.
+      setPlanFields(school, applySimpleDial(gp, btn.dataset.simpledial, btn.dataset.simpleval));
       rerender();
     });
   });
   document.querySelectorAll("[data-simplesit]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      applySimpleSit(gp, btn.dataset.simplesit, btn.dataset.sitlever, btn.dataset.sitval);
+      setPlanFields(school, applySimpleSit(gp, btn.dataset.simplesit, btn.dataset.sitlever, btn.dataset.sitval) || {});
       rerender();
     });
   });
@@ -3143,7 +3160,7 @@ function setupListeners() {
   if (!gp.targetShares) gp.targetShares = { WR1: 22, WR2: 20, WR3: 16, TE1: 20, RB1: 14 };
   if (!gp.coverageScheme) gp.coverageScheme = "balanced";
   (_d = document.getElementById("max-fg")) == null ? void 0 : _d.addEventListener("input", (e) => {
-    gp.maxFGDist = parseInt(e.target.value);
+    setPlanFields(school, { maxFGDist: parseInt(e.target.value) });
     document.getElementById("max-fg-val").textContent = `${e.target.value} yds`;
   });
   document.querySelectorAll("[data-nav]").forEach((el) => {
