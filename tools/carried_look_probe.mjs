@@ -141,7 +141,7 @@ hdr('L4 — no screen offers from a global table any more');
     'the "every formation in the game" offer is gone');
   check(/carriedDefFronts\(/.test(dc), 'depth chart asks carriedDefFronts for its defensive pills');
   check(!/\$\{Object\.keys\(DEF_FIELD_LAYOUTS\)\.map/.test(dc), 'the "every front in the game" pill strip is gone');
-  check(/carriedOffLooks\(gp, \{ all: true \}\)\.map/.test(gpv), 'the situations picker offers carried looks');
+  check(/const live = carriedOffLooks\(gp, \{ all: true \}\);/.test(gpv), 'the situations picker offers carried looks');
   check(!/\$\{Object\.keys\(FORMATIONS\)\.map\(\(fid\) => \{/.test(gpv), 'the situations "every formation" grid is gone');
 
   // THE ONE THAT BIT: every offensive resolve on the screen passes a variation.
@@ -170,6 +170,48 @@ hdr('L5 — a situational package pins a LOOK, and the sim honours it');
   const sim = src('js/engine/sim.js');
   check(/_rolledEntry \? _rolledEntry\.variation \|\| null/.test(sim),
     'sim.js takes the variation off the formation entry that won the roll');
+}
+
+// ── §6 the hole that narrowing the offer opens ──────────────────────────────
+hdr('L6 — everything that can TAKE THE FIELD is assignable (both sides)');
+{
+  // The trap: limiting the Depth Chart to the STANDING set would strand any
+  // look a SITUATION pins. A situational package fields its look for real, so
+  // an older save that pinned a goal-line look under the unrestricted picker
+  // would field an eleven the coach could no longer assign anybody to — the
+  // very "it plays but you can't coach it" class this change set kills.
+  const gp = {
+    offFormations: [{ id: 'Spread', weight: 60 }, { id: 'Air Raid', weight: 40 }],
+    defBaseFront: 'Nickel',
+    defFrontMix: { Nickel: 70, Dime: 30 },
+    situations: {
+      goal_line: { offFormations: [{ id: 'Wildcat', weight: 100 }], defFront: '5-2' },
+      third_long: { offFormations: [{ id: 'Flexbone', weight: 100, variation: 'trips' }] }
+    }
+  };
+  const field = carriedOffLooks(gp, { withSituations: true }).map((l) => l.key);
+  check(field.includes('Wildcat'), 'a situationally pinned formation is assignable on the depth chart', field.join(', '));
+  check(field.includes('Flexbone|trips'), 'a situational pin keeps its VARIATION into the depth chart');
+  const dfield = carriedDefFronts(gp, { withSituations: true });
+  check(dfield.includes('5-2'), 'a situationally pinned FRONT is assignable too — the defensive twin', dfield.join(', '));
+
+  // …while the situations PICKER still offers only the standing set, so new
+  // pins stay clean. (The panel additionally lists whatever the cell already
+  // pins, so an old pin can be cleared — asserted statically below.)
+  const offer = carriedOffLooks(gp, { all: true }).map((l) => l.key);
+  check(!offer.includes('Wildcat'), 'the situations picker does NOT offer an uncarried look as a new choice');
+  check(!carriedDefFronts(gp).includes('5-2'), 'nor an uncarried front');
+
+  const dc = src('js/ui/views/depthchart.js');
+  check(/carriedOffLooks\(gp, \{ withSituations: true \}\)/.test(dc), 'the depth chart asks for the can-take-the-field set (offense)');
+  check(/carriedDefFronts\(gp, \{ withSituations: true \}\)/.test(dc), 'the depth chart asks for the can-take-the-field set (defense)');
+
+  const gpv = src('js/ui/views/gameplan.js');
+  check(!/\$\{PIN_FRONTS\.map\(\(fr\) => `/.test(gpv), 'the situations DEFENSE picker no longer lists all eleven fronts');
+  check(/carriedDefFronts\(gp\)\.filter\(\(fr\) => PIN_FRONTS\.includes\(fr\)\)/.test(gpv),
+    'it lists the fronts the defbook calls');
+  check(/!live\.includes\(cell\.defFront\)/.test(gpv), 'a front this cell ALREADY pins stays listed, so an old pin can be cleared');
+  check(/an older pin the standing plan no longer carries/.test(gpv), 'same courtesy on the offensive grid');
 }
 
 console.log(`\nCARRIED LOOK PROBE — ${pass} pass, ${fail} fail`);

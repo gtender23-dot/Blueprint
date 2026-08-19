@@ -5314,3 +5314,36 @@ save_migration · live_book_call · play_fidelity — all green, key set ×3.
 2.02 both OK, nothing new off. Playwright tier unavailable in this container as
 always. **Owner still owes the browser eyeball on this one** — the pill strips
 and the situations grid are visual changes. NOT pushed.
+
+### 2026-08-19 (same day, follow-up) — "did the defense get the same treatment?" (owner)
+
+Honest answer was *partially*, and the question surfaced a hole the first pass
+opened. Three parts:
+
+1. **Defense HAD got** the Depth Chart front limiting + the stale-tab clamp.
+2. **Defense had NOT got** the situations treatment — the defensive half of
+   `renderSitPanel` still offered `PIN_FRONTS`, all eleven fronts in the game.
+   Same bug class as the offensive half, missed. Now limited to the fronts the
+   defbook calls.
+3. **The variation half is genuinely N/A** — there is no defensive variation
+   layer at all (no `DEF_VARIATIONS`; `resolveDefField` takes no variation
+   argument), so there is no defensive twin of the re-dressing defect.
+
+**The hole the first pass opened, on BOTH sides.** Narrowing the Depth Chart to
+the STANDING set stranded any look a SITUATION pins. A situational package
+fields its look for real, so a save that pinned a goal-line Wildcat under the
+old unrestricted picker would field an eleven the coach could no longer assign
+anybody to — recreating the exact "it plays but you can't coach it" class this
+change set exists to kill. Measured before fixing: plan carrying Spread/Air
+Raid + Nickel/Dime with a goal-line pin of Wildcat / 5-2 offered neither.
+
+Fix: the Depth Chart's question is not "what do we carry?" but **"what can take
+the field?"** — `carriedOffLooks(gp, { withSituations: true })` and
+`carriedDefFronts(gp, { withSituations: true })` union the situational pins.
+The situations PICKERS still offer only the standing set (new pins stay clean),
+plus whatever that cell already pins so an old pin remains visible and
+clearable.
+
+`carried_look_probe` grew §6 (41 checks total) and is green ×3, with build,
+plan_cohesion (97/0), card_lint, draw_up, plan_side, playbook_root,
+save_migration and dead_surface. Bands unmoved (comp% only). NOT pushed.

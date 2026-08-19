@@ -314,12 +314,21 @@ function normalizeFrontMix(mix) {
 // your defbook never calls. The identity front is ALWAYS included even if the
 // mix somehow omits it: it is what selectDefFront falls back to, so it always
 // takes the field and must always be pinnable.
-function carriedDefFronts(gp) {
+// opts.withSituations: the fronts that can TAKE THE FIELD — the mix plus every
+// front a situation pins. Same reasoning as carriedOffLooks: a pinned front
+// takes every snap of its situation, so it must stay assignable on the Depth
+// Chart even when the standing mix has dropped it.
+function carriedDefFronts(gp, opts) {
   const out = [];
   const push = (id) => { if (id && DEF_FRONT_COUNTS[id] && !out.includes(id)) out.push(id); };
   const identity = gp && gp.defFront && gp.defFront !== "auto" ? gp.defFront : gp && gp.defBaseFront;
   push(identity || "4-3");
   for (const f of normalizeFrontMix(gp && gp.defFrontMix)) push(f.id);
+  if (opts && opts.withSituations) {
+    for (const cell of Object.values((gp && gp.situations) || {})) {
+      if (cell && typeof cell.defFront === "string" && cell.defFront !== "auto") push(cell.defFront);
+    }
+  }
   return out;
 }
 function rollFrontMix(mix, base) {

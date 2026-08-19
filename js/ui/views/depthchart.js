@@ -72,7 +72,7 @@ function renderDepthChart(embed = false) {
   // line read Object.keys(OFF_FIELD_LAYOUTS) while the empty-state below it
   // already said "Pick your package on the Game Plan screen first"; the intent
   // was always the carried set, the filter just never did it (2026-08-19).
-  const offLooks = carriedOffLooks(gp);
+  const offLooks = carriedOffLooks(gp, { withSituations: true });
   const activeKey = activeOffFormation ? lookKeyOf(activeOffFormation, activeOffVariation) : null;
   if (!activeKey || !offLooks.some((l) => l.key === activeKey)) {
     activeOffFormation = offLooks[0] ? offLooks[0].id : "Single Back";
@@ -81,7 +81,7 @@ function renderDepthChart(embed = false) {
   const baseFront = gp.defBaseFront || "4-3";
   // A front tab left over from a plan that no longer carries it would pin an
   // eleven the defense never fields — drop back to the identity front.
-  const defFronts = carriedDefFronts(gp);
+  const defFronts = carriedDefFronts(gp, { withSituations: true });
   if (defFrontTab && !defFronts.includes(defFrontTab)) defFrontTab = null;
   return `
   <div class="view-depthchart">
@@ -327,7 +327,7 @@ function applySimplePlan(school) {
   // a re-dressed body got weighted as the wrong kind of receiver. Resolve each
   // formation under the variation the team actually carries it in.
   const varByFid = {};
-  for (const l of carriedOffLooks(gp, { all: true })) if (l.variation) varByFid[l.id] = l.variation;
+  for (const l of carriedOffLooks(gp, { all: true, withSituations: true })) if (l.variation) varByFid[l.id] = l.variation;
   for (const fid of Object.keys(OFF_FIELD_LAYOUTS).filter((_fid) => FORMATIONS[_fid])) {
     const layout = { slots: offFieldSlots(fid, varByFid[fid] || null) || OFF_FIELD_LAYOUTS[fid].slots };
     const e = gp.fieldAssignments.offense[fid] || (gp.fieldAssignments.offense[fid] = { slots: {}, shares: {} });

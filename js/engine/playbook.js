@@ -136,11 +136,29 @@ function fittingConceptsForFormation(formationId, variation) {
 // Deduped, order preserved, zero-weight entries dropped (a look you've dialled
 // to 0 is a look you don't run). `all` keeps every carried entry even at zero
 // weight — the Game Plan screen still wants to show you what you own.
+// opts.withSituations — the set that can actually TAKE THE FIELD, which is the
+// carried set UNION every look a situation pins. The Depth Chart wants this
+// one: a situational package fields its look for real (the sim reads the
+// winning entry's variation), so if the screen offered only the standing set,
+// an older save that pinned a goal-line look under the unrestricted picker
+// would field a look the coach could no longer assign anybody to. Narrowing
+// the offer without this union would have recreated the very class of bug this
+// change set exists to kill — a look plays that you cannot coach.
 function carriedOffLooks(gp, opts) {
   const all = !!(opts && opts.all);
-  const src = Array.isArray(gp && gp.offFormations) && gp.offFormations.length
+  const base = Array.isArray(gp && gp.offFormations) && gp.offFormations.length
     ? gp.offFormations
     : [{ id: (gp && gp.offFormation) || "Single Back", weight: 100 }];
+  const src = base.slice();
+  if (opts && opts.withSituations) {
+    for (const cell of Object.values((gp && gp.situations) || {})) {
+      for (const f of (cell && Array.isArray(cell.offFormations) ? cell.offFormations : [])) {
+        // A situational pin is live regardless of the standing weight, so it
+        // enters at full weight — it is not a "zero-weight look you own".
+        if (f && f.id) src.push({ id: f.id, variation: f.variation, weight: 100 });
+      }
+    }
+  }
   const seen = new Set();
   const out = [];
   for (const f of src) {

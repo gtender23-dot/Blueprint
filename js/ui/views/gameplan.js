@@ -2,7 +2,7 @@ import { __spreadProps, __spreadValues } from '../../_spread.js';
 import { PASS_CONCEPTS, RUN_CONCEPTS } from '../../concepts.js';
 import { C, DEF_FRONTS, FORMATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, FORMATION_VARIATIONS, PASS_TENDENCY, aggrStopFromBlitzPct } from '../../constants.js';
 import { getCoach, saveGameplanToLibrary, saveTeamToLibrary } from '../../engine/coachprofile.js';
-import { FRONT_PRESSURE_SIGNATURE, FRONT_SIG_LABEL, normalizeFrontMix } from '../../engine/formations.js';
+import { FRONT_PRESSURE_SIGNATURE, FRONT_SIG_LABEL, carriedDefFronts, normalizeFrontMix } from '../../engine/formations.js';
 import { SITUATION_KEYS, SITUATION_LABELS } from '../../engine/situations.js';
 import { getPlayerSchool, navigate, notify, rerender, state } from '../../state.js';
 import { renderFormationDiagram } from './routeart.js';
@@ -2335,7 +2335,16 @@ function renderSitPanel(gp, key) {
     Array.isArray(cell.offFormations),
     `AUTO \u2014 your default package: ${inheritForms}`,
     `<div class="sitfc-grid">
-      ${carriedOffLooks(gp, { all: true }).map((l) => {
+      ${(() => {
+      const live = carriedOffLooks(gp, { all: true });
+      for (const f of (cell.offFormations || [])) {
+        if (f && f.id && !live.some((l) => l.id === f.id && l.variation === (f.variation || null))) {
+          // an older pin the standing plan no longer carries — listed so it can be cleared
+          live.push({ key: f.variation ? `${f.id}|${f.variation}` : f.id, id: f.id, variation: f.variation || null, label: f.variation ? `${f.id} · ${f.variation}` : f.id });
+        }
+      }
+      return live;
+    })().map((l) => {
       // 2026-08-19: the carried LOOKS, not Object.keys(FORMATIONS). A situation
       // could pin a formation the playbook doesn't carry — the sim would then
       // be asked for a look with no call sheet — and it had no concept of a
@@ -2511,9 +2520,19 @@ function renderSitPanel(gp, key) {
     typeof cell.defFront === "string" && cell.defFront !== "auto",
     `AUTO \u2014 your default ${escapeHtml(gp.defBaseFront || "4-3")}; auto-subs by personnel + down: Nickel/Dime vs spread, 46/Bear on short-yardage, a 5-2 wall inside the 1`,
     `<div class="gp-options">
-      ${PIN_FRONTS.map((fr) => `
+      ${(() => {
+      // 2026-08-19 — the defensive twin of the offensive fix: this offered
+      // PIN_FRONTS, all eleven fronts in the game, so a situation could pin a
+      // front the defbook never calls and the Depth Chart (now limited to the
+      // carried set) would have no eleven for it. Offer what the book calls —
+      // plus whatever this cell ALREADY pins, so a pin made under the old
+      // unrestricted picker can still be seen and cleared.
+      const live = carriedDefFronts(gp).filter((fr) => PIN_FRONTS.includes(fr));
+      if (typeof cell.defFront === "string" && PIN_FRONTS.includes(cell.defFront) && !live.includes(cell.defFront)) live.push(cell.defFront);
+      return live.map((fr) => `
         <button class="gp-option gp-option-sm${cell.defFront === fr ? " active" : ""}"
-                data-sitset-field="defFront" data-sitset-val="${fr}">${fr}</button>`).join("")}
+                data-sitset-field="defFront" data-sitset-val="${fr}">${fr}</button>`).join("");
+    })()}
     </div>
     <div class="gp-tip tip-info">\u25B8 Pinned: this front takes EVERY snap in this situation \u2014 no auto-subs.</div>`,
     PIN_FRONTS.includes(cell.defFront)
