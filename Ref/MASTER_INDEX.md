@@ -145,7 +145,7 @@ Each shell, what it IS, who covers what, and its structural hole:
   Wing) · Gadget (Wildcat, Emory & Henry, Swinging Gate, Unbalanced). A sim formation model needs:
   eligible-receiver count & positioning (split vs attached), RB depth/spacing, TE deployment,
   line balance, under-center vs shotgun.
-- Single Wing — `[TD →]` · Flexbone — `[TD →]` · Wing-T — `[TD →]`
+- Single Wing — `[TD →]` · **Flexbone — `[TD ✓]` (read 2026-08-18)** · Wing-T — `[TD →]`
 - Offensive positions (all) — `[TD →]`
 
 ## 9. SITUATIONAL / CLOCK / GAME MANAGEMENT  ⧉ sub 5  ← current pass

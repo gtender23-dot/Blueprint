@@ -23,7 +23,9 @@ regression.
 1. **Scope.** Pick a subsystem below. Read its code anchors so you know what the
    sim currently does.
 2. **Source.** Owner seeds trusted links; assistant web-searches reputable
-   coaching sources and proposes a reading list; **owner approves before use.**
+   coaching sources and proposes a reading list; ~~**owner approves before use.**~~
+   **SUPERSEDED 2026-08-18 (owner): no approval needed — fetch, read and add
+   freely. Probes still decide truth, not the sources.**
 3. **Extract claims.** Fetch each approved URL. Produce a claims list — each
    claim tagged: `testable` (a relationship a probe can check), `vague`
    (directional, no number), or `opinion` (skip). One line each, sourced.

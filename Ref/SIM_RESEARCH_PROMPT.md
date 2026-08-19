@@ -21,7 +21,12 @@ Follow `Ref/SIM_RESEARCH_PROJECT.md` exactly. Specifically:
 2. **Sources.** Use my seeded links. Then web-search reputable coaching sources
    (coach blogs, clinic notes, coaching-clinic write-ups, respected analysts) on
    this subsystem and PROPOSE a short reading list with one line each on why.
-   **Wait for my approval before fetching anything I didn't seed.**
+   **~~Wait for my approval before fetching anything I didn't seed.~~ SUPERSEDED
+   2026-08-18 — OWNER: "i misunderstood that back then yes i want everything
+   read thats all for you and you are free to fetch and add". No approval gate:
+   read anything in the catalogs, fetch new sources, add them to the library.
+   The one rule that DOES survive: truth is still decided by the probes, never
+   by a blog — a source sets the shape, a probe says whether we match it.**
 
 3. **Extract claims.** Fetch each approved URL one at a time. Produce a numbered
    claims list. Tag each: `testable` / `vague` / `opinion`, with the source.

@@ -86,7 +86,7 @@ the rule-level mechanics blitzology gives. Weigh accordingly — probes still de
 ### Offensive systems (formations / offense identity)
 - The Complete Guide to Offensive Football Formations — `the-complete-guide-to-offensive-football-formations`  ← **the "formations" question source**
 - The Single Wing Offense — `the-single-wing-offense-an-in-depth-guide`
-- The Flexbone Offense — `the-flexbone-offense-an-in-depth-guide`
+- The Flexbone Offense — `the-flexbone-offense-an-in-depth-guide`  **[READ 2026-08-18 — fixed flex_trips; see SOURCE_LIBRARY entry F1]**
 - The Wing-T Offense — `the-wing-t-offense-an-in-depth-guide`
 - Offensive Positions in Football (All Positions Explained) — `offensive-positions-in-football-all-positions-explained`
 

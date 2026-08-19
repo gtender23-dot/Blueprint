@@ -476,7 +476,21 @@ var VARIATION_LAYOUTS = {
   flex_twirl: { moves: { RB_H: { x: 0.18, y: 0.6 }, RB_2: { x: 0.82, y: 0.6 } } },
   // Flexbone — Trips: the left A-back flexes to the slot (pkg RB:1 WR:3) and
   // draws as the slot receiver he is in that look; trips right.
-  flex_trips: { moves: { RB_H: { x: 0.7, y: 0.56, pos: "SLOT", label: "SL", role: "WR-Slot" }, RB_2: { x: 0.84, y: 0.6 } } },
+  // FLEXBONE TRIPS — re-authored 2026-08-18 from Throw Deep Publishing, "The
+  // Flexbone Offense: An In-Depth Guide" (read under the owner's 2026-08-18
+  // standing approval). The source is explicit on both alignments:
+  //   base  — "two A-backs positioned 2x4 yards outside and behind tackles"
+  //   trips — "takes one of the A backs from one side, and moves him to the
+  //            opposite side lined up in space as a receiver off the line of
+  //            scrimmage"
+  // ONE A-back travels; the other stays where he was. The old row did neither
+  // cleanly: it moved the traveller to x0.70 — tucked behind the right tackle
+  // rather than "in space" — AND shoved the staying A-back out to x0.84, which
+  // is what made the remaining ball-carrier look split out when he took a
+  // handoff (owner report). Now the traveller goes wide as a receiver and the
+  // staying A-back keeps his base 2x4 alignment, so inside runs are handed to a
+  // man standing where a flexbone A-back actually stands.
+  flex_trips: { moves: { RB_H: { x: 0.85, y: 0.54, pos: "SLOT", label: "SL", role: "WR-Slot" } } },
   // Wildcat — Unbalanced: both tight ends onto the right side.
   wc_unbal: { moves: { TE_U: { x: 0.86, y: 0.5 } } },
   // Wildcat — Slash: the U flexes away left as a split end (pkg TE:1 WR:1),

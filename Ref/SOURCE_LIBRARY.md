@@ -563,3 +563,30 @@ sampled (at least their newest post). Remaining broad labels still worth a deepe
 for their back-catalog: **`Pass Protection`, `Blitz of the Week`, `Blitz Technique`, `4-3
 Defense`, `3-4 Defense`, `Bear Front`, `RPO`, `Fire Zone`** — these each hold many posts beyond
 the one newest article captured here.
+
+
+---
+
+## F. Offensive formations — alignment truth  (added 2026-08-18)
+
+**No approval gate any more** (owner, 2026-08-18): sources are read and added
+freely; probes still decide truth.
+
+F1. **The Flexbone Offense: An In-Depth Guide** — Throw Deep Publishing,
+    Michael Campbell, 2024-10-30 —
+    `throwdeeppublishing.com/blogs/football-glossary/the-flexbone-offense-an-in-depth-guide`
+    Read 2026-08-18 to settle an owner bug report ("in flexbone trips the RB is
+    taking the handoff from a split-out position"). Two quotes decided it:
+    - **Base (Double Slot):** *"two A-backs positioned 2x4 yards outside and
+      behind tackles"* — so an A-back aligned just outside the tackle taking a
+      handoff is CORRECT flexbone, not a bug. Our base row already matches.
+    - **Trips:** *"takes one of the A backs from one side, and moves him to the
+      opposite side lined up in space as a receiver off the line of scrimmage"*
+      — ONE A-back travels and becomes a receiver; the other STAYS in his base
+      alignment. Our authored row did neither: it put the traveller at x0.70
+      (behind the right tackle, not "in space") and shoved the staying A-back
+      out to x0.84, which is what made his ordinary carries look absurd.
+    Also useful and not yet modelled: the A-back pitch relationship is
+    *"3-4 yards away"* from the QB; the **rocket toss** pitches to an A-back in
+    motion (so a wide man carrying on a toss is right); base looks expect
+    pre-snap A-back motion, and good staffs counter it with counter-motion.
