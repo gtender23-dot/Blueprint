@@ -227,6 +227,7 @@ function applyDefCall(defEff, o, defSchool) {
     }
     if (o.rotation) defEff.rotation = o.rotation;
     if (o.rush3) defEff.rush3 = true;
+    if (o.bringSeats != null) defEff.bringSeats = o.bringSeats;
   }
   // PASS 4: pressure-flavor ingredients (pressLook: mug/amoeba · dogGame:
   // green/cross). Same one-entry-point law; kill-switch strips them here.
@@ -258,6 +259,7 @@ function syncDefEff(defPlanEff, defEff) {
   defPlanEff.covFamilyEff = defEff.covFamily;
   defPlanEff.rotationEff = defEff.rotation;
   defPlanEff.rush3Eff = defEff.rush3;
+  defPlanEff.bringSeatsEff = defEff.bringSeats;
   // PASS 4: the pressure-flavor ingredients too.
   defPlanEff.pressLookEff = defEff.pressLook;
   defPlanEff.dogGameEff = defEff.dogGame;
@@ -301,6 +303,9 @@ function pickDefCall(gp, sitKey, persClass) {
     covFamily: c.covFamily || null,
     rotation: c.rotation || null,
     rush3: c.rush3 ? true : null,
+    // 2026-08-19: the card's rusher COUNT (extra hats beyond the front's four).
+    // 0 is meaningful — a real four-man rush — so the null check is explicit.
+    bringSeats: c.bringSeats != null ? c.bringSeats : null,
     // D14: the normalizer speaks the cushion now (it dropped it before, so a
     // card's press/off died here even when applyDefCall would have taken it).
     pressLevel: c.pressLevel || null,
@@ -1575,11 +1580,21 @@ function resolvePassPlay(playType, offPersonnel, defPersonnel, offRoster, defRos
   // the aggression cap. Neutral (null) for every AI plan and untouched save.
   const _pieHeatMult = !globalThis.__noBlitzPie && defPlan._pieHeat != null ? 0.5 + defPlan._pieHeat / 100 : 1;
   const blitzPct = rush3Call ? 0 : clamp2(pressureCallRate({ stop: aggrStop, lev: defPlan._defLev || "neutral", design: defPlan.blitzDesign, rate: defPlan.blitzPct }) * formTell * _pieHeatMult, 0, C.AGGRESSION.capRate);
-  if (Math.random() < blitzPct) {
+  // A CALLED COUNT IS NOT A DICE ROLL (2026-08-19). When a card names its
+  // rusher count, that count happens: seats 0 is a four-man rush that does NOT
+  // blitz, seats 1 sends five, seats 2 sends six. The standing/AUTO path is
+  // untouched and still rolls against the aggression stop.
+  //
+  // The roll is STILL DRAWN even when a card overrides it — dropping the draw
+  // would shift every seeded world downstream, and AI staffs do call from their
+  // defbooks. Draw-for-draw parity, decision overridden.
+  const _seats = !globalThis.__noBringSeats && !rush3Call ? defPlan.bringSeatsEff : null;
+  const _rolled = Math.random() < blitzPct;
+  if (_seats != null ? _seats > 0 : _rolled) {
     result.blitzFired = true;
     result.pressCall = identity;
     const spec = C.PRESS_IDENTITY[identity] || C.PRESS_IDENTITY.secondLevel;
-    let extra = spec.extra + (aggrStop === "house" ? C.AGGRESSION.extraHouse : 0);
+    let extra = _seats != null ? _seats : spec.extra + (aggrStop === "house" ? C.AGGRESSION.extraHouse : 0);
     // Never strip the coverage bare: cap extras so enough LB+DB bodies stay
     // behind the call to match up (Cover 0 is risky, not impossible).
     const coverBodies = lbIds.length + dbIds.length;

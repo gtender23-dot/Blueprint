@@ -5805,3 +5805,51 @@ plan_cohesion (97/0) ×3 · blitz_pie · bench · play_fidelity · scheme_role a
 green. Owner still owes `covfam_probe` (container caps at ~178s), the Playwright
 tier and `_gate.mjs core`. Batch 2 (`bring` → seats) is next and needs its own
 A/B. NOT pushed.
+
+## 2026-08-19 — PRESSURE BATCH 2: `bring` becomes a COUNT
+
+Second build step of `Ref/PRESSURE_REDESIGN_2026-08-19.md`, resolving OD-P1 and
+OD-P2 together. Measured against batch 1's corrected baseline, which is why it
+was ordered second.
+
+**The fix.** `DEF_CALL_BRING` compiled cards into AGGRESSION STOPS —
+bring 4/5/6 became balanced/attacking/house — so a card named "Bring 5" only
+asked for the attacking RATE and whether five came was a dice roll. It now
+compiles to `bringSeats`: extra rushers beyond the four-man front. The card
+names a count and the count happens.
+
+| the card says | fired (before → after) | rushers (before → after) |
+|---|---|---|
+| Rush 3 | 0% → 0% | 3 → 3 ✓ (unchanged) |
+| Rush 4 | **23%** → **0%** | 4 on 77% → **4 on 100%** |
+| Bring 5 | 36% → 100% | **4 on 64%** → **5 on 100%** |
+| Bring the House | 51% → 100% | 4 on 49% → **6 on 100%** |
+
+`bring "4"` is now a real four-man rush that CANNOT blitz — a call the game had
+no way to express before (only Rush 3 could say "do not blitz").
+
+**The RNG draw is preserved.** `Math.random() < blitzPct` is still drawn even
+when a card overrides the decision — the roll is computed and discarded rather
+than skipped. Dropping it would shift every seeded world downstream, and AI
+staffs DO call from their defbooks. Draw-for-draw parity, decision overridden.
+Probe-pinned so nobody "optimises" the dead roll away.
+
+**The aggression stop stops moonlighting.** A card no longer rewrites the team's
+aggression, so the subsystems that read it as a season-long identity (penalty
+aggression, DNA XP, scout memos) see the standing value — which is more correct
+than a single call rewriting it.
+
+**Bands hold.** N=500: points 26.6, rush 152.6, INT% 2.01, **sacks 2.06 —
+unchanged from batch 1**, because "Rush 4 no longer blitzes" offsets "Bring 5/6
+always fire". Only the standing comp% flag.
+
+**Two pins flipped WITH the fix** (the tripwire convention): the probe's §2 and
+§3 bring ladder, and `bench_probe`'s B2 field-compile pin (`dc.aggression ===
+'house'` → `dc.bringSeats === 2`).
+
+**Gates.** Clean build; `pressure_cohesion_probe` ×3 · `bench_probe` ×3 ·
+`defbook_probe` ×3 · plan_cohesion (97/0) · live_book_call · play_fidelity ·
+blitz_pie all green. NOTE: `blitz_pie_probe` read 6/1 once then 7/0 on three
+consecutive re-runs — unseeded noise, not a regression, but worth watching. A
+`__noBringSeats` kill-switch exists for the A/B. Batch 3 (the blitzer list, the
+only step with UI) is next. NOT pushed.

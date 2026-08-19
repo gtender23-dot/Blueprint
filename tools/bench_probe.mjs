@@ -73,8 +73,14 @@ hdr('B1 — a known play vs a forced look runs through the real sim');
 hdr('B2 — the forced look is honored (defCall vocabulary, families pinned)');
 {
   const dc = benchDefCall({ front: '3-4', coverage: 'c1', bring: '6' });
-  check(dc.front === '3-4' && dc.covShell === 'single' && dc.covStyle === 'man' && dc.aggression === 'house',
-    'front + Cover 1 picture + Bring the House compile to the exact engine fields');
+  // 2026-08-19 (pressure batch 2): `bring` used to compile to an AGGRESSION
+  // STOP — "6" became aggression:"house" — so the card asked for a RATE and the
+  // count was a dice roll ("Bring the House" was a 49/51 coin flip, measured).
+  // It now compiles to SEATS: extra rushers beyond the four-man front, so six
+  // means six. The stop keeps owning how often pressure comes when nothing is
+  // called; it no longer moonlights as a count.
+  check(dc.front === '3-4' && dc.covShell === 'single' && dc.covStyle === 'man' && dc.bringSeats === 2,
+    'front + Cover 1 picture + Bring the House compile to the exact engine fields (bring = SEATS)');
   const dc3 = benchDefCall({ front: 'Dime', coverage: 'tampa2', bring: '3' });
   check(dc3.covFamily === 'Tampa 2' && dc3.rush3 === true, 'Tampa 2 picture pins the family; Rush 3 sets rush3');
   const r = realSnap({ formationId: 'Spread', concept: 'Four Verts', defLook: { front: 'Nickel', coverage: 'tampa2', bring: '4' } }, 31);

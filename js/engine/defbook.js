@@ -56,11 +56,24 @@ var DEF_CALL_COVERAGES = [
 ];
 var DEF_CALL_COVERAGE_IDS = DEF_CALL_COVERAGES.map((c) => c.id);
 // "How many come" → the per-call aggression stop the engine already speaks.
+// ── BRING IS A COUNT (2026-08-19) ───────────────────────────────────────────
+// These used to compile to AGGRESSION STOPS — bring 4/5/6 became
+// balanced/attacking/house — so a card named "Bring 5" only asked for the
+// attacking RATE and whether five actually came was then a dice roll. Measured
+// on the bench before this changed (n=751/cell): "Bring 5" sent FOUR rushers on
+// 64% of snaps, "Bring the House" was a 49/51 coin flip, and "Rush 4" — the
+// card a coach picks when he explicitly does NOT want to blitz — sent a fifth
+// rusher 23% of the time. A called card is a play call, not a posture.
+//
+// `bringSeats` is the number of EXTRA rushers beyond the four-man front, so the
+// count is what the card says. Seats 0 is a real four-man rush that cannot
+// blitz. The aggression stop keeps owning HOW OFTEN pressure comes when nothing
+// is called; it no longer moonlights as a count.
 var DEF_CALL_BRING = {
   "3": { label: "Rush 3", desc: "Drop eight — coverage wins this down.", fields: { rush3: true } },
-  "4": { label: "Rush 4", desc: "The front wins or nobody does.", fields: { aggression: "balanced" } },
-  "5": { label: "Bring 5", desc: "A second-level player comes too.", fields: { aggression: "attacking" } },
-  "6": { label: "Bring the House", desc: "No help — get there or get beat.", fields: { aggression: "house" } }
+  "4": { label: "Rush 4", desc: "The front wins or nobody does.", fields: { bringSeats: 0 } },
+  "5": { label: "Bring 5", desc: "A second-level player comes too.", fields: { bringSeats: 1 } },
+  "6": { label: "Bring the House", desc: "No help — get there or get beat.", fields: { bringSeats: 2 } }
 };
 function emptyDefCard(name) {
   return { name: String(name || "New Call").slice(0, 24), front: null, coverage: "base", bring: "4", look: null, weight: 50 };

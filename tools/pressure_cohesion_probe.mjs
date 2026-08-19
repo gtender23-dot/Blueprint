@@ -144,15 +144,21 @@ hdr('P2 — bring is a RATE selector today, not a seat count (front 4-3, c3)');
       const only3 = r.rushDist['3'] || 0;
       check(only3 === r.n, 'bring "3": rushN is 3 on every snap', `${only3}/${r.n}`);
     } else {
-      check(Math.abs(fired - exp.blitzFired) <= TOL,
-        `bring "${bring}": PINS A DEFECT (flips in batch 2) — blitz-fired rate is a dial reading, not "${bring} rushers arrive"`,
-        `measured=${fired.toFixed(1)}% expected~${exp.blitzFired}% (±${TOL}pp)`);
-      for (const [n, expPct] of Object.entries(exp.dist)) {
-        const got = pct(r.rushDist[n] || 0, r.n);
-        check(Math.abs(got - expPct) <= TOL,
-          `bring "${bring}": PINS A DEFECT (flips in batch 2) — rushN=${n} share`,
-          `measured=${got.toFixed(1)}% expected~${expPct}% (±${TOL}pp)`);
-      }
+      // FLIPPED WITH THE FIX, batch 2 (2026-08-19). These pinned the defect:
+      // bring 4/5/6 compiled to the aggression stops balanced/attacking/house,
+      // so the card asked for a RATE and the count was a dice roll. Measured
+      // pre-fix: "Bring 5" sent FOUR on 64% of snaps, "Bring the House" was a
+      // 49/51 coin flip, and "Rush 4" blitzed 23% of the time. A called card is
+      // a play call, not a posture — the count it names is the count that comes.
+      const want = Number(bring);
+      const wantFired = want > 4 ? 100 : 0;
+      check(Math.abs(fired - wantFired) < 0.5,
+        `bring "${bring}": the call is honoured, not rolled — fires ${wantFired ? 'every' : 'no'} snap`,
+        `fired=${fired.toFixed(1)}%`);
+      const got = pct(r.rushDist[String(want)] || 0, r.n);
+      check(got > 99.5,
+        `bring "${bring}": EXACTLY ${want} rushers come, every time`,
+        `rushN=${want} on ${got.toFixed(1)}% of snaps`);
     }
   }
 }
@@ -166,14 +172,21 @@ hdr('P3 — structural preconditions (static source, not simulated)');
   const fieldassign = src('js/engine/fieldassign.js');
   const formationsSrc = src('js/engine/formations.js');
 
-  // P1/P2: bring "4"/"5"/"6" are aggression-stop labels, not seat counts.
-  // "3" is the one bring value that still sets a literal rush count.
-  check(/"4":\s*\{[^}]*aggression:\s*"balanced"/.test(defbook),
-    'DEF_CALL_BRING["4"] still maps to aggression "balanced" — PINS A DEFECT, flips in batch 2');
-  check(/"5":\s*\{[^}]*aggression:\s*"attacking"/.test(defbook),
-    'DEF_CALL_BRING["5"] still maps to aggression "attacking" — PINS A DEFECT, flips in batch 2');
-  check(/"6":\s*\{[^}]*aggression:\s*"house"/.test(defbook),
-    'DEF_CALL_BRING["6"] still maps to aggression "house" — PINS A DEFECT, flips in batch 2');
+  // FLIPPED WITH THE FIX, batch 2. `bring` compiles to SEATS — extra rushers
+  // beyond the four-man front — so the count is what the card says. Seats 0 is
+  // a real four-man rush that cannot blitz, which the game had no way to call
+  // before (only Rush 3 could say "do not blitz").
+  // Scope to the TABLE, not the file — the explanatory comment above it names
+  // the old stops, and matching those would be a false red.
+  const _bringTbl = (defbook.match(/var DEF_CALL_BRING = \{[\s\S]*?\n\};/) || [''])[0];
+  check(_bringTbl.length > 0 && !/aggression:/.test(_bringTbl),
+    'DEF_CALL_BRING no longer compiles a card into an AGGRESSION STOP');
+  check(/"4":\s*\{[^}]*bringSeats:\s*0/.test(_bringTbl),
+    'bring "4" = 0 extra seats — a four-man rush that cannot blitz');
+  check(/"5":\s*\{[^}]*bringSeats:\s*1/.test(_bringTbl), 'bring "5" = 1 extra seat');
+  check(/"6":\s*\{[^}]*bringSeats:\s*2/.test(_bringTbl), 'bring "6" = 2 extra seats');
+  check(/const _rolled = Math\.random\(\) < blitzPct/.test(simSrc),
+    'the blitz roll is STILL DRAWN when a card overrides it — draw-for-draw parity, so seeded worlds do not shift');
   check(/"3":\s*\{[^}]*rush3:\s*true/.test(defbook),
     'DEF_CALL_BRING["3"] still sets a real rush3:true count (unaffected by batch 2)');
 
