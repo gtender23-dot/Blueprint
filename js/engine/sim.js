@@ -4698,7 +4698,8 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
           const autoFirst = !!penalty.autoFirst;
           if (autoFirst) {
             down = 1;
-            distance = 10;
+            // goal-to-go, same as every other new set of downs
+            distance = Math.min(10, 100 - fieldPos);
             fourthDecided = false;
             log.push(`${penalty.name} on ${teamName}${who ? ` (${who})` : ""} \u2014 ${yds} yards, automatic first down`);
           } else {
@@ -6076,7 +6077,20 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
       fieldPos = clamp2(rawPos, 1, 99);
       if (distance <= 0) {
         down = 1;
-        distance = 10;
+        // GOAL TO GO (2026-08-19). This was a flat 10 — the main first-down
+        // path in the whole game — so a team that moved the chains at the 3
+        // was handed "1st & 10" with three yards of field left. Measured: 86%
+        // of snaps inside the 5 carried a distance LARGER than the distance to
+        // the end zone, and 149 of 251 read literally "and 10".
+        // It is not cosmetic. `distance` drives the play caller, the situation
+        // resolver, 4th-down logic and — the reason this surfaced — the
+        // DEFENSIVE front picker, whose heavy-package rule is
+        // `down >= 3 && distance <= 2`. With distance pinned at 10 that rule
+        // could essentially never fire at the goal line, which is why the
+        // defense sat in a 4-3 on 94% of first-and-goal snaps and put a 5-2 on
+        // the field 2.5% of the time. The line below at 4347 (the 4th-down
+        // conversion path) already did this correctly — these two did not.
+        distance = Math.min(10, 100 - fieldPos);
         fourthDecided = false;
         log.push(`First down! ${offSchool.name} at ${fieldPos}`);
         continue;

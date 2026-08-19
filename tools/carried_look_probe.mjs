@@ -270,6 +270,59 @@ hdr('L7 — every team has a goal-line package, and it takes the field');
   check(dcSet.includes('Spread|ace'), 'the goal-line package is assignable on the depth chart', dcSet.join(', '));
 }
 
+// ── §8 goal to go ───────────────────────────────────────────────────────────
+hdr('L8 — GOAL TO GO: you never need more yards than the end zone is away');
+{
+  // Found while giving the DEFENSE its goal-line answer. The main first-down
+  // path in the whole sim set `distance = 10` flat, so a team that moved the
+  // chains at the 3 got "1st & 10" with three yards of field left. Measured on
+  // the pre-fix tree: 86% of snaps inside the 5 carried an impossible distance,
+  // 149 of 251 reading literally "and 10".
+  //
+  // It was never cosmetic. `distance` drives the play caller, the situation
+  // resolver, the 4th-down decision and the DEFENSIVE front picker, whose
+  // heavy-package rule is `down >= 3 && distance <= 2`. Pinned at 10, that rule
+  // could not fire at the goal line: the defense sat in a 4-3 on 94% of
+  // first-and-goal snaps and 83% of heavy-offense goal-line snaps went
+  // unmatched. Fixing the distance fixed the defense — no new rule needed.
+  const sim = src('js/engine/sim.js');
+  const flat = (sim.match(/^\s*distance = 10;/gm) || []).length;
+  check(flat === 0, 'no first-down path hands out a flat 10 any more', `${flat} left`);
+  check((sim.match(/distance = Math\.min\(10, 100 - fieldPos\)/g) || []).length >= 3,
+    'every new set of downs is goal-to-go aware');
+
+  const { ROSTER_TARGETS, CLASS_YEARS } = await import('../js/constants.js');
+  const { createPlayer } = await import('../js/engine/player.js');
+  const { buildDepthChart, defaultGameplan } = await import('../js/engine/world.js');
+  const { simulateGame } = await import('../js/engine/sim.js');
+  const realRnd = Math.random;
+  const mul = (sd) => { let t = sd >>> 0; return () => { t += 0x6D2B79F5; let r = Math.imul(t ^ t >>> 15, 1 | t); r = r + Math.imul(r ^ r >>> 7, 61 | r) ^ r; return ((r ^ r >>> 14) >>> 0) / 4294967296; }; };
+  const rost = (id) => { const r = []; for (const [ps, c] of Object.entries(ROSTER_TARGETS)) for (let i = 0; i < c; i++) { const x = createPlayer(ps, CLASS_YEARS[i % 4], 1); x.schoolId = id; r.push(x); } return r; };
+  let impossible = 0, snaps = 0, heavyTot = 0, heavyUnmatched = 0;
+  for (let i = 0; i < 12; i++) {
+    Math.random = mul(9100 + i);
+    try {
+      const rH = rost('H'), rA = rost('A');
+      const g = () => ({ ...defaultGameplan() });
+      const gpH = g(), gpA = g();
+      const res = simulateGame({ id: 'H' }, { id: 'A' }, rH, rA, buildDepthChart(rH, gpH), buildDepthChart(rA, gpA), gpH, gpA);
+      for (const d of res.drives || []) for (const pl of d.plays || []) {
+        if (pl.fieldPos == null || pl.fieldPos < 95 || !pl.offFormation || !(pl.down >= 1 && pl.down <= 4)) continue;
+        snaps++;
+        if (pl.distance > 100 - pl.fieldPos) impossible++;
+        const oHeavy = ['Jumbo', 'Power-I', 'Wishbone', 'Wildcat'].includes(pl.offFormation) || (pl.variation && /big|heavy/.test(pl.variation));
+        if (oHeavy) { heavyTot++; if (!['5-2', '46/Bear'].includes(pl.defFront)) heavyUnmatched++; }
+      }
+    } finally { Math.random = realRnd; }
+  }
+  check(snaps > 20, `sampled real goal-line snaps (${snaps})`);
+  check(impossible === 0, 'ZERO impossible distances inside the 5', `${impossible}/${snaps}`);
+  // The payoff: the defense's own heavy rule now reaches the goal line.
+  check(heavyTot === 0 || heavyUnmatched / heavyTot < 0.5,
+    'the defense MATCHES heavy personnel at the goal line more often than not',
+    `${heavyUnmatched}/${heavyTot} unmatched`);
+}
+
 console.log(`\nCARRIED LOOK PROBE — ${pass} pass, ${fail} fail`);
 console.log(fail ? 'CARRIED LOOK PROBE FAIL' : 'CARRIED LOOK PROBE PASS');
 process.exit(fail ? 1 : 0);

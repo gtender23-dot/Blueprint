@@ -5422,3 +5422,68 @@ machine. NOT pushed.
 **Open / deliberately parked:** `GOAL_LINE_HEAVY_SHARE` is a first guess and
 wants a real rate source. `third_short` gets no equivalent treatment yet — the
 same argument applies to short yardage and is the obvious next step.
+
+### 2026-08-19 — GOAL TO GO: the root cause under the goal-line defense (owner: "defense needs the same treatment so the bonuses should offset no? … for the defensive side though it would still be weak against a spread offense")
+
+Both halves of the owner's instinct were right, and chasing them found a
+**engine bug**, not a missing feature.
+
+**The offsetting is already modelled.** `MATCHUP_MATRIX` encodes the
+rock-paper-scissors exactly as the owner supposed: Jumbo vs 5-2 **0.82** (heavy
+into a matched heavy front is a grind), Jumbo vs Nickel **1.13**, and — the
+answer to the second half — **Empty vs 5-2 1.18**, so a defense that walls up
+against four wides gets feasted on. That is why `selectDefFront` gates its
+heavy answer on `!spread4`. The "weak against a spread offense" failure cannot
+happen: the picker reads the offense's personnel, not the field position.
+
+**The asymmetry the previous commit created was real, though.** Measured: the
+defense played a 4-3 on **94% of first-and-goal snaps**, put a 5-2 on the field
+2.5% of the time, and **83% of heavy-offense goal-line snaps went unmatched** —
+so the new offensive package was collecting Jumbo-vs-Nickel (+13%) nearly free.
+
+**THE ROOT CAUSE — goal to go was never implemented.** Three places start a new
+set of downs. `sim.js:4347` (the 4th-down conversion path) correctly wrote
+`Math.min(10, 100 - fieldPos)`. The **penalty auto-first-down path** and — far
+worse — **the main first-down path for the entire game** both hardcoded
+`distance = 10`. A team that moved the chains at the 3 was handed **"1st & 10"
+with three yards of field left**. Measured on the pre-fix tree: **86% of snaps
+inside the 5 carried a distance larger than the distance to the end zone**, 149
+of 251 reading literally "and 10".
+
+It was never cosmetic. `distance` drives the play caller, the situation
+resolver, the 4th-down decision — and the defensive front picker, whose heavy
+rules are `down >= 3 && distance <= 2` and `heavy && distance <= 4`. **Pinned at
+10, neither could fire at the goal line.** The soft goal-line defense was a
+symptom; nobody needed a new rule.
+
+**After the fix (same seeds):**
+
+| | before | after |
+|---|---|---|
+| impossible distances inside the 5 | 86% | **0%** |
+| defense in base 4-3 inside the 5 | 71% | 33% |
+| heavy offense UNMATCHED | 83% | **20%** |
+
+And the personnel read works exactly as the owner wanted:
+**offense shows HEAVY → 46/Bear 75% + 5-2 6%** (81% matched);
+**offense shows SPREAD → 4-3 90%**, heavy only 8%. The defense matches beef
+with beef and refuses to wall up against receivers.
+
+**Bands.** N=500: points 26.3, rush **149.0** (the standing "rush low" flag,
+oscillating around its 150 boundary — it read 150.2–152.6 earlier today),
+comp% 56.4 (standing), INT% 2.03 OK, turnovers 1.60 (up from 1.51 — more
+fourth-and-goal attempts now that the AI sees "4th & 1" instead of "4th & 10",
+and FG% inside the 5 fell 5.5% → 2.9%). Two standing flags, **nothing new off**.
+
+**A REALISM GAP LEFT OPEN, deliberately.** Drives with a real scrimmage snap
+inside the 5 score a touchdown **88.5%** of the time. Real college goal-to-go
+from inside the 5 is far lower. This is a balance question of its own and is
+NOT addressed here — flagged for the owner. (Note for whoever picks it up: the
+first measurement of this said 93%, which was WRONG — it counted extra-point
+plays, which sit at fieldPos ~98 on a drive that already scored, making the
+metric circular. Filter to snaps with a real down and an offensive formation.)
+
+**Gates.** `carried_look_probe` grown to §8 / **60 checks**, green ×3 (2.9s);
+play_fidelity · plan_cohesion (97/0) · bench · convert_brain · stage4 ·
+viewer_pace · card_lint · record_call · save_migration · live_book_call ·
+option · def_stress all green; clean build. NOT pushed.
