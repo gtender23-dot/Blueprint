@@ -12,7 +12,7 @@ import { repairCreation } from '../../engine/creatorrepair.js';
 import { DEFAULT_OFF_BOOKS, DEFAULT_DEF_BOOKS, defaultOffBook, defaultDefBook } from '../../engine/defaultbooks.js';
 import { applyPlaybookToGameplan, playbookFromGameplan, lookSheetKey, splitSheetKey, resolveLookSheet } from '../../engine/playbook.js';
 import { applyDefBookToGameplan, defBookFromGameplan, emptyDefBook, pruneCallSheet } from '../../engine/defbook.js';
-import { applyControllerOverlay, controllerOverlayOf, synthesizeTeamPlan } from '../../engine/teamplan.js';
+import { applyControllerOverlay, adoptDefPlan, adoptOffPlan, controllerOverlayOf, synthesizeTeamPlan } from '../../engine/teamplan.js';
 import { renderPlaybooksTab, playbooksListeners } from './creatorplaybook.js';
 import { renderDefTab, defListeners } from './creatordef.js';
 import { tipTerm } from '../manual/tips.js';
@@ -2745,18 +2745,16 @@ function applyPlanToSchool(school, gp) {
   // _fields). A full library snapshot overrides every default, so this is
   // identical to the old behavior for those.
   const fresh = Object.assign(defaultGameplan(), JSON.parse(JSON.stringify(gp)));
-  for (const k of Object.keys(school.gameplan)) { if (!k.startsWith("_")) delete school.gameplan[k]; }
-  Object.assign(school.gameplan, fresh);
   // Stage 3: a full plan load replaces BOTH books, so any Workshop source
   // identity (the update-prompt stamps) comes off with them.
-  delete school.gameplan._bookSourceId; delete school.gameplan._bookSourceSaved;
-  delete school.gameplan._defbookSourceId; delete school.gameplan._defbookSourceSaved;
-  // [Playbook-Root Stage 3] The Game Plan is the controller: re-sync the named
-  // book model to the plan just loaded, so school.book/defbook/planOverlay track
-  // what the coach actually carries. Byte-neutral (the gameplan object is the
-  // truth; this only re-derives the parts) — compileTeamPlan(school) still
-  // deep-equals school.gameplan.
-  try { synthesizeTeamPlan(school, { force: true }); } catch (e) {}
+  delete fresh._bookSourceId; delete fresh._bookSourceSaved;
+  delete fresh._defbookSourceId; delete fresh._defbookSourceSaved;
+  // D17 BATCH A: a whole-plan snapshot replaces BOTH books and the controller,
+  // so it takes both verbs — off first, then def. Each recompiles from the same
+  // merge, so the three parts all end up describing the plan just loaded
+  // instead of being re-derived from the bag by a trailing re-synthesis.
+  adoptOffPlan(school, fresh);
+  adoptDefPlan(school, fresh);
 }
 // ── M5 (#27): the ONE starting-books applier ────────────────────────────────
 // New-game's Step-0 pickers and Season Mode's setup speak the same vocabulary:
@@ -2767,12 +2765,16 @@ function applyPlanToSchool(school, gp) {
 // the run with, exactly like one loaded mid-career.
 function applyStartingChoices(school, startPlan, startDef) {
   if (!school || !school.gameplan) return;
-  const assignGp = (merged) => { for (const k of Object.keys(school.gameplan)) { if (!k.startsWith("_")) delete school.gameplan[k]; } Object.assign(school.gameplan, merged); };
+  // D17 BATCH A: the wipe-and-Object.assign idiom is retired here. Each branch
+  // now stamps its markers onto the MERGE and routes it through adoptOffPlan /
+  // adoptDefPlan, so the BOOK is what was loaded rather than a snapshot
+  // re-derived from the bag afterwards. Field-for-field identical to the old
+  // path — playbook_root_probe §10 proves both arms against each other.
   // The whole-game presets are gone (owner, 2026-08-17): startPlan is only ""
   // (team default), a starter book (dpb:), or a Workshop playbook (pb:).
   if (startPlan && startPlan.startsWith("dpb:")) {
     const book = defaultOffBook(startPlan.slice(4));
-    if (book) { try { assignGp(applyPlaybookToGameplan(book, school.gameplan)); delete school.gameplan._bookSourceId; delete school.gameplan._bookSourceSaved; school.gameplan._bookStarter = book.name; } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's plan`, "warning"); } }
+    if (book) { try { const merged = applyPlaybookToGameplan(book, school.gameplan); delete merged._bookSourceId; delete merged._bookSourceSaved; merged._bookStarter = book.name; adoptOffPlan(school, merged, { offName: book.name, source: "starter" }); } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's plan`, "warning"); } }
   } else if (startPlan && startPlan.startsWith("pb:")) {
     const id = startPlan.slice(3);
     const pbRaw = loadCreationData("playbooks", id);
@@ -2780,10 +2782,11 @@ function applyStartingChoices(school, startPlan, startDef) {
       const rep = repairCreation("playbooks", pbRaw);
       if (rep.ok) {
         try {
-          assignGp(applyPlaybookToGameplan(rep.data, school.gameplan));
+          const merged = applyPlaybookToGameplan(rep.data, school.gameplan);
           const entry = getCreation("playbooks", id);
-          school.gameplan._bookSourceId = id; delete school.gameplan._bookStarter;
-          school.gameplan._bookSourceSaved = (entry == null ? void 0 : entry.saved) || Date.now();
+          merged._bookSourceId = id; delete merged._bookStarter;
+          merged._bookSourceSaved = (entry == null ? void 0 : entry.saved) || Date.now();
+          adoptOffPlan(school, merged, { offName: rep.data.name || null });
           if (rep.changes.length) notify(`Playbook updated for this build: ${rep.changes[0]}`, "warning");
         } catch (e) { notify(`Couldn't apply "${pbRaw.name || "playbook"}" — starting with the staff's plan`, "warning"); }
       } else notify(`"${pbRaw.name || "Playbook"}" can't load in this build — starting with the staff's plan`, "warning");
@@ -2791,7 +2794,7 @@ function applyStartingChoices(school, startPlan, startDef) {
   }
   if (startDef && startDef.startsWith("ddb:")) {
     const book = defaultDefBook(startDef.slice(4));
-    if (book) { try { assignGp(applyDefBookToGameplan(book, school.gameplan)); delete school.gameplan._defbookSourceId; delete school.gameplan._defbookSourceSaved; school.gameplan._defbookStarter = book.name; } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's defense`, "warning"); } }
+    if (book) { try { const merged = applyDefBookToGameplan(book, school.gameplan); delete merged._defbookSourceId; delete merged._defbookSourceSaved; merged._defbookStarter = book.name; adoptDefPlan(school, merged, { defName: book.name, source: "starter" }); } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's defense`, "warning"); } }
   } else if (startDef && startDef.startsWith("dd:")) {
     const id = startDef.slice(3);
     const dbRaw = loadCreationData("defbooks", id);
@@ -2799,10 +2802,11 @@ function applyStartingChoices(school, startPlan, startDef) {
       const rep = repairCreation("defbooks", dbRaw);
       if (rep.ok) {
         try {
-          assignGp(applyDefBookToGameplan(rep.data, school.gameplan));
+          const merged = applyDefBookToGameplan(rep.data, school.gameplan);
           const entry = getCreation("defbooks", id);
-          school.gameplan._defbookSourceId = id; delete school.gameplan._defbookStarter;
-          school.gameplan._defbookSourceSaved = (entry == null ? void 0 : entry.saved) || Date.now();
+          merged._defbookSourceId = id; delete merged._defbookStarter;
+          merged._defbookSourceSaved = (entry == null ? void 0 : entry.saved) || Date.now();
+          adoptDefPlan(school, merged, { defName: rep.data.name || null });
           if (rep.changes.length) notify(`Defense updated for this build: ${rep.changes[0]}`, "warning");
         } catch (e) { notify(`Couldn't apply "${dbRaw.name || "defense"}" — starting with the staff's defense`, "warning"); }
       } else notify(`"${dbRaw.name || "Defense"}" can't load in this build — starting with the staff's defense`, "warning");
@@ -2957,17 +2961,20 @@ function setupListeners() {
       if (!book) return;
       try {
         const merged = kind === "dpb" ? applyPlaybookToGameplan(book, school2.gameplan) : applyDefBookToGameplan(book, school2.gameplan);
-        for (const k of Object.keys(school2.gameplan)) { if (!k.startsWith("_")) delete school2.gameplan[k]; }
-        Object.assign(school2.gameplan, merged);
         // D12 (OD-11): the def-book compile already prunes, but a load is also
         // the healing moment for a sheet an OLD save left stale — idempotent.
-        pruneCallSheet(school2.gameplan);
+        // D17: pruned on the MERGE, before the split, so the pruned sheet is
+        // what lands in the book rather than only in the compiled output.
+        pruneCallSheet(merged);
         // Stage 3: a starter book replaces this side — its Workshop identity
         // (if any) comes off, and the STARTER marker goes on so "Edit book"
         // re-opens the whole starter (shelves+answers included, 2026-08-18).
-        if (kind === "dpb") { delete school2.gameplan._bookSourceId; delete school2.gameplan._bookSourceSaved; school2.gameplan._bookStarter = book.name; }
-        else { delete school2.gameplan._defbookSourceId; delete school2.gameplan._defbookSourceSaved; school2.gameplan._defbookStarter = book.name; }
-        try { synthesizeTeamPlan(school2, { force: true }); } catch (e) {}
+        if (kind === "dpb") { delete merged._bookSourceId; delete merged._bookSourceSaved; merged._bookStarter = book.name; }
+        else { delete merged._defbookSourceId; delete merged._defbookSourceSaved; merged._defbookStarter = book.name; }
+        // D17 BATCH A: the book becomes the truth (was wipe-and-assign + a
+        // trailing re-synthesis that re-derived the book FROM the bag).
+        if (kind === "dpb") adoptOffPlan(school2, merged, { offName: book.name, source: "starter" });
+        else adoptDefPlan(school2, merged, { defName: book.name, source: "starter" });
         notify(`"${book.name}" ${kind === "dpb" ? "offense" : "defense"} loaded`, "success");
       } catch (err) { notify("Could not load that book", "warning"); }
       rerender();
@@ -2988,10 +2995,9 @@ function setupListeners() {
       const data = rep.data;
       try {
         const merged = kind === "pb" ? applyPlaybookToGameplan(data, school2.gameplan) : applyDefBookToGameplan(data, school2.gameplan);
-        for (const k of Object.keys(school2.gameplan)) { if (!k.startsWith("_")) delete school2.gameplan[k]; }
-        Object.assign(school2.gameplan, merged);
         // D12 (OD-11): see the starter branch above — heal-on-load, idempotent.
-        pruneCallSheet(school2.gameplan);
+        // D17: on the MERGE, before the split (see the starter branch).
+        pruneCallSheet(merged);
         // Stage 3: stamp the book's Workshop identity (creation id + saved
         // time) so the Game Plan can offer "a newer version exists" later.
         // The stamps are gameplan _fields — they survive wipes + re-synthesis
@@ -2999,14 +3005,16 @@ function setupListeners() {
         {
           const _entry = getCreation(shelf, planName);
           if (kind === "pb") {
-            school2.gameplan._bookSourceId = planName; delete school2.gameplan._bookStarter;
-            school2.gameplan._bookSourceSaved = (_entry == null ? void 0 : _entry.saved) || Date.now();
+            merged._bookSourceId = planName; delete merged._bookStarter;
+            merged._bookSourceSaved = (_entry == null ? void 0 : _entry.saved) || Date.now();
           } else {
-            school2.gameplan._defbookSourceId = planName; delete school2.gameplan._defbookStarter;
-            school2.gameplan._defbookSourceSaved = (_entry == null ? void 0 : _entry.saved) || Date.now();
+            merged._defbookSourceId = planName; delete merged._defbookStarter;
+            merged._defbookSourceSaved = (_entry == null ? void 0 : _entry.saved) || Date.now();
           }
         }
-        try { synthesizeTeamPlan(school2, { force: true }); } catch (e) {}
+        // D17 BATCH A: the loaded creation IS the book.
+        if (kind === "pb") adoptOffPlan(school2, merged, { offName: data.name || null });
+        else adoptDefPlan(school2, merged, { defName: data.name || null });
         notify(`"${data.name || "Creation"}" ${kind === "pb" ? "offense" : "defense"} loaded`, "success");
         if (rep.changes.length) notify(`Updated for this build: ${rep.changes[0]}${rep.changes.length > 1 ? ` (+${rep.changes.length - 1} more)` : ""}`, "warning");
       } catch (err) { notify("Could not load that creation", "warning"); }
@@ -3019,9 +3027,10 @@ function setupListeners() {
       // Stage 3: a controller save loads ONTO the book you carry — the looks,
       // sheets and defensive identity stay; dials/weights/situations apply.
       const merged = applyControllerOverlay(school2.gameplan, p.gp, defaultGameplan());
-      for (const k of Object.keys(school2.gameplan)) { if (!k.startsWith("_")) delete school2.gameplan[k]; }
-      Object.assign(school2.gameplan, merged);
-      try { synthesizeTeamPlan(school2, { force: true }); } catch (e2) {}
+      // D17 BATCH A: a controller save loads ONTO the books you carry, so this
+      // is the overlay verb by definition — the books are left alone and the
+      // dials/weights/situations land on the controller.
+      adoptOffPlan(school2, merged);
       notify(`"${p.name}" loaded onto your current book`, "success");
     } else {
       applyPlanToSchool(school2, p.gp);
@@ -3043,11 +3052,11 @@ function setupListeners() {
     if (!rep.ok) { notify(`"${entry.name}" can't load in this build — open it in the Workshop to rebuild it`, "warning"); return; }
     try {
       const merged = side === "def" ? applyDefBookToGameplan(rep.data, school2.gameplan) : applyPlaybookToGameplan(rep.data, school2.gameplan);
-      for (const k of Object.keys(school2.gameplan)) { if (!k.startsWith("_")) delete school2.gameplan[k]; }
-      Object.assign(school2.gameplan, merged);
-      if (side === "def") school2.gameplan._defbookSourceSaved = entry.saved || Date.now();
-      else school2.gameplan._bookSourceSaved = entry.saved || Date.now();
-      try { synthesizeTeamPlan(school2, { force: true }); } catch (e2) {}
+      if (side === "def") merged._defbookSourceSaved = entry.saved || Date.now();
+      else merged._bookSourceSaved = entry.saved || Date.now();
+      // D17 BATCH A: the updated creation IS the book from here on.
+      if (side === "def") adoptDefPlan(school2, merged, { defName: rep.data.name || null });
+      else adoptOffPlan(school2, merged, { offName: rep.data.name || null });
       notify(`\u{1F4D6} "${entry.name}" updated — your dials and situations carried over`, "success");
       if (rep.changes.length) notify(`Updated for this build: ${rep.changes[0]}${rep.changes.length > 1 ? ` (+${rep.changes.length - 1} more)` : ""}`, "warning");
     } catch (err) { notify("Could not update the book", "warning"); }

@@ -2,6 +2,7 @@ import { C } from '../../constants.js';
 import { getCoach } from '../../engine/coachprofile.js';
 import { generateCandidates } from '../../engine/staff.js';
 import { coachDossierHtml } from './coachoffice.js';
+import { adoptOffPlan, adoptDefPlan } from '../../engine/teamplan.js';
 import { WORLDGEN_INFO, applyIdentityToSchool, assembleWorldSources, availableStates, generatePlayerProgram, generateWorld, rosterHintsFromBooks } from '../../engine/world.js';
 import { navigate, notify, rerender, startNewGamePrepared, state } from '../../state.js';
 import { repairCreation } from '../../engine/creatorrepair.js';
@@ -793,9 +794,24 @@ function setupListeners3() {
       state.settings.challenge = "takejob";
       {
         const school2 = state.world.schools.find((s) => s.id === state.playerSchoolId);
-        // apply* returns a NEW gameplan (never mutates), so the merged result has
-        // to be written back — replace the contents, keeping engine _fields.
-        const assignGp = (merged) => { for (const k of Object.keys(school2.gameplan)) { if (!k.startsWith("_")) delete school2.gameplan[k]; } Object.assign(school2.gameplan, merged); };
+        // ── D17 BATCH A: the books become the truth here ────────────────────
+        // This site is THE stale-book bug. It runs AFTER startNewGamePrepared
+        // has already synthesized every school's plan, and the old idiom
+        // (delete every non-underscore key, Object.assign the merge) rewrote
+        // only the flat bag — so a dynasty was born with school.book still
+        // describing the STAFF's plan, not the book the coach just chose, and
+        // nothing the chosen book said could bind afterwards.
+        // adoptOffPlan / adoptDefPlan route the merge through the parts
+        // (setOverlay + assignBook/assignDefBook), so the book IS what was
+        // picked and the flat gameplan is recompiled from it. Field-for-field
+        // identical to the old idiom — proven in playbook_root_probe §10.
+        //
+        // The _bookStarter / _defbookStarter markers are stamped onto the MERGE
+        // rather than onto the live gameplan afterwards: underscore keys ride
+        // the overlay, so stamping pre-adopt is what makes them survive the
+        // next recompile. (Stamping after would work until the first dial
+        // moved, then vanish — which is exactly how "Edit defense" lost the
+        // full book the first time.)
         // The whole-game PRESETS were removed from the wizard (owner, 2026-08-17):
         // startPlan is now only "" (team default), a starter book (dpb:), or a
         // custom playbook (pb:). Defense is applied separately below, so the two
@@ -806,7 +822,7 @@ function setupListeners3() {
           // Remember WHICH starter it was, so "Edit playbook" can re-open the
           // full book. applyPlaybookToGameplan JSON-clones the gameplan, so the
           // marker is stamped AFTER, on the live gameplan (owner, 2026-08-18).
-          if (book) { try { assignGp(applyPlaybookToGameplan(book, school2.gameplan)); school2.gameplan._bookStarter = book.name; } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's plan`, "warning"); } }
+          if (book) { try { const merged = applyPlaybookToGameplan(book, school2.gameplan); merged._bookStarter = book.name; adoptOffPlan(school2, merged, { offName: book.name, source: "starter" }); } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's plan`, "warning"); } }
         }
         else if (school2 && ob.startPlan && ob.startPlan.startsWith("pb:")) {
           // A custom playbook opens the season: copy its formations + concepts.
@@ -815,7 +831,7 @@ function setupListeners3() {
           const pbRaw = loadCreationData("playbooks", ob.startPlan.slice(3));
           if (pbRaw) {
             const rep = repairCreation("playbooks", pbRaw);
-            if (rep.ok) { try { assignGp(applyPlaybookToGameplan(rep.data, school2.gameplan)); if (rep.changes.length) notify(`Playbook updated for this build: ${rep.changes[0]}`, "warning"); } catch (e) { notify(`Couldn't apply "${pbRaw.name || "playbook"}" — starting with the staff's plan`, "warning"); } }
+            if (rep.ok) { try { adoptOffPlan(school2, applyPlaybookToGameplan(rep.data, school2.gameplan), { offName: rep.data.name || null }); if (rep.changes.length) notify(`Playbook updated for this build: ${rep.changes[0]}`, "warning"); } catch (e) { notify(`Couldn't apply "${pbRaw.name || "playbook"}" — starting with the staff's plan`, "warning"); } }
             else notify(`"${pbRaw.name || "Playbook"}" can't load in this build — starting with the staff's plan`, "warning");
           }
         }
@@ -828,12 +844,12 @@ function setupListeners3() {
           // identity-only extract that came up with an empty call sheet (owner,
           // 2026-08-18: "the defensive playbook should be absorbing the defense
           // default selections").
-          if (book) { try { assignGp(applyDefBookToGameplan(book, school2.gameplan)); school2.gameplan._defbookStarter = book.name; } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's defense`, "warning"); } }
+          if (book) { try { const merged = applyDefBookToGameplan(book, school2.gameplan); merged._defbookStarter = book.name; adoptDefPlan(school2, merged, { defName: book.name, source: "starter" }); } catch (e) { notify(`Couldn't apply "${book.name}" — starting with the staff's defense`, "warning"); } }
         } else if (school2 && ob.startDef && ob.startDef.startsWith("dd:")) {
           const dbRaw = loadCreationData("defbooks", ob.startDef.slice(3));
           if (dbRaw) {
             const rep = repairCreation("defbooks", dbRaw);
-            if (rep.ok) { try { assignGp(applyDefBookToGameplan(rep.data, school2.gameplan)); if (rep.changes.length) notify(`Defense updated for this build: ${rep.changes[0]}`, "warning"); } catch (e) { notify(`Couldn't apply "${dbRaw.name || "defense"}" — starting with the staff's defense`, "warning"); } }
+            if (rep.ok) { try { adoptDefPlan(school2, applyDefBookToGameplan(rep.data, school2.gameplan), { defName: rep.data.name || null }); if (rep.changes.length) notify(`Defense updated for this build: ${rep.changes[0]}`, "warning"); } catch (e) { notify(`Couldn't apply "${dbRaw.name || "defense"}" — starting with the staff's defense`, "warning"); } }
             else notify(`"${dbRaw.name || "Defense"}" can't load in this build — starting with the staff's defense`, "warning");
           }
         }

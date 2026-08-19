@@ -8,7 +8,8 @@
 // without a browser; the DOM-level _equiv_walk is the end-to-end final stamp.
 import {
   PLAN_FIELD_SIDE, splitTeamPlan, compilePlanParts, compileTeamPlan,
-  synthesizeTeamPlan, synthesizeLeaguePlans, assignBook, assignDefBook, setOverlay
+  synthesizeTeamPlan, synthesizeLeaguePlans, assignBook, assignDefBook, setOverlay,
+  adoptOffPlan, adoptDefPlan
 } from '../js/engine/teamplan.js';
 import { generateWorld, defaultGameplan } from '../js/engine/world.js';
 import { setAIGameplan } from '../js/engine/ai.js';
@@ -122,6 +123,97 @@ ok(sameGP(gpSchool.gameplan.situations || {}, keepSituations), 'situations overl
 ok(gpSchool.gameplan.fourthDown === keepFourthDown, 'team-level 4th-down preserved through the load');
 ok(gpSchool.gameplan.defBaseFront === keepDefFront, 'defense untouched by an offense load');
 ok(sameGP(compileTeamPlan(gpSchool), gpSchool.gameplan), 'compileTeamPlan ≡ gameplan after a controller load');
+
+// ── 10. D17 BATCH A — WRITER EQUIVALENCE ─────────────────────────────────────
+// The gate for the writer-graph collapse: for every converted LOAD writer, the
+// NEW path (adoptOffPlan / adoptDefPlan → the verbs) must produce the same flat
+// gameplan as the OLD path (the hand-rolled wipe-and-Object.assign idiom every
+// site used to carry), AND must leave the parts consistent instead of stale.
+//
+// `oldWriterIdiom` below is that retired idiom, reproduced verbatim so the
+// comparison is against what actually shipped rather than against a paraphrase.
+function oldWriterIdiom(school, merged) {
+  for (const k of Object.keys(school.gameplan)) {
+    if (!k.startsWith('_')) delete school.gameplan[k];
+  }
+  Object.assign(school.gameplan, merged);
+  return school.gameplan;
+}
+// A school with parts attached and an AI-authored plan. NOTE: generateWorld()
+// is UNSEEDED, so calling it twice gives two different worlds — the arms have
+// to be CLONES of one school or the comparison is meaningless (this probe's
+// first draft got that wrong and the "identical merges" guard below caught it).
+// The verbs only touch name/gameplan/book/defbook/planOverlay, so a JSON clone
+// of those is a faithful stand-in for the school.
+function freshSchool(seedIdx) {
+  const w = generateWorld();
+  const s = w.schools[seedIdx % w.schools.length];
+  setAIGameplan(s);
+  synthesizeTeamPlan(s, { force: true });
+  return s;
+}
+function twoArms(seedIdx) {
+  const s = freshSchool(seedIdx);
+  const snap = JSON.stringify({
+    name: s.name, gameplan: s.gameplan, book: s.book, defbook: s.defbook, planOverlay: s.planOverlay
+  });
+  return [JSON.parse(snap), JSON.parse(snap)];
+}
+{
+  const legal2 = legalConceptsForFormation('Trips/Bunch');
+  const loadPb = emptyPlaybook('Batch A Offense');
+  loadPb.formations = [{ id: 'Trips/Bunch', weight: 70 }, { id: 'Empty', weight: 30 }];
+  loadPb.sheets = { 'Trips/Bunch': { [legal2[0]]: 55, [legal2[1]]: 45 } };
+  loadPb.tendency = 'Heavy Pass';
+
+  // OFFENSE load: old idiom vs adoptOffPlan.
+  const [a, b] = twoArms(3);
+  const mergedA = applyPlaybookToGameplan(loadPb, a.gameplan);
+  const mergedB = applyPlaybookToGameplan(loadPb, b.gameplan);
+  ok(sameGP(mergedA, mergedB), 'BATCH A: the two arms start from identical merges');
+  const oldGp = JSON.parse(JSON.stringify(oldWriterIdiom(a, mergedA)));
+  const newGp = JSON.parse(JSON.stringify(adoptOffPlan(b, mergedB)));
+  ok(sameGP(oldGp, newGp), 'BATCH A: offense load — new path ≡ old wipe-and-assign path');
+  ok(sameGP(newGp, mergedB), 'BATCH A: offense load — the compiled plan ≡ the merge it was given');
+  // THE BUG THE BATCH EXISTS TO FIX: the old path left the book stale.
+  ok(a.book.plan.offFormations[0].id !== 'Trips/Bunch',
+    'BATCH A: the OLD path left school.book STALE (the defect being retired)');
+  ok(b.book.plan.offFormations[0].id === 'Trips/Bunch',
+    'BATCH A: the NEW path re-points school.book at what was actually loaded');
+  ok(sameGP(compileTeamPlan(b), b.gameplan), 'BATCH A: compile ≡ gameplan after an offense load');
+
+  // DEFENSE load: old idiom vs adoptDefPlan. This is the arm that catches the
+  // situations trap — a def book compiles its shelves into gameplan.situations,
+  // which is a TEAM field in the OVERLAY, so assigning the defbook alone would
+  // silently drop them.
+  const loadDb = emptyDefBook('Batch A Defense');
+  loadDb.baseFront = '3-4';
+  loadDb.frontMix = { '3-4': 70, 'Dime': 30 };
+  loadDb.aggression = 'attacking';
+  const [c, d] = twoArms(4);
+  const mergedC = applyDefBookToGameplan(loadDb, c.gameplan);
+  const mergedD = applyDefBookToGameplan(loadDb, d.gameplan);
+  const oldDefGp = JSON.parse(JSON.stringify(oldWriterIdiom(c, mergedC)));
+  const newDefGp = JSON.parse(JSON.stringify(adoptDefPlan(d, mergedD)));
+  ok(sameGP(oldDefGp, newDefGp), 'BATCH A: defense load — new path ≡ old wipe-and-assign path');
+  ok(sameGP(newDefGp, mergedD), 'BATCH A: defense load — the compiled plan ≡ the merge it was given');
+  ok(d.defbook.plan.defBaseFront === '3-4',
+    'BATCH A: the NEW path re-points school.defbook at the loaded defense');
+  ok(sameGP(d.gameplan.situations || {}, mergedD.situations || {}),
+    'BATCH A: a def book\'s SHELF→situations survive the load (the overlay trap)');
+  ok(sameGP(d.gameplan.offFormations, c.gameplan.offFormations),
+    'BATCH A: the offense is untouched by a defense load');
+  ok(sameGP(compileTeamPlan(d), d.gameplan), 'BATCH A: compile ≡ gameplan after a defense load');
+
+  // Underscore markers (_bookStarter / _defbookStarter / _playbookName) must
+  // survive — they are how "Edit playbook" re-opens the full starter book.
+  const [e] = twoArms(5);
+  e.gameplan._bookStarter = 'Air Raid';
+  const mergedE = applyPlaybookToGameplan(loadPb, e.gameplan);
+  adoptOffPlan(e, mergedE);
+  ok(e.gameplan._bookStarter === 'Air Raid' && e.gameplan._playbookName === 'Batch A Offense',
+    'BATCH A: the underscore book markers ride the overlay through a load');
+}
 
 console.log(`PLAYBOOK ROOT PROBE — ${pass} pass, ${fail} fail`);
 if (fail) { console.log('  FAILURES:'); bad.forEach((m) => console.log('   -', m)); }

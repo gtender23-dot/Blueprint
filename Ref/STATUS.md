@@ -486,6 +486,90 @@ D16's `_liveTempo` hunks in the same file deliberately left unstaged**) ·
 `tools/plan_cohesion_probe.mjs` (**partial-staged — §2 only; D13/D16 own §5 and
 the import line**) · `Ref/STATUS.md` (this entry + the header). NOT pushed.
 
+## 2026-08-18 — D17 · BATCH A: THE LOAD PATHS ROUTE THROUGH THE VERBS (the stale-book bug fixed)
+## NODE-GATED ×3 · ⚠ `_equiv_walk` vs the pre-batch build is the DEFINING gate and is OWED-LOCAL
+
+First batch of the writer-graph collapse (OD-10). Batch A converts the LOAD
+writers — the lowest-risk group, and the one carrying the actual bug.
+
+**THE BUG THIS FIXES.** The new-game wizard applies your chosen books AFTER
+`startNewGamePrepared` has already synthesized every school's plan, and it
+wrote only the flat bag. So a dynasty was **born with `school.book` describing
+the STAFF's plan, not the book you picked** — from the first snap, the stored
+book and the plan being played were different things, which is the root of
+"the playbooks aren't meshing". Pinned in the probe: the OLD path leaves the
+book stale, the NEW path re-points it.
+
+**What changed.** One new seam in `teamplan.js` — `adoptOffPlan` /
+`adoptDefPlan` — takes the MERGED plan a loader produces
+(`applyPlaybookToGameplan` / `applyDefBookToGameplan`) and routes it through
+`setOverlay` + `assignBook`/`assignDefBook`, so the BOOK is the truth and the
+flat gameplan is recompiled from it. **Nine call sites converted:**
+- `newgame.js` ×4 — starter offense, Workshop offense, starter defense,
+  Workshop defense (the stale-book site);
+- `gameplan.js` ×7 — `applyStartingChoices` (4 branches), the library's
+  starter-book and Workshop-creation loads, the whole-plan snapshot load, the
+  controller-overlay load, and the "a newer version exists" update reload;
+- `bookpush.js` ×1 — an edited book pushed back from the Workshop.
+**The wipe-and-`Object.assign` idiom now appears ZERO times in `js/`**, and the
+trailing `synthesizeTeamPlan(force)` re-syncs those sites used to need are gone
+with it (a re-sync re-derived the book FROM the bag — the inversion itself).
+
+**Two traps found and closed while converting:**
+1. **`applyDefBookToGameplan` writes `situations`**, which is a TEAM field in
+   the OVERLAY, not the defbook. Assigning the defbook alone would have
+   silently dropped a defensive book's shelf→situation answers on load. Both
+   adopt helpers write the overlay as well as their book; the probe pins it.
+2. **The Workshop source stamps have TWO homes** and only one is recompiled.
+   `setOverlay` rebuilds the flat plan but does not re-split, so the BOOK
+   object's own `sourceId`/`sourceSaved` — what the update banner compares —
+   went stale. `book_update_probe` caught it immediately (3 reds); the push now
+   stamps both homes directly. Also note: swapping the import in `bookpush.js`
+   initially dropped `synthesizeTeamPlan`, whose call sat inside a bare
+   `try/catch` — so it threw into silence rather than failing loudly. The probe
+   is the only reason that surfaced.
+
+**Marker ordering.** `_bookStarter` / `_defbookStarter` / the source stamps are
+stamped onto the MERGE *before* adopting, not onto the live gameplan after.
+Underscore keys ride the overlay, so pre-stamping is what makes them survive
+the next recompile — stamping after would work until the first dial moved.
+
+**Gates (node):** `playbook_root_probe` ×3 — **37/0, including the new §10
+WRITER-EQUIVALENCE section** that runs the old wipe-and-assign idiom and the
+new path against CLONES of one school and asserts the resulting plans are
+field-for-field identical (offense and defense arms), plus the stale/re-pointed
+book pins and the situations-overlay pin · `plan_side_probe` ×3 ·
+`book_update_probe` ×3 · `save_migration_check` ×3 · `plan_cohesion_probe` ×3
+(87/0) · `defbook_probe` · `defsheet_probe` · `integration_creator_probe` ·
+`creator_store_probe` · `creator_resilience_probe` · `worldgen_check` ·
+`dead_surface_probe` · clean build (13/13, cache `cfb-dynasty-5e2d563da6`).
+*(Probe note: the first draft of §10 built its two arms with two separate
+`generateWorld()` calls — which is UNSEEDED, so the arms were different worlds
+and the comparison meaningless. Its own "identical merges" guard caught it; the
+arms are now JSON clones of one school.)*
+
+**⚠ THE DEFINING GATE, OWED-LOCAL.** Batch A is a pure refactor, so unlike D14
+and D16 it must be **byte-identical** in the walk. Run:
+`node tools/_equiv_walk.mjs dist/index.html > walk-A.txt` and compare against
+`walk-head.txt` (the pre-batch transcript). **Expect diffs ONLY on snapshots
+00–03**, which are the main menu printing its build id. **Anything else is a
+finding — revert rather than explain it.**
+
+**OWNER CHECKLIST (D17 Batch A):**
+- [ ] **The walk, byte-compared** (above). This is the gate the batch is
+  defined by; do not ship the batch without it.
+- [ ] `node tools/_gate.mjs core`.
+- [ ] **Browser:** start a dynasty picking a non-default offense AND defense,
+  then open Game Plan → Edit playbook / Edit defense. Both should open the FULL
+  book you chose (looks, sheets, shelves, answers) — that is the stale-book fix
+  visible. Then load a different book from the library and confirm it sticks.
+- [ ] Batches B (AI plans), C (every Game Plan dial) and D (stragglers) are NOT
+  started. C is where the gameplan→book inversion actually flips.
+
+**Commit scoped to:** `js/engine/teamplan.js` · `js/engine/bookpush.js` ·
+`js/ui/views/newgame.js` · `js/ui/views/gameplan.js` ·
+`tools/playbook_root_probe.mjs` · `Ref/STATUS.md`. NOT pushed.
+
 ## 2026-08-18 — WIZARD COORDINATOR CARDS GET THE FULL DOSSIER (owner report) + an n=1 landmine in generateCandidates
 
 **Owner:** *"the coordinator screen in the new game wizard didnt get the updated

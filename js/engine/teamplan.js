@@ -339,6 +339,45 @@ function setOverlay(school, patch) {
   return school.gameplan;
 }
 
+// ── D17 Batch A: THE ONE WAY A *LOAD* WRITES A PLAN ─────────────────────────
+// Every book loader (the wizard's starter pick, the Game Plan library's pb:/
+// dpb:/dd: handlers, applyStartingChoices, bookpush) produces a MERGED flat
+// gameplan from `applyPlaybookToGameplan` / `applyDefBookToGameplan`. Until now
+// each site then wrote that bag straight onto school.gameplan with the same
+// hand-rolled idiom — delete every non-underscore key, Object.assign the merge —
+// and most never re-derived school.book. That is why the books were a stale
+// snapshot of whatever the bag USED to say: the wizard in particular runs after
+// synthesizeLeaguePlans, so a dynasty was born with a book that never matched
+// the one the coach picked.
+//
+// These two route a merged plan through the parts, so the BOOK becomes the
+// truth and the flat gameplan is recompiled FROM it. Equivalence is exact by
+// construction: `merged` is split into the same three parts the round-trip law
+// already covers, so compile(parts) deep-equals `merged`.
+//
+// Why the overlay is written too, and not just the book: the loaders do NOT
+// confine themselves to their own side. `applyDefBookToGameplan` compiles a
+// book's shelves into `gameplan.situations`, and `situations` is a TEAM field
+// that lives in the overlay — assign the defbook alone and a book's situational
+// answers would vanish on load. (`_playbookName` and the `_bookStarter` markers
+// ride the overlay for the same reason.)
+//
+// setOverlay MERGES its patch, which is safe here precisely because both
+// loaders start from a clone of the current plan and only ever ADD or overwrite
+// keys — neither removes one, so there is nothing for a merge to strand.
+function adoptOffPlan(school, merged, opts = {}) {
+  if (!school) return {};
+  const parts = splitTeamPlan(merged, { schoolName: school.name || null, ...opts });
+  setOverlay(school, parts.overlay);
+  return assignBook(school, parts.book);
+}
+function adoptDefPlan(school, merged, opts = {}) {
+  if (!school) return {};
+  const parts = splitTeamPlan(merged, { schoolName: school.name || null, ...opts });
+  setOverlay(school, parts.overlay);
+  return assignDefBook(school, parts.defbook);
+}
+
 // Stage 4: THE one read for "the defensive book's named calls" (the live
 // defensive headset's chips). Prefers the book's first-class home (calls — the
 // Stage-3 migration target), then the manifest snapshot the book already owns
@@ -357,6 +396,8 @@ export {
   TEAMPLAN_SCHEMA_VERSION,
   OFF_FIELDS,
   DEF_FIELDS,
+  adoptOffPlan,
+  adoptDefPlan,
   splitTeamPlan,
   compilePlanParts,
   compileTeamPlan,

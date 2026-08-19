@@ -1,7 +1,7 @@
 import { saveCreation, getCreation } from './creator.js';
 import { validatePlaybook, applyPlaybookToGameplan } from './playbook.js';
 import { validateDefBook, applyDefBookToGameplan } from './defbook.js';
-import { synthesizeTeamPlan } from './teamplan.js';
+import { adoptDefPlan, adoptOffPlan, setOverlay } from './teamplan.js';
 
 // ── bookpush.js — M5 embedded editable playbooks (#39, D8 2026-08-17) ────────
 // The two verbs of in-career book editing, shared by the Game Plan's embedded
@@ -36,11 +36,12 @@ function applyEditedBookToSchool(school, side, book) {
   } catch (e) {
     return { ok: false, reason: e.message };
   }
-  for (const k of Object.keys(school.gameplan)) {
-    if (!k.startsWith("_")) delete school.gameplan[k];
-  }
-  Object.assign(school.gameplan, merged);
-  try { synthesizeTeamPlan(school, { force: true }); } catch (e) {}
+  // D17 BATCH A: an edited book pushed back from the Workshop IS the book —
+  // route the merge through the parts instead of writing the flat bag and
+  // re-deriving the book from it afterwards. Field-for-field identical to the
+  // retired idiom (playbook_root_probe §10 compares both arms directly).
+  if (side === "def") adoptDefPlan(school, merged, { defName: book.name || null });
+  else adoptOffPlan(school, merged, { offName: book.name || null });
   return { ok: true };
 }
 function pushBookToWorkshop(school, side, book) {
@@ -53,9 +54,20 @@ function pushBookToWorkshop(school, side, book) {
   const r = saveCreation(shelf, book.name, book, gp[idKey] ? { id: gp[idKey] } : {});
   if (!r.ok) return { ok: false, reason: r.reason };
   const entry = getCreation(shelf, r.id);
-  gp[idKey] = r.id;
-  gp[savedKey] = (entry && entry.saved) || Date.now();
-  try { synthesizeTeamPlan(school, { force: true }); } catch (e) {}
+  // D17 BATCH A: the Workshop source identity is stamped in BOTH homes it has,
+  // directly, instead of being poked onto the flat gameplan and then dragged
+  // into the parts by a forced re-synthesis (the trailing re-sync this batch
+  // retires). The two homes are not redundant:
+  //   • the OVERLAY carries the flat _bookSourceId/_bookSourceSaved keys every
+  //     legacy reader still looks for (and splitTeamPlan reads them if the
+  //     parts are ever rebuilt from the bag, so the two can't disagree);
+  //   • the BOOK OBJECT carries its own source/sourceId/sourceSaved, which is
+  //     what the update banner compares against — setOverlay recompiles the
+  //     flat plan but does not re-split, so the book must be told directly.
+  const saved = (entry && entry.saved) || Date.now();
+  setOverlay(school, { [idKey]: r.id, [savedKey]: saved });
+  const bk = side === "def" ? school.defbook : school.book;
+  if (bk) { bk.source = "creator:" + r.id; bk.sourceId = String(r.id); bk.sourceSaved = saved; }
   return { ok: true, id: r.id, updated: !!r.updated };
 }
 
