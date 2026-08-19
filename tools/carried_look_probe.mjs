@@ -25,7 +25,7 @@
 // Run: node tools/carried_look_probe.mjs
 import { readFileSync } from 'fs';
 import { FORMATION_VARIATIONS } from '../js/constants.js';
-import { carriedOffLooks, lookSheetKey } from '../js/engine/playbook.js';
+import { carriedOffLooks, goalLineLookFor, goalLineFormations, lookSheetKey } from '../js/engine/playbook.js';
 import { carriedDefFronts } from '../js/engine/formations.js';
 import { offFieldSlots, resolveOffField } from '../js/engine/fieldassign.js';
 
@@ -212,6 +212,62 @@ hdr('L6 — everything that can TAKE THE FIELD is assignable (both sides)');
     'it lists the fronts the defbook calls');
   check(/!live\.includes\(cell\.defFront\)/.test(gpv), 'a front this cell ALREADY pins stays listed, so an old pin can be cleared');
   check(/an older pin the standing plan no longer carries/.test(gpv), 'same courtesy on the offensive grid');
+}
+
+// ── §7 the goal-line package ────────────────────────────────────────────────
+hdr('L7 — every team has a goal-line package, and it takes the field');
+{
+  // Measured before this landed: Ground & Pound (the ONLY shipped book carrying
+  // Jumbo) ran it on 17% of goal-line snaps against a 20% standing weight — no
+  // situational lean whatever — and the Air Raid book lined up EMPTY on 18% of
+  // its snaps inside the 5. The defense has auto-subbed a 5-2 wall inside the 1
+  // for months; the offense had no equivalent.
+  const books = {
+    airRaid: [{ id: 'Air Raid', weight: 40 }, { id: 'Air Raid', weight: 20, variation: 'empty' }, { id: 'Spread', weight: 25 }, { id: 'Empty', weight: 15 }],
+    ground: [{ id: 'Power-I', weight: 40 }, { id: 'Single Back', weight: 25 }, { id: 'Jumbo', weight: 20 }],
+    pureSpread: [{ id: 'Air Raid', weight: 60 }, { id: 'Empty', weight: 40 }]
+  };
+  const gl = (f) => goalLineLookFor({ offFormations: f });
+  check(gl(books.ground).key === 'Jumbo', 'a team carrying a true goal-line package uses it', gl(books.ground).key);
+  check(gl(books.airRaid).key === 'Spread|ace',
+    'a spread team SUBS PERSONNEL into a look it already runs rather than being handed a jumbo set', gl(books.airRaid).key);
+  const fb = gl(books.pureSpread);
+  check(fb.added === true && fb.key === 'Single Back|heavy',
+    'a team carrying nothing heavy at all is handed 13 personnel — flagged as added', fb.key);
+  // every shipped-style plan resolves to SOMETHING, always
+  check([books.airRaid, books.ground, books.pureSpread].every((f) => !!gl(f)), 'the derivation is total — no plan is left without one');
+
+  // DERIVED, not stored: it must not mutate the plan (no save migration).
+  const plan = { offFormations: JSON.parse(JSON.stringify(books.ground)) };
+  const before = JSON.stringify(plan);
+  goalLineLookFor(plan); goalLineFormations(plan, 0.6);
+  check(JSON.stringify(plan) === before, 'deriving the package does not mutate the plan — nothing to migrate, nothing to rot');
+
+  // the AUTO weighting
+  const set = goalLineFormations({ offFormations: books.ground }, 0.6);
+  const top = set.slice().sort((a, b) => b.weight - a.weight)[0];
+  check(top.id === 'Jumbo' && Math.round(top.weight) === 60, 'AUTO goal line weights the package to the configured share',
+    set.map((f) => `${f.id} ${Math.round(f.weight)}`).join(' · '));
+  check(Math.abs(set.reduce((t, f) => t + f.weight, 0) - 100) < 0.01, 'the goal-line set still sums to 100');
+  check(set.length > 1, 'the base offense still shows up — it is a lean, not a lockout');
+  const only = goalLineFormations({ offFormations: [{ id: 'Jumbo', weight: 100 }] }, 0.6);
+  check(only.length === 1 && only[0].weight === 100, 'a team whose only look IS the package keeps it at full weight');
+
+  // the seam: situations, NOT the efficiency table (no double-dip)
+  const sit = src('js/engine/situations.js');
+  check(/sitKey === "goal_line" \? goalLineFormations/.test(sit), 'AUTO goal line resolves at getEffectivePlan');
+  check(/\(_a = cell\.offFormations\) != null \? _a/.test(sit), "the coach's own pin is still checked FIRST and outranks the default");
+  const fm = src('js/engine/formations.js');
+  check(!/FORMATION_SITUATIONAL[\s\S]{0,400}rollFormationEntry/.test(fm),
+    'the efficiency table was NOT repurposed to drive call rate — that would double-count');
+
+  // the AI gap
+  const ai = src('js/engine/ai.js');
+  check(/const glLook = goalLineLookFor\(/.test(ai), 'the AI pins the same derived package (it never checked has("Jumbo"))');
+
+  // and it is COACHABLE — the standing rule
+  const dcSet = carriedOffLooks({ offFormations: books.airRaid }, { withSituations: true }).map((l) => l.key);
+  check(dcSet.includes('Spread|ace'), 'the goal-line package is assignable on the depth chart', dcSet.join(', '));
 }
 
 console.log(`\nCARRIED LOOK PROBE — ${pass} pass, ${fail} fail`);

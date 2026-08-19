@@ -10,7 +10,7 @@ import { defaultGameplan } from '../../engine/world.js';
 import { getCreation, listCreations, loadCreationData } from '../../engine/creator.js';
 import { repairCreation } from '../../engine/creatorrepair.js';
 import { DEFAULT_OFF_BOOKS, DEFAULT_DEF_BOOKS, defaultOffBook, defaultDefBook } from '../../engine/defaultbooks.js';
-import { applyPlaybookToGameplan, carriedOffLooks, playbookFromGameplan, lookSheetKey, splitSheetKey, resolveLookSheet } from '../../engine/playbook.js';
+import { applyPlaybookToGameplan, carriedOffLooks, goalLineLookFor, playbookFromGameplan, lookSheetKey, splitSheetKey, resolveLookSheet } from '../../engine/playbook.js';
 import { applyDefBookToGameplan, defBookFromGameplan, emptyDefBook, pruneCallSheet } from '../../engine/defbook.js';
 import { adoptPlan, applyControllerOverlay, adoptDefPlan, adoptOffPlan, controllerOverlayOf, setPlanFields, synthesizeTeamPlan } from '../../engine/teamplan.js';
 import { renderPlaybooksTab, playbooksListeners } from './creatorplaybook.js';
@@ -2302,7 +2302,13 @@ function renderSitPanel(gp, key) {
   const cell = (gp.situations || {})[key] || {};
   if (cell.passDepth) normalizeDistTo100(cell.passDepth, ["short", "medium", "deep"]);
   const baseForms = normalizeFormations(gp.offFormations, gp.offFormation);
-  const inheritForms = baseForms.map((f) => `${escapeHtml(f.id)} ${Math.round(f.weight)}%`).join(" \xB7 ");
+  // GOAL LINE reads AUTO differently to every other situation: it resolves to
+  // the team's derived goal-line package, not the standing mix, so the AUTO
+  // line has to say so rather than quietly showing the wrong thing.
+  const _gl = key === "goal_line" ? goalLineLookFor(gp) : null;
+  const inheritForms = _gl
+    ? `${escapeHtml(_gl.label)} most snaps, your base package the rest${_gl.added ? " (you carry nothing heavier)" : ""}`
+    : baseForms.map((f) => `${escapeHtml(f.id)} ${Math.round(f.weight)}%`).join(" \xB7 ");
   const nudge = SIT_NUDGE[key] || "no situational adjustment";
   const dep = gp.passDepth || { short: 40, medium: 40, deep: 20 };
   const covLabel = (COV_OPTIONS.find(([v]) => v === (gp.coverageScheme || "balanced")) || [])[1] || "Balanced";
@@ -2333,7 +2339,7 @@ function renderSitPanel(gp, key) {
     "Formation Package",
     "offFormations",
     Array.isArray(cell.offFormations),
-    `AUTO \u2014 your default package: ${inheritForms}`,
+    (_gl ? `AUTO \u2014 your goal-line package: ${inheritForms}` : `AUTO \u2014 your default package: ${inheritForms}`),
     `<div class="sitfc-grid">
       ${(() => {
       const live = carriedOffLooks(gp, { all: true });

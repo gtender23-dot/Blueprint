@@ -5347,3 +5347,78 @@ clearable.
 `carried_look_probe` grew §6 (41 checks total) and is green ×3, with build,
 plan_cohesion (97/0), card_lint, draw_up, plan_side, playbook_root,
 save_migration and dead_surface. Bands unmoved (comp% only). NOT pushed.
+
+## 2026-08-19 — THE GOAL-LINE PACKAGE (owner: "every team carries a goal line formation and runs it in that specific situation — what's the best way to give each team that default?" → "both")
+
+**The two defects, measured before touching anything** (six shipped books, 45
+seeded games each, scrimmage snaps with ball inside the 5):
+
+- **Ground & Pound — the ONLY book carrying Jumbo — ran it on 17% of its
+  goal-line snaps against a 20% standing weight.** i.e. carrying a goal-line
+  package bought exactly nothing where it mattered. `getSituationalMod` looked
+  like the mechanism but is not: it multiplies offensive UNIT STRENGTH *after*
+  the formation is chosen. The roll itself (`rollFormationEntry`) was
+  situation-blind.
+- **The Air Raid book lined up EMPTY on 18% of snaps inside the 5.** Five wide,
+  no back, at the goal line.
+- The other five books carried no goal-line package at all. Meanwhile the
+  DEFENSE has auto-subbed a 5-2 wall inside the 1 for months — the asymmetry
+  was one-sided.
+
+**A crucial thing NOT done.** The obvious move — make `FORMATION_SITUATIONAL`
+bias the roll — would **double-count**. That table is an EFFICIENCY multiplier
+("this look is 14% better in the red zone"); letting it also drive CALL RATE
+means a formation gets called more often *and* performs better, compounding.
+The default is applied at the SITUATIONS layer instead. Probe-pinned.
+
+**B — the package is DERIVED, not stored.** `goalLineLookFor(gp)` computes it
+from what the team already carries: no save migration, nothing to keep in sync,
+and it cannot rot when a coach changes formations. Proven non-mutating.
+The order is football, not arithmetic — a team goes to the heaviest thing it
+already knows how to line up in, so most spread teams get a PERSONNEL SUB into
+a look they already run rather than a jumbo set they have never practised:
+
+| book | derived package | source |
+|---|---|---|
+| Ground & Pound | Jumbo | carried |
+| Pro Balanced / West Coast | Power-I · Big | carried |
+| Triple Option | Wishbone · Heavy | carried |
+| Spread Option | Flexbone | carried |
+| Air Raid | Spread · Ace | carried |
+| (carries nothing heavy) | Single Back · Heavy | added, flagged |
+
+**A — AUTO goal line resolves to it**, at `getEffectivePlan` where AUTO already
+lives. `C.GOAL_LINE_HEAVY_SHARE = 0.6` [TUNE] to the package, the rest split
+among the standing looks by weight. Deliberately a lean, not a lockout — even
+at the 1 a staff shows its base offense sometimes, and **the coach's own pin is
+checked first and still outranks it**.
+
+**Result** (same seeds): Jumbo 17% → **60%** for Ground & Pound; Air Raid's
+Empty 18% → 10% with Spread·Ace leading at 56%. Every book now has an
+identity-appropriate answer inside the five.
+
+**Bands hold.** N=500: points/team 26.7 → **26.3** (in band; goal-line offense
+getting slightly harder against a defense that also subs heavy is the expected
+direction), rush 150.3, INT% 1.98, only the standing comp% flag. Nothing new off.
+
+**Also fixed:** `buildAISituations` chose its goal-line hammer with
+`has("Wishbone") ? … : has("Power-I") ? …` and **never checked `has("Jumbo")`**
+— so even a staff carrying a true goal-line package pinned Power-I. Routed
+through the same derivation. The RNG draw order is untouched (the Wildcat roll
+still fires in the same place), so world generation is unshifted.
+
+**Coachable by construction:** the derived package is unioned into
+`carriedOffLooks(withSituations)`, so it appears on the Depth Chart and can be
+assigned — the standing rule that anything taking the field must be coachable.
+The Situations panel's AUTO line now names it rather than showing the standing
+mix.
+
+**Gates.** Clean build; `carried_look_probe` grown to §7 / **55 checks** and
+green ×3; bench · plan_cohesion (97/0) · playbook_root · plan_side · card_lint ·
+play_fidelity · live_book_call · save_migration · record_call · dead_surface ·
+formation_compose · convert_brain all green. Playwright tier owed on the owner's
+machine. NOT pushed.
+
+**Open / deliberately parked:** `GOAL_LINE_HEAVY_SHARE` is a first guess and
+wants a real rate source. `third_short` gets no equivalent treatment yet — the
+same argument applies to short yardage and is the obvious next step.

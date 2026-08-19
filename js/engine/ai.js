@@ -1,6 +1,7 @@
 import { __spreadProps, __spreadValues } from '../_spread.js';
 import { C, DEFAULT_PRACTICE, FORMATION_PLAYBOOK, PASS_TENDENCY, aggrStopFromBlitzPct } from '../constants.js';
 import { FRONT_PRESSURE_SIGNATURE } from './formations.js';
+import { goalLineLookFor } from './playbook.js';
 import { derivedArchetype } from './player.js';
 import { defaultWeeklyPlan } from './situations.js';
 import { buildDepthChart } from './world.js';
@@ -451,8 +452,12 @@ function buildAISituations(bucket, offFormations, agg) {
   const pin = (id) => [{ id, weight: 100 }];
   const sits = {};
   if (bucket === "runHeavy" || bucket === "run") {
+    // 2026-08-19: this hand-rolled ladder never checked has("Jumbo"), so even a
+    // Ground & Pound staff carrying a true goal-line package pinned Power-I
+    // instead. Route it through the one derivation the whole game now uses.
+    const glLook = goalLineLookFor({ offFormations });
     const hammer = has("Wishbone") ? "Wishbone" : has("Power-I") ? "Power-I" : Math.random() < 0.15 ? "Wildcat" : offFormations[0].id;
-    sits.goal_line = { offFormations: pin(hammer), tendency: "Heavy Run" };
+    sits.goal_line = { offFormations: [glLook.variation ? { id: glLook.id, weight: 100, variation: glLook.variation } : { id: glLook.id, weight: 100 }], tendency: "Heavy Run" };
     sits.third_short = {
       offFormations: pin(hammer),
       tendency: bucket === "runHeavy" ? "Always Run" : "Heavy Run"

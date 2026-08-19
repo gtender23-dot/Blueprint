@@ -8,6 +8,15 @@ C = {
   // loose by a pre-kick timeout. Real-world studies put icing between nothing
   // and a few points of accuracy; we sit at the modest end. [TUNE]
   ICE_KICKER_EFF: 0.04,
+  // Share of AUTO goal-line snaps (ball inside the 5) that go to the team's
+  // derived goal-line package; the rest splits among the standing looks by
+  // weight. Deliberately not 100% — even at the 1 a staff shows its base
+  // offense some of the time, and a coach who wants the heavy set on every
+  // snap can pin it in the Situations editor, which still outranks this.
+  // Applied at the SITUATIONS layer, never through FORMATION_SITUATIONAL:
+  // that table is an EFFICIENCY multiplier, and letting it drive call rate too
+  // would double-count (called more often AND better, compounding). [TUNE]
+  GOAL_LINE_HEAVY_SHARE: 0.6,
   // per-division prestige ceiling (Chunk 5 rescale)
   // Tier-based talent generation (tier: 1=D3, 2=D2, 3=D1)
   // Arrival rebalance: players START ~7 lower than before while POTENTIAL_BAND

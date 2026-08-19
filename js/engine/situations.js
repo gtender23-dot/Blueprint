@@ -1,5 +1,6 @@
 import { __spreadValues } from '../_spread.js';
 import { C, aggrStopFromBlitzPct } from '../constants.js';
+import { goalLineFormations } from './playbook.js';
 import { clamp2 } from '../utils.js';
 
 function resolveSituation({ down, distance, fieldPos, margin, clock }) {
@@ -20,7 +21,15 @@ function getEffectivePlan(gameplan, weeklyPlan, sitKey) {
   const cell = gameplan.situations && gameplan.situations[sitKey] || {};
   return {
     sitKey,
-    offFormations: (_a = cell.offFormations) != null ? _a : gameplan.offFormations,
+    // GOAL LINE (2026-08-19): AUTO means "your goal-line package", not "your
+    // standing mix". Every real team goes to something heavy inside the five;
+    // before this the roll was situation-blind, so an Air Raid staff lined up
+    // EMPTY on 18% of its snaps at the goal line and the one book carrying
+    // Jumbo ran it no more often there than at midfield. The coach's own pin
+    // still outranks this — cell.offFormations is checked first.
+    offFormations: (_a = cell.offFormations) != null ? _a
+      : sitKey === "goal_line" ? goalLineFormations(gameplan, C.GOAL_LINE_HEAVY_SHARE)
+      : gameplan.offFormations,
     tendency: (_b = cell.tendency) != null ? _b : null,
     passLeanShift: (_c = weeklyPlan == null ? void 0 : weeklyPlan.passLeanShift) != null ? _c : 0,
     passDepth: (_e = (_d = (weeklyPlan == null ? void 0 : weeklyPlan.passDepth) && WEEKLY_DEPTH_PRESETS[weeklyPlan.passDepth]) != null ? _d : cell.passDepth) != null ? _e : gameplan.passDepth,

@@ -158,6 +158,13 @@ function carriedOffLooks(gp, opts) {
         if (f && f.id) src.push({ id: f.id, variation: f.variation, weight: 100 });
       }
     }
+    // The derived goal-line package takes the field on AUTO, so it has to be
+    // assignable too. Guarded against recursion: goalLineLookFor asks for the
+    // carried set WITHOUT this union.
+    if (!(opts && opts._noGoalLine)) {
+      const gl = goalLineLookFor(gp);
+      if (gl) src.push({ id: gl.id, variation: gl.variation, weight: 100 });
+    }
   }
   const seen = new Set();
   const out = [];
@@ -180,6 +187,78 @@ function carriedOffLooks(gp, opts) {
       weight: f.weight || 0,
       label: vk ? `${fid} · ${(vset[vk] && vset[vk].label) || vk}` : fid
     });
+  }
+  return out;
+}
+// ── THE GOAL-LINE PACKAGE ────────────────────────────────────────────────────
+// 2026-08-19. Every real team carries something it goes to inside the five, and
+// the sim had no such concept on offense — while the DEFENSE has auto-subbed a
+// 5-2 wall inside the 1 for months. Measured on the six shipped books before
+// this landed: Ground & Pound, the only book carrying Jumbo, ran it on 17% of
+// its goal-line snaps against a 20% standing weight (i.e. no situational lean
+// at all), and the Air Raid book lined up EMPTY on 18% of snaps inside the 5.
+//
+// DERIVED, NOT STORED. The package is computed from what the team already
+// carries rather than written into the plan: no save migration, nothing to keep
+// in sync, and it cannot rot when a coach changes his formations. It is unioned
+// into carriedOffLooks(withSituations) so the Depth Chart makes it assignable —
+// the standing rule that anything which takes the field must be coachable.
+//
+// The order is football, not arithmetic. A team goes to the heaviest thing it
+// already knows how to line up in; only a team that owns nothing heavy is
+// handed a package it does not otherwise run. Most spread teams therefore get a
+// PERSONNEL SUB into a look they already run (Spread → Ace, Trips → Closed),
+// which is what spread teams actually do inside the five, rather than a jumbo
+// set they have never practised.
+const GOAL_LINE_PREFERENCE = [
+  ["Jumbo", null],            // a true goal-line package — take it if it exists
+  ["Wishbone", "heavy"],      // the bone is already a short-yardage answer
+  ["Power-I", "big"],         // three tight ends off the I
+  ["Wildcat", null],          // unbalanced heavy — a real goal-line gadget
+  ["Flexbone", null],         // option teams punch it in from the bone
+  ["Single Back", "heavy"],   // 13 personnel
+  ["Trips/Bunch", "closed"],  // two tight ends
+  ["Pistol/RPO", "diamond"],  // the diamond carries a real fullback
+  ["Spread", "ace"]           // two tight ends out of the spread
+];
+// What a team with nothing heavy at all is handed. 13 personnel, not jumbo —
+// an Air-Raid staff subbing three tight ends is plausible; asking it to line up
+// in a full house is not.
+const GOAL_LINE_FALLBACK = { id: "Single Back", variation: "heavy" };
+function goalLineLookFor(gp) {
+  const carried = carriedOffLooks(gp, { all: true });
+  const byId = new Map();
+  for (const l of carried) if (!byId.has(l.id)) byId.set(l.id, l);
+  for (const [fid, preferred] of GOAL_LINE_PREFERENCE) {
+    if (!byId.has(fid)) continue;
+    const vset = FORMATION_VARIATIONS[fid] || {};
+    // Prefer the heavy dressing, but only if the data still authors it; a team
+    // already carrying that exact look keeps its own entry.
+    const vk = preferred && vset[preferred] ? preferred : (byId.get(fid).variation || null);
+    return { id: fid, variation: vk, key: lookSheetKey(fid, vk), derived: true,
+             label: vk ? `${fid} · ${(vset[vk] && vset[vk].label) || vk}` : fid };
+  }
+  const fb = GOAL_LINE_FALLBACK;
+  const vset = FORMATION_VARIATIONS[fb.id] || {};
+  const vk = vset[fb.variation] ? fb.variation : null;
+  return { id: fb.id, variation: vk, key: lookSheetKey(fb.id, vk), derived: true, added: true,
+           label: vk ? `${fb.id} · ${(vset[vk] && vset[vk].label) || vk}` : fb.id };
+}
+// The AUTO goal-line formation set: the derived package at C.GOAL_LINE_HEAVY_SHARE,
+// the standing looks splitting what's left by their own weights. Returned in the
+// offFormations shape the sim already rolls, so nothing downstream changes.
+function goalLineFormations(gp, share) {
+  const gl = goalLineLookFor(gp);
+  if (!gl) return (gp && gp.offFormations) || null;
+  const heavy = Math.max(0, Math.min(1, share == null ? 0.6 : share));
+  const standing = carriedOffLooks(gp).filter((l) => l.key !== gl.key);
+  const rest = standing.reduce((t, l) => t + (l.weight || 0), 0);
+  const out = [{ id: gl.id, variation: gl.variation || undefined, weight: Math.round(heavy * 100) }];
+  // A team whose ONLY look is the goal-line look keeps it at full weight.
+  if (!standing.length || rest <= 0) { out[0].weight = 100; return out; }
+  for (const l of standing) {
+    const w = (1 - heavy) * 100 * ((l.weight || 0) / rest);
+    if (w > 0) out.push({ id: l.id, variation: l.variation || undefined, weight: w });
   }
   return out;
 }
@@ -331,4 +410,4 @@ function repairPlaybook(pb) {
   return { pb: out, changes, ok: validatePlaybook(out).ok };
 }
 
-export { PLAYBOOK_SCHEMA_VERSION, carriedOffLooks, legalConceptsForFormation, filterConceptsForPersonnel, fittingConceptsForFormation, lookSheetKey, splitSheetKey, resolveLookSheet, emptyPlaybook, validatePlaybook, applyPlaybookToGameplan, playbookFromGameplan, repairPlaybook };
+export { PLAYBOOK_SCHEMA_VERSION, carriedOffLooks, goalLineLookFor, goalLineFormations, GOAL_LINE_PREFERENCE, legalConceptsForFormation, filterConceptsForPersonnel, fittingConceptsForFormation, lookSheetKey, splitSheetKey, resolveLookSheet, emptyPlaybook, validatePlaybook, applyPlaybookToGameplan, playbookFromGameplan, repairPlaybook };
