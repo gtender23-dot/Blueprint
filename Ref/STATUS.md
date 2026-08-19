@@ -486,6 +486,65 @@ D16's `_liveTempo` hunks in the same file deliberately left unstaged**) ·
 `tools/plan_cohesion_probe.mjs` (**partial-staged — §2 only; D13/D16 own §5 and
 the import line**) · `Ref/STATUS.md` (this entry + the header). NOT pushed.
 
+## 2026-08-18 — `_equiv_walk` REPAIRED AND RUN — byte-identical from snapshot 04 on, **with a coverage gap stated**
+
+The walk had not been run against the shipped UI in a long time and was broken
+in four separate ways. All four are fixed (commits `a9ab951`, `2ffac25`,
+`5d0e504`, `0510ad3`); the owner then ran it and it is **GREEN**.
+
+**THE RESULT.** Base = `9f44554` (before D13/D14/D16) built in a scratch
+worktree; head = current. **Both walks: `wizard STARTED the dynasty`,
+`PAGEERRORS 0`, no unreachable screens.** `Compare-Object` returns diffs on
+**snapshots 00–03 ONLY** — and they differ in HASH while being IDENTICAL in
+LENGTH (631 and 477 chars on both sides). That signature is a fixed-width
+string, and it is: the main menu renders `build <id>` (mainmenu.js:59), a
+10-character build hash — base `4796b49c44` vs head's stamp. Snapshots 00–03
+are all main-menu screens (boot, plant-a-tree, and the two name fills, which
+change no rendered text). **From snapshot 04 through the whole wizard and all
+thirteen tour screens the two builds are byte-identical.** No unintended
+behavioural drift from D13, D14 or D16 anywhere the walk looks.
+
+**⚠ THE COVERAGE GAP — read this before quoting the green.** The walk does NOT
+cover the surfaces D14 and D16 actually changed, so "the walk was green" is a
+narrower claim than it sounds:
+- the **defensive identity card** (D16 dropped its "comes off the edge" phrase)
+  is on the Game Plan screen's DEFENSE sub-tab; the tour hashes each screen's
+  DEFAULT tab and never opens it;
+- the **Workshop book editor** (D16 removed the pressure-source pie) is not in
+  the tour at all;
+- the **family-coverage answer** (D14's proven fix) only manifests during a
+  LIVE GAME, which the walk never plays;
+- an AI plan's `blitzPct` (D16) is plan data with no screen of its own.
+This is why the browser eyeball stays OWED rather than discharged — the
+checklist items in the D13/D14/D16 entries are exactly the surfaces the walk
+cannot see. A future pass could extend TOUR into the group sub-tabs and drive
+one game; that is a real improvement and is NOT done here.
+
+**The four breakages, for the record** (each would have produced a *false pass*
+rather than a loud failure, which is the dangerous kind):
+1. **Rotted wizard drive** — entered via `#btn-mm-newcoach` (the one-coach
+   setup the TREE replaced; the id survives only in the retained legacy block
+   nothing renders) and clicked `#ob-next-1`, the retired Situation step that
+   no longer exists in `js/`. It would have dead-ended mid-wizard **identically
+   on both builds**, matched, and "passed" while testing nothing. Now enters by
+   the tree door and drives the wizard the way `new_world_probe` does — click
+   whatever is live — which also survives D17's edits to `newgame.js`.
+2. **`'file://' + target`** — a relative path made `dist` a HOSTNAME
+   (`ERR_FILE_NOT_FOUND`), and a Windows path needs `file:///C:/…`. Now
+   `resolve()` + `pathToFileURL()`, plus guards that fail readably before
+   Chromium launches.
+3. **Three tour entries naming controls that do not exist** — `team` (the nav
+   item's `navTo` is `roster`, already toured), `coachoffice` (the screen is
+   `program`). Each printed "(no nav control)", which reads like a note and is
+   really an unhashed screen.
+4. **Standings unreachable** — it is a TAB in the Season group
+   (`data-season-tab`), and that was the one group-tab vocabulary missing from
+   the walk's nav selector. Added; `standings` now follows `schedule`.
+
+**Gate status after this:** `_equiv_walk` is DISCHARGED for D13/D14/D16 within
+its stated coverage. Still owed: the browser eyeball, a green
+`node tools/_gate.mjs night`, and a `dist/` rebuild before any deploy.
+
 ## 2026-08-18 — OWED-LOCAL GATES DISCHARGED (owner's machine) + the ypc question answered
 
 The gates D13/D14/D16 and the gate repair left owed-local have been run by the
