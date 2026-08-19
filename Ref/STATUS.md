@@ -486,6 +486,78 @@ D16's `_liveTempo` hunks in the same file deliberately left unstaged**) ·
 `tools/plan_cohesion_probe.mjs` (**partial-staged — §2 only; D13/D16 own §5 and
 the import line**) · `Ref/STATUS.md` (this entry + the header). NOT pushed.
 
+## 2026-08-18 — D17 · BATCH C-3: THE STRUCTURAL SURFACES — **AND THE BRIDGE IS OUT**
+## NODE-GATED ×3 · ⚠ WALK + A REAL BROWSER PASS OWED (this batch touches authoring, not just dials)
+
+The last of the Game Plan screen. Every writer on it now goes through the seam,
+so the transitional bridge came out in the same commit that made it unnecessary.
+
+**What converted:**
+- **The structural editors** — the named `defCalls` library, the matchup
+  `callSheet`, personnel `formChecks`, and the per-formation
+  `formationPlaybooks` sheets. These don't set a field, they reach into a nested
+  container and splice/delete/rebalance, so rewriting eleven of them immutably
+  would have been a lot of new code to get subtly wrong. Instead each one's
+  EXISTING body runs against a scratch copy (`editStruct`, whose callback
+  shadows `gp`) and whatever it changed is committed in one write. The bodies
+  are verbatim; only their target moved.
+- **Deleting a named call now purges the call sheet in the SAME write** — both
+  containers live in one scratch, so a sheet can never be left naming a call
+  that no longer exists (the OD-11 class D12 fixed on book load, closed here for
+  hand-deletion too).
+- **The situations grid** — a dozen handlers edit cells in place; `commitSits`
+  writes the result through the seam, riding immediately in front of each
+  handler's `rerender()`. Uniform, and hard to forget on a new handler that
+  copies the shape. The "promote this cell to my standing plan" block routes by
+  field, because it crosses all three bags.
+- **Render-time defaulting is gone.** `renderDefaultSharesRow` and the option-mix
+  block used to WRITE the plan while rendering it; they now read a default. The
+  five setup-time defaults are collected into ONE routed, idempotent write —
+  empty on every visit after the first.
+
+**⚠ THE BRIDGE IS REMOVED**, and `applyStartingChoices`' trailing FORCED
+re-synthesis is downgraded to an unforced guard (it only has to give a school
+that picked nothing its parts; it can no longer overwrite an adopted book with a
+snapshot of itself). **No forced re-synthesis remains anywhere except inside the
+verbs themselves**, where it is a "this school has no parts yet" guard.
+
+**⚠ A BUG `node --check` CANNOT SEE, CAUGHT BY THE BUILD.** The setup-time
+defaulting rebinds `gp`, but `gp` was declared `const` in `setupListeners` —
+assignment to a const is a *runtime* TypeError, so the syntax check passed and
+the probes passed (they don't execute UI wiring). esbuild flags it statically
+and the build failed loudly. It is now `let`. Worth remembering: **on this
+screen, `node --check` + probes are not sufficient — the build is part of the
+gate**, because nothing else in the node tier executes this file.
+
+**Still un-converted, and now visible (Batch D):** `js/ui/views/playnow.js` has
+two forced re-syntheses of its own. Play Now is a different screen and out of
+C's scope, but it is the same inversion and should be converted before D17 is
+called done.
+
+**Gates:** `playbook_root_probe` ×3 (47/0) · `plan_cohesion_probe` ×3 (87/0) ·
+`plan_side_probe` ×3 · `save_migration_check` ×3 · `book_update_probe` ·
+`defsheet_probe` · `defbook_probe` · `dead_surface_probe` ·
+`integration_creator_probe` · `creator_store_probe` · clean build (13/13, cache
+`cfb-dynasty-50202921f7`, bundle parse 2/2, CSS 5698/5698, bridge verified GONE
+from the bundle).
+
+**OWNER CHECKLIST (D17 C-3) — the most important browser pass of the whole
+refactor.** This batch moved AUTHORING, not just dials, and the walk cannot see
+any of it:
+- [ ] **Named calls:** add a call, edit its fields, add it to a couple of
+  matchup-sheet cells, then DELETE it — the sheet must not still name it.
+- [ ] **Call sheet:** toggle calls into cells, drag the weight sliders, confirm
+  the weights persist after leaving and returning.
+- [ ] **Check-with-me:** set a personnel check, clear one field, reset a class.
+- [ ] **Formation sheets:** re-weight plays for a look, then Reset that look.
+- [ ] **Situations:** customize a cell, clear a field, "make this my default",
+  and Reset-all.
+- [ ] Everything above must SURVIVE leaving the screen and coming back — that is
+  the bridge's old job, now done by the seam.
+- [ ] Walk vs the C-2 build (build-id diffs only) + `node tools/_gate.mjs core`.
+
+**Commit scoped to:** `js/ui/views/gameplan.js` · `Ref/STATUS.md`. NOT pushed.
+
 ## 2026-08-18 — D17 · BATCH C-2: THE REST OF THE DIALS (sliders · mixes · Simple mode)
 ## NODE-GATED ×3 · ⚠ WALK + THE DIAL-STICKS BROWSER CHECK OWED · BRIDGE STILL IN PLACE
 

@@ -666,8 +666,9 @@ var DEFAULT_SHARE_SLOTS = [
 ];
 var DEFAULT_SHARE_FALLBACK = { WR1: 22, WR2: 20, WR3: 16, TE1: 20, RB1: 14 };
 function renderDefaultSharesRow(gp) {
-  if (!gp.targetShares) gp.targetShares = Object.assign({}, DEFAULT_SHARE_FALLBACK);
-  const ds = gp.targetShares;
+  // D17 C-3: a RENDER must not write the plan. Read a default instead; the real
+  // one is committed once at setup (above), so this is only the first paint.
+  const ds = gp.targetShares || DEFAULT_SHARE_FALLBACK;
   return `
   <div class="gp-row">
     <label class="gp-label">Default ${tipTerm("target-share", "Target Shares")} <span class="gp-hint">(who the ball looks for)</span></label>
@@ -851,14 +852,15 @@ function renderOffenseDefaults(gp) {
             <label class="gp-label">${tipTerm("option-mix", "Option Mix")} <span class="gp-hint">(a 100% split \u2014 where you lean when the read is a coin flip)</span></label>
             <div class="run-dir-row">
               ${(() => {
-      if (!gp.optionMix) gp.optionMix = { dive: 40, keep: 30, pitch: 30 };
-      normalizeDistTo100(gp.optionMix, ["dive", "keep", "pitch"]);
+      // D17 C-3: render reads, never writes (see renderDefaultSharesRow).
+      const _om = { ...(gp.optionMix || { dive: 40, keep: 30, pitch: 30 }) };
+      normalizeDistTo100(_om, ["dive", "keep", "pitch"]);
       return [["dive", "Dive (FB)"], ["keep", "QB Keep"], ["pitch", "Pitch"]].map(([k, lbl]) => `
                 <div class="run-dir-item">
                   <span class="run-dir-lbl">${lbl}</span>
                   <input class="gp-slider" type="range" data-optmix="${k}" min="0" max="100" step="5"
-                         value="${gp.optionMix[k]}" />
-                  <span class="run-dir-val">${gp.optionMix[k]}%</span>
+                         value="${_om[k]}" />
+                  <span class="run-dir-val">${_om[k]}%</span>
                 </div>`).join("");
     })()}
             </div>
@@ -1588,7 +1590,36 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
     else Object.assign(gp, patch);
     return gp;
   };
-  gp.offFormations = normalizeFormations(gp.offFormations, gp.offFormation);
+  // D17 C-3: the STRUCTURAL editors (named calls, the matchup call sheet,
+  // personnel checks, the per-formation sheets) don't set a field — they reach
+  // into a nested container and splice, delete, rebalance. Rewriting each one's
+  // logic to be immutable would be a lot of new code to get subtly wrong, so
+  // instead their EXISTING bodies run against a scratch copy of those four
+  // fields and whatever they changed is committed in one write. The callback
+  // shadows `gp`, so the body inside is untouched, verbatim, and still reads
+  // like the code that shipped.
+  //
+  // `undefined` in the patch DELETES, which is what these editors expect: they
+  // drop the whole container when the last entry leaves it (an empty defCalls
+  // must be ABSENT, not {}, or the round-trip stops being byte-identical).
+  const STRUCT_FIELDS = ["defCalls", "callSheet", "formChecks", "formationPlaybooks"];
+  const editStruct = (fn) => {
+    const scratch = {};
+    for (const f of STRUCT_FIELDS) {
+      if (gp[f] !== undefined) scratch[f] = JSON.parse(JSON.stringify(gp[f]));
+    }
+    const ret = fn(scratch);
+    const patch = {};
+    for (const f of STRUCT_FIELDS) patch[f] = scratch[f];
+    writeDial(patch);
+    return ret;
+  };
+  // D17 C-3: the last direct write on this screen. Normalize only when it
+  // actually changes something, and route it (offFormations is the book's).
+  {
+    const _n = normalizeFormations(gp.offFormations, gp.offFormation);
+    if (JSON.stringify(_n) !== JSON.stringify(gp.offFormations)) writeDial({ offFormations: _n });
+  }
   // The formation add/remove picker is gone (owner call, 2026-08-15): the
   // playbook owns WHICH formations you carry; this screen only re-weights them.
   root.querySelectorAll("[data-gp-workshop]").forEach((btn) => {
@@ -1781,9 +1812,11 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
       // sheet outright now (the book seeds it), so a slide just writes the value
       // — no fork-on-first-write copy, no inherit-base to protect (2026-08-18).
       const key = sl.dataset.fpbform, nm = sl.dataset.fpb;
-      const all = gp.formationPlaybooks || (gp.formationPlaybooks = {});
-      const sheet = all[key] || (all[key] = {});
-      sheet[nm] = parseInt(e.target.value);
+      editStruct((gp) => {
+        const all = gp.formationPlaybooks || (gp.formationPlaybooks = {});
+        const sheet = all[key] || (all[key] = {});
+        sheet[nm] = parseInt(e.target.value);
+      });
       const grp = root.querySelectorAll(`input[data-fpbgrp="${sl.dataset.fpbgrp}"]`);
       let tot = 0;
       grp.forEach((g) => { tot += parseInt(g.value) || 0; });
@@ -1803,10 +1836,12 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
     // Reset drops this look's overrides so it falls back to the global default
     // mix (the "All Plays" sheet). The label says as much.
     const key = (_b = root.querySelector("#fpb-reset")) == null ? void 0 : _b.dataset.fpbform;
-    if (key && gp.formationPlaybooks) {
-      delete gp.formationPlaybooks[key];
-      if (!Object.keys(gp.formationPlaybooks).length) delete gp.formationPlaybooks;
-    }
+    editStruct((gp) => {
+      if (key && gp.formationPlaybooks) {
+        delete gp.formationPlaybooks[key];
+        if (!Object.keys(gp.formationPlaybooks).length) delete gp.formationPlaybooks;
+      }
+    });
     rerender();
   });
   root.querySelectorAll("[data-offsub]").forEach((btn) => {
@@ -1825,34 +1860,40 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
   root.querySelectorAll("[data-chk-class]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const cls = btn.dataset.chkClass, field = btn.dataset.chkField, val = btn.dataset.chkVal;
-      const checks = gp.formChecks || (gp.formChecks = {});
-      const cell = checks[cls] || (checks[cls] = {});
-      const v = field === "runCommit" ? parseInt(val, 10) : val;
-      if (field === "runCommit" ? cell[field] === v : cell[field] === v) delete cell[field];
-      else cell[field] = v;
-      if (!Object.keys(cell).length) delete checks[cls];
-      if (!Object.keys(checks).length) delete gp.formChecks;
+      editStruct((gp) => {
+        const checks = gp.formChecks || (gp.formChecks = {});
+        const cell = checks[cls] || (checks[cls] = {});
+        const v = field === "runCommit" ? parseInt(val, 10) : val;
+        if (field === "runCommit" ? cell[field] === v : cell[field] === v) delete cell[field];
+        else cell[field] = v;
+        if (!Object.keys(cell).length) delete checks[cls];
+        if (!Object.keys(checks).length) delete gp.formChecks;
+      });
       rerender();
     });
   });
   root.querySelectorAll("[data-chk-clear]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const checks = gp.formChecks || {};
-      const cell = checks[btn.dataset.chkClear || btn.dataset.chkClass];
-      if (cell) {
-        delete cell[btn.dataset.chkField];
-        if (!Object.keys(cell).length) delete checks[btn.dataset.chkClear];
-        if (!Object.keys(checks).length) delete gp.formChecks;
-      }
+      editStruct((gp) => {
+        const checks = gp.formChecks || {};
+        const cell = checks[btn.dataset.chkClear || btn.dataset.chkClass];
+        if (cell) {
+          delete cell[btn.dataset.chkField];
+          if (!Object.keys(cell).length) delete checks[btn.dataset.chkClear];
+          if (!Object.keys(checks).length) delete gp.formChecks;
+        }
+      });
       rerender();
     });
   });
   root.querySelectorAll("[data-chk-reset]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      if (gp.formChecks) {
-        delete gp.formChecks[btn.dataset.chkReset];
-        if (!Object.keys(gp.formChecks).length) delete gp.formChecks;
-      }
+      editStruct((gp) => {
+        if (gp.formChecks) {
+          delete gp.formChecks[btn.dataset.chkReset];
+          if (!Object.keys(gp.formChecks).length) delete gp.formChecks;
+        }
+      });
       rerender();
     });
   });
@@ -1861,12 +1902,16 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
     var _i;
     const nm = (((_i = root.querySelector("#new-call-name")) == null ? void 0 : _i.value) || "").trim().slice(0, 24);
     if (!nm) return;
-    const calls = gp.defCalls || (gp.defCalls = {});
-    if (Object.keys(calls).length >= MAX_DEF_CALLS || calls[nm]) {
-      if (!Object.keys(calls).length) delete gp.defCalls;
-      return;
-    }
-    calls[nm] = {};
+    const added = editStruct((gp) => {
+      const calls = gp.defCalls || (gp.defCalls = {});
+      if (Object.keys(calls).length >= MAX_DEF_CALLS || calls[nm]) {
+        if (!Object.keys(calls).length) delete gp.defCalls;
+        return false;
+      }
+      calls[nm] = {};
+      return true;
+    });
+    if (!added) return;
     callEditName = nm;
     rerender();
   });
@@ -1879,11 +1924,16 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
   root.querySelectorAll("[data-call-del]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const nm = btn.dataset.callDel;
-      if (gp.defCalls) {
-        delete gp.defCalls[nm];
-        if (!Object.keys(gp.defCalls).length) delete gp.defCalls;
-      }
-      sheetPurgeName(gp, nm);
+      // Deleting a call also purges its references from the matchup sheet —
+      // both containers are in the same scratch, so they commit together and a
+      // sheet can never be left naming a call that no longer exists (OD-11).
+      editStruct((gp) => {
+        if (gp.defCalls) {
+          delete gp.defCalls[nm];
+          if (!Object.keys(gp.defCalls).length) delete gp.defCalls;
+        }
+        sheetPurgeName(gp, nm);
+      });
       if (callEditName === nm) callEditName = null;
       rerender();
     });
@@ -1892,19 +1942,23 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
     btn.addEventListener("click", () => {
       var _c2;
       const nm = btn.dataset.callName, field = btn.dataset.callField, val = btn.dataset.callVal;
-      const call = (_c2 = gp.defCalls) == null ? void 0 : _c2[nm];
-      if (!call) return;
-      const v = field === "runCommit" ? parseInt(val, 10) : field === "rush3" ? true : val;
-      if (call[field] === v) delete call[field];
-      else call[field] = v;
+      editStruct((gp) => {
+        const call = (_c2 = gp.defCalls) == null ? void 0 : _c2[nm];
+        if (!call) return;
+        const v = field === "runCommit" ? parseInt(val, 10) : field === "rush3" ? true : val;
+        if (call[field] === v) delete call[field];
+        else call[field] = v;
+      });
       rerender();
     });
   });
   root.querySelectorAll("[data-call-clear]").forEach((btn) => {
     btn.addEventListener("click", () => {
       var _c2;
-      const call = (_c2 = gp.defCalls) == null ? void 0 : _c2[btn.dataset.callClear];
-      if (call) delete call[btn.dataset.callField];
+      editStruct((gp) => {
+        const call = (_c2 = gp.defCalls) == null ? void 0 : _c2[btn.dataset.callClear];
+        if (call) delete call[btn.dataset.callField];
+      });
       rerender();
     });
   });
@@ -1924,25 +1978,31 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
   root.querySelectorAll("[data-dcs-call]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const nm = btn.dataset.dcsCall;
-      const cell = sheetCellOf(gp, callSheetSit, callSheetPers, true);
-      const i = cell.findIndex((e) => e[0] === nm);
-      if (i >= 0) cell.splice(i, 1);
-      else cell.push([nm, 50]);
-      // Rebalance to 100 across the cell (equal-ish, preserving ratios).
-      const total = cell.reduce((s, e) => s + (e[1] || 0), 0) || 1;
-      cell.forEach((e) => e[1] = Math.max(5, Math.round((e[1] || 50) / total * 100)));
-      sheetCleanup(gp);
+      editStruct((gp) => {
+        const cell = sheetCellOf(gp, callSheetSit, callSheetPers, true);
+        const i = cell.findIndex((e) => e[0] === nm);
+        if (i >= 0) cell.splice(i, 1);
+        else cell.push([nm, 50]);
+        // Rebalance to 100 across the cell (equal-ish, preserving ratios).
+        const total = cell.reduce((s, e) => s + (e[1] || 0), 0) || 1;
+        cell.forEach((e) => e[1] = Math.max(5, Math.round((e[1] || 50) / total * 100)));
+        sheetCleanup(gp);
+      });
       rerender();
     });
   });
   root.querySelectorAll(".dcw-slider").forEach((slider) => {
     slider.addEventListener("input", () => {
       const i = parseInt(slider.dataset.dcwIndex);
-      const cell = sheetCellOf(gp, callSheetSit, callSheetPers);
-      if (!Array.isArray(cell) || !cell[i]) return;
-      const objs = cell.map((e) => ({ id: e[0], weight: e[1] }));
-      holdAndRebalance(objs, i, parseInt(slider.value));
-      objs.forEach((o, j) => cell[j] = [o.id, o.weight]);
+      const cell = editStruct((gp) => {
+        const c = sheetCellOf(gp, callSheetSit, callSheetPers);
+        if (!Array.isArray(c) || !c[i]) return null;
+        const objs = c.map((e) => ({ id: e[0], weight: e[1] }));
+        holdAndRebalance(objs, i, parseInt(slider.value));
+        objs.forEach((o, j) => c[j] = [o.id, o.weight]);
+        return c;
+      });
+      if (!cell) return;
       root.querySelectorAll(".dcw-slider").forEach((other) => {
         const j = parseInt(other.dataset.dcwIndex);
         if (other !== slider && cell[j]) other.value = cell[j][1];
@@ -2530,6 +2590,25 @@ function renderSitPanel(gp, key) {
 }
 function wireSituationListeners(gp, { getOpenKey, setOpenKey, root = document } = {}) {
   var _a, _b, _c, _d, _e, _f, _g;
+  // D17 C-3: the situations grid edits CELLS inside gp.situations in place — a
+  // dozen handlers reach in and set, clear or copy a field. Rewriting each one
+  // buys no behavioural change, so the cell edits still happen in place and
+  // `commitSits` writes the result through the seam. Every one of these handlers
+  // ends in rerender(), so the commit rides immediately in front of it: uniform,
+  // and hard to forget on a new handler that copies the same shape.
+  // `situations` is a TEAM field, so it lands on the overlay.
+  const commitSits = () => {
+    const sch = getPlayerSchool();
+    if (sch) gp = setPlanFields(sch, { situations: JSON.parse(JSON.stringify(gp.situations || {})) });
+  };
+  // Promoting a cell to the STANDING plan crosses all three bags — offFormations
+  // / tendency / passDepth belong to the book, defFront / coverage / shell to the
+  // defbook, tempo to the overlay — so it routes by field through the seam.
+  const writeStanding = (patch) => {
+    const sch = getPlayerSchool();
+    if (sch) gp = setPlanFields(sch, patch);
+    else Object.assign(gp, patch);
+  };
   const sitCell = () => {
     const k = getOpenKey();
     if (!k) return null;
@@ -2546,6 +2625,7 @@ function wireSituationListeners(gp, { getOpenKey, setOpenKey, root = document } 
     chip.addEventListener("click", () => {
       const k = chip.dataset.sitchip;
       setOpenKey(getOpenKey() === k ? null : k);
+      commitSits();
       rerender();
     });
   });
@@ -2574,6 +2654,7 @@ function wireSituationListeners(gp, { getOpenKey, setOpenKey, root = document } 
         cell[field] = (_g2 = gp[field]) != null ? _g2 : "balanced";
       else if (field === "subPhilosophy") cell.subPhilosophy = (_h = gp.subPhilosophy) != null ? _h : "auto";
       else if (field === "conceptWeights") cell.conceptWeights = __spreadValues({}, gp.conceptWeights || {});
+      commitSits();
       rerender();
     });
   });
@@ -2583,6 +2664,7 @@ function wireSituationListeners(gp, { getOpenKey, setOpenKey, root = document } 
       if (!cell) return;
       delete cell[btn.dataset.sitReset];
       sitCleanup();
+      commitSits();
       rerender();
     });
   });
@@ -2592,32 +2674,37 @@ function wireSituationListeners(gp, { getOpenKey, setOpenKey, root = document } 
       if (!cell) return;
       const field = btn.dataset.sitMakedefault;
       if (cell[field] == null) return;
-      if (field === "offFormations") gp.offFormations = JSON.parse(JSON.stringify(cell.offFormations));
-      else if (field === "tendency") gp.tendency = cell.tendency;
-      else if (field === "passDepth") gp.passDepth = __spreadValues({}, cell.passDepth);
-      else if (field === "qbRunPct") gp.qbRunPct = cell.qbRunPct;
-      else if (field === "tempo") gp.baseTempo = cell.tempo;
+      // D17 C-3: build the standing patch, then route it by field.
+      const _std = {};
+      if (field === "offFormations") _std.offFormations = JSON.parse(JSON.stringify(cell.offFormations));
+      else if (field === "tendency") _std.tendency = cell.tendency;
+      else if (field === "passDepth") _std.passDepth = __spreadValues({}, cell.passDepth);
+      else if (field === "qbRunPct") _std.qbRunPct = cell.qbRunPct;
+      else if (field === "tempo") _std.baseTempo = cell.tempo;
       else if (field === "defFront") {
-        if (DEF_FRONTS2.includes(cell.defFront)) gp.defBaseFront = cell.defFront;
+        if (DEF_FRONTS2.includes(cell.defFront)) _std.defBaseFront = cell.defFront;
         else return;
-      } else if (field === "defAggression") setAggr(gp, cell.defAggression);
-      else if (field === "protIdentity") gp.protIdentity = cell.protIdentity;
-      else if (field === "coverageScheme") gp.coverageScheme = cell.coverageScheme;
-      else if (field === "optionRate") gp.optionRate = cell.optionRate;
-      else if (field === "jetRate") gp.jetRate = cell.jetRate;
+      } else if (field === "defAggression") setAggr(_std, cell.defAggression);
+      else if (field === "protIdentity") _std.protIdentity = cell.protIdentity;
+      else if (field === "coverageScheme") _std.coverageScheme = cell.coverageScheme;
+      else if (field === "optionRate") _std.optionRate = cell.optionRate;
+      else if (field === "jetRate") _std.jetRate = cell.jetRate;
       else if (["drawRate", "protEmphasis", "qbAggr", "covShell", "covStyle", "pressLevel", "edgePlay", "optionKey", "tackleStyle", "subPhilosophy"].includes(field))
-        gp[field] = cell[field];
-      else if (field === "conceptWeights") gp.conceptWeights = __spreadValues({}, cell.conceptWeights);
+        _std[field] = cell[field];
+      else if (field === "conceptWeights") _std.conceptWeights = __spreadValues({}, cell.conceptWeights);
       else return;
+      writeStanding(_std);
       delete cell[field];
       sitCleanup();
       notify("Saved as your default \u2014 AUTO situations now inherit it", "success");
+      commitSits();
       rerender();
     });
   });
   root.querySelectorAll("[data-sitside]").forEach((btn) => {
     btn.addEventListener("click", () => {
       sitSide = btn.dataset.sitside;
+      commitSits();
       rerender();
     });
   });
@@ -2655,6 +2742,7 @@ function wireSituationListeners(gp, { getOpenKey, setOpenKey, root = document } 
       const cell = sitCell();
       if (!cell) return;
       cell[btn.dataset.sitsetField] = btn.dataset.sitsetVal;
+      commitSits();
       rerender();
     });
   });
@@ -2671,6 +2759,7 @@ function wireSituationListeners(gp, { getOpenKey, setOpenKey, root = document } 
         cell.offFormations.push({ id: fid, weight: 33 });
         rebalanceWeights(cell.offFormations);
       }
+      commitSits();
       rerender();
     });
   });
@@ -2735,6 +2824,7 @@ function wireSituationListeners(gp, { getOpenKey, setOpenKey, root = document } 
   (_g = root.querySelector("#sit-reset-all")) == null ? void 0 : _g.addEventListener("click", () => {
     gp.situations = {};
     notify("All situations reset to AUTO", "success");
+    commitSits();
     rerender();
   });
 }
@@ -2851,7 +2941,13 @@ function applyStartingChoices(school, startPlan, startDef) {
       } else notify(`"${dbRaw.name || "Defense"}" can't load in this build — starting with the staff's defense`, "warning");
     }
   }
-  try { synthesizeTeamPlan(school, { force: true }); } catch (e) {}
+  // D17 C-3: was a FORCED re-synthesis — i.e. re-deriving the books from the
+  // bag after the fact, the inversion again. Every branch above now adopts its
+  // own plan, so the only job left here is to make sure a school that chose
+  // NOTHING ("" = keep the staff's plan) still ends up carrying parts. Unforced
+  // synthesis does exactly that and is a no-op for a school that already has
+  // them — it cannot overwrite an adopted book with a snapshot of itself.
+  try { synthesizeTeamPlan(school); } catch (e) {}
 }
 // Stage 3: the snapshot-vs-library UPDATE PROMPT. A book loaded from the
 // Workshop is a SNAPSHOT; when its source creation has a newer saved stamp,
@@ -3103,26 +3199,21 @@ function setupListeners() {
   }));
   const school = getPlayerSchool();
   if (!school) return;
-  // ╔═══════════════════════════════════════════════════════════════════════╗
-  // ║ ⚠ TRANSITIONAL BRIDGE — DELETE IN THE FINAL D17 BATCH-C COMMIT.       ║
-  // ╚═══════════════════════════════════════════════════════════════════════╝
-  // Batch C converts this screen's ~55 plan writers to the parts, in reviewable
-  // pieces. A PARTIAL conversion is unsafe without this line, and the failure is
-  // silent: a converted writer recompiles the plan FROM the parts, which discards
-  // anything an unconverted writer had poked onto the flat bag. Proven — set
-  // tendency the old way, then move any converted dial, and the tendency reverts.
-  //
-  // Re-splitting here closes the window: whatever a legacy writer scribbled is
-  // captured into the parts before the next converted write recompiles. It is a
-  // no-op for converted writers (they already keep parts and plan in agreement,
-  // so the re-split returns identical parts).
-  //
-  // This IS the gameplan→book inversion, kept alive deliberately and briefly as
-  // scaffolding for the thing that removes it. When the last writer on this
-  // screen routes through setPlanField/setPlanFields/setOverlay, DELETE IT — and
-  // if you are reading this after Batch C closed, it was forgotten: delete it.
-  try { synthesizeTeamPlan(school, { force: true }); } catch (e) {}
-  const gp = school.gameplan;
+  // D17 BATCH C-3: the transitional re-split BRIDGE that stood here is GONE.
+  // It existed because a half-converted screen loses writes — a converted dial
+  // recompiles from the parts and discards whatever an unconverted writer left
+  // on the flat bag. Every writer on this screen now goes through the seam
+  // (dials via setPlanField/setPlanFields, structural editors via editStruct,
+  // the situations grid via commitSits, loads via adoptOffPlan/adoptDefPlan),
+  // so there is nothing left to rescue and no reason to re-derive the books
+  // from the bag. That re-derivation WAS the gameplan→book inversion; removing
+  // it is the point of D17. The hazard it covered is pinned in
+  // playbook_root_probe §11, so if a future writer forgets the seam the probe
+  // says so instead of the plan quietly reverting.
+  // D17 C-3: `let`, not `const` — the setup-time defaulting write below returns
+  // the RECOMPILED plan and rebinds this, so the handlers wired underneath read
+  // the live object rather than the pre-write one.
+  let gp = school.gameplan;
   document.querySelectorAll("[data-gpsection]").forEach((btn) => {
     btn.addEventListener("click", () => {
       gameplanSection = btn.dataset.gpsection;
@@ -3144,8 +3235,23 @@ function setupListeners() {
       rerender();
     });
   });
-  gp.offFormations = normalizeFormations(gp.offFormations, gp.offFormation);
-  if (!gp.situations) gp.situations = {};
+  // D17 C-3: the screen's DEFAULTING used to poke five fields onto the plan as a
+  // side effect of wiring up (and two more mid-RENDER, below). That is the last
+  // thing keeping the bridge alive, so it is collected into ONE routed write:
+  // normalizeFormations and the four absent-field defaults, committed together
+  // and only when something is actually missing. Idempotent — on the second
+  // visit the patch is empty and no write happens at all.
+  {
+    const _norm = normalizeFormations(gp.offFormations, gp.offFormation);
+    const _def = {};
+    if (JSON.stringify(_norm) !== JSON.stringify(gp.offFormations)) _def.offFormations = _norm;
+    if (!gp.situations) _def.situations = {};
+    if (!gp.defAggression) { const _a2 = {}; setAggr(_a2, aggrStopFromBlitzPct(gp.blitzPct)); Object.assign(_def, _a2); }
+    if (!gp.protIdentity) _def.protIdentity = "halfSlide";
+    if (!gp.targetShares) _def.targetShares = { WR1: 22, WR2: 20, WR3: 16, TE1: 20, RB1: 14 };
+    if (!gp.coverageScheme) _def.coverageScheme = "balanced";
+    if (Object.keys(_def).length) gp = setPlanFields(school, _def);
+  }
   const root = document.getElementById("view-root") || document;
   wireSituationListeners(gp, {
     getOpenKey: () => openSitKey,
@@ -3155,10 +3261,6 @@ function setupListeners() {
     root
   });
   wireDefaultsListeners(gp, { root });
-  if (!gp.defAggression) setAggr(gp, aggrStopFromBlitzPct(gp.blitzPct));
-  if (!gp.protIdentity) gp.protIdentity = "halfSlide";
-  if (!gp.targetShares) gp.targetShares = { WR1: 22, WR2: 20, WR3: 16, TE1: 20, RB1: 14 };
-  if (!gp.coverageScheme) gp.coverageScheme = "balanced";
   (_d = document.getElementById("max-fg")) == null ? void 0 : _d.addEventListener("input", (e) => {
     setPlanFields(school, { maxFGDist: parseInt(e.target.value) });
     document.getElementById("max-fg-val").textContent = `${e.target.value} yds`;
