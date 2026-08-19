@@ -486,6 +486,71 @@ D16's `_liveTempo` hunks in the same file deliberately left unstaged**) ·
 `tools/plan_cohesion_probe.mjs` (**partial-staged — §2 only; D13/D16 own §5 and
 the import line**) · `Ref/STATUS.md` (this entry + the header). NOT pushed.
 
+## 2026-08-18 — THE DEFENSIVE STRESS TEST (new CORE probe) — 26 dials A/B'd, no dead controls left
+
+Owner: *"can you stress test the defense see what other bugs you find."* The
+front-mix bug had a shape worth hunting generally — **a dial the coach can
+author, the UI shows, the book stores, and that never reaches the field.** It
+survived every existing probe because they all ask *"is the value stored
+correctly?"* and none asks *"does the game play differently?"*.
+
+**`tools/def_stress_probe.mjs` (NEW, registered CORE)** asks only the second
+question. Each defensive dial gets two seeded arms — same games, same rosters,
+same RNG stream, one dial flipped between extremes — measured on the outcome it
+is supposed to move. **26 arms, 0 flat.**
+
+**RESULT: no dead defensive controls remain.** Every standing dial moves the
+game: front (4-3 vs 46/Bear), the front mix in its BOOK shape, sub philosophy,
+aggression, pressure identity, shell, style, coverage scheme, cushion, box, edge
+discipline, tackling, QB spy, green dog, zone teaching, robber (both directions),
+option key.
+
+**THE SIX SHIPPED BOOKS ALL KEEP THEIR PROMISE** — each plays every front it
+declares. That is the exact check the front-mix bug would have failed, and it is
+now permanent.
+
+**Three leads chased, all three were MY measurement, not the code:**
+- *robber flat* — the robber only exists behind a TWO-HIGH shell (sim.js ~2757)
+  and I tested it off the default shell. Corrected, it moves in both directions
+  (and "stay over top" correctly removes the robber entirely).
+- *option key flat* — it only means anything against an offense that RUNS the
+  option; the neutral Spread offense never created the situation. Now tested
+  against a Flexbone/Wishbone arm.
+- *tackling flat* — "strip" should move FUMBLES, not explosive plays. Wrong
+  metric, corrected (1.0% → 2.2% forced fumbles).
+
+**ONE FINDING WORTH KNOWING, and it is a design win, not a bug.** On aggregate
+pressure rate, **`selective` and `balanced` are indistinguishable** — 19.2% vs
+19.3% measured, against declared rates of 14% and 20%. That reads like a dead
+stop. It is not: split BY LEVERAGE, selective sits **below** balanced on early
+downs and **above** it on passing downs, exactly as `constants.js` documents
+("a personality, not a low number" — passDownMult 2.4 vs 1.25):
+
+| stop | early downs | passing downs |
+|---|---|---|
+| bend | 7.7% | 5.8% |
+| **selective** | **16.2%** | **32.2%** |
+| balanced | 21.7% | 29.1% |
+| attacking | 35.0% | 43.6% |
+| house | 42.9% | 41.5% |
+
+House ignores the down entirely, as written. Both the ladder's ordering and
+selective's personality are now pinned, so a future tuning pass that flattens
+them fails loudly instead of quietly.
+
+**Probe hygiene, learned the hard way:** count metrics were being printed as
+percentages ("500.0%"), which made a real signal look like garbage — fixed. And
+**do not gate this probe below N=10**: at N=5 the cushion and option-key arms
+flag FLAT on sample noise alone (they move 6.7pts and 0.21 ypc at N=10). A probe
+that cries wolf gets ignored, which is worse than not having it — the same
+lesson `covfam_probe` teaches at N≈90.
+
+**Gates:** `def_stress_probe` **26/26 ×3 green**; manifest parses
+(`_gate.mjs --list`).
+
+**Commit scoped to:** `tools/def_stress_probe.mjs` (new) ·
+`tools/_gate_manifest.mjs` (one CORE entry) · `Ref/STATUS.md`. NOT pushed.
+
 ## 2026-08-18 — THE FRONT MIX NEVER ROLLED (a live sim bug) + the Defense tab rebuilt in the offense's language
 ## NODE-GATED ×3 (plan_cohesion 97/0) · BAND-CHECKED · ⚠ BROWSER OWED
 
