@@ -65,12 +65,16 @@ const NEXT_IDS = ['ob-next-0', 'ob-next-2', 'ob-next-3', 'ob-next-4', 'ob-start'
 //   'team'       → the item's navTo is "roster" (already toured separately),
 //                  so the entry was a duplicate that could never match.
 //   'coachoffice'→ the screen is "program" (label "Coach's Office").
-//   'standings'  → NOT a sidebar destination at all; it exists as a link on the
-//                  DASHBOARD (dashboard.js "Full →" / "Standings"), so it is
-//                  only clickable from there — hence the hop below.
+//   'standings'  → NOT a sidebar destination. It is a TAB inside the Season
+//                  group (app.js renderSeasonGroup → groupHeader(…,
+//                  "data-season-tab")), so it is only reachable once the walk
+//                  is ON the season screen — hence it follows 'schedule', and
+//                  [data-season-tab] joins the selector list below. (The
+//                  dashboard also carries "Full →"/"Standings" links, but only
+//                  on cards that appear later in a season, so routing through
+//                  the dashboard is not dependable this early in a dynasty.)
 const TOUR = ['roster', 'depthchart', 'practice',
-              'program', 'schedule',
-              'dashboard', 'standings',
+              'program', 'schedule', 'standings',
               'statsgroup', 'stats', 'awards', 'history',
               'gameplan', 'recruiting', 'settings'];
 
@@ -135,7 +139,9 @@ try {
   await snap('dynasty settled');
 
   for (const view of TOUR) {
-    const nav = p.locator(`[data-nav="${view}"], [data-tabbar="${view}"], [data-view="${view}"], [data-team-tab="${view}"], [data-program-tab="${view}"], [data-statsgroup-tab="${view}"]`);
+    // [data-season-tab] was the one group-tab vocabulary missing here, which is
+    // why Standings could never be reached (2026-08-18).
+    const nav = p.locator(`[data-nav="${view}"], [data-tabbar="${view}"], [data-view="${view}"], [data-team-tab="${view}"], [data-program-tab="${view}"], [data-statsgroup-tab="${view}"], [data-season-tab="${view}"]`);
     if (await nav.count()) {
       await nav.first().click({ timeout: 6000 }).catch(() => {});
       await p.waitForTimeout(800);
