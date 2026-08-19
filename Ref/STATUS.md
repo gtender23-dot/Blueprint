@@ -5609,3 +5609,57 @@ viewer_pace · card_lint · record_call · save_migration · blitz_pie all green
 the single most relevant gate for a change to SEPARATION and the cloud container
 caps command time at ~178s, so it could not finish here. Run it before this
 ships. Playwright tier owed as always. NOT pushed.
+
+## 2026-08-19 — PRESSURE COHESION AUDIT (owner: "cohesion pass targeting blitzes and pressure — depth chart blitz share vs the game plan's aggression and pressure style vs the defbook's — how many come and where it comes from")
+
+Findings in `Ref/COHESION_AUDIT_PRESSURE_2026-08-19.md`. **Audit only — no code
+changed.** Four numbered ODs (P1-P4) awaiting owner ratification.
+
+Prior art honoured rather than re-derived: `BLITZ_MODEL_ASSESSMENT.md` (deepRisk
++ zeroBehind wired, QB hot answer, blitz-the-formation — all three implemented),
+`BLITZ_PIE_PLAN.md`, and D10's OD-8 / OD-9. This pass audits the SEAMS BETWEEN
+those surfaces, which nothing had looked at end to end.
+
+**The headline (P1): `bring` on a defensive card is a RATE SELECTOR, not a
+rusher count.** `DEF_CALL_BRING` maps bring 4/5/6 onto the aggression stops
+balanced/attacking/house; only bring 3 is a real count instruction. Measured on
+the bench (n=751/cell, Spread/Four Verts vs 4-3 Cover 3):
+
+| card | fired | rushers |
+|---|---|---|
+| Rush 3 | 0% | 3 → 100% ✓ |
+| Rush 4 | 23% | 4 → 77%, **5 → 23%** |
+| Bring 5 | 36% | **4 → 64%**, 5 → 36% |
+| Bring the House | 51% | **4 → 49%**, 6 → 51% |
+
+**"Bring 5" sends four rushers on 64% of snaps — the majority outcome is the
+opposite of the card's name.** When the call fires the count is right; the
+defect is that an explicitly CALLED pressure fires probabilistically at all.
+P2: consequently there is no way to call a plain four-man rush — "Rush 4"
+blitzes 23% of the time, and only Rush 3 can say "do not blitz".
+
+**P3: a depth-chart dial silently mutes a headset call.** `_pieHeatMult` is
+applied to the call rate unconditionally — no "unless called" guard — so a coach
+with HEAT 0 on his Nickel front who calls Bring the House gets 45% × 0.5 =
+22.5%. Contradicts the already-ratified OD-3 (the headset beats the standing
+plan), so this one may be a correctness fix rather than a real open question.
+
+**P4: the pie and HEAT are keyed to the front FIELDED, not the front dialed**
+(`fieldAssignments.defense[defFrontId]`). Measured: a 4-3 base team fields its
+base front on only **72% of pass snaps** (46/Bear 11%, Nickel 6%, Dime 5%, 5-2
+2%), so a dialed pressure pie is absent on **28% of passing downs** — and they
+are the obvious-pressure downs, plus most goal-line snaps since today's work.
+Defensible as designed (a Dime pie legitimately differs from a 4-3 pie); the
+defect is that nothing tells the coach and there is no way to express a
+front-independent pressure identity.
+
+**Confirmed SOUND, no action:** aggression × HEAT compose (they multiply inside
+the cap, they do not fight); `rush3` is honoured absolutely; the blitz's
+coverage cost is real; `blitzPct` derived-only; `pressureSource` retired; the
+pie engages only when dialed, so AI plans and untouched saves keep the
+byte-identical path.
+
+**Dispatch order once ratified:** P1+P2 together (one change, one A/B) → P3
+(small) → P4 (largest; option (a) needs a role-mapping between fronts). Gates
+named in the audit; note sacks/team is 2.07 against a 1.8-2.3 target, so
+pressure changes have little headroom. NOT pushed.
