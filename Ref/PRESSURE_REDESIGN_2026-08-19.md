@@ -156,6 +156,58 @@ own A/B, not smuggled in here.
 
 ---
 
+### 8 · The 3-4 has no 4th rusher — it rushes BOTH outside backers *(new, found 2026-08-19 by the owner asking "how does the sim decide who the 4th is in a 3-4?")*
+
+It doesn't decide. There is no rush-backer concept anywhere in the engine.
+
+`fieldassign.js:230` / `sim.js:22` fold BOTH outside linebackers into the rush
+group for `3-4` and `Penny` (`DL = DE + DT + OLB`). Each OLB then independently
+rolls `C.FZ_NATIVE_DROP_PCT` (18%) to bail into coverage, and whoever does not
+bail rushes. **Measured, unfired snaps only — no blitz called:**
+
+| front | rushers | avg | sack% | hurry% |
+|---|---|---|---|---|
+| 4-3 | 4 → 100% | 4.00 | 6.7% | 52.6% |
+| Nickel | 4 → 100% | 4.00 | 5.4% | 50.9% |
+| **3-4** | 3 → 3%, 4 → 29%, **5 → 69%** | **4.66** | 7.1% | 54.5% |
+| **Penny** | same | **4.66** | 7.2% | 54.4% |
+
+So a 3-4 sends **five rushers on 69% of snaps where nothing was called** — a
+permanent overload with six in coverage. Nothing compensates: the extra 0.66
+rushers buy +0.4pp sack and +2pp hurry over the 4-3.
+
+Real football is the MIRROR IMAGE. A 3-4 rushes four: three down linemen plus
+**one designated rush backer** (the Jack), while the other OLB drops. The sim's
+default is inverted — both rush unless one happens to bail — and the 18% native
+drop, which was authored as the fire-zone bail rate, is the only thing standing
+between the front and a permanent five-man rush.
+
+**Why this belongs to this redesign and not to a separate ticket:** "which OLB
+rushes" IS the "who attacks the QB" question the owner set out to give the
+player control over, and it is the one case where the Depth Chart genuinely does
+NOT already answer it — both men are in rush slots, so alignment cannot express
+the choice.
+
+**Recommended shape (fits the model with no new UI):**
+- **Default (Auto): derive it.** Of the two OLBs on the field, the better pass
+  rusher is the Jack and rushes; the better coverage man drops. Costs nothing to
+  express, and is what a real staff does.
+- **Override: the blitzer list.** Name your Jack **Often** and he is your rusher.
+  This is the list doing exactly the job it was designed for.
+- The native 18% bail stays as what it was meant to be — the occasional
+  fire-zone wrinkle ON TOP of a sound four-man rush, not the mechanism holding
+  the front's rush count together.
+
+**Consequence worth stating plainly:** this restores "blitz = 5+ rushers" as a
+true statement across all eleven fronts. Today it is false for two of them, and
+every downstream mechanic that keys on `blitzFired` — protection tilt, the QB
+hot answer, screen jackpots, coverage risk — is reasoning about a four-man rush
+that is really five.
+
+**Band risk:** removing ~0.66 rushers from two fronts will move sacks for any
+team running them. Sacks/team is 2.07 against a 1.8–2.3 target, so this wants
+its own A/B rather than riding along with the list.
+
 ## Where it lives
 
 **Game Plan ▸ Defense**, beside aggression and pressure style. That is the

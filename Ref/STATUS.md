@@ -5718,3 +5718,35 @@ list cannot express it and every marker is another thing to explain.
 Migration: no faithful one exists (per-front seat-shares vs a player list are
 different statements) — a dialed pie is dropped with a release note. Cheap: the
 pie is opt-in and the AI never used it. NOT pushed.
+
+### 2026-08-19 — the 3-4 has no 4th rusher (owner: "how does the sim decide who the 4th is in a 3-4?")
+
+**It doesn't.** There is no rush-backer/Jack concept in the engine. `fieldassign.js:230`
+and `sim.js:22` fold BOTH outside linebackers into the rush group for `3-4` and
+`Penny` (`DL = DE + DT + OLB`); each OLB then independently rolls
+`FZ_NATIVE_DROP_PCT` (18%) to bail, and whoever doesn't bail rushes.
+
+**Measured, unfired snaps only (no blitz called):** 4-3 and Nickel rush exactly
+4.00 every snap. **3-4 and Penny rush 5 on 69% of snaps, averaging 4.66** —
+a permanent overload with six in coverage, with nothing called. Nothing
+compensates: the extra 0.66 rushers buy +0.4pp sack and +2pp hurry over the 4-3.
+
+Real football is the mirror image — three down plus ONE designated rush backer,
+the other OLB drops. The sim's default is inverted, and the 18% native drop
+(authored as the fire-zone bail) is the only thing between the front and a
+permanent five-man rush.
+
+**Consequence:** "blitz = 5+ rushers" — the premise of the whole pressure model
+per BLITZ_MODEL_ASSESSMENT — is FALSE for two of the eleven fronts. Every
+mechanic keying on `blitzFired` (protection tilt, the QB hot answer, screen
+jackpots, coverage risk) is reasoning about a four-man rush that is really five.
+
+Recorded as **finding 8** in `Ref/PRESSURE_REDESIGN_2026-08-19.md`. Recommended
+shape needs no new UI: default derives the Jack (better pass rusher of the two
+OLBs rushes, better coverage man drops); the blitzer list overrides it by name.
+This is also the one "who attacks the QB" case the Depth Chart genuinely cannot
+express, since both men already occupy rush slots — so it belongs to this
+redesign rather than a separate ticket. Wants its OWN A/B: removing ~0.66
+rushers from two fronts moves sacks, and sacks/team is 2.07 in a 1.8-2.3 band.
+
+Still design-only. Nothing built. NOT pushed.
