@@ -617,38 +617,53 @@ function renderMilestoneHistory() {
     </div></div></div>` : ""}`;
 }
 var _candidates = { side: null, list: [] };
+// Short rating labels — module scope so BOTH hiring doors read the same list.
+var STAFF_SHORT = {
+  qbRunDesign: "QB Run",
+  passGame: "Pass",
+  runGame: "Run",
+  blitzDesign: "Blitz Dsn",
+  coverage: "Coverage",
+  runFits: "Run Fits"
+};
+// ── ONE DOSSIER, TWO DOORS (owner report 2026-08-18) ────────────────────────
+// The full candidate dossier (owner request Aug 2026) — age, ambition, scheme
+// identity, specialty, colour-coded ratings and the formation-grade sheet —
+// was built into the in-game hire market and never given to the NEW-GAME
+// WIZARD's coordinator step. So the FIRST coordinator decision of a dynasty
+// was made on a stub (a name, a salary and six bare numbers) while the exact
+// same decision mid-career showed the whole sheet. Both doors now render this
+// function, so a third copy can't drift the way the card vocabularies did.
+function coachDossierHtml(c) {
+  ensureAmbition(c);
+  const sheet = Object.entries(c.schemeIQ || {}).sort((a, b) => b[1] - a[1]).map(([s, iq]) => {
+    const t = schemeStarTier(iq);
+    return `<span class="${s === c.specialty ? "staff-hi" : ""}">${escapeHtml(s)} ${t >= 4 ? "\u{1F48E}" : t ? "★★★".slice(0, t) : "–"} ${iq}</span>`;
+  }).join(" \xB7 ");
+  const meta = [c.age != null ? `${c.age} yrs` : null, c.ambition || null,
+                c.salary != null ? `$${c.salary.toLocaleString()}/yr` : null].filter(Boolean).join(" \xB7 ");
+  return `
+    <div class="staff-name">${escapeHtml(c.name.first)} ${escapeHtml(c.name.last)}
+      <span class="muted" style="font-weight:400">${meta ? " \xB7 " + escapeHtml(meta) : ""}</span></div>
+    <div class="staff-schemes muted">${escapeHtml(deriveSchemeIdentity(c.side, c.ratings))} \xB7 Specialty: <span class="staff-hi">${escapeHtml(c.specialty || "–")}</span></div>
+    <div class="staff-ratings muted">${Object.entries(c.ratings || {}).map(([k, v]) => `${STAFF_SHORT[k] || k} <b class="${v >= 70 ? "staff-hi" : v <= 35 ? "staff-lo" : ""}">${v}</b>`).join(" \xB7 ")}</div>
+    <div class="staff-schemes muted">${sheet}</div>`;
+}
 function renderStaffMarket(side, school) {
   if (_candidates.side !== side || !_candidates.list.length) {
     _candidates = { side, list: generateCandidates(side, school, 5) };
   }
-  const SHORT = {
-    qbRunDesign: "QB Run",
-    passGame: "Pass",
-    runGame: "Run",
-    blitzDesign: "Blitz Dsn",
-    coverage: "Coverage",
-    runFits: "Run Fits"
-  };
   return `
   <div class="staff-market">
     <div class="staff-market-head">CANDIDATES \u2014 ${side} <button class="btn-ghost btn-sm" data-hire-close="1">Close</button></div>
     ${_candidates.list.map((c, i) => {
-    ensureAmbition(c);
     // [Owner request Aug 2026] The full dossier at hire: every formation
     // grade (star + raw IQ), specialty called out, all ratings labeled.
-    const sheet = Object.entries(c.schemeIQ || {}).sort((a, b) => b[1] - a[1]).map(([s, iq]) => {
-      const t = schemeStarTier(iq);
-      return `<span class="${s === c.specialty ? "staff-hi" : ""}">${escapeHtml(s)} ${t >= 4 ? "\u{1F48E}" : t ? "\u2605\u2605\u2605".slice(0, t) : "\u2013"} ${iq}</span>`;
-    }).join(" \xB7 ");
+    // 2026-08-18: that markup now lives in coachDossierHtml, shared with the
+    // new-game wizard's coordinator step.
     return `
       <div class="staff-row staff-cand">
-        <div class="staff-info">
-          <div class="staff-name">${escapeHtml(c.name.first)} ${escapeHtml(c.name.last)}
-            <span class="muted" style="font-weight:400">\xB7 ${c.age != null ? `${c.age} yrs` : ""} \xB7 ${escapeHtml(c.ambition || "")} \xB7 $${c.salary.toLocaleString()}/yr</span></div>
-          <div class="staff-schemes muted">${escapeHtml(deriveSchemeIdentity(c.side, c.ratings))} \xB7 Specialty: <span class="staff-hi">${escapeHtml(c.specialty || "\u2013")}</span></div>
-          <div class="staff-ratings muted">${Object.entries(c.ratings).map(([k, v]) => `${SHORT[k] || k} <b class="${v >= 70 ? "staff-hi" : v <= 35 ? "staff-lo" : ""}">${v}</b>`).join(" \xB7 ")}</div>
-          <div class="staff-schemes muted">${sheet}</div>
-        </div>
+        <div class="staff-info">${coachDossierHtml(c)}</div>
         <button class="btn-primary btn-sm" data-hire-pick="${i}">Hire</button>
       </div>`;
   }).join("")}
@@ -867,4 +882,4 @@ function setupListeners18() {
   });
 }
 
-export { renderCoachOffice, renderHandoffCard, setupHandoffListeners, setupListeners18 };
+export { coachDossierHtml, renderCoachOffice, renderHandoffCard, setupHandoffListeners, setupListeners18 };

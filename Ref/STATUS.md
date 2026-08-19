@@ -486,6 +486,55 @@ D16's `_liveTempo` hunks in the same file deliberately left unstaged**) ·
 `tools/plan_cohesion_probe.mjs` (**partial-staged — §2 only; D13/D16 own §5 and
 the import line**) · `Ref/STATUS.md` (this entry + the header). NOT pushed.
 
+## 2026-08-18 — WIZARD COORDINATOR CARDS GET THE FULL DOSSIER (owner report) + an n=1 landmine in generateCandidates
+
+**Owner:** *"the coordinator screen in the new game wizard didnt get the updated
+coach cards."* Correct, and it had been that way since the dossier shipped.
+
+**THE GAP.** The Aug 2026 owner request — *"the full dossier at hire: every
+formation grade (star + raw IQ), specialty called out, all ratings labeled"* —
+was built into the IN-GAME hire market (coachoffice.js `renderStaffMarket`) and
+never given to the NEW-GAME WIZARD's coordinator step (newgame.js `stepStaff`),
+which still printed a stub: name, salary, and six unlabelled numbers. Same
+decision, two doors, wildly different information — and the wizard's is the one
+you make on day one, knowing least about the game.
+
+**FIX — one dossier, two doors.** `coachDossierHtml(c)` is now exported from
+coachoffice.js and rendered by BOTH: age · ambition · salary, the derived
+scheme identity, the called-out specialty, colour-coded ratings (`staff-hi` /
+`staff-lo`), and the full formation-grade sheet with star tiers (💎/★★★ + raw
+IQ, specialty highlighted). The market's inline copy is deleted, not duplicated
+— a third hand-kept copy is exactly the drift D14 spent a session undoing. The
+wizard card keeps its `.ob-pick-card` behaviour (click to select) and gains
+`.staff-info` so it inherits the dossier's styling.
+The data was always there: the wizard already builds its four candidates with
+the same `generateCandidates`, so this is presentation only — no generation,
+balance or save change.
+
+**⚠ AND A LATENT BUG FOUND WHILE VERIFYING IT.** `generateCandidates` spreads
+candidate quality across the division band with `i / (n - 1)`. At **n === 1**
+that is 0/0 → NaN → `generateCoordinator` receives NaN quality and returns a
+coach with **null ratings and NaN scheme grades**. It surfaced because the
+verification asked for a single candidate. **No shipped caller is affected** —
+the wizard asks for 4, the hire market for 5 — so this is a trap for the next
+caller rather than a live defect. Guarded: a lone candidate now sits mid-band.
+
+**Gates:** `dead_surface_probe` ALL GREEN · `coach_age_probe` 19/19 ·
+`multicoach_week_probe` 16/0 · `save_migration_check` ALL PASS ·
+`worldgen_check` PASSED · clean build (13/13 sanity, cache
+`cfb-dynasty-922a1d67d4`, bundle parse 2/2). `new_world_probe` is the PW tier
+and unrunnable in this sandbox — **it walks the wizard's staff step, so it is
+the one to re-run locally**.
+
+**OWNER CHECKLIST:**
+- [ ] Start a new dynasty → the coordinator screen: each OC/DC card should now
+  read like the hire market — age, Climber/Lifer, salary, scheme identity,
+  Specialty, labelled ratings, and every formation graded with stars.
+- [ ] `node tools/new_world_probe.mjs` (PW) — it drives this exact step.
+
+**Commit scoped to:** `js/ui/views/coachoffice.js` · `js/ui/views/newgame.js` ·
+`js/engine/staff.js` · `Ref/STATUS.md`. NOT pushed.
+
 ## 2026-08-18 — `_equiv_walk` REPAIRED AND RUN — byte-identical from snapshot 04 on, **with a coverage gap stated**
 
 The walk had not been run against the shipped UI in a long time and was broken

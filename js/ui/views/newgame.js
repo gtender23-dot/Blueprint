@@ -1,6 +1,7 @@
 import { C } from '../../constants.js';
 import { getCoach } from '../../engine/coachprofile.js';
 import { generateCandidates } from '../../engine/staff.js';
+import { coachDossierHtml } from './coachoffice.js';
 import { WORLDGEN_INFO, applyIdentityToSchool, assembleWorldSources, availableStates, generatePlayerProgram, generateWorld, rosterHintsFromBooks } from '../../engine/world.js';
 import { navigate, notify, rerender, startNewGamePrepared, state } from '../../state.js';
 import { repairCreation } from '../../engine/creatorrepair.js';
@@ -141,21 +142,18 @@ function stepStaff() {
     ob.oc = null;
     ob.dc = null;
   }
-  const SHORT = {
-    qbRunDesign: "QB Run",
-    passGame: "Pass",
-    runGame: "Run",
-    blitzDesign: "Blitz Dsn",
-    coverage: "Coverage",
-    runFits: "Run Fits"
-  };
+  // [Owner report 2026-08-18] This step used to print a stub — name, salary and
+  // six bare numbers — while the SAME hire made mid-career (Coach's Office →
+  // hire market) showed the full dossier the owner asked for in Aug 2026: age,
+  // ambition, scheme identity, specialty, colour-coded ratings and every
+  // formation grade with its star tier. The first coordinator decision of a
+  // dynasty is the one you make with the least information about the game, so
+  // it needed the dossier most. Both doors now render coachDossierHtml.
   const pool = (side, list, picked) => `
   <div class="ob-kicker" style="margin-top:${side === "OC" ? "0" : "14px"}">${side === "OC" ? "OFFENSIVE COORDINATOR" : "DEFENSIVE COORDINATOR"}</div>
   ${list.map((c) => `
-    <button class="ob-pick-card ob-staff-card${(picked == null ? void 0 : picked.id) === c.id ? " active" : ""}" data-ob-staff="${side}:${c.id}">
-      <div class="ob-pick-head"><span class="ob-pick-title">${escapeHtml(c.name.first)} ${escapeHtml(c.name.last)}</span>
-        <span class="muted" style="font-size:11px">$${c.salary.toLocaleString()}/yr</span></div>
-      <div class="ob-pick-desc">${Object.entries(c.ratings).map(([k, v]) => `${SHORT[k]} <b>${v}</b>`).join(" \xB7 ")}</div>
+    <button class="ob-pick-card ob-staff-card staff-info${(picked == null ? void 0 : picked.id) === c.id ? " active" : ""}" data-ob-staff="${side}:${c.id}">
+      ${coachDossierHtml(c)}
     </button>`).join("")}`;
   return `
   <div class="ob-step">

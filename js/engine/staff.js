@@ -96,7 +96,14 @@ function generateCandidates(side, school, n = 5) {
   const divLift = (_b = (_a = C.STAFF_DIV_QUALITY) == null ? void 0 : _a[div]) != null ? _b : 0;
   const floor = (_d = (_c = C.STAFF_DIV_FLOOR) == null ? void 0 : _c[div]) != null ? _d : 22;
   const top = floor + 10 + p * 4;
-  return Array.from({ length: n }, (_, i) => generateCoordinator(side, clamp(floor + 4 + (top - floor - 4) * (i / (n - 1)) + randInt2(-3, 3), floor + 4, 93), div));
+  // The candidates are spread evenly from the division floor to its ceiling.
+  // GUARD (2026-08-18): n === 1 made this i/(n-1) = 0/0 = NaN, which flowed
+  // into generateCoordinator as the quality and produced a coach with NULL
+  // ratings and NaN scheme grades. No shipped caller asks for one (the wizard
+  // takes 4, the hire market 5), so nothing in the game was affected — but it
+  // is a live trap for the next caller. A lone candidate sits mid-range.
+  const spread = (i) => n > 1 ? i / (n - 1) : 0.5;
+  return Array.from({ length: n }, (_, i) => generateCoordinator(side, clamp(floor + 4 + (top - floor - 4) * spread(i) + randInt2(-3, 3), floor + 4, 93), div));
 }
 function coordIqMod(school, side, schemeId) {
   var _a, _b, _c, _d;
