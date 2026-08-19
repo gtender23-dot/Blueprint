@@ -9,7 +9,7 @@
 import {
   PLAN_FIELD_SIDE, splitTeamPlan, compilePlanParts, compileTeamPlan,
   synthesizeTeamPlan, synthesizeLeaguePlans, assignBook, assignDefBook, setOverlay,
-  adoptOffPlan, adoptDefPlan
+  adoptOffPlan, adoptDefPlan, setPlanField, setPlanFields
 } from '../js/engine/teamplan.js';
 import { generateWorld, defaultGameplan } from '../js/engine/world.js';
 import { setAIGameplan } from '../js/engine/ai.js';
@@ -218,6 +218,57 @@ function twoArms(seedIdx) {
   adoptOffPlan(e, mergedE);
   ok(e.gameplan._bookStarter === 'Air Raid' && e.gameplan._playbookName === 'Batch A Offense',
     'BATCH A: the underscore book markers ride the overlay through a load');
+}
+
+// ── 11. D17 BATCH C — THE DIAL SEAM ─────────────────────────────────────────
+// A dial must land in the bag that OWNS its field, or it is silently lost:
+// compile layers overlay → book → defbook, so a book-owned field parked in the
+// overlay is overwritten by the book, and a field poked onto the flat plan is
+// discarded by the next recompile. Both directions are pinned here.
+{
+  const s2 = { name: 'Dial Test', gameplan: defaultGameplan() };
+  synthesizeTeamPlan(s2, { force: true });
+
+  setPlanField(s2, 'defBaseFront', '3-4');
+  ok(s2.defbook.plan.defBaseFront === '3-4' && s2.gameplan.defBaseFront === '3-4',
+    'BATCH C: a DEF dial lands in the defbook and shows on the plan');
+  setPlanField(s2, 'tendency', 'Heavy Pass');
+  ok(s2.book.plan.tendency === 'Heavy Pass' && s2.gameplan.tendency === 'Heavy Pass',
+    'BATCH C: an OFF dial lands in the book and shows on the plan');
+  setPlanField(s2, 'fourthDown', 'Aggressive');
+  ok(s2.planOverlay.fourthDown === 'Aggressive' && s2.gameplan.fourthDown === 'Aggressive',
+    'BATCH C: a TEAM dial lands in the overlay and shows on the plan');
+  ok(!('defBaseFront' in s2.planOverlay) && !('tendency' in s2.planOverlay),
+    'BATCH C: book-owned dials do NOT leak into the overlay (where the book would swallow them)');
+
+  // Survival: every dial set above must still read back after further writes.
+  setPlanField(s2, 'covShell', 'two');
+  ok(s2.gameplan.tendency === 'Heavy Pass' && s2.gameplan.defBaseFront === '3-4'
+    && s2.gameplan.fourthDown === 'Aggressive',
+    'BATCH C: earlier dials SURVIVE a later recompile (the half-conversion hazard)');
+  ok(sameGP(compileTeamPlan(s2), s2.gameplan), 'BATCH C: compile ≡ gameplan after dial writes');
+
+  // undefined DELETES rather than storing undefined (absent stays absent).
+  setPlanField(s2, 'spyQB', true);
+  setPlanField(s2, 'spyQB', undefined);
+  ok(!('spyQB' in s2.gameplan) && !('spyQB' in s2.defbook.plan),
+    'BATCH C: writing undefined removes the field from its bag');
+
+  // The batched form is one compile with the same routing.
+  const before = JSON.parse(JSON.stringify(s2.gameplan));
+  setPlanFields(s2, { covStyle: 'man', rushInPct: 61, maxFGDist: 47 });
+  ok(s2.defbook.plan.covStyle === 'man' && s2.book.plan.rushInPct === 61
+    && s2.planOverlay.maxFGDist === 47,
+    'BATCH C: setPlanFields routes a MIXED batch to three different bags');
+  ok(before.tendency === s2.gameplan.tendency, 'BATCH C: a batched write disturbs nothing else');
+
+  // THE HAZARD ITSELF, pinned: a legacy flat-bag write is discarded by the next
+  // recompile. This is why the screen keeps a re-split bridge until every writer
+  // on it is converted — when the bridge goes, this pin documents what it bought.
+  s2.gameplan.tendency = 'Heavy Run';           // legacy-style write
+  setPlanField(s2, 'defBaseFront', '4-3');      // any converted dial
+  ok(s2.gameplan.tendency === 'Heavy Pass',
+    'BATCH C: a legacy flat write IS discarded by the next recompile (the hazard the bridge covers)');
 }
 
 console.log(`PLAYBOOK ROOT PROBE — ${pass} pass, ${fail} fail`);

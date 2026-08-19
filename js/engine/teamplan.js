@@ -365,6 +365,48 @@ function setOverlay(school, patch) {
 // setOverlay MERGES its patch, which is safe here precisely because both
 // loaders start from a clone of the current plan and only ever ADD or overwrite
 // keys — neither removes one, so there is nothing for a merge to strand.
+// ── D17 Batch C: THE DIAL SEAM — one field, routed to its OWNER ─────────────
+// The Game Plan screen turns ~55 individual dials, and this is where the
+// gameplan→book inversion actually flips: a dial stops being an edit to the
+// flat bag and becomes an edit to whichever PART owns that field.
+//
+// Routing is not tidiness, it is CORRECTNESS. compilePlanParts layers
+// overlay → book.plan → defbook.plan, so a book-owned field written to the
+// overlay is silently SWALLOWED by the book on the next compile — the coach
+// moves the dial, the screen re-renders from the compiled plan, and his change
+// is simply gone. (Verified directly: setOverlay({defBaseFront:"3-4"}) on a
+// synthesized school leaves the plan reading "4-3".) So:
+//   'off'  → school.book.plan[key]
+//   'def'  → school.defbook.plan[key]
+//   team / unlisted → school.planOverlay[key]   (the controller layer)
+//
+// `undefined` DELETES the field from its bag rather than storing undefined —
+// an absent field must stay absent through the round-trip (the sparse-plan law
+// the split/compile pair is built on), and several dials clear by deleting.
+function setPlanField(school, key, value) {
+  return setPlanFields(school, { [key]: value });
+}
+// The batched form: one compile for a group of dials that move together (a
+// posture preset, a Simple-mode lever). Prefer it over N setPlanField calls.
+function setPlanFields(school, patch) {
+  if (!school) return {};
+  if (!school.book && !school.planOverlay) synthesizeTeamPlan(school, { force: true });
+  if (!school.book) school.book = { schemaVersion: TEAMPLAN_SCHEMA_VERSION, name: "Offense", source: "staff", plan: {} };
+  if (!school.defbook) school.defbook = { schemaVersion: TEAMPLAN_SCHEMA_VERSION, name: "Defense", source: "staff", plan: {} };
+  if (!school.planOverlay) school.planOverlay = {};
+  if (!school.book.plan) school.book.plan = {};
+  if (!school.defbook.plan) school.defbook.plan = {};
+  for (const key in patch) {
+    if (!Object.prototype.hasOwnProperty.call(patch, key)) continue;
+    const side = PLAN_FIELD_SIDE[key];
+    const bag = side === "off" ? school.book.plan : side === "def" ? school.defbook.plan : school.planOverlay;
+    if (patch[key] === undefined) delete bag[key];
+    else bag[key] = _clone(patch[key]);
+  }
+  school.gameplan = compileTeamPlan(school);
+  return school.gameplan;
+}
+
 // D17 Batch B: the WHOLE-PLAN twin of the two above. A writer that authors an
 // entire plan in one go — the AI staff, a full library snapshot — sets all
 // three parts from it. One split and ONE compile rather than two of each, which
@@ -410,6 +452,8 @@ export {
   TEAMPLAN_SCHEMA_VERSION,
   OFF_FIELDS,
   DEF_FIELDS,
+  setPlanField,
+  setPlanFields,
   adoptPlan,
   adoptOffPlan,
   adoptDefPlan,

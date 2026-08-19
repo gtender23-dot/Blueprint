@@ -12,7 +12,7 @@ import { repairCreation } from '../../engine/creatorrepair.js';
 import { DEFAULT_OFF_BOOKS, DEFAULT_DEF_BOOKS, defaultOffBook, defaultDefBook } from '../../engine/defaultbooks.js';
 import { applyPlaybookToGameplan, playbookFromGameplan, lookSheetKey, splitSheetKey, resolveLookSheet } from '../../engine/playbook.js';
 import { applyDefBookToGameplan, defBookFromGameplan, emptyDefBook, pruneCallSheet } from '../../engine/defbook.js';
-import { applyControllerOverlay, adoptDefPlan, adoptOffPlan, controllerOverlayOf, synthesizeTeamPlan } from '../../engine/teamplan.js';
+import { applyControllerOverlay, adoptDefPlan, adoptOffPlan, controllerOverlayOf, setPlanFields, synthesizeTeamPlan } from '../../engine/teamplan.js';
 import { renderPlaybooksTab, playbooksListeners } from './creatorplaybook.js';
 import { renderDefTab, defListeners } from './creatordef.js';
 import { tipTerm } from '../manual/tips.js';
@@ -1570,6 +1570,17 @@ function normalizeDistTo100(obj, keys) {
 }
 function wireDefaultsListeners(gp, { root = document } = {}) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
+  // D17 BATCH C-1: write a dial (or a group of dials) through the parts. The
+  // `gp` BINDING is reassigned to the freshly compiled plan so every handler in
+  // this closure keeps reading the live plan — a recompile returns a NEW object,
+  // and a captured stale one would silently render yesterday's values.
+  // Falls back to a plain write when there is no school (harness/detached use).
+  const writeDial = (patch) => {
+    const sch = getPlayerSchool();
+    if (sch) gp = setPlanFields(sch, patch);
+    else Object.assign(gp, patch);
+    return gp;
+  };
   gp.offFormations = normalizeFormations(gp.offFormations, gp.offFormation);
   // The formation add/remove picker is gone (owner call, 2026-08-15): the
   // playbook owns WHICH formations you carry; this screen only re-weights them.
@@ -1616,21 +1627,35 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
       });
     });
   });
+  // ── D17 BATCH C-1: the three GENERIC dial handlers write through the PARTS ──
+  // These three cover most of the screen's chips and toggles, for both sides of
+  // the ball, because they route by FIELD NAME — which is exactly what the seam
+  // routes on. `writeDial` sends each field to its owner (book / defbook /
+  // overlay) and recompiles.
+  //
+  // Routing is correctness, not tidiness: compile layers overlay → book →
+  // defbook, so a book-owned field written to the overlay is SWALLOWED by the
+  // book on the next compile and the coach's change disappears. Writing the flat
+  // bag has the same problem from the other end — the next recompile discards it.
   root.querySelectorAll("[data-gp-set]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      gp[btn.dataset.gpSet] = btn.dataset.gpVal;
+      writeDial({ [btn.dataset.gpSet]: btn.dataset.gpVal });
       rerender();
     });
   });
   root.querySelectorAll("[data-gp-boolset]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      gp[btn.dataset.gpBoolset] = btn.dataset.gpBoolval === "true";
+      writeDial({ [btn.dataset.gpBoolset]: btn.dataset.gpBoolval === "true" });
       rerender();
     });
   });
   root.querySelectorAll("[data-gp-aggr]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      setAggr(gp, btn.dataset.gpAggr);
+      // setAggr writes the stop AND its derived blitzPct mirror (D16/OD-8), so
+      // it is applied to a scratch bag and the pair committed together.
+      const _pair = {};
+      setAggr(_pair, btn.dataset.gpAggr);
+      writeDial(_pair);
       rerender();
     });
   });
@@ -3064,6 +3089,25 @@ function setupListeners() {
   }));
   const school = getPlayerSchool();
   if (!school) return;
+  // ╔═══════════════════════════════════════════════════════════════════════╗
+  // ║ ⚠ TRANSITIONAL BRIDGE — DELETE IN THE FINAL D17 BATCH-C COMMIT.       ║
+  // ╚═══════════════════════════════════════════════════════════════════════╝
+  // Batch C converts this screen's ~55 plan writers to the parts, in reviewable
+  // pieces. A PARTIAL conversion is unsafe without this line, and the failure is
+  // silent: a converted writer recompiles the plan FROM the parts, which discards
+  // anything an unconverted writer had poked onto the flat bag. Proven — set
+  // tendency the old way, then move any converted dial, and the tendency reverts.
+  //
+  // Re-splitting here closes the window: whatever a legacy writer scribbled is
+  // captured into the parts before the next converted write recompiles. It is a
+  // no-op for converted writers (they already keep parts and plan in agreement,
+  // so the re-split returns identical parts).
+  //
+  // This IS the gameplan→book inversion, kept alive deliberately and briefly as
+  // scaffolding for the thing that removes it. When the last writer on this
+  // screen routes through setPlanField/setPlanFields/setOverlay, DELETE IT — and
+  // if you are reading this after Batch C closed, it was forgotten: delete it.
+  try { synthesizeTeamPlan(school, { force: true }); } catch (e) {}
   const gp = school.gameplan;
   document.querySelectorAll("[data-gpsection]").forEach((btn) => {
     btn.addEventListener("click", () => {

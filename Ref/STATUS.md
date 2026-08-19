@@ -486,6 +486,82 @@ D16's `_liveTempo` hunks in the same file deliberately left unstaged**) ·
 `tools/plan_cohesion_probe.mjs` (**partial-staged — §2 only; D13/D16 own §5 and
 the import line**) · `Ref/STATUS.md` (this entry + the header). NOT pushed.
 
+## 2026-08-18 — D17 · BATCH C-1: THE DIAL SEAM (side-routed) + a TEMPORARY BRIDGE
+## NODE-GATED ×3 · ⚠ WALK + BROWSER OWED — and the walk covers this batch WORST
+
+Batch C is where the inversion actually flips: a dial stops editing the flat bag
+and edits whichever PART owns the field. C-1 lands the seam and the three
+generic dial handlers.
+
+**⚠ THE PLAN CHANGED, WITH EVIDENCE — the owner-approved "split C by side"
+IS NOT SAFE.** A defence-first split would have shipped a silent data-loss bug:
+a converted dial recompiles the plan FROM the parts, which DISCARDS anything an
+unconverted writer poked onto the flat bag. Demonstrated directly — set
+`tendency` the old way, move any converted dial, and the tendency reverts to
+Balanced. It is not an off/def matter either: it applies to every unconverted
+writer on the screen (situations grid, call sheet, formation weights). **C is
+atomic by nature**; the only seam you can cut on is *"which writers, plus a
+bridge that makes the rest safe"*.
+
+**So: a TEMPORARY BRIDGE.** `setupListeners` re-splits the school
+(`synthesizeTeamPlan(force)`) on every Game Plan render, so whatever a legacy
+writer scribbled is captured into the parts before the next converted write
+recompiles. It is a no-op for converted writers. **This IS the gameplan→book
+inversion, kept alive deliberately as scaffolding for the thing that removes
+it** — it is flagged in a box comment that says to delete it in the final C
+commit, and says outright that if you're reading it after C closed, it was
+forgotten. **Do not let it become permanent.**
+
+**What shipped:**
+- **`setPlanField` / `setPlanFields` (teamplan.js)** — write a field, or a
+  batch, to its OWNER: `off` → `book.plan`, `def` → `defbook.plan`, team or
+  unlisted → the overlay. `undefined` DELETES (absent must stay absent — the
+  sparse-plan law). Routing is correctness, not tidiness: compile layers
+  overlay → book → defbook, so a book-owned field parked in the overlay is
+  **swallowed by the book** on the next compile. Verified:
+  `setOverlay({defBaseFront:"3-4"})` leaves the plan reading `4-3`.
+- **The three GENERIC dial handlers** (`[data-gp-set]`, `[data-gp-boolset]`,
+  `[data-gp-aggr]`) now route through the seam. They cover most chips and
+  toggles on BOTH sides, because they already dispatch by field NAME — which is
+  exactly what the seam routes on. The aggression handler applies `setAggr` to a
+  scratch bag and commits the stop + its derived `blitzPct` mirror together
+  (D16/OD-8), so the pair can never separate.
+- **`writeDial`** reassigns the closure's `gp` binding to the recompiled plan,
+  so no handler is left reading a stale object.
+
+**COST (measured, as promised in Batch B):** the PLAYER's plan — the big one,
+carrying all-legal formation sheets — is **6.6 KB / 189 concept weights**, and
+a recompile is **0.070 ms**: a 20-tick slider drag costs 1.4 ms. No perf work
+needed; the side-routing exists for correctness alone.
+
+**Gates:** `playbook_root_probe` **×5 green, 47/0**, including a new §11 pinning
+the seam: each side lands in its own bag, book-owned dials do NOT leak into the
+overlay, earlier dials SURVIVE later recompiles, `undefined` deletes, a mixed
+batch routes to three bags in one compile — **and the hazard itself is pinned**,
+so when the bridge is removed the pin documents what it was buying ·
+`plan_side_probe` ×3 · `plan_cohesion_probe` ×3 (87/0) · `save_migration_check`
+×3 · `book_update_probe` · `dead_surface_probe` · clean build (13/13, cache
+`cfb-dynasty-0d4de45f62`).
+
+**⚠ COVERAGE WARNING — the walk is WEAKEST here.** The tour hashes each
+screen's DEFAULT tab, and the dials live on sub-tabs it never opens (the same
+blind spot that hid D14 and D16). A byte-identical walk is necessary but NOT
+sufficient for this batch; the browser check below is the real gate.
+
+**OWNER CHECKLIST (D17 C-1):**
+- [ ] Walk vs the Batch B baseline — build-id diffs only.
+- [ ] **Browser, the one that matters:** Game Plan → move several dials on BOTH
+  sides (coverage scheme, safety shell, edge discipline, tackling, QB spy,
+  green dog, aggression). Leave the screen, come back: **every one must have
+  stuck.** Then move an OFFENSIVE dial, then a DEFENSIVE one, and re-check the
+  offensive one — that is the exact hazard above, and the bridge is what makes
+  it safe today.
+- [ ] C-2 (the remaining direct dial writes: sliders, front mix, weights) and
+  C-3 (the structural surfaces + **BRIDGE REMOVAL**) are NOT started.
+
+**Commit scoped to:** `js/engine/teamplan.js` · `js/ui/views/gameplan.js` ·
+`tools/playbook_root_probe.mjs` · `Ref/STATUS.md`. NOT pushed.
+
 ## 2026-08-18 — D17 · BATCH B: THE AI AUTHORS A BOOK (the biggest wholesale write retired)
 ## NODE-GATED ×3 · BAND-CHECKED · ✅ **WALK-GATED — BYTE-IDENTICAL, build id only**
 
