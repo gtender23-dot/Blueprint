@@ -5663,3 +5663,58 @@ byte-identical path.
 (small) → P4 (largest; option (a) needs a role-mapping between fronts). Gates
 named in the audit; note sacks/team is 2.07 against a 1.8-2.3 target, so
 pressure changes have little headroom. NOT pushed.
+
+### 2026-08-19 — PRESSURE REDESIGN: the pie is replaced by a BLITZER LIST (owner design session)
+
+The owner reviewed the pressure audit and rejected the pie as the right shape:
+*"blitz share pie is clear when it's used properly. It's not clear when someone
+sets 1 guy to 100% and then wants to bring the house, and then has no calls in
+the playbook to accommodate it… we need to give the player the control to make
+a chaotic defense but also make it straightforward for someone that doesn't
+want that."* Design note: `Ref/PRESSURE_REDESIGN_2026-08-19.md`. **Design only,
+nothing built.** The audit's OD-P1..P4 are marked SUPERSEDED in place (its
+measurements remain the evidence base).
+
+**The deeper error the session surfaced:** the pie was answering the wrong
+question. "Who attacks the QB" is mostly PERSONNEL and the Depth Chart already
+answers it — a man in a DE slot rushes every down. The pie's real job is the
+much narrower *which COVERAGE player abandons coverage to come*. One widget was
+doing both.
+
+**The model — three questions, one owner each:** how often = the aggression
+stop; how many = the card's `bring` (as SEATS) or the identity; who = a
+player-level **blitzer list** on Game Plan ▸ Defense.
+
+The list is a few names with a two-step label (**Often** / **Sometimes**), no
+percentages, no sum constraint, **unranked**, tap-to-cycle. Empty = Auto,
+byte-identical to today. Off-list men are still sent occasionally (owner call:
+preference not law) at a rate tied to the DC's Blitz Design — chosen because an
+exclusive list BREAKS when its men are off the field (Dime/injury/fatigue) and
+a deterministic one is fully scoutable.
+
+**Seat logic does the work:** more names than seats = rotation; names = seats =
+deterministic. Arrived at by working the owner's failure cases — two OLBs
+alternating (both Often, one seat), plus a stud safety occasionally (Sometimes:
+this case is precisely why a flat unordered set was not enough and the second
+label exists), and everyone-even to disguise (all Often). Unranked is load-
+bearing: ranking would put the first name in seat one every time and destroy
+the rotation.
+
+**Five further changes fall out** (skipping any leaves the old incoherence):
+`bring` becomes SEATS not an aggression stop (rewrites P1/P2 — "Bring 5"
+currently sends four rushers on 64% of snaps); **HEAT retires** as a second
+owner of "how often" (dissolves P3); the 🛡 drop half of the pie retires with
+the ⚡ half; **identity and the list must not both own WHO** — identity becomes
+the AUTO answer and keeps the coverage-risk tier and fire-zone drop spec (NEW,
+not in the audit); Simple mode's three-men-at-100 becomes an honest list.
+AI stays on Auto for now — giving AI staffs real blitzer lists is attractive but
+wants its own change and its own A/B.
+
+**Parked for the owner:** the Often:Sometimes ratio (3:1 is a guess, set it by
+watching); a list-length cap (4 feels right); and whether to add a single
+"always comes" marker — recommended DEFERRED until missed, since an unranked
+list cannot express it and every marker is another thing to explain.
+
+Migration: no faithful one exists (per-front seat-shares vs a player list are
+different statements) — a dialed pie is dropped with a release note. Cheap: the
+pie is opt-in and the AI never used it. NOT pushed.

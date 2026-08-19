@@ -1,5 +1,16 @@
 # PRESSURE COHESION AUDIT — 2026-08-19
 
+> ## ⚠ ODs SUPERSEDED — read `Ref/PRESSURE_REDESIGN_2026-08-19.md` first
+> The owner reviewed these findings and rejected the pie as the right shape for
+> the problem, so **OD-P1 through OD-P4 are no longer the live questions.** The
+> redesign replaces the pie with a player-level BLITZER LIST and gives each of
+> the three pressure questions (how often / how many / who) exactly one owner.
+> P1+P2 are answered by `bring` becoming SEATS; P3 dissolves because HEAT
+> retires; P4 dissolves because the list is attached to players, not fronts.
+> **The MEASUREMENTS below remain valid and are the evidence base for the
+> redesign** — keep reading them, ignore the recommendations.
+
+
 **Scope (owner):** "Depth chart blitz share vs the game plan's aggression and
 pressure style vs the defbook's — how many come and where it comes from."
 
