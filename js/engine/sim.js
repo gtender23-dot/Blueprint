@@ -1,7 +1,7 @@
 import { __spreadProps, __spreadValues } from '../_spread.js';
 import { PASS_CONCEPTS, RUN_CONCEPTS } from '../concepts.js';
-import { C, COV_FAMILY, DEF_WEIGHTS, FORMATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, FRONT_ROLES, MEASURED_ATTRS, OFF_WEIGHTS, OUT_OF_POS, PASS_TENDENCY, PENALTY_CATALOG, STARTER_COUNTS, SUB_ADJACENT, aggrStopFromBlitzPct, aliasFormation } from '../constants.js';
-import { DEF_DROP_ELIGIBLE, DEF_FIELD_LAYOUTS, OFF_FIELD_LAYOUTS } from '../constants_field.js';
+import { C, COV_FAMILY, DEF_WEIGHTS, FORMATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, FORMATION_VARIATIONS, FRONT_ROLES, MEASURED_ATTRS, OFF_WEIGHTS, OUT_OF_POS, PASS_TENDENCY, PENALTY_CATALOG, STARTER_COUNTS, SUB_ADJACENT, aggrStopFromBlitzPct, aliasFormation } from '../constants.js';
+import { DEF_DROP_ELIGIBLE, DEF_FIELD_LAYOUTS, OFF_FIELD_LAYOUTS, variationLayoutSlots } from '../constants_field.js';
 import { contestGap } from './contests.js';
 import { resolveDefField, resolveOffField } from './fieldassign.js';
 import { FRONT_PRESSURE_SIGNATURE, defUnitStrengthSchemeFit, getDefWeights, getMatchupEdge, getOffWeights, getSituationalMod, offPersonnelClass, offUnitStrengthRoles, resolveDefPersonnel, resolvePersonnel, rollFormation, rollFormationEntry, selectDefFront, variationPassLeanDelta } from './formations.js';
@@ -332,6 +332,44 @@ var FAMILY_SHELL = Object.fromEntries(Object.entries(COV_FAMILY).map(([fam, v]) 
 var COV_FAMILY_IMPLIES = Object.fromEntries(
   Object.entries(COV_FAMILY).filter(([, v]) => v.callable).map(([fam, v]) => [fam, { shell: v.shell, style: v.style }])
 );
+// ── THE JET MAN (fixed 2026-08-18) ──────────────────────────────────────────
+// JET_SLOTS is keyed by BASE formation and names slot IDs, but a variation can
+// RE-DRESS the body in that slot. Three shipped looks turned the jet man into a
+// blocker: Spread|ace and Power-I|big re-dress the jet slot to a BLOCKING tight
+// end, and Pistol/RPO|diamond re-dresses it to a lead FULLBACK. The sweep was
+// then handed to the one man on the field whose job is to block it.
+// A jet man must be a body who can actually run the sweep, so a re-dressed
+// blocker is rejected here and the existing fastest-receiver fallback takes it.
+function _jetCandidates(formationId, variation, offField, roster) {
+  var _bs;
+  const bySlot = (_bs = offField == null ? void 0 : offField.bySlot) != null ? _bs : null;
+  if (!bySlot) return [];
+  const base = OFF_FIELD_LAYOUTS[formationId];
+  const rows = base
+    ? variationLayoutSlots(base.slots, ((FORMATION_VARIATIONS[formationId] || {})[variation] || {}).layout) || base.slots
+    : null;
+  // A man who can take a jet sweep: not a lineman, not the QB, and not a body
+  // the LOOK has dressed as a blocker. The role is read from the VARIATION's
+  // resolved row, which is the whole point — the base row would say "receiver"
+  // for a slot the variation turned into a blocking tight end.
+  const canJet = (sid) => {
+    const row = rows && rows.find((r) => r.id === sid);
+    if (!row) return true;
+    if (row.pos === "OL" || row.pos === "QB") return false;
+    return !/TE-Blocking|FB-Lead/.test(row.role || "");
+  };
+  const bodies = (ids) => ids.map((sid) => bySlot[sid]).map((id) => id && roster.find((p) => p.id === id)).filter(Boolean);
+  // NO SCAVENGING (owner, 2026-08-18: "not every formation needs the jet sweep
+  // either"). If the look's named jet slot is dressed as a blocker, this look
+  // has no jet man — and the answer is that it does not run jet sweep, not that
+  // the ball goes to whoever else is standing there. A first pass fell back to
+  // any skill body and turned Power-I BIG (three tight ends, no receivers) into
+  // a 46-jet look; a heavy short-yardage formation should not be running the
+  // sweep at all. Empty here means the ORGANIC roll skips it. A COACH-CALLED
+  // jet still fires — that path keeps its own fastest-man fallback, because a
+  // human asking for the play should get the play.
+  return bodies((JET_SLOTS[formationId] || []).filter(canJet));
+}
 function resolveJetSweep(offPersonnel, defPersonnel, offRoster, defRoster, offUnit, defUnit, gameplan, defPlan, frontId, formationId, qb, jetMan, rbShares = null, rbPool = null) {
   var _a, _b, _c;
   const dfind = (id) => defRoster.find((p) => p.id === id);
@@ -2990,6 +3028,20 @@ function resolveOptionPlay(playType, offPersonnel, defPersonnel, offRoster, defR
   const mix = gameplan.optionMix || { dive: 40, keep: 30, pitch: 30 };
   const mixTot = (mix.dive || 0) + (mix.keep || 0) + (mix.pitch || 0) || 100;
   const pitchAggr = clamp2(((_a = gameplan.pitchAggr) != null ? _a : 50) / 100, 0, 1);
+  // ── THE PITCH RELATIONSHIP (source) ───────────────────────────────────────
+  // "he will pitch it to the A back who should be running at between 3-4 yards
+  // away from him". The engine had no notion of that relationship: a pitch was
+  // equally clean whoever pitched it and wherever the pitch man started. A back
+  // who ALIGNS wider has farther to travel to get into phase, so the pitch is
+  // later and looser. Measured against the flexbone A-back's own base split
+  // (x0.76 vs a QB at x0.50 = 0.26), which the same source calls "2x4 yards
+  // outside and behind the tackles" — i.e. the alignment the relationship is
+  // built for. INFERENCE, not a published number: the source gives the target
+  // relationship, not a muff curve. Kill switch: __noPitchRel.
+  const BASE_PITCH_SPLIT = 0.26;
+  const pitchSplit = gameplan._pitchSplit;
+  const pitchStretch = globalThis.__noPitchRel || pitchSplit == null
+    ? 0 : clamp2((pitchSplit - BASE_PITCH_SPLIT) / 0.2, 0, 1);
   const optionKey = (_c = (_b = defPlan == null ? void 0 : defPlan.optionKeyEff) != null ? _b : defPlan == null ? void 0 : defPlan.optionKey) != null ? _c : "balanced";
   const qbRead2 = (qb.attributes.AWR || 50) * 0.65 + (qb.attributes.TEC || 50) * 0.35;
   const readWinP = (keyDef) => {
@@ -3019,7 +3071,7 @@ function resolveOptionPlay(playType, offPersonnel, defPersonnel, offRoster, defR
     const cType = called === "dive" || (midline && called === "keep") ? "run_inside" : "run_outside";
     if (called === "pitch" && cCarrier && cCarrier !== qb) {
       const secure = (cCarrier.attributes.HND || 50) * 0.5 + (cCarrier.attributes.SEC || 50) * 0.5;
-      const muffP = clamp2((0.03 - (qb.attributes.TEC - 55) * 35e-5 - (secure - 55) * 3e-4 + pitchAggr * 0.014) * 0.5, 3e-3, 0.04) * flawMult(cCarrier, "muffs", 0.2);
+      const muffP = clamp2((0.03 - (qb.attributes.TEC - 55) * 35e-5 - (secure - 55) * 3e-4 + pitchAggr * 0.014 + pitchStretch * 0.012) * 0.5, 3e-3, 0.05) * flawMult(cCarrier, "muffs", 0.2);
       if (Math.random() < muffP) {
         const result = {
           type: cType,
@@ -3064,6 +3116,34 @@ function resolveOptionPlay(playType, offPersonnel, defPersonnel, offRoster, defR
       { carrier: cCarrier, laneShift: 0, forcePenetrator: null, phase: called }
     );
   }
+  // ── MIDLINE "FOLLOW" (source) ─────────────────────────────────────────────
+  // "Rather than have the Wingback continue on his pitch path after the snap,
+  // he comes downhill and follows the other Wingback through the B-gap. He acts
+  // as an extra lead blocker for the Quarterback in the case that the
+  // Quarterback decides to keep the ball… programs like Army, Navy, and Air
+  // Force use [it] in short-yardage situations."
+  // So: on a short-yardage midline, the keep runs behind an extra body.
+  const followTag = midline && (gameplan._optDist != null && gameplan._optDist <= 3);
+  // ── THE TWIRL AS EYE CANDY (source) ───────────────────────────────────────
+  // "Any defense that sees the twirl motion of the Wingback immediately
+  // defaults into the teachings of every option drill they ran that week.
+  // Linebackers attempt to flow and fill… while Safeties and Nickels lock onto
+  // the pitch man. That same motion can be run with Midline as 'eye candy' for
+  // the defense, meanwhile, the Fullback and Quarterback are running right up
+  // the gut."
+  // The engine's motion model was PASS-ONLY (separation vs coverage); this is
+  // the run-side half. A disciplined second level is harder to pull, so the
+  // decoy is priced against the front seven's awareness.
+  let twirlDecoy = false;
+  if (midline && !globalThis.__noTwirl) {
+    const motionDial = clamp2(((_g = gameplan.motionRate) != null ? _g : 100) / 100, 0, 1);
+    if (Math.random() < 0.45 * motionDial) {
+      const box = [...(defPersonnel.LB || []), ...(defPersonnel.OLB || [])].map(dfind).filter(Boolean);
+      const boxAwr = box.length ? box.reduce((a, p) => a + (p.attributes.AWR || 50), 0) / box.length : 50;
+      // A 50-AWR front seven bites most of the time; an 80-AWR one rarely.
+      twirlDecoy = Math.random() < clamp2(0.62 - (boxAwr - 50) * 0.009, 0.15, 0.7);
+    }
+  }
   const crashBase = optionKey === "qb" ? 0.35 : optionKey === "pitch" ? 0.6 : 0.48;
   const diveLean = (mix.dive || 0) / mixTot;
   const keyCrashes = Math.random() < crashBase;
@@ -3077,6 +3157,8 @@ function resolveOptionPlay(playType, offPersonnel, defPersonnel, offRoster, defR
     phase = "dive";
     carrier = diveBack;
     effType = "run_inside";
+    // "…meanwhile, the Fullback and Quarterback are running right up the gut."
+    if (twirlDecoy) laneShift += 0.1;
     if (read1Won && !keyCrashes) laneShift = 0.1;
     else if (!read1Won && keyCrashes) {
       laneShift = -0.15;
@@ -3093,6 +3175,8 @@ function resolveOptionPlay(playType, offPersonnel, defPersonnel, offRoster, defR
     if (decidePitch && pitchBack) {
       phase = "pitch";
       carrier = pitchBack;
+      // Out of phase = the ball arrives late, so the edge is a step tighter.
+      if (pitchStretch > 0) laneShift -= pitchStretch * 0.08;
       effType = "run_outside";
       if (read2Won && forceTakesQB) laneShift = 0.12;
       else if (!read2Won && !forceTakesQB) {
@@ -3100,7 +3184,7 @@ function resolveOptionPlay(playType, offPersonnel, defPersonnel, offRoster, defR
         forcePenetrator = forceDef;
       }
       const secure = (pitchBack.attributes.HND || 50) * 0.5 + (pitchBack.attributes.SEC || 50) * 0.5;
-      const muffP = clamp2(0.03 - (qb.attributes.TEC - 55) * 35e-5 - (secure - 55) * 3e-4 + pitchAggr * 0.014, 6e-3, 0.075) * flawMult(pitchBack, "muffs", 0.2);
+      const muffP = clamp2(0.03 - (qb.attributes.TEC - 55) * 35e-5 - (secure - 55) * 3e-4 + pitchAggr * 0.014 + pitchStretch * 0.02, 6e-3, 0.09) * flawMult(pitchBack, "muffs", 0.2);
       if (Math.random() < muffP) {
         const result = {
           type: effType,
@@ -3134,6 +3218,10 @@ function resolveOptionPlay(playType, offPersonnel, defPersonnel, offRoster, defR
       // Midline's keep is downhill through the B-gap; a veer/triple keep bends
       // to the perimeter.
       effType = midline ? "run_inside" : "run_outside";
+      // The Follow tag's extra body, and the twirl pulling the second level
+      // away from the gut, both widen the crease the keep runs through.
+      if (followTag) laneShift += 0.12;
+      if (twirlDecoy) laneShift += 0.1;
       if (read2Won && !forceTakesQB) laneShift = 0.1;
       else if (!read2Won && forceTakesQB) {
         laneShift = -0.15;
@@ -3155,7 +3243,7 @@ function resolveOptionPlay(playType, offPersonnel, defPersonnel, offRoster, defR
     qb,
     rbShares,
     rbPool,
-    { carrier, laneShift, forcePenetrator, phase }
+    { carrier, laneShift, forcePenetrator, phase, midline, followTag, twirlDecoy }
   );
 }
 function resolveRunPlay(playType, offPersonnel, defPersonnel, offRoster, defRoster, offUnit, defUnit, gameplan, frontId, formationId, qb, rbShares = null, rbPool = null, optionOverride = null) {
@@ -3349,6 +3437,9 @@ function resolveRunPlay(playType, offPersonnel, defPersonnel, offRoster, defRost
   result.btStyle = outcome.btStyle || null;
   result.isQBDesignedRun = useQBCarrier;
   if (optionOverride == null ? void 0 : optionOverride.phase) result.optionPhase = optionOverride.phase;
+  if (optionOverride == null ? void 0 : optionOverride.midline) result.midline = true;
+  if (optionOverride == null ? void 0 : optionOverride.followTag) result.followTag = true;
+  if (optionOverride == null ? void 0 : optionOverride.twirlDecoy) result.twirlDecoy = true;
   result.qbInjured = qbInjured;
   result.qbInjuryGames = qbInjuryGames;
   if (outcome.ffId) {
@@ -5441,7 +5532,7 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     _situDown = down;
     let jetMan = null;
     if (forcedGadget === "jet" && (offField == null ? void 0 : offField.bySlot)) {
-      jetMan = (JET_SLOTS[offFormationId] || []).map((sid) => offField.bySlot[sid]).map((id) => id && effOffRoster.find((p) => p.id === id)).filter(Boolean).sort((a, b) => (b.attributes.SPD || 0) - (a.attributes.SPD || 0))[0] || null;
+      jetMan = _jetCandidates(offFormationId, offVar, offField, effOffRoster).sort((a, b) => (b.attributes.SPD || 0) - (a.attributes.SPD || 0))[0] || null;
       if (!jetMan) {
         const onField = Object.values(offField.bySlot).map((id) => id && effOffRoster.find((p) => p.id === id)).filter(Boolean);
         const bySpeed = (arr) => arr.slice().sort((a, b) => (b.attributes.SPD || 0) - (a.attributes.SPD || 0))[0] || null;
@@ -5450,7 +5541,7 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     } else if (!optionSnap && !coachCalled && !_rpoCtx && !zrSnap && !_m3Authored && effPlayType === "run_outside" && JET_CAPABLE[offFormationId] != null) {
       const jetShare = offPlanEff.jetRate != null ? clamp2(offPlanEff.jetRate / 100, 0, 1) : JET_CAPABLE[offFormationId];
       if (Math.random() < jetShare && (offField == null ? void 0 : offField.bySlot)) {
-        jetMan = (JET_SLOTS[offFormationId] || []).map((sid) => offField.bySlot[sid]).map((id) => id && effOffRoster.find((p) => p.id === id)).filter(Boolean).sort((a, b) => (b.attributes.SPD || 0) - (a.attributes.SPD || 0))[0] || null;
+        jetMan = _jetCandidates(offFormationId, offVar, offField, effOffRoster).sort((a, b) => (b.attributes.SPD || 0) - (a.attributes.SPD || 0))[0] || null;
       }
     }
     let wildcatTaker = null;
@@ -5565,7 +5656,27 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
         effDefRoster,
         offUnit,
         defUnit,
-        __spreadProps(__spreadValues({}, offPlanEff), { _pitchManId: pitchManId }),
+        __spreadProps(__spreadValues({}, offPlanEff), {
+          _pitchManId: pitchManId,
+          // Down-and-distance for the midline FOLLOW tag (short yardage).
+          _optDist: distance,
+          // THE PITCH RELATIONSHIP (Throw Deep, flexbone guide): the pitch back
+          // "should be running at between 3-4 yards away from him". The engine
+          // had no notion of that relationship, so a pitch was equally clean
+          // whoever was pitching and wherever he started. This measures how far
+          // outside the QB the pitch man actually ALIGNS — a man who starts
+          // wider has farther to travel to reach the proper pitch phase.
+          _pitchSplit: (() => {
+            if (!pitchManId || !(offField == null ? void 0 : offField.bySlot)) return null;
+            const base = OFF_FIELD_LAYOUTS[offFormationId];
+            if (!base) return null;
+            const slots = variationLayoutSlots(base.slots, ((FORMATION_VARIATIONS[offFormationId] || {})[offVar] || {}).layout) || base.slots;
+            const sid = Object.keys(offField.bySlot).find((k) => offField.bySlot[k] === pitchManId);
+            const me = sid && slots.find((sl) => sl.id === sid);
+            const q = slots.find((sl) => sl.pos === "QB");
+            return me && q ? Math.abs(me.x - q.x) : null;
+          })()
+        }),
         defPlanEff,
         defFrontId,
         offFormationId,

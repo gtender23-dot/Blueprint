@@ -617,3 +617,26 @@ F2. **The Midline Option: The Complete Guide** — Throw Deep Publishing,
     **Rate gap:** the source establishes midline as a COMPLEMENT to a veer-based
     option offense but gives no call frequency, so `MIDLINE_SHARE = 0.22` is a
     provisional band, not a sourced one.
+
+**F1/F2 follow-ups BUILT 2026-08-18** (the three items logged as "not yet
+modelled" when F2 was read):
+- **Midline "Follow"** — *"Rather than have the Wingback continue on his pitch
+  path… he comes downhill and follows the other Wingback through the B-gap. He
+  acts as an extra lead blocker for the Quarterback… Army, Navy, and Air Force
+  use [it] in short-yardage."* Now fires on midline inside 3 yards to go and
+  widens the keep's crease. Measured: keep averages 5.50 yd with the tag vs
+  4.38 without.
+- **The twirl as eye candy** — *"Linebackers attempt to flow and fill… while
+  Safeties and Nickels lock onto the pitch man. That same motion can be run with
+  Midline as 'eye candy'… meanwhile, the Fullback and Quarterback are running
+  right up the gut."* This is the RUN-side half of motion (the engine's existing
+  motion model prices coverage reaction inside resolvePassPlay; the jet game is
+  the other run-side motion path and was already built). Priced against the
+  front seven's awareness — a 50-AWR box bites, an 80-AWR box mostly does not.
+  Measured: dive averages 3.55 yd with the decoy vs 2.37 without.
+- **The pitch relationship** — *"he will pitch it to the A back who should be
+  running at between 3-4 yards away from him."* The engine had no notion of it.
+  A pitch man who ALIGNS wider than the flexbone A-back's own base split has
+  farther to travel to get in phase, so his pitch muffs more and his edge is
+  tighter. INFERENCE, flagged as such in code: the source gives the target
+  relationship, not a muff curve. Kill switch `__noPitchRel`.
