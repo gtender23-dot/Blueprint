@@ -47,7 +47,11 @@ var DEF_CALL_COVERAGES = [
   { id: "c2man", label: "2-Man", desc: "Man underneath, two safeties over the top.", fields: { covFamily: "Cover 2-Man" }, art: { deep: "halves", man: true } },
   { id: "tampa2", label: "Tampa 2", desc: "Cover 2 with the Mike running the deep middle.", fields: { covFamily: "Tampa 2" }, art: { deep: "halves", pole: true } },
   { id: "c6", label: "Cover 6", desc: "Quarters to the field, Cover 2 to the boundary.", fields: { covFamily: "Cover 6" }, art: { deep: "quarters" } },
-  { id: "prevent", label: "Prevent", desc: "Rush three, everything stays in front.", fields: { covFamily: "Prevent", rush3: true }, art: { deep: "thirds" } },
+  // 2026-08-18: `prevent: true` so the card can DRAW the difference. It shared
+  // "thirds" with Cover 3 and rendered a byte-identical picture, which made two
+  // completely different calls — rush four vs rush three and drop eight — look
+  // like the same defense on the shelf.
+  { id: "prevent", label: "Prevent", desc: "Rush three, everything stays in front.", fields: { covFamily: "Prevent", rush3: true }, art: { deep: "thirds", prevent: true } },
   { id: "base", label: "Match the identity", desc: "Play the book's standing coverage identity.", fields: {}, art: { deep: null } }
 ];
 var DEF_CALL_COVERAGE_IDS = DEF_CALL_COVERAGES.map((c) => c.id);

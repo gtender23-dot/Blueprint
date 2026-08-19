@@ -166,10 +166,14 @@ function renderCardEditor() {
   const fronts = [{ id: "", label: `Base (${db.baseFront})` }].concat(frontIds().map((f) => ({ id: f, label: f })));
   const brings = Object.entries(DEF_CALL_BRING).map(([id, b]) => ({ id, label: b.label, desc: b.desc }));
   const looks = [{ id: "", label: "Any look" }].concat(pressIdentities().map((pi) => ({ id: pi, label: (C.PRESS_IDENTITY[pi] && C.PRESS_IDENTITY[pi].label) || pi })));
-  const covCards = DEF_CALL_COVERAGES.map((cov) => `<button type="button" class="def-cov-card${c.coverage === cov.id ? " on" : ""}" data-card-cov="${esc(cov.id)}" title="${esc(cov.desc)}">
-      <span class="def-cov-dia">${renderDefCallCard({ ...c, coverage: cov.id, bring: "4" }, { w: 130, h: 88, art: cov.art, fallbackFront: db.baseFront })}</span>
-      <span class="def-cov-name">${esc(cov.label)}</span>
-    </button>`).join("");
+  // [Owner, 2026-08-18] The coverage picker used to draw EIGHT little coverage
+  // diagrams, one per option. They were redundant — the live call card above
+  // already redraws with every selection — and they were where the non-plain-
+  // zone pictures looked worst at 130x88 (Cover 1's man lines, 2-Man's empty
+  // underneath, Tampa's overlapping pole). Now it is a chip row like every
+  // other picker on this screen (Front, How many come, Look), with each
+  // coverage's one-line description on hover. The PICTURE lives in one place.
+  const covOpts = DEF_CALL_COVERAGES.map((cov) => ({ id: cov.id, label: cov.label, desc: cov.desc }));
   return `<div class="creator-hub">
     <div class="creator-hub-head"><div class="creator-title">${ed.idx == null ? "New Call" : "Edit Call"}</div>
       <div class="creator-sub">${esc(shelf ? shelf.label : "")} — ${esc(shelf ? shelf.desc : "")}</div></div>
@@ -178,7 +182,7 @@ function renderCardEditor() {
     <div class="def-section-head">Front</div>
     ${chips(fronts, c.front || "", "data-card-front")}
     <div class="def-section-head">Coverage <span class="muted">— the picture behind the rush</span></div>
-    <div class="def-cov-grid">${covCards}</div>
+    ${chips(covOpts, c.coverage || "base", "data-card-cov")}
     <div class="def-section-head">How many come</div>
     ${chips(brings, c.bring, "data-card-bring")}
     <div class="def-section-head">Where it comes from</div>

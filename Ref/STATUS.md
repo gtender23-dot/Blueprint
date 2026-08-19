@@ -486,6 +486,69 @@ D16's `_liveTempo` hunks in the same file deliberately left unstaged**) ·
 `tools/plan_cohesion_probe.mjs` (**partial-staged — §2 only; D13/D16 own §5 and
 the import line**) · `Ref/STATUS.md` (this entry + the header). NOT pushed.
 
+## 2026-08-18 — COVERAGE ART: the redundant picker diagrams removed + the four non-zone pictures fixed
+
+Owner: *"take a look at coverage graphics if it's not plain zone it looks
+confusing"* and *"get rid of the coverage specific graphic because the call
+graphic changes already with your selection when making a named call."*
+
+**THE REDUNDANT SURFACE, REMOVED.** The card editor drew the coverage picture
+TWICE: a live 250×170 call card at the top that redraws with every selection,
+and then EIGHT 130×88 mini-cards inside the coverage picker, one per option.
+The picker's diagrams are gone; it is now a chip row exactly like the Front,
+How-many-come and Look pickers beside it, each chip carrying its coverage's
+one-line description on hover. **One picture, in one place, that responds to
+what you pick.** (The mini-cards were also where the bad drawings hurt most —
+at 130×88 the non-zone pictures were mush.)
+
+**THE FOUR PICTURES THAT WERE ACTUALLY WRONG.** Rendered from the shipped code
+and counted, rather than eyeballed:
+- **Cover 1** drew **one box and two dangling lines**. The man-line filter
+  matched `CB|NB` only, so a 4-3 Cover 1 — man ACROSS — showed the two corners
+  and nothing else: no strong safety, no linebackers on the backs. Now every
+  man defender is drawn (5 lines), with the free safety left on his deep box,
+  and the ghost receivers spread to match the number of men rather than sitting
+  at four fixed spots.
+- **2-Man** drew two deep halves, two lines and an **empty underneath** — the
+  card looked unfinished rather than tight. Same fix: five man lines under two
+  halves.
+- **Tampa 2** laid the **POLE box on top of the deep halves** and down into the
+  underneath band — three translucent rectangles stacked — and deleted one CURL
+  to make room, leaving FLAT-gap-FLAT. Now the halves SPLIT to give the pole
+  runner his own lane and all four underneath zones are back.
+- **Cover 6** drew three deep boxes and **nothing underneath**, reading as
+  half-finished beside Cover 2/3, with nothing marking which side was which.
+  Underneath added, and both sides are now named — the entire point of the call
+  is that the two halves play different coverages.
+- **Prevent** was **byte-identical to Cover 3**. Two completely different calls
+  (rush four vs rush three and drop eight) drew the same picture. It now has its
+  own `prevent: true` art flag: deeper thirds labelled *soft*, and five
+  underneath instead of four.
+
+**Zone counts before → after:** c1 1→1 (man lines 2→5) · c2man 2→2 (lines 2→5) ·
+tampa2 6→7 (no overlap) · c6 3→7 · prevent 7→8 and no longer a Cover 3 clone.
+Cover 3 and Cover 2 are untouched — they always read well, and they are the
+reference the others now match.
+
+**`coverage-art-audit.html`** (repo root, not shipped) renders all eight from
+the real code and the real stylesheet with a note on each — open it to see them
+side by side.
+
+**Gates:** `defbook_probe` ×3 · `plan_cohesion_probe` 97/0 · `defsheet_probe` ·
+clean build (13/13, cache `cfb-dynasty-1cffc3de80`, CSS braces 5698/5698). The
+picker's `.def-cov-*` CSS is kept one release with a note; nothing renders it.
+
+**OWNER CHECKLIST:**
+- [ ] Workshop → a defensive book → edit a call. The coverage row should be
+  chips now, and the ONE card above should redraw as you pick each coverage.
+- [ ] Step through all eight: Cover 1 and 2-Man should show man lines fanning to
+  receivers; Tampa's pole should sit in its own lane between the halves; Cover 6
+  should name both sides; Prevent should no longer look like Cover 3.
+
+**Commit scoped to:** `js/ui/views/routeart.js` · `js/ui/views/creatordef.js` ·
+`js/engine/defbook.js` · `style.css` · `coverage-art-audit.html` (new, dev doc)
+· `Ref/STATUS.md`. NOT pushed.
+
 ## 2026-08-18 — THE DEFENSIVE STRESS TEST (new CORE probe) — 26 dials A/B'd, no dead controls left
 
 Owner: *"can you stress test the defense see what other bugs you find."* The

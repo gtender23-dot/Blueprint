@@ -327,24 +327,68 @@ function renderDefCallCard(call, opts) {
     (label ? `<text x="${_fmt(x + w / 2)}" y="${_fmt(y + 11)}" text-anchor="middle" class="dcz-lbl">${_esc(label)}</text>` : "");
   const zTop = topPad + 1, zMid = sy(0.36), underH = sy(0.7) - zMid - 2;
   if (art.deep === "thirds") {
-    for (let i = 0; i < 3; i++) svg += zone(5 + i * ((W - 10) / 3), zTop, (W - 10) / 3 - 3, zMid - zTop - 4, "DEEP ⅓", "dcz-deep");
-    for (let i = 0; i < 4; i++) svg += zone(7 + i * ((W - 14) / 4), zMid, (W - 14) / 4 - 3, underH, i === 0 || i === 3 ? "FLAT" : "HOOK", "dcz-under");
+    // PREVENT shares the three deep thirds with Cover 3 and used to draw an
+    // identical card. It is not the same defense: three rush, EIGHT drop, and
+    // the thirds sit deeper because nothing is allowed behind them. So its
+    // thirds are pushed back and it gets FIVE underneath instead of four.
+    const deepDrop = art.prevent ? 8 : 0;
+    for (let i = 0; i < 3; i++) svg += zone(5 + i * ((W - 10) / 3), zTop, (W - 10) / 3 - 3, zMid - zTop - 4 + deepDrop, art.prevent ? "DEEP ⅓ (soft)" : "DEEP ⅓", "dcz-deep");
+    const nUnder = art.prevent ? 5 : 4;
+    for (let i = 0; i < nUnder; i++) svg += zone(7 + i * ((W - 14) / nUnder), zMid + deepDrop, (W - 14) / nUnder - 3, underH - deepDrop, i === 0 || i === nUnder - 1 ? "FLAT" : "HOOK", "dcz-under");
   } else if (art.deep === "halves") {
-    for (let i = 0; i < 2; i++) svg += zone(5 + i * ((W - 10) / 2), zTop, (W - 10) / 2 - 3, zMid - zTop - 4, "DEEP ½", "dcz-deep");
-    if (!art.man) for (let i = 0; i < 4; i++) { if (art.pole && i === 1) continue; svg += zone(7 + i * ((W - 14) / 4), zMid + (art.pole ? 6 : 0), (W - 14) / 4 - 3, underH - (art.pole ? 6 : 0), i === 0 || i === 3 ? "FLAT" : "CURL", "dcz-under"); }
-    if (art.pole) svg += zone(W / 2 - 16, zTop + 6, 32, sy(0.56) - zTop, "POLE", "dcz-deep");
+    // Tampa 2's POLE runner used to be drawn as a tall box laid ON TOP of the
+    // two deep halves and down into the underneath band — three translucent
+    // rectangles stacked on each other, which is what made this card mush.
+    // Now the halves SPLIT to leave him a lane, and he owns it cleanly.
+    const poleW = art.pole ? 34 : 0;
+    const halfW = ((W - 10) - poleW) / 2 - 3;
+    for (let i = 0; i < 2; i++) {
+      const hx = 5 + i * (halfW + 3 + poleW);
+      svg += zone(hx, zTop, halfW, zMid - zTop - 4, "DEEP ½", "dcz-deep");
+    }
+    if (art.pole) svg += zone(W / 2 - poleW / 2, zTop, poleW, zMid - zTop - 4, "POLE", "dcz-deep");
+    // Underneath: Tampa keeps FOUR under (the Mike runs the pole, so the two
+    // inside droppers become one wide CURL each side) — no deleted gap.
+    if (!art.man) for (let i = 0; i < 4; i++) svg += zone(7 + i * ((W - 14) / 4), zMid, (W - 14) / 4 - 3, underH, i === 0 || i === 3 ? "FLAT" : "CURL", "dcz-under");
   } else if (art.deep === "quarters") {
+    // Cover 6 is a SPLIT-FIELD coverage: quarters to the field, Cover 2 to the
+    // boundary. The shape was right but the card drew three deep boxes and
+    // NOTHING underneath, so it read as half-finished beside Cover 2 and 3.
+    // Underneath added, and each side is now named — the whole point of the
+    // call is that the two halves are playing different coverages.
     for (let i = 0; i < 2; i++) svg += zone(5 + i * ((W - 10) / 4), zTop, (W - 10) / 4 - 3, zMid - zTop - 4, "¼", "dcz-deep");
     svg += zone(5 + 2 * ((W - 10) / 4), zTop, (W - 10) / 2 - 3, zMid - zTop - 4, "DEEP ½", "dcz-deep");
+    svg += `<text x="${_fmt(5 + (W - 10) / 4)}" y="${_fmt(zMid + 2)}" text-anchor="middle" class="dcz-lbl">QUARTERS SIDE</text>`;
+    svg += `<text x="${_fmt(5 + 3 * ((W - 10) / 4))}" y="${_fmt(zMid + 2)}" text-anchor="middle" class="dcz-lbl">COVER 2 SIDE</text>`;
+    for (let i = 0; i < 4; i++) svg += zone(7 + i * ((W - 14) / 4), zMid + 6, (W - 14) / 4 - 3, underH - 6, i === 0 || i === 3 ? "FLAT" : "CURL", "dcz-under");
   } else if (art.deep === "mof") {
     svg += zone(W / 2 - 40, zTop, 80, zMid - zTop - 4, "FREE — MOF", "dcz-deep");
   }
-  // man lines to ghost receivers
+  // ── man lines (rewritten 2026-08-18) ──────────────────────────────────────
+  // The old filter matched CB/NB only, so a 4-3 Cover 1 — man ACROSS — drew
+  // exactly TWO lines and left the picture reading as a lone deep box with a
+  // couple of dangling threads. Man coverage is played by the corners AND the
+  // safeties not capping a deep zone AND the linebackers carrying backs/tight
+  // ends, so that is what gets drawn.
+  //
+  // How many safeties stay deep is the coverage itself: Cover 1 keeps ONE
+  // (the free safety over the top), 2-Man keeps TWO. The rest are in man, and
+  // the ghost receivers spread to match however many defenders are covering
+  // rather than sitting at four fixed spots.
   if (art.man) {
-    const ghosts = [0.08, 0.3, 0.7, 0.92];
-    const dbs = layout.slots.filter((s) => /CB|NB|DB/.test(s.pos) || /CB|NB/.test(s.label)).slice(0, 4);
-    dbs.forEach((s, i) => {
-      const gx = sx(ghosts[i % ghosts.length]), gy = sy(0.03);
+    const deepKeep = art.deep === "halves" ? 2 : art.deep === "mof" ? 1 : 0;
+    const safeties = layout.slots.filter((s) => /^S$|^FS$|^SS$/.test(s.pos) || /FS|SS/.test(s.label || ""));
+    const deepMen = safeties.slice(0, deepKeep);
+    const inMan = layout.slots.filter((s) => {
+      if (deepMen.includes(s)) return false;                       // he has the deep zone
+      if (/DE|DT|NT|EDGE/.test(s.pos)) return false;               // he is rushing
+      return /CB|NB|DB|S|FS|SS|LB|OLB|MLB/.test(s.pos) || /CB|NB|WILL|MIKE|SAM/.test(s.label || "");
+    }).slice(0, 5);
+    const n = inMan.length || 1;
+    inMan.forEach((s, i) => {
+      // Spread the ghosts across the width in the order the defenders stand,
+      // so the lines fan out instead of crossing.
+      const gx = sx(n === 1 ? 0.5 : 0.06 + (i / (n - 1)) * 0.88), gy = sy(0.03);
       svg += `<line x1="${_fmt(sx(s.x))}" y1="${_fmt(sy(s.y) - 7)}" x2="${_fmt(gx)}" y2="${_fmt(gy + 7)}" class="dc-man"/><circle cx="${_fmt(gx)}" cy="${_fmt(gy)}" r="3.6" class="dc-ghost"/>`;
     });
   }

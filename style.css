@@ -9655,6 +9655,9 @@ body *::after {
 .def-shelf-add { min-width: 120px; min-height: 90px; border: 1px dashed var(--border); border-radius: 8px; background: none; color: var(--text-1); cursor: pointer; font-size: 12px; }
 .def-shelf-add:hover { border-color: var(--text-1); color: var(--text-0); }
 .def-card-preview { max-width: 300px; margin: 8px 0; }
+/* 2026-08-18: the coverage PICKER's eight mini-diagrams are gone (owner: the
+   call graphic already changes with your selection). Rules kept for one
+   release in case the grid is wanted back; nothing renders them today. */
 .def-cov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
 .def-cov-card { border: 1px solid var(--border); border-radius: 8px; background: none; padding: 5px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; }
 .def-cov-card.on { border-color: var(--gold, #ffd34d); box-shadow: 0 0 0 1px var(--gold, #ffd34d); }
