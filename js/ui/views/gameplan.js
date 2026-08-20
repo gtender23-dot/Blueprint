@@ -1,6 +1,6 @@
 import { __spreadProps, __spreadValues } from '../../_spread.js';
 import { PASS_CONCEPTS, RUN_CONCEPTS } from '../../concepts.js';
-import { C, DEF_FRONTS, FORMATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, FORMATION_VARIATIONS, PASS_TENDENCY, aggrStopFromBlitzPct } from '../../constants.js';
+import { C, DEF_FRONTS, FORMATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, FORMATION_VARIATIONS, PASS_TENDENCY, STARTER_COUNTS, aggrStopFromBlitzPct } from '../../constants.js';
 import { getCoach, saveGameplanToLibrary, saveTeamToLibrary } from '../../engine/coachprofile.js';
 import { FRONT_PRESSURE_SIGNATURE, FRONT_SIG_LABEL, carriedDefFronts, normalizeFrontMix } from '../../engine/formations.js';
 import { SITUATION_KEYS, SITUATION_LABELS } from '../../engine/situations.js';
@@ -1483,8 +1483,10 @@ function renderDefenseDefaults(gp) {
       secondaryHeat: "\u25B8 SECONDARY HEAT \u2014 the strong safety or slot corner comes screaming off the edge. It arrives faster than any backer and the protection rarely sees it \u2014 but a DB in the rush is a hole in the coverage, and deep over the top is where it lives.",
       theHouse: "\u25B8 THE HOUSE \u2014 six coming, everyone else manned up with no help: the zero. The maximum-risk, maximum-violence call. When it gets home, it's a highlight; when it doesn't, it's six the other way."
     }[gp.pressureIdentity || "auto"]}</div>
-            <div class="gp-tip tip-info">\u25B8 Who carries it: your \u26A1 shares on the <a data-nav="depthchart" class="link">Depth Chart</a> field still name the preferred hitman inside the package \u2014 the identity decides the shape, your dial decides the man.</div>
+            <div class="gp-tip tip-info">\u25B8 Who carries it: name your men in the BLITZER LIST below \u2014 the identity decides the shape, your list decides who's in it. Leave the list empty and the identity picks by grade, same as always.</div>
           </div>
+
+          ${renderBlitzerListPanel(gp)}
 
           <div class="gp-row">
             <label class="gp-label">Green Dog <span class="gp-hint">(rush when your man stays in)</span></label>
@@ -1514,6 +1516,54 @@ function renderDefenseDefaults(gp) {
 
         </div>
       </div>`;
+}
+// THE BLITZER LIST (Ref/PRESSURE_REDESIGN_2026-08-19.md) — the only place a
+// coach names who abandons coverage to come. The engine half (sim.js, the
+// seat-filling lottery keyed on gp.blitzers[playerId] = "often"|"sometimes")
+// already shipped; this panel is the missing write path. Absent/empty map =
+// AUTO, byte-identical to today — the coordinator still picks by grade.
+//
+// Eligible = coverage defenders only (LB, OLB, S, CB) — DL already rush every
+// down, which is the whole distinction this redesign draws. Capped to each
+// position's STARTER_COUNTS so the chip wall stays a phone-sized list instead
+// of the full room (ROSTER_TARGETS runs 5-7 deep per group).
+function renderBlitzerListPanel(gp) {
+  const school = getPlayerSchool();
+  if (!school) return "";
+  const roster = school.roster || [];
+  const depthChart = school.depthChart || {};
+  const seen = /* @__PURE__ */ new Set();
+  const eligible = [];
+  for (const pos of ["LB", "OLB", "S", "CB"]) {
+    const ids = (depthChart[pos] || []).slice(0, STARTER_COUNTS[pos] || 2);
+    for (const id of ids) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const p = roster.find((r) => r.id === id);
+      if (p) eligible.push(p);
+    }
+  }
+  if (!eligible.length) return "";
+  const list = gp.blitzers && typeof gp.blitzers === "object" ? gp.blitzers : {};
+  const namedCount = Object.values(list).filter((v) => v === "often" || v === "sometimes").length;
+  return `
+          <div class="gp-row">
+            <label class="gp-label">${tipTerm("blitzer-list", "Blitzer List")} <span class="gp-hint">(who comes off the edge)</span></label>
+            <div class="gp-options" style="flex-wrap:wrap">
+              ${eligible.map((p) => {
+    const raw = list[p.id];
+    const st = raw === "often" || raw === "sometimes" ? raw : null;
+    const lbl = st === "often" ? "Often" : st === "sometimes" ? "Sometimes" : "Auto";
+    const capped = !st && namedCount >= 4;
+    const nm = escapeHtml(`${p.name.first[0]}. ${p.name.last}`);
+    const posLbl = escapeHtml(p.position);
+    return `<button type="button" class="gp-option gp-option-sm${st ? " active" : ""}"
+                        data-gp-blitzer="${p.id}"${capped ? ' disabled style="opacity:.35;cursor:not-allowed"' : ""}
+                        title="${capped ? "Four men already named — cycle one back to Auto first" : `${nm} — ${posLbl}, tap to cycle`}">${nm} <span class="gp-option-sub">${posLbl} \xB7 ${lbl}</span></button>`;
+  }).join("")}
+            </div>
+            <div class="gp-tip tip-info">▸ AUTO leaves it to your coordinator — he sends his best rusher straight off the depth chart, exactly like today. Tap a name to put him on the list instead: OFTEN makes him a regular in the pressure package, SOMETIMES puts him in the rotation without making him a co-starter. Name more men than a call has rush seats to come from and they trade the job off possession to possession — nobody's tell is readable. Name exactly as many as there are seats and the same men come every time. A name off the list can still get sent once in a while — how disciplined your coordinator stays to the plan you set here is his Blitz Design. Four men, max.</div>
+          </div>`;
 }
 function holdAndRebalance(forms, movedIdx, movedVal) {
   const n = forms.length;
@@ -1697,6 +1747,30 @@ function wireDefaultsListeners(gp, { root = document } = {}) {
   root.querySelectorAll("[data-gp-pressid]").forEach((btn) => {
     btn.addEventListener("click", () => {
       writeDial({ pressureIdentity: btn.dataset.gpPressid === "auto" ? null : btn.dataset.gpPressid });
+      rerender();
+    });
+  });
+  // THE BLITZER LIST: tap-to-cycle, Auto → Often → Sometimes → Auto. Cap of 4
+  // named men (Often+Sometimes combined) is enforced here AND by the disabled
+  // attribute the render puts on Auto chips once the cap is hit — belt and
+  // suspenders, since a stale render could still be on screen for a tick.
+  // Builds a FRESH map (never mutates gp.blitzers in place) and sends it
+  // through the same setPlanFields seam every other dial on this screen uses.
+  root.querySelectorAll("[data-gp-blitzer]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const pid = btn.dataset.gpBlitzer;
+      const next = __spreadValues({}, gp.blitzers || {});
+      const cur = next[pid] === "often" || next[pid] === "sometimes" ? next[pid] : null;
+      if (cur === "often") {
+        next[pid] = "sometimes";
+      } else if (cur === "sometimes") {
+        delete next[pid];
+      } else {
+        const namedCount = Object.values(next).filter((v) => v === "often" || v === "sometimes").length;
+        if (namedCount >= 4) return;
+        next[pid] = "often";
+      }
+      writeDial({ blitzers: next });
       rerender();
     });
   });

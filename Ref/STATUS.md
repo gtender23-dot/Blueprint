@@ -5944,3 +5944,63 @@ out, and now records WHY a ratio band would be wrong: it would gate on how the
 fixture's players happened to roll rather than on the feature.
 
 Batch 3b (the UI) is unblocked.
+
+## 2026-08-19 — PRESSURE BATCH 3b: the list gets a screen (pressure work COMPLETE)
+
+Final step of `Ref/PRESSURE_REDESIGN_2026-08-19.md`. The engine landed in 3a;
+this is the only way for a player to SET a list, plus the retirement of every
+surface it replaces.
+
+**Split by file ownership so a delegated agent could work in parallel without
+git contention:** the agent owned `gameplan.js` only and ran no git commands;
+this session owned `depthchart.js` + the cleanup.
+
+**Game Plan ▸ Defense — the blitzer list** (agent-built). One chip per eligible
+defender, tap to cycle **Auto → Often → Sometimes → Auto**, capped at four
+named men (enforced in BOTH the handler and the render, so a disabled chip
+explains itself instead of silently no-op'ing). Eligible = the coverage
+defenders who could blitz (LB/OLB/S/CB); linemen are excluded because they
+already rush every down — the distinction the whole redesign turns on. Writes
+go through `setPlanFields` via the file's existing `writeDial` wrapper, building
+a fresh object (never mutating in place), per the D17 plan-seam law. Placed
+directly beside Aggression and Pressure Style, which IS the cohesion fix: how
+often / how many / who, all on one screen.
+
+**Depth Chart — everything the list replaces is gone.** The PRESSURE PIE legend,
+the per-front **HEAT** stepper, the per-slot ⚡/🛡 dials, `_pieShareOf`,
+`renderBlitzControl`, `renderDropControl`, `repaintBlitzShares` and their
+handlers — all removed, not merely unrendered (`dead_surface_probe` green).
+The screen's tip now says what it does: this is who lines up where; who blitzes
+is on Game Plan.
+
+**Simple mode finally tells the truth.** It used to write
+`blitzShares[sid] = 100` to up to THREE slots — three men each showing "100",
+which the sim read as a 33/33/33 lottery for ONE seat. That mismatch was most of
+why the pie read badly. It now writes `gp.blitzers` exactly like the Game Plan
+list does, so the screen and the engine say the same sentence.
+
+**Gates.** Clean build from a temp copy; `pressure_cohesion_probe` ×3 ·
+`dead_surface_probe` ×3 (the one that would catch a half-removed surface) ·
+`help_rule_probe` ×3 (the new copy prints no coefficient) · plan_cohesion
+(97/0) · plan_side · save_migration · bench · blitz_pie tombstone — all green.
+Bands N=500: points 26.2, rush 152.7, sacks 2.12, INT% 1.98, only the standing
+comp% flag.
+
+**The four-batch pressure pass is now complete.** Recap of what it cost and
+bought: the 3-4 stopped rushing five men on 69% of unblitzed snaps; a card that
+says "Bring 5" now sends five instead of four on 64% of snaps; HEAT stopped
+muting headset calls; and WHO blitzes moved from a per-front percentage that
+was silently absent on 28% of passing downs to a player list that follows the
+men. Sacks/team began the day at 2.07 and ended at 2.12 — inside the 1.8-2.3
+target throughout.
+
+**Owner still owes, once, across all four batches:** `covfam_probe` (the
+container caps commands at ~178s), the Playwright tier, `_gate.mjs core`, and
+BROWSER EYEBALLS on the new Game Plan panel and the emptied Depth Chart
+defensive tab — 3b is the only batch with UI.
+
+**Parked, each its own change with its own A/B:** AI staffs getting real
+blitzer lists (so a program has a recognisable pressure man); tier-3 designed
+pressure cards (the chaos outlet the owner originally asked for — a card that
+names its rushers); the Often:Sometimes ratio [TUNE]; and a possible single
+"always comes" marker, recommended DEFERRED until missed.
