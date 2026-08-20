@@ -6004,3 +6004,33 @@ blitzer lists (so a program has a recognisable pressure man); tier-3 designed
 pressure cards (the chaos outlet the owner originally asked for — a card that
 names its rushers); the Often:Sometimes ratio [TUNE]; and a possible single
 "always comes" marker, recommended DEFERRED until missed.
+
+### 2026-08-19 — owner's local `_gate.mjs core`: 90 OK / 2 FAIL, one real
+
+Owner ran the gate after the four pressure batches: **90 OK · 2 FAIL · 14.9 min**.
+
+- **`size_fit_probe`** (14 pass / 1 fail) — the STANDING boundary flake
+  documented in `_gate_manifest.mjs`: the light-OLB fat tail sits at 0.4-0.5%
+  against a 0.5% floor and fails roughly one run in three. Not a regression. A
+  red materially BELOW 0.4% would be.
+- **`defsheet_probe`** — **REAL, and mine.** 108 pass / 1 fail, six cards in the
+  Balanced Pro book: `key "bringSeats" outside applyDefCall's vocabulary`.
+
+**The defsheet cause.** Pressure batch 2 made `bring` compile to `bringSeats`
+instead of `aggression`. `applyDefCall` HANDLES the new key correctly — the
+behaviour was right and every behavioural probe was green — but
+`defsheet_probe` keeps a **hand-maintained mirror** of the call seam's
+vocabulary (`APPLY_KEYS`), and that list still knew only `aggression`. So the
+compile emitted a field the declared vocabulary did not admit.
+
+This is precisely the vocabulary-drift class the D14 `CARD_VOCAB` work exists to
+prevent, and the probe caught it exactly as designed. Fixed: `bringSeats` added
+to `APPLY_KEYS` with a legality rule (`Number.isInteger`, 0-3 — **zero is a
+legal, meaningful value**, a four-man rush that cannot blitz, so a truthiness
+test would have been wrong). Green ×3, plus `defbook_probe` green.
+
+**Worth flagging as a latent trap, not fixed here:** `APPLY_KEYS` is a duplicate
+of engine knowledge maintained by hand in a probe. It caught this drift, but the
+next person to add a compiled field will hit the same red. Deriving it from the
+engine — the same move D14 made for `CARD_VOCAB` — is the permanent fix and
+should be its own small change.

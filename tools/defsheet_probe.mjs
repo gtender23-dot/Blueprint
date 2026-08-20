@@ -47,7 +47,12 @@ ok(DEFAULT_OFF_BOOKS.length === 6, `six offensive starters survive load-time val
 // applyDefCall's vocabulary (see the header). Keys = pickDefCall's normalized
 // list ∩ applyDefCall's reads — the set a compiled call can actually land on
 // the sim through EITHER path (F1 forced call or the sheet sample).
-const APPLY_KEYS = new Set(['front', 'covShell', 'covStyle', 'edgePlay', 'pressureIdentity', 'robberCall', 'zoneStyle', 'aggression', 'runCommit', 'covFamily', 'rotation', 'rush3', 'pressLook', 'dogGame']);
+// ⚠ HAND-MAINTAINED MIRROR of applyDefCall's vocabulary. Adding a compiled
+// field to the call seam without adding it here reds this probe — which is
+// exactly what happened on 2026-08-19 when `bring` started compiling to
+// `bringSeats` (pressure batch 2) and this list still knew only `aggression`.
+// The probe did its job; the list is the thing that drifts.
+const APPLY_KEYS = new Set(['front', 'covShell', 'covStyle', 'edgePlay', 'pressureIdentity', 'robberCall', 'zoneStyle', 'aggression', 'runCommit', 'covFamily', 'rotation', 'rush3', 'pressLook', 'dogGame', 'bringSeats']);
 const COV_FAMILIES = new Set(['Cover 6', 'Tampa 2', 'Cover 2-Man', 'Prevent']); // COV_FAMILY_IMPLIES, sim.js
 const legalVal = {
   front: (v) => !!DEF_FRONTS[v],
@@ -56,6 +61,10 @@ const legalVal = {
   edgePlay: (v) => ['contain', 'crash', 'balanced'].includes(v),
   pressureIdentity: (v) => !!C.PRESS_IDENTITY[v],
   aggression: (v) => C.AGGRESSION.order.includes(v),
+  // EXTRA rushers beyond the four-man front: bring 4/5/6 -> 0/1/2. Zero is a
+  // legal, meaningful value (a four-man rush that cannot blitz), so this must
+  // be an integer test, not a truthiness one.
+  bringSeats: (v) => Number.isInteger(v) && v >= 0 && v <= 3,
   covFamily: (v) => COV_FAMILIES.has(v),
   rush3: (v) => v === true,
   runCommit: (v) => typeof v === 'number' && v >= -25 && v <= 25,
