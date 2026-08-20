@@ -5853,3 +5853,69 @@ blitz_pie all green. NOTE: `blitz_pie_probe` read 6/1 once then 7/0 on three
 consecutive re-runs — unseeded noise, not a regression, but worth watching. A
 `__noBringSeats` kill-switch exists for the A/B. Batch 3 (the blitzer list, the
 only step with UI) is next. NOT pushed.
+
+## 2026-08-19 — PRESSURE BATCH 3a: the blitzer list (ENGINE ONLY — no UI yet)
+
+Third build step of `Ref/PRESSURE_REDESIGN_2026-08-19.md`. **Engine only.** The
+UI (batch 3b) is NOT built, so there is currently no way for a player to SET a
+list — the field is read but unwritable. Deliberate stopping point: the engine
+is testable and band-neutral on its own, and the shape is now proven before any
+screen is built against it.
+
+**Landed:**
+
+- **`gp.blitzers`** = `{ playerId: "often" | "sometimes" }`, registered on the
+  DEF side of `PLAN_FIELD_SIDE`. Player-level, NOT per-front — which is what
+  dissolves OD-P4 (a pie keyed to the front FIELDED was silently absent on 28%
+  of passing downs).
+- **The rush resolver fills seats from the list**, weighted `often:sometimes`
+  = 3:1 (`C.BLITZER_WEIGHT`, [TUNE]). Unranked; the seat count does the work.
+- **Off-list leak** tied to the DC's Blitz Design (`C.BLITZ_OFFLIST_MAX`) — a
+  sharp coordinator stays on script, a poor one improvises. Owner's call:
+  preference, not law.
+- **HEAT RETIRED** (dissolves OD-P3). It was a second owner of "how often",
+  keyed to a front, and multiplied headset calls with no "unless called" guard.
+- **Identity demoted to the AUTO answer for WHO.** It still owns the coverage
+  risk tier (`deepRisk`/`zeroBehind`) and the fire-zone drop spec in every
+  case; the list wins on who comes when it is non-empty.
+- **Empty list = byte-identical.** The block is skipped entirely and consumes
+  ZERO RNG, so every AI plan and untouched save takes the old path exactly.
+
+**Bands hold.** N=500 ×2: points 25.8 / 26.2, sacks 1.98 / 2.11, INT% 2.06 /
+1.96 — the harness is unseeded and today's spread has been 25.8-26.7 points and
+1.98-2.16 sacks, so both runs sit inside it. Only the standing comp% flag.
+
+**⚠ OPEN — the rotation is UNEVEN and the cause is NOT isolated.** Two men
+tagged IDENTICALLY (`often`/`often`) split **4.47 : 1** on a pinned fixture,
+while an earlier unpinned roster gave 1.03 : 1. Ruled out by measurement: both
+men are on the field in every front (checked per-front), and the lottery itself
+is a plain weighted draw with the leak removed. Remaining suspects are claim
+order (a man already rushing cannot take a seat) and in-game depth/fatigue.
+**The probe asserts only what is defensible — that both named men come and
+neither is locked out — rather than a ratio band.** Widening a band until it
+passes would dress an unexplained result up as a green gate. This needs
+resolving before batch 3b ships, because "two OLBs alternating" is the owner's
+original requirement.
+
+**Probe fixture flakiness found and fixed en route:** the probe built its
+rosters OUTSIDE the pinned RNG, so `createPlayer` drew fresh players every run
+and the same code measured 0.46:1 then 1.69:1. Fixture now pinned. The lesson
+is the general one — pin the fixture, not the tolerance.
+
+**`blitz_pie_probe` is now a TOMBSTONE.** Its three pie-contract checks
+(seat-1 lottery, its control arm, and heat 100-vs-0) are obsolete by design.
+The file remains as a GUARD that the pie stays retired, and records what the
+pie promised so nobody resurrects it blind. Note one old check passed
+throughout the rewrite — "undialed plans: switch is a no-op" — which is exactly
+the byte-identical property preserved here.
+
+**Left for batch 3b (UI):** the Game Plan ▸ Defense list surface; removing the
+pie/HEAT panel from the Depth Chart; Simple mode writing a list instead of
+`blitzShares[sid]=100` ×3. Until then the old `blitzShares`/`heat` data is
+written by the Depth Chart but no longer read for heat or seat-1 selection —
+`blitzShareByPlayerId` still nudges the legacy fallback pick by +0.6, which is
+harmless but should be cleaned in 3b.
+
+**Gates.** Clean build; `pressure_cohesion_probe` 51/0 ×3 (fixture pinned);
+plan_cohesion (97/0) · plan_side · dead_surface · save_migration ·
+playbook_root · bench · blitz_pie tombstone all green. NOT pushed.

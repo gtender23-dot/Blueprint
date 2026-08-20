@@ -1575,11 +1575,15 @@ function resolvePassPlay(playType, offPersonnel, defPersonnel, offRoster, defRos
   const mugCall = _pf && defPlan.pressLookEff === "mug" && !rush3Call;
   const amoebaCall = _pf && defPlan.pressLookEff === "amoeba" && !rush3Call;
   const crossCall = _pf && defPlan.dogGameEff === "cross" && !rush3Call;
-  // BLITZ PIE: the front's HEAT dial owns "how often" — a plain multiplier on
-  // the computed call rate (0 → ×0.5, 50 → ×1.0, 100 → ×1.5), still inside
-  // the aggression cap. Neutral (null) for every AI plan and untouched save.
-  const _pieHeatMult = !globalThis.__noBlitzPie && defPlan._pieHeat != null ? 0.5 + defPlan._pieHeat / 100 : 1;
-  const blitzPct = rush3Call ? 0 : clamp2(pressureCallRate({ stop: aggrStop, lev: defPlan._defLev || "neutral", design: defPlan.blitzDesign, rate: defPlan.blitzPct }) * formTell * _pieHeatMult, 0, C.AGGRESSION.capRate);
+  // HEAT RETIRED (2026-08-19). The per-front HEAT dial was a SECOND owner of
+  // "how often": keyed to a front, silently absent on 28% of passing downs
+  // because the defense auto-subs, and applied to HEADSET CALLS with no
+  // "unless called" guard — so a slider moved on the Depth Chart weeks earlier
+  // halved an explicit Bring-the-House call, contradicting the ratified OD-3
+  // (the headset beats the standing plan). With the aggression stop as the one
+  // owner of rate, heat had no job left; retiring it removes the conflict
+  // instead of adjudicating it. Front-specific rates are a SITUATION now.
+  const blitzPct = rush3Call ? 0 : clamp2(pressureCallRate({ stop: aggrStop, lev: defPlan._defLev || "neutral", design: defPlan.blitzDesign, rate: defPlan.blitzPct }) * formTell, 0, C.AGGRESSION.capRate);
   // A CALLED COUNT IS NOT A DICE ROLL (2026-08-19). When a card names its
   // rusher count, that count happens: seats 0 is a four-man rush that does NOT
   // blitz, seats 1 sends five, seats 2 sends six. The standing/AUTO path is
@@ -1626,55 +1630,57 @@ function resolvePassPlay(playType, offPersonnel, defPersonnel, offRoster, defRos
       claimed.add(p.id);
       if ((p.position === "S" || p.position === "CB") && !blitzerDbId) blitzerDbId = p.id;
     };
-    // BLITZ PIE (Ref/BLITZ_PIE_PLAN.md): a dialed plan's 100% allocation owns
-    // the FIRST rush seat by weighted lottery. An ⚡ slice = that man comes;
-    // a 🛡 slice = that lineman DROPS and the best backer comes behind him —
-    // a shield slice IS a fire-zone look (same droppedIds/fzBonus machinery).
-    // Undialed plans (all AI + untouched saves) never build slices — legacy
-    // path byte-identical. Sampled man unavailable → legacy seat-1 fallback.
-    let pieUsed = false;
-    if (!globalThis.__noBlitzPie && extra > 0) {
-      const _slices = [];
-      for (const [id, w] of Object.entries(pref)) if (w > 0 && onField.has(id) && !claimed.has(id)) _slices.push({ id, w, fz: false });
-      for (const [id, w] of Object.entries(dropShareById || {})) if (w > 0 && onField.has(id)) _slices.push({ id, w, fz: true });
-      const _tot = _slices.reduce((s, x) => s + x.w, 0);
-      if (_tot > 0) {
-        let _r = Math.random() * _tot;
-        let _sl = _slices[0];
-        for (const x of _slices) {
-          _r -= x.w;
-          if (_r <= 0) { _sl = x; break; }
+    // ── THE BLITZER LIST (Ref/PRESSURE_REDESIGN_2026-08-19.md) ─────────────
+    // Replaces the pressure pie. The coach names a few men and tags each
+    // Often or Sometimes; the SEAT COUNT above decides how many of them come.
+    // More names than seats = rotation (nobody's tell is readable); names
+    // equal to seats = the same men every time. Unranked on purpose — ranking
+    // would put the first name in seat one every snap and destroy the
+    // rotation, which is the case that killed the "just tag them" version.
+    //
+    // Empty/absent list = AUTO: this block is skipped entirely, consumes no
+    // RNG, and the identity picks by grade exactly as before. Every AI plan and
+    // every untouched save takes that path, so the change is byte-identical
+    // for them by construction.
+    let listUsed = 0;
+    const _blist = defPlan.blitzers && typeof defPlan.blitzers === "object" ? defPlan.blitzers : null;
+    if (!globalThis.__noBlitzerList && _blist && extra > 0) {
+      const _W = C.BLITZER_WEIGHT || { often: 3, sometimes: 1 };
+      // A PREFERENCE, not a law. The DC's Blitz Design is his script
+      // discipline: a sharp coordinator stays on it, a poor one improvises and
+      // sends someone off-list. This is also what keeps an unavailable list
+      // (Dime package, injury, fatigue) from breaking the blitz outright.
+      const _design = clamp2((defPlan.blitzDesign != null ? defPlan.blitzDesign : 50) / 100, 0, 1);
+      const _leak = (C.BLITZ_OFFLIST_MAX != null ? C.BLITZ_OFFLIST_MAX : 0.3) * (1 - _design);
+      while (extra > 0) {
+        const _pool = [];
+        for (const _id in _blist) {
+          if (!onField.has(_id) || claimed.has(_id)) continue;
+          const _w = _W[_blist[_id]] || 0;
+          if (_w > 0) _pool.push({ id: _id, w: _w });
         }
-        if (_sl.fz) {
-          // the shield slice: pull him out of the shown rush if he hasn't
-          // already bailed naturally this snap, then send the backer behind
-          const _di = passRushers.findIndex((x) => x.player.id === _sl.id && !x.blitzer);
-          if (_di >= 0 && passRushers.length > 3) {
-            const [_dp] = passRushers.splice(_di, 1);
-            droppedIds.push(_dp.player.id);
-            lbIds.push(_dp.player.id);
-          }
-          const _backer = pick(lbIds.filter((id) => id !== _sl.id), lbGrade);
-          if (_backer) {
-            send(_backer);
-            pieUsed = true;
-            extra--;
-          }
-        } else {
-          const _pp = defRoster.find((pl) => pl.id === _sl.id);
-          if (_pp) {
-            send(_pp);
-            pieUsed = true;
-            extra--;
-          }
-        }
+        if (!_pool.length) break;
+        if (Math.random() < _leak) break;
+        let _r = Math.random() * _pool.reduce((t, x) => t + x.w, 0);
+        let _sel = _pool[0];
+        for (const x of _pool) { _r -= x.w; if (_r <= 0) { _sel = x; break; } }
+        const _sp = defRoster.find((pl) => pl.id === _sel.id);
+        if (!_sp) break;
+        send(_sp);
+        extra--;
+        listUsed++;
       }
     }
     // Who comes, by identity: fire zone = a backer behind a dropping lineman;
     // second level = LB heat; secondary heat = the SS (or slot corner) down;
     // the House = numbers — a backer AND a DB, more when the stop says so.
-    // (A dialed pie owns seat 1; the identity keeps the remaining seats.)
-    if (!pieUsed && (identity === "secondaryHeat" || identity === "theHouse")) {
+    // (The blitzer list fills what it can; the identity keeps the rest.)
+    // IDENTITY IS THE *AUTO* ANSWER TO "WHO" (2026-08-19). It still owns the
+    // coverage RISK TIER (deepRisk/zeroBehind) and the fire-zone drop spec in
+    // every case — but when the coach has named his blitzers, the list wins on
+    // who comes. Without this the two surfaces would disagree: a list of
+    // safeties under a secondLevel identity would send both.
+    if (!listUsed && (identity === "secondaryHeat" || identity === "theHouse")) {
       send(pick(dbIds, dbGrade));
       extra--;
     }
@@ -5179,10 +5185,8 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     const offField = resolveOffField(offFormationId, offFA == null ? void 0 : offFA.slots, offFA == null ? void 0 : offFA.shares, offDepthWithSlot, null, offPosOf, offById, offVar);
     const defHasPins = !!defFA && (Object.keys(defFA.slots || {}).length > 0 || Object.values(defFA.blitzShares || {}).some((v) => v > 0) || defFA.heat != null);
     const defBaseField = defFrontId === baseFront || defHasPins ? resolveDefField(defFrontId, defFA == null ? void 0 : defFA.slots, defFA == null ? void 0 : defFA.blitzShares, activeDefDepth, null, defPosOf, defById) : null;
-    // BLITZ PIE (Ref/BLITZ_PIE_PLAN.md): the front's HEAT dial rides to the
-    // rush resolver on the effective plan. null = neutral (every AI plan and
-    // every untouched save). `__noBlitzPie`.
-    defPlanEff._pieHeat = !globalThis.__noBlitzPie && defFA && defFA.heat != null ? defFA.heat : null;
+    // HEAT retired 2026-08-19 — the aggression stop is the single owner of
+    // "how often". Nothing rides here any more.
     const offPersonnel = offField ? offField.personnel : resolvePersonnel(offFormationId, activeOffDepth, offVar);
     const defPersonnel = defBaseField ? defBaseField.personnel : resolveDefPersonnel(defFrontId, activeDefDepth, defRoster);
     const qb0 = (() => {

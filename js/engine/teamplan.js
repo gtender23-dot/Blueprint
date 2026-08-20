@@ -39,6 +39,12 @@
 // an unanticipated field — the manifest only decides who OWNS a field, not
 // whether it survives.
 const PLAN_FIELD_SIDE = {
+  // 2026-08-19: WHO blitzes. A player-level map { playerId: "often"|"sometimes" },
+  // absent/empty = Auto. Deliberately NOT per-front like the pie it replaces —
+  // a pie keyed to the front FIELDED was silently absent on 28% of passing
+  // downs (measured), because the defense auto-subs. Attached to men, it
+  // follows them.
+  blitzers: "def",
   // ── OFFENSE — the book owns the looks, the sheet, and the offensive dials ──
   offFormations: "off",
   formationPlaybooks: "off",

@@ -248,6 +248,87 @@ hdr('P4 — invariants (must hold before, during, and after every batch)');
     `violations=${badBlitzerIds}`);
 }
 
+hdr('P5 — the blitzer list (batch 3): WHO comes');
+{
+  // Replaces the pressure pie. The list is player-level (not per-front, which
+  // is why a pie was silently absent on 28% of passing downs), unranked (a rank
+  // would put the first name in seat one every snap and destroy rotation), and
+  // a PREFERENCE not a law (an exclusive list breaks when its men are off the
+  // field, and a deterministic one is fully scoutable).
+  const simSrc2 = src('js/engine/sim.js');
+  check(/defPlan\.blitzers/.test(simSrc2), 'the resolver reads the blitzer list');
+  check(!/_pieHeatMult|_pieHeat/.test(simSrc2),
+    'HEAT is GONE — the aggression stop is the single owner of "how often"');
+  check(/if \(!listUsed && \(identity === "secondaryHeat"/.test(simSrc2),
+    'identity is demoted to the AUTO answer for WHO — it only fills seats the list did not');
+  check(/BLITZ_OFFLIST_MAX/.test(simSrc2) && /blitzDesign/.test(simSrc2),
+    'the off-list leak is tied to the DC\'s Blitz Design — a sharp coordinator stays on script');
+
+  const { ROSTER_TARGETS, CLASS_YEARS } = await import('../js/constants.js');
+  const { createPlayer } = await import('../js/engine/player.js');
+  const { buildDepthChart, defaultGameplan } = await import('../js/engine/world.js');
+  const { simulateGame } = await import('../js/engine/sim.js');
+  const realRnd = Math.random;
+  const mul = (sd) => { let t = sd >>> 0; return () => { t += 0x6D2B79F5; let r = Math.imul(t ^ t >>> 15, 1 | t); r = r + Math.imul(r ^ r >>> 7, 61 | r) ^ r; return ((r ^ r >>> 14) >>> 0) / 4294967296; }; };
+  const rost = (id) => { const r = []; for (const [ps, c] of Object.entries(ROSTER_TARGETS)) for (let i = 0; i < c; i++) { const x = createPlayer(ps, CLASS_YEARS[i % 4], 1); x.schoolId = id; r.push(x); } return r; };
+  // ONE roster reused — a player list needs stable ids. Built UNDER THE PINNED
+  // RNG: createPlayer draws from Math.random, so building rosters outside the
+  // pin made every probe run generate different players, which made the
+  // measured split swing run to run (0.46:1 to 1.69:1 on identical code).
+  // A flaky core gate is worse than no gate — pin the fixture, not the band.
+  Math.random = mul(101);
+  const rH = rost('H'), rA = rost('A');
+  Math.random = realRnd;
+  // SAFETIES on purpose: they are on the field in every front, so the measured
+  // split isolates the LIST from who happens to be dressed for a sub package.
+  Math.random = mul(102);
+  const S = (buildDepthChart(rA, { ...defaultGameplan() }).S || []).slice(0, 2);
+  Math.random = realRnd;
+  const run = (list, games, design) => {
+    const t = {};
+    for (let i = 0; i < games; i++) {
+      Math.random = mul(3300 + i);
+      try {
+        const gpH = { ...defaultGameplan() };
+        const gpA = { ...defaultGameplan(), defAggression: 'attacking', blitzDesign: design, blitzers: list };
+        const res = simulateGame({ id: 'H' }, { id: 'A' }, rH, rA, buildDepthChart(rH, gpH), buildDepthChart(rA, gpA), gpH, gpA);
+        for (const d of res.drives || []) { if (d.possession !== 'home') continue;
+          for (const pl of d.plays || []) if (pl.blitzFired && pl.blitzerIds) for (const b of pl.blitzerIds) t[b] = (t[b] || 0) + 1; }
+      } finally { Math.random = realRnd; }
+    }
+    return t;
+  };
+  // THE ROTATION CASE — the owner's requirement, and the reason the list is
+  // unranked. Leak removed (design 100) so this measures the lottery itself.
+  const both = {}; both[S[0]] = 'often'; both[S[1]] = 'often';
+  const tb = run(both, 60, 100);
+  const a = tb[S[0]] || 0, b = tb[S[1]] || 0;
+  check(a > 30 && b > 30, `both names actually come (${a}/${b})`);
+  const ratio = a / Math.max(1, b);
+  // ── WHAT THIS CHECKS, AND WHAT IT DELIBERATELY DOES NOT ──────────────────
+  // Asserted: both named men come, and neither is locked out. That is the
+  // property the redesign needs — an unranked list must not become a de-facto
+  // rank.
+  //
+  // NOT asserted: that the split approaches 1:1. It does not, reliably.
+  // Measured on this pinned fixture: 4.47:1 for two men tagged IDENTICALLY,
+  // while an earlier unpinned roster gave 1.03:1. Both safeties are on the
+  // field in every front and the lottery itself is a plain weighted draw, so
+  // presence and the draw are ruled out — the cause is NOT yet isolated
+  // (claim order and in-game depth/fatigue are the open suspects).
+  // See Ref/STATUS.md 2026-08-19 batch 3a. Pinning a ratio band here would
+  // dress an unexplained result up as a passing gate.
+  check(a > 0 && b > 0, 'both named men come — an unranked list has not become a de-facto rank',
+    `${a} : ${b} = ${ratio.toFixed(2)}:1`);
+  // Often outranks Sometimes, but does not lock him out.
+  const mixed = {}; mixed[S[0]] = 'often'; mixed[S[1]] = 'sometimes';
+  const tm = run(mixed, 60, 100);
+  const oa = tm[S[0]] || 0, ob = tm[S[1]] || 0;
+  // Same caveat: directional, not a ratio assertion.
+  check(oa > ob, 'Often comes more than Sometimes', `${oa} vs ${ob}`);
+  check(ob > 0, 'Sometimes still shows up — a change-up, not a bench', `${ob}`);
+}
+
 console.log(`\nPRESSURE COHESION PROBE — ${pass} pass, ${fail} fail`);
 console.log(fail ? 'PRESSURE COHESION PROBE FAIL' : 'PRESSURE COHESION PROBE PASS');
 process.exit(fail ? 1 : 0);

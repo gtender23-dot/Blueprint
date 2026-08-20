@@ -17,6 +17,21 @@ C = {
   // that table is an EFFICIENCY multiplier, and letting it drive call rate too
   // would double-count (called more often AND better, compounding). [TUNE]
   GOAL_LINE_HEAVY_SHARE: 0.6,
+  // ── THE BLITZER LIST (2026-08-19, replaces the pressure pie) ──────────────
+  // A coach names a few men and tags each Often or Sometimes. No percentages,
+  // no sum constraint, no ordering — the SEAT COUNT does the work: more names
+  // than seats gives rotation, names equal to seats gives determinism.
+  // RELATIVE weights only; nothing has to add up to anything. [TUNE: 3:1 is a
+  // starting point, to be set by watching games — the probe reports the
+  // realized split rather than anyone asserting it.]
+  BLITZER_WEIGHT: { often: 3, sometimes: 1 },
+  // The list is a PREFERENCE, not a law (owner call). Chosen over an exclusive
+  // list for two concrete reasons: an exclusive list BREAKS when its men are
+  // not on the field (Dime package, injury, fatigue rotation), and a fully
+  // deterministic list is fully scoutable by an opponent with memory.
+  // A sharp coordinator stays on script; a poor one improvises — so the leak
+  // is highest at Blitz Design 0 and shrinks as the DC gets better. [TUNE]
+  BLITZ_OFFLIST_MAX: 0.3,
   // Where a route is CENTRED as a share of the room to the back of the end
   // zone. The catch point sits in front of the boundary — a fade goes to the
   // pylon, not to the back line. Only binds near the goal line; at midfield the
