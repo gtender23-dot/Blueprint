@@ -6274,3 +6274,99 @@ personnel eligibility widening does not move them.
 **Noted, not done:** the 4-3 still has no meshed slot. Defensible — it is a base
 front of natural positions — but a 4-3 SAM is often a space body in real
 football, and that is the next candidate if you want it.
+
+---
+
+## FULL + NIGHT sweep triage — 2026-08-19 (evening)
+
+**Night is GREEN.** `h2_shadow` and `recruit_calendar` both pass (13.9 min). The
+deploy no longer owes a night run.
+
+**FULL: 217 OK, 14 FAIL, 87.3 min.** The headline is that **only one failure came
+from today's work.** The sweep's real lesson is about cadence, not defects:
+`full` had not been run since **2026-08-17**, so a third of tonight's red was
+already red and already triaged in `Ref/FULLGATE_TRIAGE_2026-08-17.md`. Running
+full once per SESSION rather than once per DEPLOY would have caught my two stale
+pins in minutes instead of at the end of an 87-minute sweep.
+
+### Fixed this sitting
+
+**1 · `defmesh_probe` (4 fails) and `front_variants_probe` (3 fails) were STALE
+PINS I failed to flip with the changes that moved them.** The convention is that
+a fix flips its pin WITH the fix; I broke it. Both are `full` tier, which is why
+the core gate run per change-set could not have caught them. Now green (20/20 and
+53/53) with each pin carrying why it moved:
+
+- OVERHANG 8 → 10 (the 3-4's two outside backers joined the pool)
+- `base 3-4 carries no mesh keys` → **carries OVERHANG keys**, inverted on
+  purpose: the 3-4 stopped being mesh-free the moment one backer became the Jack
+- NB pool `["CB","S"]` → `["CB","S","LB"]`
+- Penny `DL=5 → 4`, coverage backers `1 → 2` — the Jack change, redesign §8
+
+One of those four "failures" was not a value mismatch at all: `check()` compares
+stringified objects, so the counts map failed purely on KEY ORDER once the 3-4
+started sorting ahead of the Nickel. Pinned in layout-insertion order with a note.
+
+**2 · `viewer_throwcatch_live_probe` — flake, now flagged `seedFlaky`.** It failed
+the sweep and passed alone on the same build. It samples an UNSEEDED Play Now
+exhibition for 520 frames and needs a catch AND a QB release AND a trench pair
+inside that one window, so a run-heavy stretch fails it with nothing wrong — the
+identical fragility its sibling `viewer_act_a_finish_live_probe` already carried
+the flag for. **Also recorded in the manifest note: the screenshot it names is
+written TWICE** (frame 260, then again after the loop), so the file on disk is the
+END state and is usually a blank board between plays. That blank shot cost this
+session a detour; it should not cost anyone else one.
+
+**3 · `SLOT_ELIGIBILITY.CB` gained `LB: 0.65` — a closed trap, NOT a live bug.**
+Widening NB to admit a backer left `SLOT_ELIGIBILITY.CB.LB` undefined, and the
+`null → 1` default at `fieldassign.js:106` meant an LB would take the nickel job
+at FULL rating while a safety correctly paid 0.8 — a backer as the CHEAPEST
+nickel. **I called this "the real bug" before measuring, and the measurement said
+otherwise:** auto-fill picks an LB for nickel in **0% of cases**, even with the CB
+room cut to two and the safety room to two, because native-position-first holds.
+It is a hand-pick affordance and a trap worth closing, not a defect that was
+changing games. Priced from the table's own logic — one step below his own price
+at safety (`S: { LB: 0.7 }`), above an untrained athlete (`WR: 0.55`).
+
+> **Open for the owner:** if you expected the sim to sometimes walk a SAM out over
+> the slot ON ITS OWN, it does not and this does not make it. Auto-fill ignores the
+> widening entirely. That would be a separate change.
+
+### Not ours — already triaged on 08-17
+
+- `table_button_phone_smoke` — logged **ENV-ONLY** ("locator flake/timeouts on a
+  demonstrably overloaded box"). Its `[data-conv-target="QB"]` timeout is that
+  flake. `dashboard.js`, which owns the attribute, has not been touched since 08-16.
+- `instant_classic_ui_smoke` · `calendar_display_probe` — logged **TEST-STALE**,
+  both entering by the retired coach main-menu door. Both have since been partly
+  retargeted and now get much further, leaving one residual check each (the replay
+  scoreboard prints the abbr `HST` where the probe wants `HOME STATE`; day 4 stalls
+  on `PRE 3`). The watch-bug scoreboard was **not touched today**.
+- `timeout_screen_smoke` — the 08-17 doc's **one real product bug** (the timeout
+  overlay never called `wireDefaultsListeners`). That fix landed and the aggression
+  chip now passes; the tempo chip still does not. **Hypothesis for whoever takes
+  it:** `defAggression` is a `"def"` field and `baseTempo` is a `"team"` field, so
+  the surviving half may be that only the def side reaches the live overlay. Note
+  the check is `!wasActive && nowActive`, which also fails when Hurry was ALREADY
+  active — that would explain the FAIL(1) ↔ FAIL(2) wobble between runs.
+
+### Noise, not signal
+
+`robber_probe` (failed 1 of 3 here), `run_scheme_probe` (3 of 3 green here),
+`blitz_reality_probe` (fails on a **0.13** margin — empty 6.32 vs heavy 6.45).
+All unseeded. Candidates for `seedFlaky`, but not flagged without more runs —
+flagging on one observation is how a real regression gets buried.
+
+### Still open
+
+- **`phone_dial_guard_smoke` — MINE, and a real phone regression.** Deleting the
+  blitz dial left `.fs-share` as the first match, and it never enters `is-editing`,
+  so the second tap does not write. Note the check BEFORE it passes vacuously ("the
+  value did not change" is also what you get when the tap did nothing), so the phone
+  depth chart may have lost tap-to-edit ENTIRELY rather than partially. `addGuard`
+  does run on `.fs-share`, so the wiring is not obviously absent — needs a browser.
+- `creeper_probe`, `choice_route_probe` (Δ 3.3pp vs a 2.5pp tolerance),
+  `live_score_kickoff_probe` — unmeasured, all exceed the cloud container's limit.
+
+**Housekeeping:** `_nb_price.mjs` in the repo root is a scratch file from this
+sitting's measurement; it is untracked and safe to delete.

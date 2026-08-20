@@ -50,15 +50,31 @@ console.log('— 1. tables (one source of truth, priced by existing math) —');
   for (const { s } of meshSlots) counts[s.mesh] = (counts[s.mesh] || 0) + 1;
   // 16 STACKER jobs: Nickel WILL+MIKE, Dime MIKE, 46 MIKE, 5-2 ILB×2,
   // 3-3-5 STK×2+MIKE, Tite MIKE+WILL, 4-4 MIKE+WILL, Big Nickel WILL+MIKE,
-  // Penny MIKE. 8 OVERHANG: 46 JACK/CHAR, Tite JOKER/JACK, 4-4 SPUR/BNDT,
-  // Penny EDGE×2. 3 NB (Nickel/Dime/Penny). 3 SPACE (WAR, ROVER, Dime DB).
-  check('ratified mesh coverage (slots per pool)', counts, { NB: 3, STACKER: 16, SPACE: 3, OVERHANG: 8 });
+  // Penny MIKE. 10 OVERHANG: 46 JACK/CHAR, Tite JOKER/JACK, 4-4 SPUR/BNDT,
+  // Penny EDGE×2, and (2026-08-19) 3-4 OLB_L/OLB_R. 3 NB (Nickel/Dime/Penny).
+  // 3 SPACE (WAR, ROVER, Dime DB).
+  // Key ORDER matters here — check() compares stringified objects. OVERHANG
+  // leads because the 3-4 now carries mesh slots and sorts ahead of the Nickel
+  // in DEF_FIELD_LAYOUTS. Keep this literal in layout-insertion order.
+  check('ratified mesh coverage (slots per pool)', counts, { OVERHANG: 10, NB: 3, STACKER: 16, SPACE: 3 });
   check('base 4-3 carries no mesh keys', DEF_FIELD_LAYOUTS['4-3'].slots.some(s => s.mesh), false);
-  check('base 3-4 carries no mesh keys', DEF_FIELD_LAYOUTS['3-4'].slots.some(s => s.mesh), false);
+  // The 3-4 STOPPED being mesh-free on 2026-08-19. Its two outside backers are
+  // no longer interchangeable bodies: one is the JACK (the designated rusher,
+  // derived at runtime by pass-rush grade or named on the blitzer list) and the
+  // other drops. Pooling them as OVERHANG is what lets a coach hand-pick the
+  // man he wants rushing. See Ref/PRESSURE_REDESIGN_2026-08-19.md §8 — before
+  // this, the 3-4 rushed BOTH and sent five on 69% of unblitzed snaps.
+  check('base 3-4 carries OVERHANG mesh keys (the Jack)',
+    DEF_FIELD_LAYOUTS['3-4'].slots.filter(s => s.mesh === 'OVERHANG').map(s => s.id).sort(),
+    ['OLB_L', 'OLB_R']);
+  // NB gained LB on 2026-08-19 so a coach can walk a backer out over the slot.
+  // Auto-fill still never picks one (measured: 0% even with the CB and S rooms
+  // stripped to the starters) — native-position-first holds. It is a hand-pick
+  // affordance, and SLOT_ELIGIBILITY.CB.LB prices him when he takes the job.
   check('pool lists (ratified)', {
     NB: SLOT_ELIGIBLE_POS.NB, OVERHANG: SLOT_ELIGIBLE_POS.OVERHANG,
     STACKER: SLOT_ELIGIBLE_POS.STACKER, SPACE: SLOT_ELIGIBLE_POS.SPACE,
-  }, { NB: ['CB', 'S'], OVERHANG: ['OLB', 'DE', 'LB'], STACKER: ['LB', 'OLB'], SPACE: ['S', 'LB', 'CB'] });
+  }, { NB: ['CB', 'S', 'LB'], OVERHANG: ['OLB', 'DE', 'LB'], STACKER: ['LB', 'OLB'], SPACE: ['S', 'LB', 'CB'] });
   let pooled = true, priced = true, autoPool = true;
   for (const { s } of meshSlots) {
     const elig = SLOT_ELIGIBLE_POS[s.mesh];

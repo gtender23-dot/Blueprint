@@ -2136,7 +2136,13 @@ SLOT_ELIGIBILITY = {
   OLB: { OLB: 1, DE: 0.85, LB: 0.9, S: 0.7 },
   DT: { DT: 1, DE: 0.85, OL: 0.65 },
   LB: { LB: 1, OLB: 0.9, S: 0.75, DE: 0.7 },
-  CB: { CB: 1, S: 0.8, WR: 0.55 },
+  // LB priced 2026-08-19, when SLOT_ELIGIBLE_POS.NB was widened to admit a
+  // walked-out backer. Without a key here the null→1 default at
+  // fieldassign.js:106 let an LB take the nickel job at FULL rating, making a
+  // backer a cheaper nickel than a safety (0.8) — the opposite of the truth.
+  // 0.65 follows this table's own logic: one clear step below his own price at
+  // safety (S: { LB: 0.7 }), still above an untrained athlete (WR: 0.55).
+  CB: { CB: 1, S: 0.8, LB: 0.65, WR: 0.55 },
   S: { S: 1, CB: 0.85, LB: 0.7 }
 };
 ARCHETYPE_DISTANCE = {

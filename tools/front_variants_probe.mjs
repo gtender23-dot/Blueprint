@@ -54,8 +54,14 @@ for (const f of NEW_FRONTS) {
   const total = pers.DE.length + pers.DT.length + pers.OLB.length + pers.ILB.length + pers.CB.length + pers.S.length;
   check(`${f}: eleven`, total, 11);
 }
-check("Penny EDGEs rush (DL=5)", resolveDefPersonnel("Penny", dc, roster).DL.length, 5);
-check("Penny coverage backers = lone MIKE", resolveDefPersonnel("Penny", dc, roster).LB.length, 1);
+// 2026-08-19: Penny went from DL=5 to DL=4. Only the JACK rushes — the other
+// EDGE drops into coverage. Before this, both EDGEs rushed and the front sent
+// five on 69% of snaps where NOTHING was called, a permanent overload that
+// bought +0.4pp sack over a 4-3. Real football is the mirror image: three down
+// plus one designated rush backer. This restores "blitz = 5+ rushers" as a true
+// statement across all eleven fronts. Ref/PRESSURE_REDESIGN_2026-08-19.md §8.
+check("Penny rushes the JACK only (DL=4)", resolveDefPersonnel("Penny", dc, roster).DL.length, 4);
+check("Penny coverage backers = MIKE + the dropping EDGE", resolveDefPersonnel("Penny", dc, roster).LB.length, 2);
 check("Tite overhangs cover (DL=3, LB group=4)", (() => { const p = resolveDefPersonnel("Tite", dc, roster); return [p.DL.length, p.LB.length]; })(), [3, 4]);
 check("4-4 fields one safety, LB group=4", (() => { const p = resolveDefPersonnel("4-4", dc, roster); return [p.S.length, p.LB.length]; })(), [1, 4]);
 check("Big Nickel three safeties", resolveDefPersonnel("Big Nickel", dc, roster).S.length, 3);
@@ -110,7 +116,7 @@ const pinned = resolveDefField("Nickel", { NB: cb3.id }, {}, dc, null, (id) => r
 check("pinned NB takes the Nickel field", pinned.bySlot.NB, cb3.id);
 const unpinned = resolveDefField("Penny", {}, {}, dc, null, (id) => roster.find((p) => p.id === id)?.position || null);
 check("Penny resolves a full eleven unpinned", Object.values(unpinned.bySlot).filter(Boolean).length, 11);
-check("Penny field: EDGEs in rush unit", unpinned.personnel.DL.length, 5);
+check("Penny field: the JACK in the rush unit, his partner dropping", unpinned.personnel.DL.length, 4);
 
 console.log("\u2014 7. front mix \u2014");
 const MIX = [{ id: "4-3", weight: 50 }, { id: "3-3-5", weight: 30 }, { id: "Penny", weight: 20 }];
