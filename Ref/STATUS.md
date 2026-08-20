@@ -5919,3 +5919,28 @@ harmless but should be cleaned in 3b.
 **Gates.** Clean build; `pressure_cohesion_probe` 51/0 ×3 (fixture pinned);
 plan_cohesion (97/0) · plan_side · dead_surface · save_migration ·
 playbook_root · bench · blitz_pie tombstone all green. NOT pushed.
+
+### 2026-08-19 — batch 3a open item RESOLVED: the rotation is fine; the ratio is the roster
+
+The uneven rotation flagged in batch 3a is **not a defect**. Discriminating
+experiment: the two safeties the probe names split **4.47 : 1** as generated
+(56 ovr vs 48) and **1.02 : 1** once every attribute was equalized — same code,
+same seeds, same fixture.
+
+So the weighted lottery is fair. The imbalance comes from everything UPSTREAM of
+it: a weaker man is fielded less often, and any seat the list cannot fill goes
+to the coordinator's best available body. Both behaviours are correct — you
+cannot blitz a man who is not on the field, and an improvising coordinator sends
+his best.
+
+**Consequence for the design, worth stating plainly:** the realized rotation
+follows PLAYING TIME and quality, not just the label. Two starters of similar
+grade rotate evenly; a stud and a scrub do not, and should not. The owner's
+original case — "two good blitzing OLBs alternating" — is two men of similar
+grade, which is exactly the case that works.
+
+The probe keeps asserting only that both named men come and neither is locked
+out, and now records WHY a ratio band would be wrong: it would gate on how the
+fixture's players happened to roll rather than on the feature.
+
+Batch 3b (the UI) is unblocked.

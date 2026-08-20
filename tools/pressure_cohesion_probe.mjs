@@ -310,14 +310,17 @@ hdr('P5 — the blitzer list (batch 3): WHO comes');
   // property the redesign needs — an unranked list must not become a de-facto
   // rank.
   //
-  // NOT asserted: that the split approaches 1:1. It does not, reliably.
-  // Measured on this pinned fixture: 4.47:1 for two men tagged IDENTICALLY,
-  // while an earlier unpinned roster gave 1.03:1. Both safeties are on the
-  // field in every front and the lottery itself is a plain weighted draw, so
-  // presence and the draw are ruled out — the cause is NOT yet isolated
-  // (claim order and in-game depth/fatigue are the open suspects).
-  // See Ref/STATUS.md 2026-08-19 batch 3a. Pinning a ratio band here would
-  // dress an unexplained result up as a passing gate.
+  // NOT asserted: a 1:1 split. RESOLVED 2026-08-19 — the imbalance is
+  // RATING-DRIVEN, not a defect in the lottery. Discriminating experiment: two
+  // safeties tagged identically split 4.47:1 as generated (56 ovr vs 48), and
+  // **1.02:1 once every attribute was equalized**. The lottery is a fair
+  // weighted draw; what differs is everything UPSTREAM of it — a weaker man is
+  // fielded less, and the seats the list cannot fill go to the coordinator's
+  // best body. Both are correct football: you cannot blitz a man who is not
+  // playing, and an improvising coordinator sends his best.
+  //
+  // So the ratio is a property of the ROSTER, not of the feature, and pinning
+  // a band here would gate on how the fixture's players happened to roll.
   check(a > 0 && b > 0, 'both named men come — an unranked list has not become a de-facto rank',
     `${a} : ${b} = ${ratio.toFixed(2)}:1`);
   // Often outranks Sometimes, but does not lock him out.
