@@ -6359,14 +6359,56 @@ flagging on one observation is how a real regression gets buried.
 
 ### Still open
 
-- **`phone_dial_guard_smoke` — MINE, and a real phone regression.** Deleting the
-  blitz dial left `.fs-share` as the first match, and it never enters `is-editing`,
-  so the second tap does not write. Note the check BEFORE it passes vacuously ("the
-  value did not change" is also what you get when the tap did nothing), so the phone
-  depth chart may have lost tap-to-edit ENTIRELY rather than partially. `addGuard`
-  does run on `.fs-share`, so the wiring is not obviously absent — needs a browser.
+- ~~`phone_dial_guard_smoke` — MINE, and a real phone regression.~~ **RESOLVED, and
+  it was NOT a product bug — see the correction below. 14/14 green.**
 - `creeper_probe`, `choice_route_probe` (Δ 3.3pp vs a 2.5pp tolerance),
   `live_score_kickoff_probe` — unmeasured, all exceed the cloud container's limit.
 
 **Housekeeping:** `_nb_price.mjs` in the repo root is a scratch file from this
 sitting's measurement; it is untracked and safe to delete.
+
+### Correction: `phone_dial_guard_smoke` was a PROBE bug, not a product bug
+
+I logged this as the one real regression from today's work. It wasn't. Measured
+with a throwaway diagnostic that reported the actual geometry instead of
+inferring it from the failure pattern:
+
+```
+viewport            390x844
+isGuard             true          <- the guard DID install
+hasUnlockChild      true          <- the unlock overlay IS there
+unlockBox           107x50 @ y=839   <- full-size tap target
+plusCentre          x=118 y=867      <- 23px BELOW the fold
+elementAtClickPoint (outside viewport — mouse.click hits nothing)
+```
+
+The group's TOP edge (y=839) sits inside an 844-tall viewport, so
+`scrollIntoViewIfNeeded()` decided no scroll was needed — while the +/- button
+INSIDE it did not. `center(plus)` then handed `page.mouse.click` a point in
+empty space. Today's depth chart additions (the carried-look pills, the
+line-up button, the how-this-works banner, the spot explainer) pushed the
+stepper those last 23 pixels.
+
+Fixed in the probe: scroll the BUTTON to viewport centre before taking its
+point. The raw mouse tap stays — it deliberately models a finger going THROUGH
+the unlock overlay, which `locator.click()` would reject as intercepted. 14/14.
+
+**The finding worth keeping.** That check could never have failed honestly.
+*"First tap doesn't change the value"* is satisfied both by a correctly LOCKED
+control and by a tap that hit NOTHING — so a genuine regression in phone
+tap-to-edit produces the identical three lines. A vacuous pass is a check that
+cannot distinguish working from absent, and this sweep produced three in one
+night: this one, the blank `_a2` screenshot (written twice, so the file is the
+end state), and my own first diagnostic (a stubbed fixture rendering no team,
+reported as "0 groups" — indistinguishable from "the guard is gone"). When a
+probe reports absence, it must say WHY, or it is not diagnostic.
+
+**Bottom line on the sweep: ZERO product regressions came from today's work.**
+Three stale pins I owed, one missing flake flag, one probe with a viewport bug,
+four already documented on 08-17, three unmeasured (`creeper`, `choice_route`,
+`live_score_kickoff`) and three noise.
+
+**Housekeeping:** `tools/_dialguard_diag.mjs` is the throwaway diagnostic and
+`_nb_price.mjs` the scratch measurement — both are untracked, neither is wired
+into the manifest, and both want deleting by hand (the sandbox is denied unlink
+on this mount).

@@ -119,7 +119,19 @@ try {
     const valueEl = stepper.locator('.fs-share-pct, .fs-blitz-val, .do-carry-pct').first();
     const plus = stepper.locator('button[data-share-step="1"], button[data-blitz-step="1"], button[data-rbshare-step="1"]').first();
     const stepStart = await valueEl.textContent();
-    await plus.scrollIntoViewIfNeeded();
+    // scrollIntoViewIfNeeded is NOT enough here and silently wasn't (2026-08-19).
+    // These groups sit low on the depth chart, so the GROUP's top edge lands
+    // inside the viewport while the +/- button inside it does not — Playwright
+    // then decides no scroll is needed and `center()` hands back a point below
+    // the fold. Measured: button centre y=867 in an 844-tall viewport, with
+    // document.elementFromPoint returning nothing. The raw mouse click then hit
+    // empty space, which looks EXACTLY like a broken guard: the "first tap
+    // doesn't change the value" check passes vacuously, and the two after it
+    // fail. Centre the button explicitly so the point is always live.
+    // (The raw tap is deliberate — it models a finger going THROUGH the unlock
+    // overlay, which locator.click() would reject as intercepted. Keep it.)
+    await plus.evaluate(el => el.scrollIntoView({ block: 'center' }));
+    await page.waitForTimeout(120);
     const plusPoint = await center(plus);
     await page.mouse.click(plusPoint.x, plusPoint.y);
     await page.waitForTimeout(80);
