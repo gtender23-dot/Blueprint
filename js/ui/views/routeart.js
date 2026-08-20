@@ -399,9 +399,14 @@ function renderDefCallCard(call, opts) {
   let svg = `<rect width="${W}" height="${H}" rx="0" class="play-card-turf"/>`;
   svg += `<line x1="0" y1="${_fmt(losY)}" x2="${W}" y2="${_fmt(losY)}" class="play-card-los"/>`;
   // coverage zones
+  // ZONE STYLE (2026-08-19): SPOT drops to a landmark and sits in it; MATCH
+  // carries the receiver who enters. Same boxes, different job — so the box
+  // says which, and a matching zone gets a carry tick.
+  const zStyle = o.zoneStyle || call.zoneStyle || null;
   const zone = (x, y, w, h, label, cls) =>
-    `<rect x="${_fmt(x)}" y="${_fmt(y)}" width="${_fmt(w)}" height="${_fmt(h)}" rx="8" class="dcz ${cls}"/>` +
-    (label ? `<text x="${_fmt(x + w / 2)}" y="${_fmt(y + 11)}" text-anchor="middle" class="dcz-lbl">${_esc(label)}</text>` : "");
+    `<rect x="${_fmt(x)}" y="${_fmt(y)}" width="${_fmt(w)}" height="${_fmt(h)}" rx="8" class="dcz ${cls}"${zStyle === "spot" ? ' stroke-dasharray="4 3"' : ""}/>` +
+    (zStyle === "match" && label ? `<line x1="${_fmt(x + w / 2)}" y1="${_fmt(y + h - 3)}" x2="${_fmt(x + w / 2)}" y2="${_fmt(y + h + 5)}" class="dc-man"/>` : "") +
+    (label ? `<text x="${_fmt(x + w / 2)}" y="${_fmt(y + 11)}" text-anchor="middle" class="dcz-lbl">${_esc(label)}${zStyle === "match" ? " ⟂" : zStyle === "spot" ? " ·" : ""}</text>` : "");
   const zTop = topPad + 1, zMid = sy(0.36), underH = sy(0.7) - zMid - 2;
   if (art.deep === "thirds") {
     // PREVENT shares the three deep thirds with Cover 3 and used to draw an
@@ -485,8 +490,12 @@ function renderDefCallCard(call, opts) {
   const qbX = W / 2, qbY = losY + 19;
   svg += `<rect x="${_fmt(qbX - 3.5)}" y="${_fmt(qbY - 3.5)}" width="7" height="7" rx="1.4" class="dc-ghost-ol" transform="rotate(45 ${_fmt(qbX)} ${_fmt(qbY)})"/>`;
   // the rush
-  const arrow = (x1, y1, cls) => {
-    const dx = qbX - x1, dy = qbY - y1, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
+  // `aimX` bends a rusher off the straight line to the QB. Used by edgePlay
+  // (contain keeps outside leverage, crash spikes inside) and by dogGame cross
+  // (two rushers swap paths). Default null = straight at the quarterback.
+  const arrow = (x1, y1, cls, aimX) => {
+    const tx = aimX == null ? qbX : aimX;
+    const dx = tx - x1, dy = qbY - y1, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
     const ex = x1 + ux * (L - 9), ey = y1 + uy * (L - 9);
     return `<line x1="${_fmt(x1)}" y1="${_fmt(y1)}" x2="${_fmt(ex)}" y2="${_fmt(ey)}" class="${cls}"/><polygon points="${_fmt(ex + uy * 3.6 - ux * 2)},${_fmt(ey - ux * 3.6 - uy * 2)} ${_fmt(ex - uy * 3.6 - ux * 2)},${_fmt(ey + ux * 3.6 - uy * 2)} ${_fmt(ex + ux * 5.5)},${_fmt(ey + uy * 5.5)}" class="${cls}-head"/>`;
   };
@@ -511,8 +520,50 @@ function renderDefCallCard(call, opts) {
   const rushers = dl.slice(0, bring);
   const droppers = dl.slice(bring);
   const extra = rushers.length < bring ? edges.concat(dogs, dbs).slice(0, bring - rushers.length) : [];
-  rushers.forEach((s) => { svg += arrow(slotX(s), slotY(s) + 6, "dc-rush"); });
-  extra.forEach((s) => { svg += arrow(slotX(s), slotY(s) + 6, "dc-dog"); });
+  // ── EDGE PLAY + DOG GAME (2026-08-19) ────────────────────────────────────
+  // edgePlay is the biggest silent control in the engine (24 sim readers) and
+  // it is a PATH: CONTAIN rushes upfield and turns in, keeping outside
+  // leverage so nothing escapes the pocket; CRASH spikes inside and gives the
+  // edge up. dogGame CROSS is a two-man game — the rushers swap paths.
+  const edge = o.edgePlay || call.edgePlay || null;
+  const dog = o.dogGame || call.dogGame || null;
+  const _isEdgeMan = (s) => /DE|EDGE|OLB/.test(s.pos);
+  const _aimFor = (s, i, list) => {
+    if (dog === "cross" && list.length > 1) {
+      // the game: this man takes the NEXT man's lane, and the last takes the
+      // first's — that swap IS the picture.
+      const partner = list[(i + 1) % list.length];
+      return slotX(partner);
+    }
+    if (edge && _isEdgeMan(s)) {
+      const outside = slotX(s) < qbX ? -1 : 1;
+      if (edge === "contain") return qbX + outside * 22;  // stays outside him
+      if (edge === "crash") return qbX - outside * 16;    // spikes across his face
+    }
+    return null;
+  };
+  rushers.forEach((s, i) => { svg += arrow(slotX(s), slotY(s) + 6, "dc-rush", _aimFor(s, i, rushers)); });
+  extra.forEach((s, i) => { svg += arrow(slotX(s), slotY(s) + 6, "dc-dog", _aimFor(s, i, extra)); });
+  // GREEN DOG: a coverage backer who comes only if the man he has stays in to
+  // block. Drawn as a dashed path, because it is conditional — it is not a
+  // rusher until the back blocks.
+  if (dog === "green") {
+    const gd = layout.slots.filter((s) => /LB|OLB|MLB/.test(s.pos) && !rushers.includes(s) && !extra.includes(s))[0];
+    if (gd) {
+      const x1 = slotX(gd), y1 = slotY(gd) + 6;
+      svg += `<line x1="${_fmt(x1)}" y1="${_fmt(y1)}" x2="${_fmt(qbX)}" y2="${_fmt(qbY - 8)}" class="dc-dog" stroke-dasharray="3 3"/>`;
+    }
+  }
+  // ── ROBBER (2026-08-19) ──────────────────────────────────────────────────
+  // ROB sits LOW in the hole under the crossers (the library's Cover-1 detail:
+  // "don't rush the drop, sit low"); OVERTOP caps over the route instead. Two
+  // different jobs, two different depths — so draw the man where he plays.
+  const robber = o.robberCall || call.robberCall || null;
+  if (robber === "rob" || robber === "overtop") {
+    const ry = robber === "rob" ? sy(0.42) : sy(0.16);
+    svg += `<circle cx="${_fmt(W / 2)}" cy="${_fmt(ry)}" r="4.2" class="dc-drop-dot"/>` +
+      `<text x="${_fmt(W / 2)}" y="${_fmt(ry - 7)}" text-anchor="middle" class="dcz-lbl">${robber === "rob" ? "ROB" : "OVER TOP"}</text>`;
+  }
   droppers.forEach((dropper, di) => {
     const dSide = dropper.x >= 0.5 ? 1 : -1; // bend toward his own hook, in bounds
     svg += `<path d="M${_fmt(sx(dropper.x))} ${_fmt(sy(dropper.y) - 6)} C ${_fmt(sx(dropper.x) + dSide * 8)} ${_fmt(sy(dropper.y) - 24)}, ${_fmt(sx(dropper.x) + dSide * 20)} ${_fmt(sy(dropper.y) - 30)}, ${_fmt(sx(dropper.x) + dSide * 26)} ${_fmt(sy(dropper.y) - 38)}" class="dc-drop"/><circle cx="${_fmt(sx(dropper.x) + dSide * 28)}" cy="${_fmt(sy(dropper.y) - 40)}" r="2.8" class="dc-drop-dot"/>`;

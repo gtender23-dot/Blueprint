@@ -6175,3 +6175,42 @@ next pass does not start cold):
   Wants the zone boxes to differ (static landmark vs carrying arrows).
 - **`dogGame`** — green dog sends a coverage backer when his man stays in to
   block; cross is a two-man game whose rushers swap paths. Wants crossed arrows.
+
+## 2026-08-19 — THE SILENT-CONTROL REGISTER IS EMPTY
+
+Owner ran `_gate.mjs core` a second time after the `defsheet` fix and everything
+passed, then asked for the rest built before running again. The remaining four
+are done, so the next gate covers the whole day in one pass.
+
+**The register opened at six and is now zero:**
+
+| control | sim readers | what it draws now |
+|---|---|---|
+| `pressLevel` | 3 seams | ALIGNMENT — a pressed corner walks up, an off corner backs off |
+| `look` | 3 | MUG pulls the second level onto the ball; AMOEBA levels it flat |
+| `rotation` | 7 | SKY safety to the flat · BUZZ safety to the middle hook · CLOUD corner squats, safety over the top |
+| **`edgePlay`** | **24** | a PATH — contain rushes upfield and turns in keeping outside leverage, crash spikes across his face |
+| `robberCall` | 7 | ROB sits LOW in the hole under the crossers; OVERTOP caps over the route |
+| `zoneStyle` | 9 | SPOT drops to a landmark and sits (dashed box); MATCH carries what enters (carry tick) |
+| `dogGame` | 3 | CROSS is a two-man game, the rushers swap lanes; GREEN DOG is DASHED because it is conditional — he only comes if his man stays in to block |
+
+`edgePlay` was the biggest of them all at 24 readers and had no expression
+whatever; it is a rush PATH, so the `arrow` helper gained an aim point rather
+than getting a new line style. The green dog being **dashed** is the detail
+worth keeping: it is not a rusher until the back blocks, and a solid arrow would
+have promised something the engine does not do.
+
+**The gate mechanism is deliberately KEPT with an empty list.** An empty
+`KNOWN_SILENT` is not a dead check — the moment a field the engine honours draws
+identically for two values, C8's "no NEW silent control" reds and names it. C8c
+additionally locks each of the four to its own picture, so none can quietly
+collapse back into the undialed card.
+
+**Gates.** Clean build; `card_lint_probe` **36/0 ×3**; draw_up · dead_surface ·
+help_rule · defsheet · viewer_pace · record_call · pressure_cohesion ·
+plan_cohesion (97/0) all green.
+
+**Owner's next `_gate.mjs core` now covers everything since `c55cdef`:** the man
+line direction, press, look, rotation, and these four. Still owed separately:
+`covfam_probe`, the Playwright tier, browser eyeballs on the three changed
+screens, and a night run before deploy. NOT pushed.

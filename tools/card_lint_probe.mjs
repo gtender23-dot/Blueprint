@@ -401,13 +401,13 @@ hdr('C8 — NO SILENT CONTROLS: a field the engine honours must change the pictu
   // KNOWN SILENT — live in the engine, not yet drawn. Each is a real gap with
   // its reason; the list should SHRINK. A field that leaves this list and stays
   // silent, or a NEW silent field, reds this check immediately.
-  const KNOWN_SILENT = {
-    edgePlay:   'contain/crash changes the edge technique (24 sim readers) — wants the DE arrows to angle',
-    robberCall: 'rob/overtop puts a defender in a specific job — wants a drawn robber',
-    zoneStyle:  'spot/match changes how the zones are played — wants the zone shapes to differ',
-    dogGame:    'green/cross is a pressure wrinkle — wants the rush paths to cross'
-    // rotation LEFT THIS LIST 2026-08-19 — researched and drawn. See C8b below.
-  };
+  // ── THE REGISTER IS EMPTY (2026-08-19) ───────────────────────────────────
+  // It opened at six. rotation left after the taxonomy was researched
+  // (SOURCE_LIBRARY section G); edgePlay, robberCall, zoneStyle and dogGame
+  // followed once each had a shape worth drawing. KEEP THE MECHANISM: an empty
+  // list is not a dead check — the moment a new field the engine honours draws
+  // identically for two values, "no NEW silent control" reds and names it.
+  const KNOWN_SILENT = {};
   const cases = {
     pressLevel: ['press', 'off'],
     look:       ['mug', 'amoeba'],
@@ -446,6 +446,20 @@ hdr('C8 — NO SILENT CONTROLS: a field the engine honours must change the pictu
   const rots = ['sky', 'cloud', 'buzz'].map((r) => mk({ rotation: r }));
   check(new Set(rots).size === 3, 'sky, cloud and buzz each draw a DIFFERENT picture — not just "something changed"');
   check(rots.every((r) => r !== mk({})), 'and each differs from an unrotated call');
+  // C8c — the last four off the register, each locked to its own picture.
+  //   edgePlay  contain rushes upfield and turns in to keep outside leverage;
+  //             crash spikes across his face. A PATH, so the arrow bends.
+  //   robberCall rob sits LOW in the hole under the crossers; overtop caps
+  //             over the route. Two jobs, two depths, so the man is drawn twice.
+  //   zoneStyle spot drops to a landmark and sits; match carries what enters.
+  //   dogGame   cross is a two-man game (the rushers swap lanes); green dog is
+  //             conditional — dashed, because he only comes if his man blocks.
+  for (const [k, a, b] of [['edgePlay', 'contain', 'crash'], ['robberCall', 'rob', 'overtop'],
+                           ['zoneStyle', 'spot', 'match'], ['dogGame', 'green', 'cross']]) {
+    const A = mk({ [k]: a }), B = mk({ [k]: b });
+    check(A !== B && A !== mk({}) && B !== mk({}),
+      `${k}: "${a}" and "${b}" each draw their own picture, and neither is the undialed card`);
+  }
 }
 
 console.log(`\nCARD LINT PROBE — ${pass} pass, ${fail} fail`);
