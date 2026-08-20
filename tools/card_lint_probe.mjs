@@ -379,6 +379,70 @@ hdr('C7 — man coverage points at the offense, and press is visible (2026-08-19
     `press ${pr.toFixed(1)} · auto ${au.toFixed(1)} · off ${of.toFixed(1)}`);
 }
 
+hdr('C8 — NO SILENT CONTROLS: a field the engine honours must change the picture');
+{
+  // THE PATTERN THIS GATES (2026-08-19). Three defects in one day shared a
+  // shape: a control that is real in the ENGINE and silent or lying on the
+  // SURFACE — the front mix that never rolled, `bring` that promised a count
+  // and delivered a rate, and `pressLevel`, which the sim honours in three
+  // places while press/off/auto rendered BYTE-IDENTICAL.
+  //
+  // `dead_surface_probe` already covers the inverse (a UI-writable key with no
+  // engine reader). This covers the direction nothing checked: the engine reads
+  // it, so the card that exists to SHOW you the call had better draw it.
+  //
+  // A/B each field against the renderer, the same technique def_stress_probe
+  // uses on the dials. Identical SVG for two different values = silent.
+  const { DEF_CALL_COVERAGES } = await import('../js/engine/defbook.js');
+  const art = (DEF_CALL_COVERAGES.find((c) => c.id === 'c1') || {}).art;
+  const base = { name: 'probe', front: '4-3', coverage: 'c1', bring: '4' };
+  const mk = (extra) => renderDefCallCard({ ...base, ...extra }, { w: 250, h: 170, art });
+
+  // KNOWN SILENT — live in the engine, not yet drawn. Each is a real gap with
+  // its reason; the list should SHRINK. A field that leaves this list and stays
+  // silent, or a NEW silent field, reds this check immediately.
+  const KNOWN_SILENT = {
+    edgePlay:   'contain/crash changes the edge technique (24 sim readers) — wants the DE arrows to angle',
+    robberCall: 'rob/overtop puts a defender in a specific job — wants a drawn robber',
+    zoneStyle:  'spot/match changes how the zones are played — wants the zone shapes to differ',
+    dogGame:    'green/cross is a pressure wrinkle — wants the rush paths to cross',
+    // HIGHEST VALUE of the four still owed: rotation is a STRUCTURAL fact about
+    // the coverage — which safety comes down and which stays over the top — so
+    // it belongs on a picture more than any other item here. Left undrawn only
+    // because what sky/cloud/buzz should each DEPICT is a football decision the
+    // owner should make, not one to invent inside a probe fix.
+    rotation:   'sky/cloud/buzz decides which safety rotates down (7 sim readers) — wants the secondary to move'
+  };
+  const cases = {
+    pressLevel: ['press', 'off'],
+    look:       ['mug', 'amoeba'],
+    bring:      ['3', '6'],
+    front:      ['4-3', '3-4'],
+    runCommit:  [0, 20],
+    edgePlay:   ['contain', 'crash'],
+    robberCall: ['rob', 'overtop'],
+    zoneStyle:  ['spot', 'match'],
+    dogGame:    ['green', 'cross'],
+    rotation:   ['sky', 'cloud']
+  };
+  const silent = [];
+  for (const [k, [a, b]] of Object.entries(cases)) {
+    if (mk({ [k]: a }) === mk({ [k]: b })) silent.push(k);
+  }
+  const unexpected = silent.filter((k) => !KNOWN_SILENT[k]);
+  const fixed = Object.keys(KNOWN_SILENT).filter((k) => !silent.includes(k));
+  unexpected.forEach((k) => console.log(`    FLAG: "${k}" is honoured by the engine but the card draws it identically either way`));
+  check(unexpected.length === 0,
+    `no NEW silent control on the def call card (${silent.length} known-silent, ${Object.keys(cases).length - silent.length} drawn)`,
+    unexpected.join(', '));
+  check(fixed.length === 0,
+    'KNOWN_SILENT is honest — nothing on the list has quietly been fixed without being removed from it',
+    fixed.length ? `now drawn, delete from the list: ${fixed.join(', ')}` : 'in sync');
+  // and the two fixed today must STAY drawn
+  check(mk({ pressLevel: 'press' }) !== mk({ pressLevel: 'off' }), 'pressLevel stays drawn');
+  check(mk({ look: 'mug' }) !== mk({ look: 'amoeba' }), 'look (mug vs amoeba) stays drawn');
+}
+
 console.log(`\nCARD LINT PROBE — ${pass} pass, ${fail} fail`);
 console.log(fail ? 'CARD LINT PROBE FAIL' : 'CARD LINT PROBE PASS');
 process.exit(fail ? 1 : 0);

@@ -6088,3 +6088,51 @@ silent again.
 
 Green ×3 plus draw_up · help_rule · dead_surface · defsheet · pressure_cohesion,
 clean build. NOT pushed.
+
+## 2026-08-19 — THE SILENT-CONTROL SWEEP (owner: "yes do it")
+
+Three defects today shared one shape: **a control that is real in the ENGINE and
+silent or lying on the SURFACE.** The front mix that never rolled, `bring` that
+promised a count and delivered a rate, and `pressLevel` that the sim honours in
+three places while the card rendered press/off/auto byte-identically. Rather
+than keep tripping over them, swept the class.
+
+**Method:** A/B every field of a defensive call card against the renderer — the
+same technique `def_stress_probe` uses on the dials. Two different values, same
+SVG = the picture ignores the control.
+
+**Result — six live controls with NO visual expression**, every one confirmed
+read by the sim (reader counts): `edgePlay` **24**, `zoneStyle` 9,
+`robberCall` 7, `rotation` 7, `pressLook`/`look` 3, `dogGame` 3.
+
+This is the direction nothing was checking. `dead_surface_probe` covers the
+inverse — a UI-writable key with no engine reader — but nothing asked whether a
+field the ENGINE honours ever reaches the screen whose job is to show the call.
+
+**Fixed now: `look`.** Mug and amoeba are literally the pre-snap PICTURE — mug
+walks the backers into the A gaps, amoeba stands everyone up so no front can be
+read — and the card drew both identically to a base look. Wired the same way as
+press, because a look IS an alignment: MUG pulls the second level down onto the
+ball (backer y 53 → 73, LOS at 114.6), AMOEBA levels it to one depth, the
+picture with no picture. Both now render distinctly.
+
+**NOT fixed, and deliberately so — recorded in `KNOWN_SILENT`:** `edgePlay`,
+`robberCall`, `zoneStyle`, `dogGame`, `rotation`. Each carries its reason and
+what it wants. **`rotation` is the highest value of the four** — sky/cloud/buzz
+is a STRUCTURAL fact about the coverage (which safety comes down, which stays
+over the top), so it belongs on a picture more than anything else on the list.
+It is undrawn only because what each value should DEPICT is a football decision
+for the owner, not one to invent inside a probe fix.
+
+**Gated as a CLASS, not as instances** — `card_lint_probe` gains **C8**:
+- a NEW silent field reds immediately (it caught `rotation` the moment the
+  check existed, which is how it ended up on the list rather than forgotten);
+- `KNOWN_SILENT` must stay HONEST — if something on the list quietly starts
+  being drawn, the check reds until it is removed from the list, so the debt
+  register cannot rot;
+- `pressLevel` and `look` must STAY drawn.
+
+The list is the deliverable: it makes the debt visible and it should shrink.
+
+Green ×3, clean build, plus draw_up · dead_surface · help_rule · defsheet.
+NOT pushed.

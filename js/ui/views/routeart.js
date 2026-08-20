@@ -338,7 +338,30 @@ function renderDefCallCard(call, opts) {
   const pressLvl = o.pressLevel || call.pressLevel || "auto";
   const _PRESS_SHIFT = { press: 0.1, off: -0.08 };
   const _pressable = (s) => /CB|NB/.test(s.pos) || /CB|NB/.test(s.label || "");
-  const slotY = (s) => sy(s.y + (_pressable(s) ? (_PRESS_SHIFT[pressLvl] || 0) : 0));
+  // ── THE LOOK (2026-08-19) ────────────────────────────────────────────────
+  // `look` is the pre-snap PICTURE — mug walks the backers up into the A gaps
+  // to threaten the interior, amoeba stands everybody up so the offense cannot
+  // read a front at all. The sim honours both (mugCall/amoebaCall gate real
+  // pressure flavours), and the card — the one screen whose whole job is to
+  // show what the offense will see — drew them identically to a base look.
+  //
+  // Same treatment as press, for the same reason: a LOOK is an alignment, so
+  // alignment is what moves. MUG pulls the second level down onto the ball.
+  // AMOEBA levels the second level to one depth — the picture with no picture.
+  const lookId = o.look || call.look || null;
+  const _backer = (s) => /LB|OLB|MLB/.test(s.pos) || /WILL|MIKE|SAM/.test(s.label || "");
+  const _AMOEBA_Y = 0.5;
+  const _lookY = (s) => {
+    if (!_backer(s)) return null;
+    if (lookId === "mug") return s.y + 0.16;      // walked up into the gaps
+    if (lookId === "amoeba") return _AMOEBA_Y;    // all one depth, no front to read
+    return null;
+  };
+  const slotY = (s) => {
+    const lk = _lookY(s);
+    if (lk != null) return sy(lk);
+    return sy(s.y + (_pressable(s) ? (_PRESS_SHIFT[pressLvl] || 0) : 0));
+  };
   let svg = `<rect width="${W}" height="${H}" rx="0" class="play-card-turf"/>`;
   svg += `<line x1="0" y1="${_fmt(losY)}" x2="${W}" y2="${_fmt(losY)}" class="play-card-los"/>`;
   // coverage zones
