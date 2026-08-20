@@ -640,3 +640,33 @@ modelled" when F2 was read):
   farther to travel to get in phase, so his pitch muffs more and his edge is
   tighter. INFERENCE, flagged as such in code: the source gives the target
   relationship, not a muff curve. Kill switch `__noPitchRel`.
+
+---
+
+## G · COVERAGE ROTATION — sky / cloud / buzz (read 2026-08-19)
+
+Fetched because the owner asked "i dont honestly know can you find anything for
+these?" about the `rotation` control, which the sim honours (7 readers) and the
+call card drew identically for every value. Standard coaching taxonomy, and it
+turned out to be cleanly drawable.
+
+**The three differ by WHO forces the edge and where he ends up:**
+
+| call | force defender | where he goes | who has the deep thirds |
+|---|---|---|---|
+| **Sky** | the SAFETY | down to the **curl/flat** (outside) | 2 corners + the other safety |
+| **Cloud** | the **CORNER** | squats the flat and stays wide ("clouds" it) | 2 safeties + 1 corner |
+| **Buzz** | the SAFETY | down to the **middle hook** (inside) — robber-ish, and he helps the run fit | 2 corners + 1 safety |
+
+Also noted: the same family of calls carries side names — *Rita/Linda* for
+inside rotations, *Roger/Lou* for outside — and Pete Carroll's usage of "buzz"
+stresses starting WITH DEPTH and only then buzzing down, which is why buzz reads
+as a hook/robber player rather than a flat player.
+
+**Used for:** `renderDefCallCard` now draws all three distinctly (verified: sky,
+cloud and buzz each produce a different picture, and each differs from an
+unrotated call). Rotation is toward the card's right by convention — a book card
+has no offensive formation, so it cannot know the strength; the SHAPE is what is
+being shown, not the side.
+
+Sources: [Big Blue View — coverage terms glossary](https://www.bigblueview.com/2023/6/4/23742492/defensive-pass-coverage-terms-explained-glossary-of-terms) · [MatchQuarters — defensive glossary](https://www.matchquarters.com/p/comprehensive-defensive-football-glossary) · [Brophy — Saban MOF safety principles, Cover 3](http://brophyfootball.blogspot.com/2009/10/nick-saban-middle-of-field-safety_05.html) · [SI — Seahawks Cover 3 buzz vs sky](https://www.si.com/nfl/seahawks/onsi/news/seahawks-losing-the-tuff-cover-3-buzz-and-sky-scheme-battle)

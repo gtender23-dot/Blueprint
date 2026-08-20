@@ -6136,3 +6136,42 @@ The list is the deliverable: it makes the debt visible and it should shrink.
 
 Green ×3, clean build, plus draw_up · dead_surface · help_rule · defsheet.
 NOT pushed.
+
+### 2026-08-19 — rotation researched and drawn; the register drops to four
+
+Owner: *"i dont honestly know can you find anything for these?"* — so the
+standing research law applied: sources set the shape, probes decide truth.
+Checked `SOURCE_LIBRARY.md` first (it had cloud and robber, no rotation
+taxonomy), then fetched. Logged as **section G** of the source library.
+
+**Sky / cloud / buzz differ by WHO forces the edge and where he lands:**
+SKY the safety down to the **curl/flat** (outside) · BUZZ the safety down to the
+**middle hook** (inside), robber-ish and helping the run fit · CLOUD the
+**CORNER** squats the flat with a safety rotating over the top behind him.
+
+**Drawn.** Verified the three produce three DIFFERENT pictures rather than
+merely differing from "none" — safety to (196,63) outside for sky, (129,58)
+inside for buzz, corner squatted to (214,58) with a safety over the top for
+cloud. Rotation is toward the card's right by convention: a book card has no
+offensive formation so it cannot know the strength, and the shape is the point.
+
+`card_lint_probe` gains **C8b** asserting exactly that — three distinct pictures
+AND each distinct from unrotated. A weaker "it changed" check would have passed
+on all three rendering the same wrong thing.
+
+**KNOWN_SILENT is now four**, and the honesty check earned its keep: removing
+`rotation` from the list was forced by the probe, which reds if a listed field
+quietly starts being drawn.
+
+**Still owed, with what each wants** (specs derived while researching, so the
+next pass does not start cold):
+- **`edgePlay`** (24 sim readers, the biggest) — contain vs crash is the DE's
+  path: contain rushes upfield and turns in to keep outside leverage, crash
+  spikes inside. Cheapest remaining fix: angle the existing rush arrows.
+- **`robberCall`** — rob sits LOW in the hole under the crossers (the library
+  already has Cover-1 robber detail at entries 148/151: "don't rush the drop,
+  sit low"); overtop caps over the route instead. Wants a drawn robber dot.
+- **`zoneStyle`** — spot drops to landmarks and sits; match carries receivers.
+  Wants the zone boxes to differ (static landmark vs carrying arrows).
+- **`dogGame`** — green dog sends a coverage backer when his man stays in to
+  block; cross is a two-man game whose rushers swap paths. Wants crossed arrows.

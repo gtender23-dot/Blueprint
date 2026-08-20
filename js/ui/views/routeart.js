@@ -357,7 +357,41 @@ function renderDefCallCard(call, opts) {
     if (lookId === "amoeba") return _AMOEBA_Y;    // all one depth, no front to read
     return null;
   };
+  // ── ROTATION: sky / cloud / buzz (2026-08-19) ────────────────────────────
+  // Standard coaching taxonomy — the three differ by WHO forces the edge and
+  // where he ends up, which is a picture, not a number:
+  //   SKY   — the SAFETY rotates down to the CURL/FLAT (outside). Two corners
+  //           and the other safety take the deep thirds.
+  //   CLOUD — the CORNER squats the flat and stays wide ("clouds" it), and a
+  //           safety rotates over the top behind him. Two safeties deep.
+  //   BUZZ  — the safety drops to the MIDDLE HOOK (inside), robber-ish, and
+  //           helps the run fit. Two corners and one safety deep.
+  // Rotation is toward the card's RIGHT by convention: a book card has no
+  // offensive formation, so it cannot know the strength — the shape is what is
+  // being shown, not the side.
+  const rot = o.rotation || call.rotation || null;
+  const _isS = (s) => /^S$|^FS$|^SS$/.test(s.pos) || /FS|SS/.test(s.label || "");
+  const _isCB = (s) => /CB/.test(s.pos) || /CB/.test(s.label || "");
+  const _rotXY = (s) => {
+    if (!rot) return null;
+    const right = s.x >= 0.5;
+    if (rot === "sky" && _isS(s) && right) return { x: 0.86, y: 0.5 };   // down to the flat
+    if (rot === "buzz" && _isS(s) && right) return { x: 0.56, y: 0.46 }; // down to the middle hook
+    if (rot === "cloud") {
+      if (_isCB(s) && right) return { x: s.x, y: 0.46 };                 // corner squats the flat
+      if (_isS(s) && right) return { x: 0.78, y: 0.04 };                 // safety over the top behind him
+    }
+    // the deep safety takes the middle third on any single-high rotation
+    if ((rot === "sky" || rot === "buzz") && _isS(s) && !right) return { x: 0.5, y: 0.04 };
+    return null;
+  };
+  const slotX = (s) => {
+    const r = _rotXY(s);
+    return sx(r ? r.x : s.x);
+  };
   const slotY = (s) => {
+    const r = _rotXY(s);
+    if (r) return sy(r.y);
     const lk = _lookY(s);
     if (lk != null) return sy(lk);
     return sy(s.y + (_pressable(s) ? (_PRESS_SHIFT[pressLvl] || 0) : 0));
@@ -443,7 +477,7 @@ function renderDefCallCard(call, opts) {
       const gx = sx(Math.max(0.04, Math.min(0.96, s.x)));
       const gy = losY + (isBacker ? 15 : 4);
       const y1 = slotY(s) + 7;
-      svg += `<line x1="${_fmt(sx(s.x))}" y1="${_fmt(y1)}" x2="${_fmt(gx)}" y2="${_fmt(gy - 4)}" class="dc-man"/><circle cx="${_fmt(gx)}" cy="${_fmt(gy)}" r="3.6" class="dc-ghost"/>`;
+      svg += `<line x1="${_fmt(slotX(s))}" y1="${_fmt(y1)}" x2="${_fmt(gx)}" y2="${_fmt(gy - 4)}" class="dc-man"/><circle cx="${_fmt(gx)}" cy="${_fmt(gy)}" r="3.6" class="dc-ghost"/>`;
     });
   }
   // ghost offense
@@ -477,8 +511,8 @@ function renderDefCallCard(call, opts) {
   const rushers = dl.slice(0, bring);
   const droppers = dl.slice(bring);
   const extra = rushers.length < bring ? edges.concat(dogs, dbs).slice(0, bring - rushers.length) : [];
-  rushers.forEach((s) => { svg += arrow(sx(s.x), slotY(s) + 6, "dc-rush"); });
-  extra.forEach((s) => { svg += arrow(sx(s.x), slotY(s) + 6, "dc-dog"); });
+  rushers.forEach((s) => { svg += arrow(slotX(s), slotY(s) + 6, "dc-rush"); });
+  extra.forEach((s) => { svg += arrow(slotX(s), slotY(s) + 6, "dc-dog"); });
   droppers.forEach((dropper, di) => {
     const dSide = dropper.x >= 0.5 ? 1 : -1; // bend toward his own hook, in bounds
     svg += `<path d="M${_fmt(sx(dropper.x))} ${_fmt(sy(dropper.y) - 6)} C ${_fmt(sx(dropper.x) + dSide * 8)} ${_fmt(sy(dropper.y) - 24)}, ${_fmt(sx(dropper.x) + dSide * 20)} ${_fmt(sy(dropper.y) - 30)}, ${_fmt(sx(dropper.x) + dSide * 26)} ${_fmt(sy(dropper.y) - 38)}" class="dc-drop"/><circle cx="${_fmt(sx(dropper.x) + dSide * 28)}" cy="${_fmt(sy(dropper.y) - 40)}" r="2.8" class="dc-drop-dot"/>`;
@@ -487,7 +521,7 @@ function renderDefCallCard(call, opts) {
   // defenders on top
   for (const s of layout.slots) {
     const cls = _DPOS_CLASS[s.pos] || "fd-lb";
-    svg += `<g><rect x="${_fmt(sx(s.x) - 9)}" y="${_fmt(slotY(s) - 7)}" width="18" height="14" rx="3" class="fd-node ${cls}"/><text x="${_fmt(sx(s.x))}" y="${_fmt(slotY(s) + 3)}" class="fd-lbl">${_esc(s.label)}</text></g>`;
+    svg += `<g><rect x="${_fmt(slotX(s) - 9)}" y="${_fmt(slotY(s) - 7)}" width="18" height="14" rx="3" class="fd-node ${cls}"/><text x="${_fmt(slotX(s))}" y="${_fmt(slotY(s) + 3)}" class="fd-lbl">${_esc(s.label)}</text></g>`;
   }
   return `<svg class="play-card-svg def-call-card" viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${_esc(call.name || "Defensive call")}">${svg}</svg>`;
 }

@@ -405,13 +405,8 @@ hdr('C8 — NO SILENT CONTROLS: a field the engine honours must change the pictu
     edgePlay:   'contain/crash changes the edge technique (24 sim readers) — wants the DE arrows to angle',
     robberCall: 'rob/overtop puts a defender in a specific job — wants a drawn robber',
     zoneStyle:  'spot/match changes how the zones are played — wants the zone shapes to differ',
-    dogGame:    'green/cross is a pressure wrinkle — wants the rush paths to cross',
-    // HIGHEST VALUE of the four still owed: rotation is a STRUCTURAL fact about
-    // the coverage — which safety comes down and which stays over the top — so
-    // it belongs on a picture more than any other item here. Left undrawn only
-    // because what sky/cloud/buzz should each DEPICT is a football decision the
-    // owner should make, not one to invent inside a probe fix.
-    rotation:   'sky/cloud/buzz decides which safety rotates down (7 sim readers) — wants the secondary to move'
+    dogGame:    'green/cross is a pressure wrinkle — wants the rush paths to cross'
+    // rotation LEFT THIS LIST 2026-08-19 — researched and drawn. See C8b below.
   };
   const cases = {
     pressLevel: ['press', 'off'],
@@ -441,6 +436,16 @@ hdr('C8 — NO SILENT CONTROLS: a field the engine honours must change the pictu
   // and the two fixed today must STAY drawn
   check(mk({ pressLevel: 'press' }) !== mk({ pressLevel: 'off' }), 'pressLevel stays drawn');
   check(mk({ look: 'mug' }) !== mk({ look: 'amoeba' }), 'look (mug vs amoeba) stays drawn');
+  // C8b — ROTATION, researched 2026-08-19 (owner: "i dont honestly know can you
+  // find anything for these?"). The three are distinguished by WHO forces the
+  // edge and where he lands, so the three cards must not merely differ from
+  // "none" — they must differ from EACH OTHER:
+  //   SKY   safety down to the curl/FLAT (outside)
+  //   BUZZ  safety down to the middle HOOK (inside), robber-ish, helps the run
+  //   CLOUD the CORNER squats the flat, a safety rotates over the top behind
+  const rots = ['sky', 'cloud', 'buzz'].map((r) => mk({ rotation: r }));
+  check(new Set(rots).size === 3, 'sky, cloud and buzz each draw a DIFFERENT picture — not just "something changed"');
+  check(rots.every((r) => r !== mk({})), 'and each differs from an unrotated call');
 }
 
 console.log(`\nCARD LINT PROBE — ${pass} pass, ${fail} fail`);
