@@ -332,6 +332,60 @@ hdr('P5 — the blitzer list (batch 3): WHO comes');
   check(ob > 0, 'Sometimes still shows up — a change-up, not a bench', `${ob}`);
 }
 
+hdr('P6 — hybrid defensive jobs, and the Jack the coach names (2026-08-19)');
+{
+  // Owner: "im also looking at nickleback and rover the DB in dime, War … these
+  // use S, CB, and LB just like how our offensive spots use different
+  // positions." They were right that it is the same idea, and the job mesh
+  // already existed — it was simply never surfaced or fully consistent.
+  const { DEF_FIELD_LAYOUTS, DEF_BLITZ_ELIGIBLE } = await import('../js/constants_field.js');
+  const { SLOT_ELIGIBLE_POS } = await import('../js/engine/fieldassign.js');
+  const { splitRushOlbs } = await import('../js/engine/formations.js');
+
+  // The nickel was the ONLY hybrid job that refused a backer while accepting a
+  // wide receiver through SLOT_ELIGIBILITY. Its cousins (ROVER/WAR/Dime DB, all
+  // SPACE) always took S/LB/CB.
+  check(SLOT_ELIGIBLE_POS.NB.includes('LB'),
+    'the nickel accepts a LINEBACKER — it is staffed by converted safeties and undersized backers, not receivers',
+    JSON.stringify(SLOT_ELIGIBLE_POS.NB));
+  for (const m of ['NB', 'SPACE', 'OVERHANG', 'STACKER']) {
+    check(Array.isArray(SLOT_ELIGIBLE_POS[m]) && SLOT_ELIGIBLE_POS[m].length > 1,
+      `job mesh "${m}" pools more than one position`, JSON.stringify(SLOT_ELIGIBLE_POS[m]));
+  }
+  // The named hybrids must each carry a mesh, or the picker silently offers
+  // only their listed position and the whole idea is invisible.
+  for (const [front, id, label] of [['Nickel', 'NB', 'NB'], ['Dime', 'S_D', 'DB'],
+                                    ['3-3-5', 'S_W', 'WAR'], ['Big Nickel', 'S_R', 'ROV'],
+                                    ['3-4', 'OLB_L', 'LOLB'], ['3-4', 'OLB_R', 'ROLB']]) {
+    const sl = (DEF_FIELD_LAYOUTS[front].slots || []).find((x) => x.id === id);
+    check(!!sl && !!sl.mesh, `${front} ${label} is a HYBRID job (mesh: ${sl && sl.mesh})`);
+  }
+  // The 3-4's outside backers got a mesh because ONE of them is now the Jack
+  // and the other is a coverage player — two different jobs at the same slot.
+  check((DEF_FIELD_LAYOUTS['3-4'].slots.find((x) => x.id === 'OLB_R') || {}).role === 'OLB-Rush',
+    'but neither 3-4 OLB slot ASSERTS which is the cover man — the Jack is derived, not a side');
+
+  // THE JACK HONOURS A NAMED BLITZER. The design note promised this and the
+  // first implementation did not do it — splitRushOlbs never read the list.
+  const ids = ['olbA', 'olbB'];
+  const pl = (id) => ({ id, position: 'OLB', attributes: { SPD: id === 'olbA' ? 80 : 60, AGI: 70, PWR: 60, STR: 60, JMP: 50, TEC: 60, AWR: 60 } });
+  check(splitRushOlbs('3-4', ids, pl, null).jacks[0] === 'olbA',
+    'with no list the better pass rusher is the Jack');
+  check(splitRushOlbs('3-4', ids, pl, { olbB: 'often' }).jacks[0] === 'olbB',
+    'NAME one outside backer and he takes the Jack seat, even over the better rusher');
+  check(splitRushOlbs('3-4', ids, pl, { olbA: 'often', olbB: 'often' }).jacks[0] === 'olbA',
+    'name BOTH and it falls back to rating — "both blitz often" says nothing about which is the base rusher');
+
+  // The explainer must obey the help rule like every other surface.
+  const dc = src('js/ui/views/depthchart.js');
+  const blurbs = (dc.match(/var _JOB_BLURB = \{[\s\S]*?\n\};/) || [''])[0];
+  check(blurbs.length > 0, 'the defensive spot explainer exists');
+  check(!/\d/.test(blurbs.replace(/2026-08-19/g, '')),
+    'and its copy prints no rating, weight or threshold — the standing help rule');
+  check(/renderDefFrontInfo/.test(dc) && /depthTab === "defense" \? renderDefFrontInfo/.test(dc),
+    'it is wired to the DEFENSE tab, mirroring the offense overlay');
+}
+
 console.log(`\nPRESSURE COHESION PROBE — ${pass} pass, ${fail} fail`);
 console.log(fail ? 'PRESSURE COHESION PROBE FAIL' : 'PRESSURE COHESION PROBE PASS');
 process.exit(fail ? 1 : 0);

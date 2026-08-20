@@ -5184,11 +5184,11 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
     // __noVarPkg restores base-personnel fielding for the A/B.
     const offField = resolveOffField(offFormationId, offFA == null ? void 0 : offFA.slots, offFA == null ? void 0 : offFA.shares, offDepthWithSlot, null, offPosOf, offById, offVar);
     const defHasPins = !!defFA && (Object.keys(defFA.slots || {}).length > 0 || Object.values(defFA.blitzShares || {}).some((v) => v > 0) || defFA.heat != null);
-    const defBaseField = defFrontId === baseFront || defHasPins ? resolveDefField(defFrontId, defFA == null ? void 0 : defFA.slots, defFA == null ? void 0 : defFA.blitzShares, activeDefDepth, null, defPosOf, defById) : null;
+    const defBaseField = defFrontId === baseFront || defHasPins ? resolveDefField(defFrontId, defFA == null ? void 0 : defFA.slots, defFA == null ? void 0 : defFA.blitzShares, activeDefDepth, null, defPosOf, defById, defPlan.blitzers) : null;
     // HEAT retired 2026-08-19 — the aggression stop is the single owner of
     // "how often". Nothing rides here any more.
     const offPersonnel = offField ? offField.personnel : resolvePersonnel(offFormationId, activeOffDepth, offVar);
-    const defPersonnel = defBaseField ? defBaseField.personnel : resolveDefPersonnel(defFrontId, activeDefDepth, defRoster);
+    const defPersonnel = defBaseField ? defBaseField.personnel : resolveDefPersonnel(defFrontId, activeDefDepth, defRoster, defPlan.blitzers);
     const qb0 = (() => {
       const id = ((offPersonnel == null ? void 0 : offPersonnel.QB) || [])[0];
       return id ? offRoster.find((p) => p.id === id) : null;

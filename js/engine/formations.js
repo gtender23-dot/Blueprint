@@ -93,18 +93,35 @@ function rushOlbCount(frontId) {
 // Split a front's OLBs into the men who RUSH and the men who DROP. The Jack is
 // the better pass rusher on the field — what a real staff does — so it needs no
 // coach input, and a blitzer list can override it by name later.
-function splitRushOlbs(frontId, olbIds, playerOf) {
+// `blitzers` is the coach's blitzer list (gp.blitzers). THE JACK IS NOT THE
+// SAME QUESTION AS THE BLITZ — the Jack rushes on a plain four-man rush; the
+// list says who abandons COVERAGE when a pressure fires. But a coach who has
+// named an outside backer is telling you he wants that man coming, and on a
+// front with a Jack seat the strongest way to honour that is to give him the
+// seat: he then rushes every down instead of occasionally.
+//
+// The rule is deliberately narrow. It applies only when EXACTLY ONE of the
+// front's outside backers is named — that is an unambiguous instruction. Name
+// both (or neither) and it falls back to the pass-rush rating, because "both
+// my OLBs blitz often" says nothing about which one is the base rusher.
+function splitRushOlbs(frontId, olbIds, playerOf, blitzers) {
   const ids = olbIds || [];
   const n = rushOlbCount(frontId);
   if (!n) return { jacks: [], cover: [...ids] };
   if (ids.length <= n) return { jacks: [...ids], cover: [] };
+  if (blitzers && typeof blitzers === "object") {
+    const named = ids.filter((id) => blitzers[id]);
+    if (named.length === n) {
+      return { jacks: [...named], cover: ids.filter((id) => !blitzers[id]) };
+    }
+  }
   const scored = ids.map((id) => {
     const pl = playerOf ? playerOf(id) : null;
     return { id, v: pl ? roleRating(pl, "OLB-Rush") : 0 };
   }).sort((a, b) => b.v - a.v || String(a.id).localeCompare(String(b.id)));
   return { jacks: scored.slice(0, n).map((x) => x.id), cover: scored.slice(n).map((x) => x.id) };
 }
-function resolveDefPersonnel(frontId, depthChart, roster = null) {
+function resolveDefPersonnel(frontId, depthChart, roster = null, blitzers = null) {
   // Per-front position counts moved to constants.js (DEF_FRONT_COUNTS,
   // scheme-aware-roles pass Aug 2026) so the role/recruiting helpers read the
   // SAME table that fields the eleven — the two can never drift. The 46/Bear
@@ -179,7 +196,7 @@ function resolveDefPersonnel(frontId, depthChart, roster = null) {
   // Only the JACK rushes — the other OLB is a coverage backer. RUSH_SLOTS still
   // says a 3-4 rushes its OLBs; HOW MANY comes from the front's role list.
   const _rp = roster ? (id) => roster.find((x) => x.id === id) || null : null;
-  const _split = splitRushOlbs(frontId, OLB, _rp);
+  const _split = splitRushOlbs(frontId, OLB, _rp, blitzers);
   const _coverOlb = rushSlots.includes("OLB") ? _split.cover : [];
   const slotMap2 = { DE, DT, OLB: _split.jacks, LB: ILB, CB, S };
   const DL = rushSlots.flatMap((k) => slotMap2[k]);

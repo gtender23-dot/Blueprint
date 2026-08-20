@@ -1,8 +1,8 @@
 import { DEF_BLITZ_ELIGIBLE, DEF_DROP_ELIGIBLE, DEF_FIELD_LAYOUTS, OFF_FIELD_LAYOUTS } from '../../constants_field.js';
-import { C, FORMATIONS, FORMATION_PLAYBOOK, SLOT_ELIGIBILITY, STARTER_COUNTS } from '../../constants.js';
+import { C, FORMATIONS, FORMATION_PLAYBOOK, FRONT_ROLES, SLOT_ELIGIBILITY, STARTER_COUNTS } from '../../constants.js';
 import { defaultShareFor, ensureFieldAssignments, offFieldSlots, resolveDefField, resolveOffField, SLOT_ELIGIBLE_POS } from '../../engine/fieldassign.js';
 import { carriedOffLooks } from '../../engine/playbook.js';
-import { carriedDefFronts } from '../../engine/formations.js';
+import { carriedDefFronts, splitRushOlbs } from '../../engine/formations.js';
 import { bridgeCoversSlot, bridgeOf, sizeFitForSlot } from '../../engine/traits.js';
 import { derivedArchetype, posAdjust, roleRating } from '../../engine/player.js';
 import { buildDepthChart, buildRoleSortedDepthOrder } from '../../engine/world.js';
@@ -113,6 +113,7 @@ function renderDepthChart(embed = false) {
     ${picker ? renderPicker2(school) : ""}
     ${uniqSwap ? renderUniqSwapPicker(school) : ""}
     ${formationInfoOpen && depthTab === "offense" ? renderFormationInfo(activeOffFormation, { slots: offFieldSlots(activeOffFormation, activeOffVariation) || [] }) : ""}
+    ${formationInfoOpen && depthTab === "defense" ? renderDefFrontInfo(school, defFrontTab || (gp.defFront && gp.defFront !== "auto" ? gp.defFront : baseFront)) : ""}
   </div>
 `;
 }
@@ -271,6 +272,84 @@ function renderFormationMiniDiagram(fid, layout) {
       <span class="formation-mini-los" aria-hidden="true">LOS</span>
       ${slots}
     </div>
+  </div>`;
+}
+// ── THE DEFENSIVE SPOT EXPLAINER (2026-08-19) ────────────────────────────────
+// The offense has had a positions overlay for months; the defense had nothing,
+// so a coach looking at Dime saw "DB" with no way to learn it will take a
+// safety, a corner OR a linebacker. That machinery all existed — the job mesh
+// (NB / OVERHANG / STACKER / SPACE) pools from the SAME table the resolver
+// enforces — it was simply never surfaced. Everything below is DERIVED, so it
+// cannot drift from what the game actually does.
+//
+// Help rule: describe the job, never print a rating, weight or threshold.
+var _JOB_BLURB = {
+  NB: "The nickel. He lives in the slot — quick feet, tackles in space, and he is on the field the moment the offense adds a receiver.",
+  SPACE: "A space player. Part safety, part backer: he covers the slot or the back, fits the run from depth, and he is the body that lets you stay in a light box.",
+  OVERHANG: "An overhang. He sets the edge — heavy enough to hold it against the run, athletic enough to drop into the flat when the call asks him to.",
+  STACKER: "A stacked backer. He reads the play from depth, fills downhill, and carries the back or tight end when the coverage is man."
+};
+function defSpotInfo(front, slot, jackIds) {
+  const pool = slot.mesh ? SLOT_ELIGIBLE_POS[slot.mesh] : null;
+  const eligible = pool && pool.length ? pool : [slot.pos];
+  const canBlitz = (DEF_BLITZ_ELIGIBLE[front] || []).includes(slot.id);
+  const canDrop = (DEF_DROP_ELIGIBLE[front] || []).includes(slot.id);
+  const isJack = jackIds && jackIds.includes(slot.id);
+  const bits = [];
+  if (slot.mesh && _JOB_BLURB[slot.mesh]) bits.push(_JOB_BLURB[slot.mesh]);
+  if (isJack) bits.push("Right now he is your RUSH BACKER — on a plain four-man rush he is the one who comes, and the other outside backer drops into coverage. Name him on your blitzer list to keep the job with him.");
+  else if (canDrop) bits.push("He can bail into coverage on a fire zone while a backer comes behind him.");
+  if (canBlitz && !isJack) bits.push("He can be named on your blitzer list — a coverage man who comes is what a blitz IS.");
+  return { eligible, detail: bits.join(" ") || "A base job in this front — he plays the position he is listed at." };
+}
+function renderDefFrontInfo(school, front) {
+  const layout = DEF_FIELD_LAYOUTS[front];
+  if (!layout) return "";
+  // which outside backer is currently the Jack — derived exactly as the sim
+  // derives it, including the blitzer-list override, so the screen and the
+  // field cannot disagree.
+  const gp = (school == null ? void 0 : school.gameplan) || {};
+  const entry = ((gp.fieldAssignments || {}).defense || {})[front] || {};
+  const resolved = resolveDefField(front, entry.slots, entry.blitzShares, buildActiveDepth(school), buildRatingById(school), posById(school), byId(school), gp.blitzers);
+  const bySlot = (resolved == null ? void 0 : resolved.bySlot) || {};
+  const olbSlots = layout.slots.filter((s) => /OLB/.test(s.pos));
+  const olbIds = olbSlots.map((s) => bySlot[s.id]).filter(Boolean);
+  const split = splitRushOlbs(front, olbIds, byId(school), gp.blitzers);
+  const jackSlotIds = olbSlots.filter((s) => split.jacks.includes(bySlot[s.id])).map((s) => s.id);
+  const groups = [
+    ["Up front", (s) => /DE|DT|NT|EDGE/.test(s.pos)],
+    ["Linebackers", (s) => /LB|OLB|MLB/.test(s.pos)],
+    ["Secondary", (s) => /CB|NB|S|DB/.test(s.pos)]
+  ];
+  return `
+  <div class="picker-overlay formation-info-overlay" data-formation-info-close="bg">
+    <section class="picker-panel formation-info-panel" data-formation-info-close="stop"
+             role="dialog" aria-modal="true" aria-labelledby="def-front-info-title">
+      <div class="picker-head">
+        <div>
+          <div class="picker-title" id="def-front-info-title">${escapeHtml(front)} \u2014 every job</div>
+          <div class="picker-sub">who can play each spot, and what he is asked to do</div>
+        </div>
+        <button class="picker-x" type="button" data-formation-info-close="x" aria-label="Close the front guide">\u2715</button>
+      </div>
+      <div class="formation-info-list">
+        ${groups.map(([title, test]) => {
+    const rows = layout.slots.filter(test);
+    if (!rows.length) return "";
+    return `<div class="formation-info-unit">
+          <div class="formation-info-unit-title">${escapeHtml(title)}</div>
+          ${rows.map((s) => {
+      const info = defSpotInfo(front, s, jackSlotIds);
+      const who = bySlot[s.id] ? fullName(byId(school)(bySlot[s.id]) || {}) : null;
+      return `<div class="formation-info-spot">
+              <div class="formation-info-line-labels"><span>${escapeHtml(s.label)}</span>${who ? `<span class="muted"> \u00B7 ${escapeHtml(who)}</span>` : ""}</div>
+              <div class="formation-info-detail"><strong>Eligible:</strong> ${info.eligible.map(escapeHtml).join(" \u00B7 ")}. ${escapeHtml(info.detail)}</div>
+            </div>`;
+    }).join("")}
+        </div>`;
+  }).join("")}
+      </div>
+    </section>
   </div>`;
 }
 function renderFormationInfo(fid, layout) {
@@ -651,6 +730,13 @@ function renderDefense(school, gp, front, defFronts) {
     ${(defFronts && defFronts.length ? defFronts : [baseFront]).filter((fid) => DEF_FIELD_LAYOUTS[fid]).map((fid) => `
       <button class="ff-pill${fid === baseFront ? " active" : ""}" data-dfront="${fid}">${fid}${fid === identityFront ? " \u2605" : ""}</button>`).join("")}
     <span class="ff-hint">\u2605 = your identity front \xB7 these are the fronts your defensive book calls \xB7 pins here apply whenever this front takes the field \xB7 situational subs are automatic</span>
+  </div>
+
+  <div class="formation-info-row">
+    <button class="btn-ghost formation-info-btn" type="button" data-formation-info-open="1"
+            aria-label="Explain the jobs in ${escapeHtml(baseFront)}">
+      <span aria-hidden="true">\u24D8</span> Every job in ${escapeHtml(baseFront)} \u2014 who can play it, what he does
+    </button>
   </div>
 
   <details class="dc-tip"${depthSecOpen["tip:defense"] ? " open" : ""} data-do-sec="tip:defense">

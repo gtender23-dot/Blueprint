@@ -6214,3 +6214,63 @@ plan_cohesion (97/0) all green.
 line direction, press, look, rotation, and these four. Still owed separately:
 `covfam_probe`, the Playwright tier, browser eyeballs on the three changed
 screens, and a night run before deploy. NOT pushed.
+
+## 2026-08-19 — HYBRID DEFENSIVE JOBS + THE DEFENSIVE SPOT EXPLAINER
+
+Owner: *"im also looking at nickleback and rover the DB in dime, War … these use
+S, CB, and LB just like how our offensive spots use different positions."* He
+was right that it is the same idea — and the machinery already existed. The job
+mesh (**NB / OVERHANG / STACKER / SPACE**) pools from the SAME table the
+resolver enforces, with a bridge-trait waiver and a size window. It was simply
+never surfaced, and it was not consistent.
+
+**Three things landed.**
+
+**1 · The nickel was the odd one out.** `NB` pooled `["CB","S"]` — no
+linebacker — while `SLOT_ELIGIBILITY` let a CB-posed slot accept a **wide
+receiver** at 0.55. So the nickel took a receiver but refused a backer, exactly
+backwards from how the position is staffed. Its cousins (ROVER, WAR and the Dime
+DB, all `SPACE`) already took S/LB/CB. Widened to `["CB","S","LB"]`.
+
+**2 · The 3-4's outside backers became real OVERHANG jobs** (`OLB/DE/LB`). They
+had no mesh at all, which mattered from today: ONE of them is now the Jack who
+rushes and the other drops into coverage, so the slot needs to accept a rush
+body OR a coverage body. **Neither slot asserts which is which** — I briefly set
+`OLB_R.role = "OLB-Cover"` and reverted it, because the Jack is derived at
+runtime and is not fixed to a side; the slot table would have lied whenever the
+better rusher was the left one.
+
+**3 · THE JACK NOW HONOURS A NAMED BLITZER — a promise that was written and not
+built.** The redesign note said *"Override: the blitzer list. Name your Jack
+Often and he is your rusher."* `splitRushOlbs` never read `gp.blitzers`. Caught
+by the owner asking *"isn't the jack covered by our blitz fix?"* — the honest
+answer being no: the Jack is who rushes on a plain four-man rush, the list is
+who abandons COVERAGE when a pressure fires. Two different questions, and the
+bridge between them was missing. Now wired, with a deliberately narrow rule:
+
+| named | Jack |
+|---|---|
+| neither OLB | the better pass rusher (unchanged) |
+| exactly one | **that man**, even over the better rusher |
+| both | falls back to rating — "both blitz often" says nothing about which is the base rusher |
+
+`blitzers` threaded to `resolveDefField` and `resolveDefPersonnel` so BOTH
+personnel paths agree.
+
+**4 · The explainer.** The offense has had a positions overlay for months; the
+defense had none, so a coach on Dime saw "DB" with no way to learn it takes a
+safety, a corner OR a backer. Built as the MIRROR of the offensive overlay
+(same button, same panel, same tab state) rather than a new pattern. Everything
+is DERIVED — the mesh pool, the blitz/drop eligibility, and **which outside
+backer is currently your Jack, resolved exactly as the sim resolves it including
+the list override** — so the screen cannot drift from the field.
+
+**Gates.** Clean build; `pressure_cohesion_probe` grown to **P6 / 69 checks**,
+green ×3; scheme_role · help_rule (the explainer's copy prints no coefficient) ·
+dead_surface · plan_cohesion (97/0) · starter_hold · save_migration · bench all
+green. Bands N=500: points 25.7, rush 150.6, sacks 2.13, INT% 2.09 — inside, and
+personnel eligibility widening does not move them.
+
+**Noted, not done:** the 4-3 still has no meshed slot. Defensible — it is a base
+front of natural positions — but a 4-3 SAM is often a space body in real
+football, and that is the next candidate if you want it.

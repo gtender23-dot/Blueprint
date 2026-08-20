@@ -223,7 +223,7 @@ function resolveOffField(formationId, assignments, shares, activeDepth, ratingBy
   }
   return { personnel, shareByPlayerId, bySlot, roleBySlotPlayer, oopByPlayer };
 }
-function resolveDefField(frontId, assignments, blitzShares, activeDepth, ratingById = null, playerPos = null, playerById = null) {
+function resolveDefField(frontId, assignments, blitzShares, activeDepth, ratingById = null, playerPos = null, playerById = null, blitzers = null) {
   const layout = DEF_FIELD_LAYOUTS[frontId];
   if (!layout) return null;
   const { bySlot, byPos } = resolveSlots(layout.slots, assignments, activeDepth, ratingById, playerPos, playerById);
@@ -232,7 +232,7 @@ function resolveDefField(frontId, assignments, blitzShares, activeDepth, ratingB
   // selector (the better pass rusher on the field), so this file, sim.js and
   // resolveDefPersonnel can no longer disagree about who is in the rush group.
   const _pOf = typeof playerById === "function" ? playerById : playerById ? (id) => playerById[id] : null;
-  const _olbSplit = splitRushOlbs(frontId, OLB, _pOf);
+  const _olbSplit = splitRushOlbs(frontId, OLB, _pOf, blitzers);
   const olbRush = _olbSplit.jacks.length > 0;
   const blitzShareByPlayerId = {};
   const dropShareByPlayerId = {};
@@ -337,7 +337,13 @@ SLOT_ELIGIBLE_POS = {
   // Keyed by the slot's MESH key (slot.mesh in DEF_FIELD_LAYOUTS), never by a
   // roster position — base 4-3 and 3-4 slots carry no mesh key and stay
   // hard-typed to their positions. Native position first in every list.
-  NB: ["CB", "S"],
+  // 2026-08-19: the nickel gains LB. It was the only hybrid defensive job that
+  // refused a backer while accepting a WIDE RECEIVER through SLOT_ELIGIBILITY
+  // (CB: {CB 1, S .8, WR .55}) — backwards from how the position is staffed.
+  // A nickel is routinely a converted safety or an undersized backer; the
+  // ROVER, WAR and Dime DB spots (all SPACE) already took S/LB/CB, so this is
+  // the odd one out coming into line with its own cousins.
+  NB: ["CB", "S", "LB"],
   // the nickel: a corner's job that a star safety can own (2010 Woodson)
   OVERHANG: ["OLB", "DE", "LB"],
   // JACK / JOKER / CHAR / SPUR / BANDIT / EDGE — stand-up edge bodies

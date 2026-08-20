@@ -190,10 +190,10 @@ DEF_FIELD_LAYOUTS = {
       { id: "S_SS", pos: "S", label: "SS", x: 0.62, y: 0.1, role: "S-Strong" },
       { id: "CB_L", pos: "CB", label: "CB", x: 0.06, y: 0.2, role: "CB-Press" },
       { id: "CB_R", pos: "CB", label: "CB", x: 0.94, y: 0.2, role: "CB-Press" },
-      { id: "OLB_L", pos: "OLB", label: "LOLB", x: 0.16, y: 0.52, role: "OLB-Rush" },
+      { id: "OLB_L", pos: "OLB", label: "LOLB", x: 0.16, y: 0.52, role: "OLB-Rush", mesh: "OVERHANG" },
       { id: "LB_I1", pos: "LB", label: "ILB", x: 0.4, y: 0.44, role: "LB-Thumper" },
       { id: "LB_I2", pos: "LB", label: "ILB", x: 0.6, y: 0.44, role: "LB-Cover" },
-      { id: "OLB_R", pos: "OLB", label: "ROLB", x: 0.84, y: 0.52, role: "OLB-Rush" },
+      { id: "OLB_R", pos: "OLB", label: "ROLB", x: 0.84, y: 0.52, role: "OLB-Rush", mesh: "OVERHANG" },
       // #31: end labels are side-explicit (LE/RE) on EVERY front — the 4-3
       // family already was; the odd fronts said "DE"/"4i" and the Defensive
       // Playbook diagrams read inconsistent card to card.
