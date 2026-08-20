@@ -323,6 +323,62 @@ hdr('C6 — the big card and the words (D4/M2): jobs for all eleven, blurbs with
   check(!!rb && !/\d/.test(rb), 'composed plays get a derived blurb with no numbers');
 }
 
+hdr('C7 — man coverage points at the offense, and press is visible (2026-08-19)');
+{
+  // TWO defects found by the owner asking "is man coverage going the wrong way?"
+  //
+  // 1. IT WAS. The ghost receivers sat at sy(0.03) — the deepest point of the
+  //    DEFENSIVE backfield, behind the safeties — while the ghost offense (OL,
+  //    QB) is drawn below the LOS. Measured on the pre-fix tree: LOS at 114.6,
+  //    ghost offense at 119.6, man ghosts at 19. So every man line ran AWAY
+  //    from the offense, opposite to the rush arrows on the same card.
+  // 2. PRESS WAS INVISIBLE. `pressLevel` is a standing plan dial, a situation
+  //    field AND a card field, and the sim honours it — but the card never
+  //    received it, so press / off / auto rendered BYTE-IDENTICAL.
+  const { DEF_CALL_COVERAGES } = await import('../js/engine/defbook.js');
+  const manCov = (DEF_CALL_COVERAGES || []).filter((c) => c.art && c.art.man);
+  check(manCov.length > 0, `coverages that draw man exist (${manCov.length})`);
+  const losOf = (svg) => Number((svg.match(/<line x1="0" y1="([\d.]+)"[^>]*class="play-card-los"/) || [])[1]);
+  const manLines = (svg) => [...svg.matchAll(/<line x1="[\d.]+" y1="([\d.]+)" x2="[\d.]+" y2="([\d.]+)" class="dc-man"/g)]
+    .map((m) => ({ from: Number(m[1]), to: Number(m[2]) }));
+
+  let drawn = 0, backwards = 0, pastLos = 0;
+  for (const cov of manCov) {
+    for (const front of ['4-3', '3-4', 'Nickel', 'Dime']) {
+      for (const press of ['auto', 'press', 'off']) {
+        const svg = renderDefCallCard({ name: 'probe', front, coverage: cov.id, bring: '4', pressLevel: press }, { w: 250, h: 170, art: cov.art });
+        const los = losOf(svg);
+        for (const l of manLines(svg)) {
+          drawn++;
+          // y grows DOWNWARD and the offense is below the LOS, so a man line
+          // must END further down than it STARTS.
+          if (!(l.to > l.from)) backwards++;
+          // and it must reach the offense's side of the ball, not stop short
+          // in the defensive backfield.
+          if (!(l.to >= los - 1)) pastLos++;
+        }
+      }
+    }
+  }
+  check(drawn > 40, `sampled man lines across fronts and press levels (${drawn})`);
+  check(backwards === 0, 'EVERY man line runs toward the offense — same direction as the rush arrows',
+    `${backwards}/${drawn} backwards`);
+  check(pastLos === 0, 'and every one reaches the offense\'s side of the ball', `${pastLos}/${drawn} stopped short`);
+
+  // Press must be VISIBLE — and specifically, a pressed corner lines up nearer
+  // the ball than an off corner. Byte-difference alone would pass on a colour
+  // change, so this measures the alignment.
+  const cov1 = manCov[0];
+  const startAvg = (press) => {
+    const svg = renderDefCallCard({ name: 'probe', front: '4-3', coverage: cov1.id, bring: '4', pressLevel: press }, { w: 250, h: 170, art: cov1.art });
+    const ls = manLines(svg);
+    return ls.reduce((t, l) => t + l.from, 0) / (ls.length || 1);
+  };
+  const pr = startAvg('press'), au = startAvg('auto'), of = startAvg('off');
+  check(pr > au && au > of, 'PRESS lines up nearer the ball than AUTO, which is nearer than OFF',
+    `press ${pr.toFixed(1)} · auto ${au.toFixed(1)} · off ${of.toFixed(1)}`);
+}
+
 console.log(`\nCARD LINT PROBE — ${pass} pass, ${fail} fail`);
 console.log(fail ? 'CARD LINT PROBE FAIL' : 'CARD LINT PROBE PASS');
 process.exit(fail ? 1 : 0);

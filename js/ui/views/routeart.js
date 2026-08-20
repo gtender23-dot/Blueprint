@@ -319,6 +319,26 @@ function renderDefCallCard(call, opts) {
   const sx = (x) => padX + x * (W - 2 * padX);
   const sy = (y) => topPad + y * ySpan;
   const losY = sy(0.86);
+  // ── PRESS LEVEL (2026-08-19) ─────────────────────────────────────────────
+  // `pressLevel` is a real control — a standing Game Plan dial, a situation
+  // cell field AND a card field — and the sim honours it (it flips a press
+  // technique to off-man in assignCoverage). The card ignored it completely:
+  // press, off and auto rendered BYTE-IDENTICAL, so the one screen showing you
+  // the call never showed the leverage you had chosen.
+  //
+  // Press is an ALIGNMENT, not a line style, so alignment is what moves: a
+  // pressed corner walks up onto the receiver, an off corner backs off. The
+  // shift goes through ONE resolver so the man line, the node and the arrows
+  // can never disagree about where a man is standing.
+  //
+  // `opts.pressLevel` lets a LIVE call sheet pass the RESOLVED value (where the
+  // effective plan is known); a book card falls back to what the card itself
+  // states; "auto" draws neutral rather than inventing leverage the plan has
+  // not chosen yet. Corners and the nickel only — safeties do not press.
+  const pressLvl = o.pressLevel || call.pressLevel || "auto";
+  const _PRESS_SHIFT = { press: 0.1, off: -0.08 };
+  const _pressable = (s) => /CB|NB/.test(s.pos) || /CB|NB/.test(s.label || "");
+  const slotY = (s) => sy(s.y + (_pressable(s) ? (_PRESS_SHIFT[pressLvl] || 0) : 0));
   let svg = `<rect width="${W}" height="${H}" rx="0" class="play-card-turf"/>`;
   svg += `<line x1="0" y1="${_fmt(losY)}" x2="${W}" y2="${_fmt(losY)}" class="play-card-los"/>`;
   // coverage zones
@@ -386,10 +406,21 @@ function renderDefCallCard(call, opts) {
     }).slice(0, 5);
     const n = inMan.length || 1;
     inMan.forEach((s, i) => {
-      // Spread the ghosts across the width in the order the defenders stand,
-      // so the lines fan out instead of crossing.
-      const gx = sx(n === 1 ? 0.5 : 0.06 + (i / (n - 1)) * 0.88), gy = sy(0.03);
-      svg += `<line x1="${_fmt(sx(s.x))}" y1="${_fmt(sy(s.y) - 7)}" x2="${_fmt(gx)}" y2="${_fmt(gy + 7)}" class="dc-man"/><circle cx="${_fmt(gx)}" cy="${_fmt(gy)}" r="3.6" class="dc-ghost"/>`;
+      // WHICH WAY THE LINE GOES (fixed 2026-08-19). The ghost receiver used to
+      // sit at sy(0.03) — the DEEPEST point of the defensive backfield, behind
+      // the safeties — while the ghost offense (OL, QB) is drawn BELOW the LOS.
+      // So every man line ran up and away from the offense, in the opposite
+      // direction to the rush arrows on the same card. Measured before the fix:
+      // LOS at y=114.6, ghost offense at 119.6, man ghosts at 19.
+      //
+      // A receiver lines up on the offense's side of the ball, so the line runs
+      // DOWN to him. A back or tight end covered by a backer sits deeper in the
+      // backfield, so his ghost is placed behind the line rather than on it.
+      const isBacker = /LB|OLB|MLB/.test(s.pos) || /WILL|MIKE|SAM/.test(s.label || "");
+      const gx = sx(Math.max(0.04, Math.min(0.96, s.x)));
+      const gy = losY + (isBacker ? 15 : 4);
+      const y1 = slotY(s) + 7;
+      svg += `<line x1="${_fmt(sx(s.x))}" y1="${_fmt(y1)}" x2="${_fmt(gx)}" y2="${_fmt(gy - 4)}" class="dc-man"/><circle cx="${_fmt(gx)}" cy="${_fmt(gy)}" r="3.6" class="dc-ghost"/>`;
     });
   }
   // ghost offense
@@ -423,8 +454,8 @@ function renderDefCallCard(call, opts) {
   const rushers = dl.slice(0, bring);
   const droppers = dl.slice(bring);
   const extra = rushers.length < bring ? edges.concat(dogs, dbs).slice(0, bring - rushers.length) : [];
-  rushers.forEach((s) => { svg += arrow(sx(s.x), sy(s.y) + 6, "dc-rush"); });
-  extra.forEach((s) => { svg += arrow(sx(s.x), sy(s.y) + 6, "dc-dog"); });
+  rushers.forEach((s) => { svg += arrow(sx(s.x), slotY(s) + 6, "dc-rush"); });
+  extra.forEach((s) => { svg += arrow(sx(s.x), slotY(s) + 6, "dc-dog"); });
   droppers.forEach((dropper, di) => {
     const dSide = dropper.x >= 0.5 ? 1 : -1; // bend toward his own hook, in bounds
     svg += `<path d="M${_fmt(sx(dropper.x))} ${_fmt(sy(dropper.y) - 6)} C ${_fmt(sx(dropper.x) + dSide * 8)} ${_fmt(sy(dropper.y) - 24)}, ${_fmt(sx(dropper.x) + dSide * 20)} ${_fmt(sy(dropper.y) - 30)}, ${_fmt(sx(dropper.x) + dSide * 26)} ${_fmt(sy(dropper.y) - 38)}" class="dc-drop"/><circle cx="${_fmt(sx(dropper.x) + dSide * 28)}" cy="${_fmt(sy(dropper.y) - 40)}" r="2.8" class="dc-drop-dot"/>`;
@@ -433,7 +464,7 @@ function renderDefCallCard(call, opts) {
   // defenders on top
   for (const s of layout.slots) {
     const cls = _DPOS_CLASS[s.pos] || "fd-lb";
-    svg += `<g><rect x="${_fmt(sx(s.x) - 9)}" y="${_fmt(sy(s.y) - 7)}" width="18" height="14" rx="3" class="fd-node ${cls}"/><text x="${_fmt(sx(s.x))}" y="${_fmt(sy(s.y) + 3)}" class="fd-lbl">${_esc(s.label)}</text></g>`;
+    svg += `<g><rect x="${_fmt(sx(s.x) - 9)}" y="${_fmt(slotY(s) - 7)}" width="18" height="14" rx="3" class="fd-node ${cls}"/><text x="${_fmt(sx(s.x))}" y="${_fmt(slotY(s) + 3)}" class="fd-lbl">${_esc(s.label)}</text></g>`;
   }
   return `<svg class="play-card-svg def-call-card" viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${_esc(call.name || "Defensive call")}">${svg}</svg>`;
 }

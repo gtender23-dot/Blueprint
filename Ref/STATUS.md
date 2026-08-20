@@ -6034,3 +6034,57 @@ of engine knowledge maintained by hand in a probe. It caught this drift, but the
 next person to add a compiled field will hit the same red. Deriving it from the
 engine — the same move D14 made for `CARD_VOCAB` — is the permanent fix and
 should be its own small change.
+
+## 2026-08-19 — MAN COVERAGE WAS DRAWN BACKWARDS, and press was invisible (owner: "is man coverage on the play graphics going the wrong way?")
+
+Two defects on the defensive call card, found by the owner's question and both
+confirmed by measurement before anything changed.
+
+**1 · The man lines pointed AWAY from the offense.** The ghost receivers were
+placed at `sy(0.03)` — the DEEPEST point of the defensive backfield, behind the
+safeties — while the ghost offense (OL, QB) is drawn BELOW the line. Measured on
+a 250×170 Cover 1 card: **LOS at y=114.6, ghost offense at 119.6, man ghosts at
+19.** So each covering defender had a line running up and away from the men he
+was covering.
+
+The tell was inside the same picture: the **rush arrows were correct**, running
+down to the ghost QB at y≈133. One card showed rushers attacking one way and
+coverage defending the other, which is why it read wrong before the geometry was
+worked out. (The comment dated the man lines to a 2026-08-18 rewrite; that pass
+fixed WHO gets drawn in man — the old filter matched corners only — and kept the
+ghosts parked at the top.)
+
+**Fixed:** a covering defender's line now runs DOWN to the man he has —
+receivers just across the LOS, backs and tight ends deeper in the backfield —
+the same direction as the rush arrows. Verified: 120 sampled man lines across
+four fronts and three press levels, **zero backwards, zero stopping short of the
+ball**.
+
+**2 · `pressLevel` had no visual expression at all.** It is a real control in
+three places — a standing Game Plan dial ("press at the line / off coverage /
+mixed leverage"), a situation cell field, and a card field — and the sim honours
+it (it flips a press technique to off-man in `assignCoverage`). But the card art
+only ever received `{deep, man}` from the coverage. Measured: a Cover 1 card at
+`press`, `off` and `auto` rendered **byte-identical**.
+
+**Fixed as ALIGNMENT, not decoration** — press is where a corner stands, so that
+is what moves. One resolver (`slotY`) now carries the shift, and the man line,
+the defender's node and the rush arrows all go through it, so they cannot
+disagree about where a man is standing. Corners and the nickel only; safeties do
+not press. Measured leverage (avg start y, larger = nearer the ball):
+**press 53.2 · auto 48.2 · off 44.3**.
+
+**Resolution order, deliberately honest:** `opts.pressLevel` (a LIVE call sheet,
+where the effective plan is resolved) → the card's own `pressLevel` → `auto`
+draws NEUTRAL. A book card marked auto genuinely cannot know what leverage it
+will be played with, so it does not invent one.
+
+**Gated so neither can silently return:** `card_lint_probe` gains **C7** — every
+man line must run toward the offense AND reach the offense's side of the ball
+(120 samples), and press must line up nearer the ball than auto, which must be
+nearer than off. The second check measures ALIGNMENT rather than byte-difference
+on purpose: a byte check would pass on a colour change and let the control go
+silent again.
+
+Green ×3 plus draw_up · help_rule · dead_surface · defsheet · pressure_cohesion,
+clean build. NOT pushed.
