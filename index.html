@@ -10090,6 +10090,34 @@ body *::after {
 .pb-cinfo-art { display:block; max-width:340px; }
 .concept-card-info { position:absolute; top:2px; left:2px; font-size:10px; padding:1px 4px; background:rgba(2,3,7,.6); border:1px solid var(--px-line,#43536b); border-radius:3px; cursor:pointer; }
 
+/* ── Defensive call sheet: a grid of drawn calls (2026-08-21) ──────────────
+   The headset was nine rows of text chips and a row of call NAMES. It now
+   mirrors the offensive sheet — front tabs, then tappable cards that draw the
+   real call — so both sides of the ball are read the same way. Layout comes
+   from .cs-concepts / .cs-concept-card, shared with offense on purpose. */
+.dc-callhead { display: flex; align-items: center; gap: 8px; margin: 2px 0 6px; }
+.dc-fronttabs { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 5px; margin-bottom: 7px; scrollbar-width: thin; }
+.dc-ftab { flex: 0 0 auto; display: inline-flex; align-items: baseline; gap: 5px;
+  padding: 6px 10px 7px; background: var(--px-panel-2, #111827); color: var(--text-1);
+  border: 2px solid var(--px-line, #43536b); border-bottom-width: 4px; border-radius: 0;
+  font-size: 12px; font-weight: 800; letter-spacing: .03em; cursor: pointer; white-space: nowrap; }
+.dc-ftab b { font-size: 10px; font-weight: 700; opacity: .6; }
+.dc-ftab.active { color: #07110b; background: var(--px-yellow, #ffd54a); border-color: var(--px-paper, #f4edda); }
+.dc-ftab.active b { opacity: .75; }
+.dc-ftab:focus-visible { outline: 2px solid var(--px-yellow, #ffd54a); outline-offset: 2px; }
+.dc-cards .cs-concept-card { min-height: 104px; align-items: stretch; }
+.dc-cards .def-call-card { grid-row: 1 / 3; width: 100%; height: auto; align-self: center; }
+.dc-cards .cs-c-learn { font-size: 9.5px; letter-spacing: .02em; opacity: .78; }
+.dc-cards .cs-concept-card.active { border-color: var(--px-yellow, #ffd54a); box-shadow: inset 0 0 0 2px var(--px-yellow, #ffd54a); }
+.dc-adjust { margin-top: 9px; border-top: 1px solid var(--border-sub); padding-top: 7px; }
+.dc-adjust > summary { cursor: pointer; font-size: 11px; font-weight: 800; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--text-2); padding: 3px 0; list-style: none; }
+.dc-adjust > summary::-webkit-details-marker { display: none; }
+.dc-adjust > summary::before { content: "\25B8 "; display: inline-block; transition: transform .15s ease; }
+.dc-adjust[open] > summary::before { transform: rotate(90deg); }
+.dc-adjust > summary b { color: var(--px-yellow, #ffd54a); }
+@media (prefers-reduced-motion: reduce) { .dc-adjust > summary::before { transition: none; } }
+
   </style>
 </head>
 <body>
@@ -10099,7 +10127,7 @@ body *::after {
     </div>
   </div>
   <script>
-globalThis.__BUILD__ = "33b0dcc23f";
+globalThis.__BUILD__ = "9262938c34";
 var _CFB = (() => {
   var __defProp = Object.defineProperty;
   var __defProps = Object.defineProperties;
@@ -13413,7 +13441,13 @@ var _CFB = (() => {
         OLB: { OLB: 1, DE: 0.85, LB: 0.9, S: 0.7 },
         DT: { DT: 1, DE: 0.85, OL: 0.65 },
         LB: { LB: 1, OLB: 0.9, S: 0.75, DE: 0.7 },
-        CB: { CB: 1, S: 0.8, WR: 0.55 },
+        // LB priced 2026-08-19, when SLOT_ELIGIBLE_POS.NB was widened to admit a
+        // walked-out backer. Without a key here the null→1 default at
+        // fieldassign.js:106 let an LB take the nickel job at FULL rating, making a
+        // backer a cheaper nickel than a safety (0.8) — the opposite of the truth.
+        // 0.65 follows this table's own logic: one clear step below his own price at
+        // safety (S: { LB: 0.7 }), still above an untrained athlete (WR: 0.55).
+        CB: { CB: 1, S: 0.8, LB: 0.65, WR: 0.55 },
         S: { S: 1, CB: 0.85, LB: 0.7 }
       };
       ARCHETYPE_DISTANCE = {
@@ -19257,23 +19291,9 @@ var _CFB = (() => {
   }
   function resolveDefPersonnel(frontId, depthChart, roster = null, blitzers = null) {
     const FRONT_COUNTS = DEF_FRONT_COUNTS;
-    const RUSH_SLOTS = {
-      "4-3": ["DE", "DT"],
-      "3-4": ["DE", "DT", "OLB"],
-      "Nickel": ["DE", "DT"],
-      "Dime": ["DE", "DT"],
-      "46/Bear": ["DE", "DT"],
-      "5-2": ["DE", "DT"],
-      // 3-3-5: a three-man rush baseline — the stack backers cover; the heat
-      // comes from the blitz machinery (any of six second-level hats).
-      "3-3-5": ["DE", "DT"],
-      // Wave 2: Tite/4-4 overhangs play space; Big Nickel is a 4-down nickel;
-      // Penny's stand-up EDGEs are ON the line — they rush like 3-4 OLBs.
-      "Tite": ["DE", "DT"],
-      "4-4": ["DE", "DT"],
-      "Big Nickel": ["DE", "DT"],
-      "Penny": ["DE", "DT", "OLB"]
-    };
+    const RUSH_SLOTS = Object.fromEntries(Object.keys(FRONT_ROLES).map(
+      (f) => [f, rushOlbCount(f) > 0 ? ["DE", "DT", "OLB"] : ["DE", "DT"]]
+    ));
     const counts = FRONT_COUNTS[frontId] || FRONT_COUNTS["4-3"];
     const used = /* @__PURE__ */ new Set();
     const ratingOf = roster ? (id) => {
@@ -29794,9 +29814,13 @@ var _CFB = (() => {
           }
         }
         if (worst != null && passRushers.length > 3) {
-          const [dropped] = passRushers.splice(worst, 1);
-          droppedIds.push(dropped.player.id);
-          lbIds.push(dropped.player.id);
+          const _sub = pick2(lbIds, lbGrade);
+          if (_sub) {
+            const [dropped] = passRushers.splice(worst, 1);
+            droppedIds.push(dropped.player.id);
+            send(_sub);
+            lbIds.push(dropped.player.id);
+          }
         }
       }
       if (spec.zero) result.zeroBehind = true;
@@ -29827,6 +29851,8 @@ var _CFB = (() => {
       const _bl = passRushers.filter((r) => r.blitzer).map((r) => r.player.id);
       if (_bl.length) result.blitzerIds = _bl;
     }
+    result.rusherIds = passRushers.map((r) => r.player.id);
+    if (droppedIds.length) result.droppedRushIds = [...droppedIds];
     if (mugCall) result.mug = result.blitzFired ? "fired" : "bail";
     if (amoebaCall) result.amoeba = true;
     result.rushN = passRushers.length;
@@ -29910,6 +29936,7 @@ var _CFB = (() => {
         rush3DroppedIds.push(cut.player.id);
       }
       result.rushN = passRushers.length;
+      result.rusherIds = passRushers.map((r) => r.player.id);
       result.rush3 = true;
       if (rush3DroppedIds.length) result.rush3DroppedIds = [...rush3DroppedIds];
     }
@@ -33269,13 +33296,24 @@ var _CFB = (() => {
         // Slot-level truth stamps (recording only): the beaten cover
         // man and the coverage matchups, translated player→slot so the
         // viewer animates the SIM'S assignments, not proximity guesses.
+        // ── THE FILM STAMPS FOLLOW THE CALLED FRONT (2026-08-20) ─────────
+        // These read `defBaseField.bySlot`, and defBaseField is NULL whenever
+        // the snap's front differs from the team's base front and no depth pins
+        // force a resolve (see the ternary where it is built). So every film
+        // stamp — who covered whom, who got beaten, who made the tackle — went
+        // BLANK on exactly the snaps a named call changed the front, which is
+        // most of what a named call is for. Measured on the bench: covSlots
+        // present on 33 of 37 base-front snaps and 0 of 37 Nickel or 3-4 snaps.
+        // `_defViewerSlots` (built above) is the same slotId->playerId shape
+        // with the front-aware fallback the viewer already relies on. Recording
+        // only; no outcome path reads any of these.
         beatenDefSlot: (() => {
-          const bs = defBaseField == null ? void 0 : defBaseField.bySlot;
+          const bs = _defViewerSlots;
           if (!bs || !playResult.beatenDefId) return null;
           return Object.keys(bs).find((sid) => bs[sid] === playResult.beatenDefId) || null;
         })(),
         covSlots: (() => {
-          const ob2 = offField == null ? void 0 : offField.bySlot, db = defBaseField == null ? void 0 : defBaseField.bySlot;
+          const ob2 = offField == null ? void 0 : offField.bySlot, db = _defViewerSlots;
           if (!ob2 || !db || !playResult.covAssign) return null;
           const inv = (m) => {
             const o = {};
@@ -33291,7 +33329,7 @@ var _CFB = (() => {
         // broken tackle instead of a proximity guess. No outcome path reads
         // these — same contract as beatenDefSlot/covSlots above.
         contactSlots: (() => {
-          const db = defBaseField == null ? void 0 : defBaseField.bySlot;
+          const db = _defViewerSlots;
           if (!db) return null;
           const inv = {};
           for (const k of Object.keys(db)) inv[db[k]] = k;
@@ -33329,6 +33367,29 @@ var _CFB = (() => {
         blitzFired: (_za = playResult.blitzFired) != null ? _za : false,
         // BLITZ PIE: who came (ids), when a blitz fired — probe/film surface
         blitzerIds: playResult.blitzerIds || null,
+        // The rush group, translated player -> defensive SLOT so a probe can
+        // join it against what the call card drew (the card draws by slot).
+        // Recording only; no outcome path reads it.
+        rushSlots: (() => {
+          const db = _defViewerSlots;
+          if (!db || !playResult.rusherIds) return null;
+          const inv = {};
+          for (const k of Object.keys(db)) inv[db[k]] = k;
+          const out2 = playResult.rusherIds.map((id) => inv[id]).filter(Boolean);
+          return out2.length ? out2 : null;
+        })(),
+        // BOTH kinds of drop: the fire-zone exchange (droppedRushIds) and the
+        // bring-3 cut (rush3DroppedIds). A reader should not have to know which
+        // internal list a dropped man came from.
+        dropSlots: (() => {
+          const db = _defViewerSlots;
+          const src = [...playResult.droppedRushIds || [], ...playResult.rush3DroppedIds || []];
+          if (!db || !src.length) return null;
+          const inv = {};
+          for (const k of Object.keys(db)) inv[db[k]] = k;
+          const out2 = src.map((id) => inv[id]).filter(Boolean);
+          return out2.length ? out2 : null;
+        })(),
         fireZone: playResult.fireZone || false,
         clock: gameState.clock,
         half: gameState.half,
@@ -39093,6 +39154,428 @@ var _CFB = (() => {
     }
   });
 
+  // js/engine/defbook.js
+  function emptyDefCard(name) {
+    return { name: String(name || "New Call").slice(0, 24), front: null, coverage: "base", bring: "4", look: null, weight: 50 };
+  }
+  function cardToDefCall(card) {
+    const cov = DEF_CALL_COVERAGES.find((c) => c.id === card.coverage) || DEF_CALL_COVERAGES[DEF_CALL_COVERAGES.length - 1];
+    const bring = DEF_CALL_BRING[card.bring] || DEF_CALL_BRING["4"];
+    const out2 = __spreadValues(__spreadValues({}, cov.fields), bring.fields);
+    if (card.front && isFront(card.front)) out2.front = card.front;
+    if (card.look && pressIdentities().includes(card.look)) out2.pressureIdentity = card.look;
+    for (const k of _vocabKeys("call")) {
+      if (card[k] != null && card[k] !== "auto" && card[k] !== "") out2[k] = card[k];
+    }
+    return out2;
+  }
+  function cardToCell(card) {
+    const call = cardToDefCall(card);
+    const cell = {};
+    if (call.front) cell.defFront = call.front;
+    if (call.aggression) cell.defAggression = call.aggression;
+    if (call.pressureIdentity) cell.pressureIdentity = call.pressureIdentity;
+    const fam = call.covFamily && _FAMILY_SHELL[call.covFamily];
+    if (fam) {
+      cell.covShell = fam.covShell;
+      cell.covStyle = fam.covStyle;
+    } else {
+      if (call.covShell) cell.covShell = call.covShell;
+      if (call.covStyle) cell.covStyle = call.covStyle;
+    }
+    for (const k of _vocabKeys("cell")) if (call[k] != null) cell[k] = call[k];
+    return cell;
+  }
+  function cardToFormCheck(card) {
+    const call = cardToDefCall(card);
+    const chk = {};
+    if (call.front) chk.defFront = call.front;
+    if (call.aggression) chk.defAggression = call.aggression;
+    if (call.pressureIdentity) chk.pressureIdentity = call.pressureIdentity;
+    const fam = call.covFamily && _FAMILY_SHELL[call.covFamily];
+    if (fam) {
+      chk.covFamily = call.covFamily;
+      chk.covShell = fam.covShell;
+      chk.covStyle = fam.covStyle;
+    } else {
+      if (call.covShell) chk.covShell = call.covShell;
+      if (call.covStyle) chk.covStyle = call.covStyle;
+    }
+    for (const k of _vocabKeys("check")) if (call[k] != null) chk[k] = call[k];
+    return chk;
+  }
+  function _covShellOf(coverage) {
+    const cov = DEF_CALL_COVERAGES.find((c) => c.id === coverage) || DEF_CALL_COVERAGES[DEF_CALL_COVERAGES.length - 1];
+    if (cov.fields.covShell) return cov.fields.covShell;
+    const fam = cov.fields.covFamily && COV_FAMILY[cov.fields.covFamily];
+    return fam && fam.shell || null;
+  }
+  function callFitsFront(card, frontId) {
+    const layout = DEF_FIELD_LAYOUTS[frontId];
+    if (!layout) return false;
+    if (_covShellOf(card && card.coverage || "base") !== "two") return true;
+    return layout.slots.filter((s) => /^S$/.test(s.pos)).length >= 2;
+  }
+  function bookCards(db) {
+    const out2 = [];
+    for (const sh of DEF_SHELVES) for (const c of db && db.shelves && db.shelves[sh.key] || []) out2.push({ shelf: sh.key, card: c });
+    return out2;
+  }
+  function frontIds() {
+    return Object.keys(DEF_FRONTS);
+  }
+  function isFront(id) {
+    return !!DEF_FRONTS[id];
+  }
+  function aggressionStops() {
+    return C.AGGRESSION && C.AGGRESSION.order || ["bend", "selective", "balanced", "attacking", "house"];
+  }
+  function pressIdentities() {
+    return Object.keys(C.PRESS_IDENTITY || {});
+  }
+  function emptyDefBook(name) {
+    return {
+      schemaVersion: DEFBOOK_SCHEMA_VERSION,
+      name: String(name || "New Defense").slice(0, 36),
+      baseFront: "4-3",
+      frontMix: { "4-3": 60, "Nickel": 40 },
+      aggression: "balanced",
+      pressIdentity: "fireZone",
+      pressureSource: { edge: 50, interior: 25, secondary: 25 },
+      coverageScheme: "balanced",
+      greenDog: false,
+      spyQB: false,
+      shelves: {},
+      answers: {}
+    };
+  }
+  function validateDefBook(db) {
+    const errors = [], warnings = [];
+    if (!db || typeof db !== "object") return { ok: false, errors: ["defense must be an object"], warnings };
+    if (typeof db.name !== "string" || !db.name.trim()) warnings.push("defense has no name");
+    if (!db.baseFront || !isFront(db.baseFront)) errors.push(`unknown base front "${db.baseFront}"`);
+    const fm = db.frontMix && typeof db.frontMix === "object" ? db.frontMix : null;
+    if (db.frontMix != null && !fm) errors.push("frontMix must be an object");
+    let liveWeight = 0;
+    if (fm) {
+      for (const [front, w] of Object.entries(fm)) {
+        if (!isFront(front)) errors.push(`front mix has unknown front "${front}"`);
+        if (typeof w !== "number" || w < 0) errors.push(`front "${front}": weight must be a number \u2265 0`);
+        else liveWeight += w;
+      }
+      if (db.baseFront && isFront(db.baseFront) && !(db.baseFront in fm)) warnings.push("the base front isn't in the front mix \u2014 it may rarely be called");
+      if (Object.keys(fm).length && liveWeight <= 0) warnings.push("no front carries a positive weight");
+    }
+    if (!aggressionStops().includes(db.aggression)) errors.push(`unknown aggression "${db.aggression}"`);
+    if (db.pressIdentity != null && !pressIdentities().includes(db.pressIdentity)) errors.push(`unknown pressure identity "${db.pressIdentity}"`);
+    if (!COVERAGE_IDS.includes(db.coverageScheme)) errors.push(`unknown coverage scheme "${db.coverageScheme}"`);
+    const ps = db.pressureSource;
+    if (ps != null) {
+      if (typeof ps !== "object") errors.push("pressureSource must be an object");
+      else {
+        for (const k of ["edge", "interior", "secondary"]) {
+          if (ps[k] != null && (typeof ps[k] !== "number" || ps[k] < 0)) errors.push(`pressureSource.${k} must be a number \u2265 0`);
+        }
+        const sum = ["edge", "interior", "secondary"].reduce((a, k) => a + (typeof ps[k] === "number" ? ps[k] : 0), 0);
+        if (sum <= 0) warnings.push("pressure comes from nowhere \u2014 set at least one source");
+      }
+    }
+    if (db.greenDog != null && typeof db.greenDog !== "boolean") errors.push("greenDog must be true/false");
+    if (db.spyQB != null && typeof db.spyQB !== "boolean") errors.push("spyQB must be true/false");
+    if (db.shelves != null) {
+      if (typeof db.shelves !== "object") errors.push("shelves must be an object");
+      else for (const [key, cards] of Object.entries(db.shelves)) {
+        if (!DEF_SHELVES.some((s) => s.key === key)) {
+          errors.push(`unknown shelf "${key}"`);
+          continue;
+        }
+        if (!Array.isArray(cards)) {
+          errors.push(`shelf "${key}" must be an array of calls`);
+          continue;
+        }
+        if (cards.length > DEF_SHELF_CARD_CAP) errors.push(`shelf "${key}" holds at most ${DEF_SHELF_CARD_CAP} calls`);
+        for (const c of cards) {
+          if (!c || typeof c !== "object") {
+            errors.push(`shelf "${key}" has a malformed call`);
+            continue;
+          }
+          if (!c.name || !String(c.name).trim()) warnings.push(`a call on "${key}" has no name`);
+          if (c.front != null && !isFront(c.front)) errors.push(`call "${c.name}": unknown front "${c.front}"`);
+          if (c.coverage != null && !DEF_CALL_COVERAGE_IDS.includes(c.coverage)) errors.push(`call "${c.name}": unknown coverage "${c.coverage}"`);
+          if (c.bring != null && !DEF_CALL_BRING[c.bring]) errors.push(`call "${c.name}": unknown pressure count "${c.bring}"`);
+          if (c.look != null && !pressIdentities().includes(c.look)) errors.push(`call "${c.name}": unknown pressure look "${c.look}"`);
+          if (c.weight != null && (typeof c.weight !== "number" || c.weight < 0)) errors.push(`call "${c.name}": weight must be \u2265 0`);
+          if (c.runCommit != null && typeof c.runCommit !== "number") errors.push(`call "${c.name}": runCommit must be a number`);
+          for (const [k, legal] of Object.entries(CARD_EXTRA_ENUMS)) {
+            const v = c[k];
+            if (v == null || legal.includes(v)) continue;
+            if ((CARD_EXTRA_LEGACY[k] || []).includes(v)) {
+              warnings.push(`call "${c.name}": ${k} "${v}" is a retired legacy value (quarter-quarter-half is the Cover 6 picture \u2014 call c6 instead); the engine ignores it`);
+            } else {
+              errors.push(`call "${c.name}": unknown ${k} "${v}" (legal: ${legal.join("/")})`);
+            }
+          }
+          for (const k of Object.keys(c)) {
+            if (!CARD_KNOWN_KEYS.has(k)) warnings.push(`call "${c.name}": unknown key "${k}" \u2014 the engine reads nothing from it`);
+          }
+        }
+      }
+    }
+    if (db.answers != null) {
+      if (typeof db.answers !== "object") errors.push("answers must be an object");
+      else {
+        const names = new Set(bookCards(db).map((e) => e.card && e.card.name));
+        for (const [cls, nm] of Object.entries(db.answers)) {
+          if (!DEF_ANSWER_CLASSES.some((a) => a.key === cls)) errors.push(`unknown personnel answer "${cls}"`);
+          if (nm && !names.has(nm)) warnings.push(`personnel answer "${cls}" names a call that isn't on a shelf ("${nm}")`);
+        }
+      }
+    }
+    return { ok: errors.length === 0, errors, warnings };
+  }
+  function pruneCallSheet(gp) {
+    const sheet = gp ? gp.callSheet : null;
+    if (!sheet || typeof sheet !== "object") return;
+    const lib = gp.defCalls && typeof gp.defCalls === "object" ? gp.defCalls : {};
+    for (const sit of Object.keys(sheet)) {
+      const row = sheet[sit];
+      if (!row || typeof row !== "object") {
+        delete sheet[sit];
+        continue;
+      }
+      for (const pers of Object.keys(row)) {
+        const cell = Array.isArray(row[pers]) ? row[pers].filter((e) => Array.isArray(e) && lib[e[0]]) : [];
+        if (cell.length) row[pers] = cell;
+        else delete row[pers];
+      }
+      if (!Object.keys(row).length) delete sheet[sit];
+    }
+    if (!Object.keys(sheet).length) delete gp.callSheet;
+  }
+  function applyDefBookToGameplan(db, gameplan) {
+    const v = validateDefBook(db);
+    if (!v.ok) throw new Error(`applyDefBookToGameplan: invalid defense \u2014 ${v.errors[0]}`);
+    const gp = JSON.parse(JSON.stringify(gameplan || {}));
+    gp.defBaseFront = db.baseFront;
+    if (db.frontMix && typeof db.frontMix === "object") gp.defFrontMix = __spreadValues({}, db.frontMix);
+    gp.defAggression = db.aggression;
+    gp.blitzPct = C.AGGRESSION && C.AGGRESSION.rate[db.aggression] != null ? C.AGGRESSION.rate[db.aggression] : 20;
+    if (db.pressIdentity) gp.pressureIdentity = db.pressIdentity;
+    delete gp.pressIdentity;
+    if (db.pressureSource && typeof db.pressureSource === "object") gp.pressureSource = __spreadValues({}, db.pressureSource);
+    gp.coverageScheme = db.coverageScheme;
+    gp.greenDog = !!db.greenDog;
+    gp.spyQB = !!db.spyQB;
+    gp._defbookName = db.name || null;
+    if (db.shelves && typeof db.shelves === "object") {
+      const calls = {};
+      let n = 0;
+      for (const { card } of bookCards(db)) {
+        if (!card || !card.name || n >= MAX_HEADSET_CALLS) continue;
+        if (calls[card.name]) continue;
+        calls[card.name] = cardToDefCall(card);
+        n++;
+      }
+      if (n) {
+        gp.defCalls = calls;
+        pruneCallSheet(gp);
+      }
+      gp.situations = gp.situations && typeof gp.situations === "object" ? gp.situations : {};
+      for (const sh of DEF_SHELVES) {
+        const cards = (db.shelves[sh.key] || []).filter((c) => c && c.name);
+        if (!cards.length || !sh.cells.length) continue;
+        const top = cards.slice().sort((a, b) => (b.weight || 0) - (a.weight || 0))[0];
+        const cellPatch = cardToCell(top);
+        if (!Object.keys(cellPatch).length) continue;
+        for (const cellKey of sh.cells) gp.situations[cellKey] = __spreadValues(__spreadValues({}, gp.situations[cellKey] || {}), cellPatch);
+      }
+    }
+    if (db.answers && typeof db.answers === "object") {
+      const byName = {};
+      for (const { card } of bookCards(db)) if (card && card.name) byName[card.name] = card;
+      const checks = {};
+      for (const [cls, nm] of Object.entries(db.answers)) {
+        const card = nm && byName[nm];
+        if (!card) continue;
+        const chk = cardToFormCheck(card);
+        if (Object.keys(chk).length) checks[cls] = chk;
+      }
+      if (Object.keys(checks).length) gp.formChecks = checks;
+    }
+    return gp;
+  }
+  function defBookFromGameplan(gameplan, name) {
+    const gp = gameplan || {};
+    const db = emptyDefBook(name || gp._defbookName || "My Defense");
+    if (gp.defBaseFront && isFront(gp.defBaseFront)) db.baseFront = gp.defBaseFront;
+    const _fm = normalizeFrontMix(gp.defFrontMix);
+    db.frontMix = _fm.length ? Object.fromEntries(_fm.map((f) => [f.id, f.weight])) : { [db.baseFront]: 100 };
+    db.aggression = gp.defAggression || aggrStopFromBlitzPct(gp.blitzPct);
+    if (gp.pressureIdentity) db.pressIdentity = gp.pressureIdentity;
+    else if (gp.pressIdentity) db.pressIdentity = gp.pressIdentity;
+    if (gp.pressureSource && typeof gp.pressureSource === "object") db.pressureSource = __spreadValues({}, gp.pressureSource);
+    if (gp.coverageScheme) db.coverageScheme = gp.coverageScheme;
+    db.greenDog = !!gp.greenDog;
+    db.spyQB = !!gp.spyQB;
+    return db;
+  }
+  function repairDefBook(db) {
+    const changes = [];
+    const src = db && typeof db === "object" ? db : {};
+    const out2 = emptyDefBook(src.name || "Defense");
+    if (src.baseFront && isFront(src.baseFront)) out2.baseFront = src.baseFront;
+    else if (src.baseFront) changes.push(`dropped base front "${src.baseFront}" (no longer exists) \u2014 using ${out2.baseFront}`);
+    const fm = {};
+    for (const [front, w] of Object.entries(src.frontMix && typeof src.frontMix === "object" ? src.frontMix : {})) {
+      if (!isFront(front)) {
+        changes.push(`dropped front "${front}" from the mix (no longer exists)`);
+        continue;
+      }
+      fm[front] = typeof w === "number" && w >= 0 ? w : 0;
+    }
+    out2.frontMix = Object.keys(fm).length ? fm : { [out2.baseFront]: 100 };
+    if (aggressionStops().includes(src.aggression)) out2.aggression = src.aggression;
+    else if (src.aggression) changes.push(`dropped aggression "${src.aggression}" (no longer exists)`);
+    if (pressIdentities().includes(src.pressIdentity)) out2.pressIdentity = src.pressIdentity;
+    else if (src.pressIdentity) changes.push(`dropped pressure identity "${src.pressIdentity}" (no longer exists)`);
+    if (COVERAGE_IDS.includes(src.coverageScheme)) out2.coverageScheme = src.coverageScheme;
+    else if (src.coverageScheme) changes.push(`dropped coverage scheme "${src.coverageScheme}" (no longer exists)`);
+    if (src.pressureSource && typeof src.pressureSource === "object") {
+      const ps = {};
+      for (const k of ["edge", "interior", "secondary"]) ps[k] = typeof src.pressureSource[k] === "number" && src.pressureSource[k] >= 0 ? src.pressureSource[k] : out2.pressureSource[k];
+      out2.pressureSource = ps;
+    }
+    if (typeof src.greenDog === "boolean") out2.greenDog = src.greenDog;
+    if (typeof src.spyQB === "boolean") out2.spyQB = src.spyQB;
+    out2.shelves = {};
+    if (src.shelves && typeof src.shelves === "object") {
+      for (const sh of DEF_SHELVES) {
+        const kept = [];
+        for (const c of Array.isArray(src.shelves[sh.key]) ? src.shelves[sh.key] : []) {
+          if (!c || typeof c !== "object" || !c.name) {
+            changes.push(`dropped a malformed call from "${sh.label}"`);
+            continue;
+          }
+          const fix = __spreadValues(__spreadValues({}, emptyDefCard(c.name)), c);
+          if (fix.front != null && !isFront(fix.front)) {
+            changes.push(`call "${c.name}": dropped front "${fix.front}" (no longer exists)`);
+            fix.front = null;
+          }
+          if (!DEF_CALL_COVERAGE_IDS.includes(fix.coverage)) {
+            changes.push(`call "${c.name}": coverage reset (no longer exists)`);
+            fix.coverage = "base";
+          }
+          if (!DEF_CALL_BRING[fix.bring]) fix.bring = "4";
+          if (fix.look != null && !pressIdentities().includes(fix.look)) {
+            changes.push(`call "${c.name}": dropped pressure look`);
+            fix.look = null;
+          }
+          if (kept.length < DEF_SHELF_CARD_CAP) kept.push(fix);
+        }
+        if (kept.length) out2.shelves[sh.key] = kept;
+      }
+    }
+    out2.answers = {};
+    if (src.answers && typeof src.answers === "object") {
+      const names = new Set(bookCards(out2).map((e) => e.card.name));
+      for (const [cls, nm] of Object.entries(src.answers)) {
+        if (DEF_ANSWER_CLASSES.some((a) => a.key === cls) && nm && names.has(nm)) out2.answers[cls] = nm;
+        else if (nm) changes.push(`dropped personnel answer "${cls}" (its call is gone)`);
+      }
+    }
+    return { db: out2, changes, ok: validateDefBook(out2).ok };
+  }
+  var DEFBOOK_SCHEMA_VERSION, MAX_HEADSET_CALLS, DEF_SHELVES, DEF_SHELF_CARD_CAP, DEF_CALL_COVERAGES, DEF_CALL_COVERAGE_IDS, DEF_CALL_BRING, CARD_EXTRA_ENUMS, CARD_EXTRA_LEGACY, CARD_KNOWN_KEYS, CARD_VOCAB, _vocabKeys, _FAMILY_SHELL, DEF_ANSWER_CLASSES, DEF_COVERAGE_SCHEMES, COVERAGE_IDS;
+  var init_defbook = __esm({
+    "js/engine/defbook.js"() {
+      init_constants();
+      init_formations();
+      init_constants_field();
+      DEFBOOK_SCHEMA_VERSION = 2;
+      MAX_HEADSET_CALLS = 40;
+      DEF_SHELVES = [
+        { key: "base", label: "Base Downs", desc: "Your everyday answer \u2014 most snaps live here.", cells: ["base", "first_ten"] },
+        { key: "passing", label: "Passing Downs", desc: "Get off the field on 3rd & long and late trailing downs.", cells: ["third_long", "third_medium", "second_long", "two_min_trail"] },
+        { key: "short", label: "Short Yardage & Goal Line", desc: "A yard to give, nothing behind you.", cells: ["third_short", "goal_line", "backed_up"] },
+        { key: "gamble", label: "The Gamble", desc: "Your pressure package \u2014 headset calls, never automatic.", cells: [] },
+        { key: "protect", label: "Protect", desc: "Late with a lead \u2014 keep everything in front.", cells: ["four_min_lead"] }
+      ];
+      DEF_SHELF_CARD_CAP = 10;
+      DEF_CALL_COVERAGES = [
+        { id: "c1", label: "Cover 1", desc: "Man across, one deep safety helps.", fields: { covShell: "single", covStyle: "man" }, art: { deep: "mof", man: true } },
+        { id: "c3", label: "Cover 3", desc: "Three deep thirds, four underneath.", fields: { covShell: "single", covStyle: "zone" }, art: { deep: "thirds" } },
+        { id: "c2", label: "Cover 2", desc: "Two deep halves, five underneath.", fields: { covShell: "two", covStyle: "zone" }, art: { deep: "halves" } },
+        { id: "c2man", label: "2-Man", desc: "Man underneath, two safeties over the top.", fields: { covFamily: "Cover 2-Man" }, art: { deep: "halves", man: true } },
+        { id: "tampa2", label: "Tampa 2", desc: "Cover 2 with the Mike running the deep middle.", fields: { covFamily: "Tampa 2" }, art: { deep: "halves", pole: true } },
+        { id: "c6", label: "Cover 6", desc: "Quarters to the field, Cover 2 to the boundary.", fields: { covFamily: "Cover 6" }, art: { deep: "quarters" } },
+        // 2026-08-18: `prevent: true` so the card can DRAW the difference. It shared
+        // "thirds" with Cover 3 and rendered a byte-identical picture, which made two
+        // completely different calls — rush four vs rush three and drop eight — look
+        // like the same defense on the shelf.
+        // 2026-08-21: the art drew THREE deep thirds while COV_FAMILY["Prevent"] is
+        // a TWO-high shell — picture and engine disagreed about the coverage, and
+        // check C2 could not see it because both agree it is zone. Owner: fix the
+        // art. Two deep halves pushed back, six underneath — rush three, drop eight.
+        { id: "prevent", label: "Prevent", desc: "Rush three, everything stays in front.", fields: { covFamily: "Prevent", rush3: true }, art: { deep: "halves", prevent: true } },
+        { id: "base", label: "Match the identity", desc: "Play the book's standing coverage identity.", fields: {}, art: { deep: null } }
+      ];
+      DEF_CALL_COVERAGE_IDS = DEF_CALL_COVERAGES.map((c) => c.id);
+      DEF_CALL_BRING = {
+        "3": { label: "Rush 3", desc: "Drop eight \u2014 coverage wins this down.", fields: { rush3: true } },
+        "4": { label: "Base Rush", desc: "Whatever the front rushes, and nobody else.", fields: { bringSeats: 0 } },
+        "5": { label: "Bring One", desc: "The front, plus one more from the second level.", fields: { bringSeats: 1 } },
+        "6": { label: "Bring Two", desc: "The front plus two \u2014 no help behind it.", fields: { bringSeats: 2 } }
+      };
+      CARD_EXTRA_ENUMS = {
+        edgePlay: ["auto", "contain", "balanced", "crash"],
+        robberCall: ["auto", "rob", "overtop"],
+        zoneStyle: ["auto", "spot", "balanced", "match"],
+        dogGame: ["green", "cross"],
+        pressLevel: ["auto", "press", "balanced", "off"],
+        rotation: ["sky", "cloud", "buzz"]
+      };
+      CARD_EXTRA_LEGACY = {
+        zoneStyle: ["quarterQuarterHalf"]
+      };
+      CARD_KNOWN_KEYS = /* @__PURE__ */ new Set(["name", "front", "coverage", "bring", "look", "weight", "runCommit", ...Object.keys(CARD_EXTRA_ENUMS)]);
+      CARD_VOCAB = {
+        front: { enum: null, call: true, cell: true, check: true },
+        coverage: { enum: null, call: true, cell: true, check: true },
+        bring: { enum: null, call: true, cell: true, check: true },
+        look: { enum: null, call: true, cell: true, check: true },
+        runCommit: { enum: null, call: true, cell: true, check: true },
+        edgePlay: { enum: "edgePlay", call: true, cell: true, check: true },
+        robberCall: { enum: "robberCall", call: true, cell: true, check: false },
+        zoneStyle: { enum: "zoneStyle", call: true, cell: true, check: false },
+        pressLevel: { enum: "pressLevel", call: true, cell: true, check: false },
+        dogGame: { enum: "dogGame", call: true, cell: false, check: false },
+        rotation: { enum: "rotation", call: true, cell: false, check: false }
+      };
+      _vocabKeys = (seam) => Object.keys(CARD_VOCAB).filter(
+        (k) => CARD_VOCAB[k][seam] && !["front", "coverage", "bring", "look"].includes(k)
+      );
+      _FAMILY_SHELL = Object.fromEntries(
+        Object.entries(COV_FAMILY).filter(([, v]) => v.callable).map(([fam, v]) => [fam, { covShell: v.shell, covStyle: v.style }])
+      );
+      DEF_ANSWER_CLASSES = [
+        { key: "empty", label: "vs Empty" },
+        { key: "10", label: "vs 10 pers (4 WR)" },
+        { key: "11", label: "vs 11 pers (3 WR)" },
+        { key: "12", label: "vs 12 pers (2 TE)" },
+        { key: "heavy", label: "vs Heavy" },
+        { key: "option", label: "vs Option looks" }
+      ];
+      DEF_COVERAGE_SCHEMES = [
+        { id: "balanced", label: "Balanced", desc: "Mix man and zone, protect the middle." },
+        { id: "aggressive", label: "Aggressive", desc: "Retired \u2014 plays as Balanced (it always did).", retired: true },
+        { id: "conservative", label: "Conservative", desc: "Retired \u2014 plays as Balanced (it always did).", retired: true },
+        { id: "lockTop", label: "Lock the No. 1", desc: "Travel your best corner onto their best receiver." },
+        { id: "bracketTop", label: "Bracket the No. 1", desc: "Double their best receiver over the top." }
+      ];
+      COVERAGE_IDS = DEF_COVERAGE_SCHEMES.map((c) => c.id);
+    }
+  });
+
   // js/engine/instantclassics.js
   function scoreTimeline(result) {
     const states = [];
@@ -41822,410 +42305,6 @@ var _CFB = (() => {
     }
   });
 
-  // js/engine/defbook.js
-  function emptyDefCard(name) {
-    return { name: String(name || "New Call").slice(0, 24), front: null, coverage: "base", bring: "4", look: null, weight: 50 };
-  }
-  function cardToDefCall(card) {
-    const cov = DEF_CALL_COVERAGES.find((c) => c.id === card.coverage) || DEF_CALL_COVERAGES[DEF_CALL_COVERAGES.length - 1];
-    const bring = DEF_CALL_BRING[card.bring] || DEF_CALL_BRING["4"];
-    const out2 = __spreadValues(__spreadValues({}, cov.fields), bring.fields);
-    if (card.front && isFront(card.front)) out2.front = card.front;
-    if (card.look && pressIdentities().includes(card.look)) out2.pressureIdentity = card.look;
-    for (const k of _vocabKeys("call")) {
-      if (card[k] != null && card[k] !== "auto" && card[k] !== "") out2[k] = card[k];
-    }
-    return out2;
-  }
-  function cardToCell(card) {
-    const call = cardToDefCall(card);
-    const cell = {};
-    if (call.front) cell.defFront = call.front;
-    if (call.aggression) cell.defAggression = call.aggression;
-    if (call.pressureIdentity) cell.pressureIdentity = call.pressureIdentity;
-    const fam = call.covFamily && _FAMILY_SHELL[call.covFamily];
-    if (fam) {
-      cell.covShell = fam.covShell;
-      cell.covStyle = fam.covStyle;
-    } else {
-      if (call.covShell) cell.covShell = call.covShell;
-      if (call.covStyle) cell.covStyle = call.covStyle;
-    }
-    for (const k of _vocabKeys("cell")) if (call[k] != null) cell[k] = call[k];
-    return cell;
-  }
-  function cardToFormCheck(card) {
-    const call = cardToDefCall(card);
-    const chk = {};
-    if (call.front) chk.defFront = call.front;
-    if (call.aggression) chk.defAggression = call.aggression;
-    if (call.pressureIdentity) chk.pressureIdentity = call.pressureIdentity;
-    const fam = call.covFamily && _FAMILY_SHELL[call.covFamily];
-    if (fam) {
-      chk.covFamily = call.covFamily;
-      chk.covShell = fam.covShell;
-      chk.covStyle = fam.covStyle;
-    } else {
-      if (call.covShell) chk.covShell = call.covShell;
-      if (call.covStyle) chk.covStyle = call.covStyle;
-    }
-    for (const k of _vocabKeys("check")) if (call[k] != null) chk[k] = call[k];
-    return chk;
-  }
-  function bookCards(db) {
-    const out2 = [];
-    for (const sh of DEF_SHELVES) for (const c of db && db.shelves && db.shelves[sh.key] || []) out2.push({ shelf: sh.key, card: c });
-    return out2;
-  }
-  function frontIds() {
-    return Object.keys(DEF_FRONTS);
-  }
-  function isFront(id) {
-    return !!DEF_FRONTS[id];
-  }
-  function aggressionStops() {
-    return C.AGGRESSION && C.AGGRESSION.order || ["bend", "selective", "balanced", "attacking", "house"];
-  }
-  function pressIdentities() {
-    return Object.keys(C.PRESS_IDENTITY || {});
-  }
-  function emptyDefBook(name) {
-    return {
-      schemaVersion: DEFBOOK_SCHEMA_VERSION,
-      name: String(name || "New Defense").slice(0, 36),
-      baseFront: "4-3",
-      frontMix: { "4-3": 60, "Nickel": 40 },
-      aggression: "balanced",
-      pressIdentity: "fireZone",
-      pressureSource: { edge: 50, interior: 25, secondary: 25 },
-      coverageScheme: "balanced",
-      greenDog: false,
-      spyQB: false,
-      shelves: {},
-      answers: {}
-    };
-  }
-  function validateDefBook(db) {
-    const errors = [], warnings = [];
-    if (!db || typeof db !== "object") return { ok: false, errors: ["defense must be an object"], warnings };
-    if (typeof db.name !== "string" || !db.name.trim()) warnings.push("defense has no name");
-    if (!db.baseFront || !isFront(db.baseFront)) errors.push(`unknown base front "${db.baseFront}"`);
-    const fm = db.frontMix && typeof db.frontMix === "object" ? db.frontMix : null;
-    if (db.frontMix != null && !fm) errors.push("frontMix must be an object");
-    let liveWeight = 0;
-    if (fm) {
-      for (const [front, w] of Object.entries(fm)) {
-        if (!isFront(front)) errors.push(`front mix has unknown front "${front}"`);
-        if (typeof w !== "number" || w < 0) errors.push(`front "${front}": weight must be a number \u2265 0`);
-        else liveWeight += w;
-      }
-      if (db.baseFront && isFront(db.baseFront) && !(db.baseFront in fm)) warnings.push("the base front isn't in the front mix \u2014 it may rarely be called");
-      if (Object.keys(fm).length && liveWeight <= 0) warnings.push("no front carries a positive weight");
-    }
-    if (!aggressionStops().includes(db.aggression)) errors.push(`unknown aggression "${db.aggression}"`);
-    if (db.pressIdentity != null && !pressIdentities().includes(db.pressIdentity)) errors.push(`unknown pressure identity "${db.pressIdentity}"`);
-    if (!COVERAGE_IDS.includes(db.coverageScheme)) errors.push(`unknown coverage scheme "${db.coverageScheme}"`);
-    const ps = db.pressureSource;
-    if (ps != null) {
-      if (typeof ps !== "object") errors.push("pressureSource must be an object");
-      else {
-        for (const k of ["edge", "interior", "secondary"]) {
-          if (ps[k] != null && (typeof ps[k] !== "number" || ps[k] < 0)) errors.push(`pressureSource.${k} must be a number \u2265 0`);
-        }
-        const sum = ["edge", "interior", "secondary"].reduce((a, k) => a + (typeof ps[k] === "number" ? ps[k] : 0), 0);
-        if (sum <= 0) warnings.push("pressure comes from nowhere \u2014 set at least one source");
-      }
-    }
-    if (db.greenDog != null && typeof db.greenDog !== "boolean") errors.push("greenDog must be true/false");
-    if (db.spyQB != null && typeof db.spyQB !== "boolean") errors.push("spyQB must be true/false");
-    if (db.shelves != null) {
-      if (typeof db.shelves !== "object") errors.push("shelves must be an object");
-      else for (const [key, cards] of Object.entries(db.shelves)) {
-        if (!DEF_SHELVES.some((s) => s.key === key)) {
-          errors.push(`unknown shelf "${key}"`);
-          continue;
-        }
-        if (!Array.isArray(cards)) {
-          errors.push(`shelf "${key}" must be an array of calls`);
-          continue;
-        }
-        if (cards.length > DEF_SHELF_CARD_CAP) errors.push(`shelf "${key}" holds at most ${DEF_SHELF_CARD_CAP} calls`);
-        for (const c of cards) {
-          if (!c || typeof c !== "object") {
-            errors.push(`shelf "${key}" has a malformed call`);
-            continue;
-          }
-          if (!c.name || !String(c.name).trim()) warnings.push(`a call on "${key}" has no name`);
-          if (c.front != null && !isFront(c.front)) errors.push(`call "${c.name}": unknown front "${c.front}"`);
-          if (c.coverage != null && !DEF_CALL_COVERAGE_IDS.includes(c.coverage)) errors.push(`call "${c.name}": unknown coverage "${c.coverage}"`);
-          if (c.bring != null && !DEF_CALL_BRING[c.bring]) errors.push(`call "${c.name}": unknown pressure count "${c.bring}"`);
-          if (c.look != null && !pressIdentities().includes(c.look)) errors.push(`call "${c.name}": unknown pressure look "${c.look}"`);
-          if (c.weight != null && (typeof c.weight !== "number" || c.weight < 0)) errors.push(`call "${c.name}": weight must be \u2265 0`);
-          if (c.runCommit != null && typeof c.runCommit !== "number") errors.push(`call "${c.name}": runCommit must be a number`);
-          for (const [k, legal] of Object.entries(CARD_EXTRA_ENUMS)) {
-            const v = c[k];
-            if (v == null || legal.includes(v)) continue;
-            if ((CARD_EXTRA_LEGACY[k] || []).includes(v)) {
-              warnings.push(`call "${c.name}": ${k} "${v}" is a retired legacy value (quarter-quarter-half is the Cover 6 picture \u2014 call c6 instead); the engine ignores it`);
-            } else {
-              errors.push(`call "${c.name}": unknown ${k} "${v}" (legal: ${legal.join("/")})`);
-            }
-          }
-          for (const k of Object.keys(c)) {
-            if (!CARD_KNOWN_KEYS.has(k)) warnings.push(`call "${c.name}": unknown key "${k}" \u2014 the engine reads nothing from it`);
-          }
-        }
-      }
-    }
-    if (db.answers != null) {
-      if (typeof db.answers !== "object") errors.push("answers must be an object");
-      else {
-        const names = new Set(bookCards(db).map((e) => e.card && e.card.name));
-        for (const [cls, nm] of Object.entries(db.answers)) {
-          if (!DEF_ANSWER_CLASSES.some((a) => a.key === cls)) errors.push(`unknown personnel answer "${cls}"`);
-          if (nm && !names.has(nm)) warnings.push(`personnel answer "${cls}" names a call that isn't on a shelf ("${nm}")`);
-        }
-      }
-    }
-    return { ok: errors.length === 0, errors, warnings };
-  }
-  function pruneCallSheet(gp) {
-    const sheet = gp ? gp.callSheet : null;
-    if (!sheet || typeof sheet !== "object") return;
-    const lib = gp.defCalls && typeof gp.defCalls === "object" ? gp.defCalls : {};
-    for (const sit of Object.keys(sheet)) {
-      const row = sheet[sit];
-      if (!row || typeof row !== "object") {
-        delete sheet[sit];
-        continue;
-      }
-      for (const pers of Object.keys(row)) {
-        const cell = Array.isArray(row[pers]) ? row[pers].filter((e) => Array.isArray(e) && lib[e[0]]) : [];
-        if (cell.length) row[pers] = cell;
-        else delete row[pers];
-      }
-      if (!Object.keys(row).length) delete sheet[sit];
-    }
-    if (!Object.keys(sheet).length) delete gp.callSheet;
-  }
-  function applyDefBookToGameplan(db, gameplan) {
-    const v = validateDefBook(db);
-    if (!v.ok) throw new Error(`applyDefBookToGameplan: invalid defense \u2014 ${v.errors[0]}`);
-    const gp = JSON.parse(JSON.stringify(gameplan || {}));
-    gp.defBaseFront = db.baseFront;
-    if (db.frontMix && typeof db.frontMix === "object") gp.defFrontMix = __spreadValues({}, db.frontMix);
-    gp.defAggression = db.aggression;
-    gp.blitzPct = C.AGGRESSION && C.AGGRESSION.rate[db.aggression] != null ? C.AGGRESSION.rate[db.aggression] : 20;
-    if (db.pressIdentity) gp.pressureIdentity = db.pressIdentity;
-    delete gp.pressIdentity;
-    if (db.pressureSource && typeof db.pressureSource === "object") gp.pressureSource = __spreadValues({}, db.pressureSource);
-    gp.coverageScheme = db.coverageScheme;
-    gp.greenDog = !!db.greenDog;
-    gp.spyQB = !!db.spyQB;
-    gp._defbookName = db.name || null;
-    if (db.shelves && typeof db.shelves === "object") {
-      const calls = {};
-      let n = 0;
-      for (const { card } of bookCards(db)) {
-        if (!card || !card.name || n >= 12) continue;
-        if (calls[card.name]) continue;
-        calls[card.name] = cardToDefCall(card);
-        n++;
-      }
-      if (n) {
-        gp.defCalls = calls;
-        pruneCallSheet(gp);
-      }
-      gp.situations = gp.situations && typeof gp.situations === "object" ? gp.situations : {};
-      for (const sh of DEF_SHELVES) {
-        const cards = (db.shelves[sh.key] || []).filter((c) => c && c.name);
-        if (!cards.length || !sh.cells.length) continue;
-        const top = cards.slice().sort((a, b) => (b.weight || 0) - (a.weight || 0))[0];
-        const cellPatch = cardToCell(top);
-        if (!Object.keys(cellPatch).length) continue;
-        for (const cellKey of sh.cells) gp.situations[cellKey] = __spreadValues(__spreadValues({}, gp.situations[cellKey] || {}), cellPatch);
-      }
-    }
-    if (db.answers && typeof db.answers === "object") {
-      const byName = {};
-      for (const { card } of bookCards(db)) if (card && card.name) byName[card.name] = card;
-      const checks = {};
-      for (const [cls, nm] of Object.entries(db.answers)) {
-        const card = nm && byName[nm];
-        if (!card) continue;
-        const chk = cardToFormCheck(card);
-        if (Object.keys(chk).length) checks[cls] = chk;
-      }
-      if (Object.keys(checks).length) gp.formChecks = checks;
-    }
-    return gp;
-  }
-  function defBookFromGameplan(gameplan, name) {
-    const gp = gameplan || {};
-    const db = emptyDefBook(name || gp._defbookName || "My Defense");
-    if (gp.defBaseFront && isFront(gp.defBaseFront)) db.baseFront = gp.defBaseFront;
-    const _fm = normalizeFrontMix(gp.defFrontMix);
-    db.frontMix = _fm.length ? Object.fromEntries(_fm.map((f) => [f.id, f.weight])) : { [db.baseFront]: 100 };
-    db.aggression = gp.defAggression || aggrStopFromBlitzPct(gp.blitzPct);
-    if (gp.pressureIdentity) db.pressIdentity = gp.pressureIdentity;
-    else if (gp.pressIdentity) db.pressIdentity = gp.pressIdentity;
-    if (gp.pressureSource && typeof gp.pressureSource === "object") db.pressureSource = __spreadValues({}, gp.pressureSource);
-    if (gp.coverageScheme) db.coverageScheme = gp.coverageScheme;
-    db.greenDog = !!gp.greenDog;
-    db.spyQB = !!gp.spyQB;
-    return db;
-  }
-  function repairDefBook(db) {
-    const changes = [];
-    const src = db && typeof db === "object" ? db : {};
-    const out2 = emptyDefBook(src.name || "Defense");
-    if (src.baseFront && isFront(src.baseFront)) out2.baseFront = src.baseFront;
-    else if (src.baseFront) changes.push(`dropped base front "${src.baseFront}" (no longer exists) \u2014 using ${out2.baseFront}`);
-    const fm = {};
-    for (const [front, w] of Object.entries(src.frontMix && typeof src.frontMix === "object" ? src.frontMix : {})) {
-      if (!isFront(front)) {
-        changes.push(`dropped front "${front}" from the mix (no longer exists)`);
-        continue;
-      }
-      fm[front] = typeof w === "number" && w >= 0 ? w : 0;
-    }
-    out2.frontMix = Object.keys(fm).length ? fm : { [out2.baseFront]: 100 };
-    if (aggressionStops().includes(src.aggression)) out2.aggression = src.aggression;
-    else if (src.aggression) changes.push(`dropped aggression "${src.aggression}" (no longer exists)`);
-    if (pressIdentities().includes(src.pressIdentity)) out2.pressIdentity = src.pressIdentity;
-    else if (src.pressIdentity) changes.push(`dropped pressure identity "${src.pressIdentity}" (no longer exists)`);
-    if (COVERAGE_IDS.includes(src.coverageScheme)) out2.coverageScheme = src.coverageScheme;
-    else if (src.coverageScheme) changes.push(`dropped coverage scheme "${src.coverageScheme}" (no longer exists)`);
-    if (src.pressureSource && typeof src.pressureSource === "object") {
-      const ps = {};
-      for (const k of ["edge", "interior", "secondary"]) ps[k] = typeof src.pressureSource[k] === "number" && src.pressureSource[k] >= 0 ? src.pressureSource[k] : out2.pressureSource[k];
-      out2.pressureSource = ps;
-    }
-    if (typeof src.greenDog === "boolean") out2.greenDog = src.greenDog;
-    if (typeof src.spyQB === "boolean") out2.spyQB = src.spyQB;
-    out2.shelves = {};
-    if (src.shelves && typeof src.shelves === "object") {
-      for (const sh of DEF_SHELVES) {
-        const kept = [];
-        for (const c of Array.isArray(src.shelves[sh.key]) ? src.shelves[sh.key] : []) {
-          if (!c || typeof c !== "object" || !c.name) {
-            changes.push(`dropped a malformed call from "${sh.label}"`);
-            continue;
-          }
-          const fix = __spreadValues(__spreadValues({}, emptyDefCard(c.name)), c);
-          if (fix.front != null && !isFront(fix.front)) {
-            changes.push(`call "${c.name}": dropped front "${fix.front}" (no longer exists)`);
-            fix.front = null;
-          }
-          if (!DEF_CALL_COVERAGE_IDS.includes(fix.coverage)) {
-            changes.push(`call "${c.name}": coverage reset (no longer exists)`);
-            fix.coverage = "base";
-          }
-          if (!DEF_CALL_BRING[fix.bring]) fix.bring = "4";
-          if (fix.look != null && !pressIdentities().includes(fix.look)) {
-            changes.push(`call "${c.name}": dropped pressure look`);
-            fix.look = null;
-          }
-          if (kept.length < DEF_SHELF_CARD_CAP) kept.push(fix);
-        }
-        if (kept.length) out2.shelves[sh.key] = kept;
-      }
-    }
-    out2.answers = {};
-    if (src.answers && typeof src.answers === "object") {
-      const names = new Set(bookCards(out2).map((e) => e.card.name));
-      for (const [cls, nm] of Object.entries(src.answers)) {
-        if (DEF_ANSWER_CLASSES.some((a) => a.key === cls) && nm && names.has(nm)) out2.answers[cls] = nm;
-        else if (nm) changes.push(`dropped personnel answer "${cls}" (its call is gone)`);
-      }
-    }
-    return { db: out2, changes, ok: validateDefBook(out2).ok };
-  }
-  var DEFBOOK_SCHEMA_VERSION, DEF_SHELVES, DEF_SHELF_CARD_CAP, DEF_CALL_COVERAGES, DEF_CALL_COVERAGE_IDS, DEF_CALL_BRING, CARD_EXTRA_ENUMS, CARD_EXTRA_LEGACY, CARD_KNOWN_KEYS, CARD_VOCAB, _vocabKeys, _FAMILY_SHELL, DEF_ANSWER_CLASSES, DEF_COVERAGE_SCHEMES, COVERAGE_IDS;
-  var init_defbook = __esm({
-    "js/engine/defbook.js"() {
-      init_constants();
-      init_formations();
-      DEFBOOK_SCHEMA_VERSION = 2;
-      DEF_SHELVES = [
-        { key: "base", label: "Base Downs", desc: "Your everyday answer \u2014 most snaps live here.", cells: ["base", "first_ten"] },
-        { key: "passing", label: "Passing Downs", desc: "Get off the field on 3rd & long and late trailing downs.", cells: ["third_long", "third_medium", "second_long", "two_min_trail"] },
-        { key: "short", label: "Short Yardage & Goal Line", desc: "A yard to give, nothing behind you.", cells: ["third_short", "goal_line", "backed_up"] },
-        { key: "gamble", label: "The Gamble", desc: "Your pressure package \u2014 headset calls, never automatic.", cells: [] },
-        { key: "protect", label: "Protect", desc: "Late with a lead \u2014 keep everything in front.", cells: ["four_min_lead"] }
-      ];
-      DEF_SHELF_CARD_CAP = 3;
-      DEF_CALL_COVERAGES = [
-        { id: "c1", label: "Cover 1", desc: "Man across, one deep safety helps.", fields: { covShell: "single", covStyle: "man" }, art: { deep: "mof", man: true } },
-        { id: "c3", label: "Cover 3", desc: "Three deep thirds, four underneath.", fields: { covShell: "single", covStyle: "zone" }, art: { deep: "thirds" } },
-        { id: "c2", label: "Cover 2", desc: "Two deep halves, five underneath.", fields: { covShell: "two", covStyle: "zone" }, art: { deep: "halves" } },
-        { id: "c2man", label: "2-Man", desc: "Man underneath, two safeties over the top.", fields: { covFamily: "Cover 2-Man" }, art: { deep: "halves", man: true } },
-        { id: "tampa2", label: "Tampa 2", desc: "Cover 2 with the Mike running the deep middle.", fields: { covFamily: "Tampa 2" }, art: { deep: "halves", pole: true } },
-        { id: "c6", label: "Cover 6", desc: "Quarters to the field, Cover 2 to the boundary.", fields: { covFamily: "Cover 6" }, art: { deep: "quarters" } },
-        // 2026-08-18: `prevent: true` so the card can DRAW the difference. It shared
-        // "thirds" with Cover 3 and rendered a byte-identical picture, which made two
-        // completely different calls — rush four vs rush three and drop eight — look
-        // like the same defense on the shelf.
-        { id: "prevent", label: "Prevent", desc: "Rush three, everything stays in front.", fields: { covFamily: "Prevent", rush3: true }, art: { deep: "thirds", prevent: true } },
-        { id: "base", label: "Match the identity", desc: "Play the book's standing coverage identity.", fields: {}, art: { deep: null } }
-      ];
-      DEF_CALL_COVERAGE_IDS = DEF_CALL_COVERAGES.map((c) => c.id);
-      DEF_CALL_BRING = {
-        "3": { label: "Rush 3", desc: "Drop eight \u2014 coverage wins this down.", fields: { rush3: true } },
-        "4": { label: "Rush 4", desc: "The front wins or nobody does.", fields: { bringSeats: 0 } },
-        "5": { label: "Bring 5", desc: "A second-level player comes too.", fields: { bringSeats: 1 } },
-        "6": { label: "Bring the House", desc: "No help \u2014 get there or get beat.", fields: { bringSeats: 2 } }
-      };
-      CARD_EXTRA_ENUMS = {
-        edgePlay: ["auto", "contain", "balanced", "crash"],
-        robberCall: ["auto", "rob", "overtop"],
-        zoneStyle: ["auto", "spot", "balanced", "match"],
-        dogGame: ["green", "cross"],
-        pressLevel: ["auto", "press", "balanced", "off"],
-        rotation: ["sky", "cloud", "buzz"]
-      };
-      CARD_EXTRA_LEGACY = {
-        zoneStyle: ["quarterQuarterHalf"]
-      };
-      CARD_KNOWN_KEYS = /* @__PURE__ */ new Set(["name", "front", "coverage", "bring", "look", "weight", "runCommit", ...Object.keys(CARD_EXTRA_ENUMS)]);
-      CARD_VOCAB = {
-        front: { enum: null, call: true, cell: true, check: true },
-        coverage: { enum: null, call: true, cell: true, check: true },
-        bring: { enum: null, call: true, cell: true, check: true },
-        look: { enum: null, call: true, cell: true, check: true },
-        runCommit: { enum: null, call: true, cell: true, check: true },
-        edgePlay: { enum: "edgePlay", call: true, cell: true, check: true },
-        robberCall: { enum: "robberCall", call: true, cell: true, check: false },
-        zoneStyle: { enum: "zoneStyle", call: true, cell: true, check: false },
-        pressLevel: { enum: "pressLevel", call: true, cell: true, check: false },
-        dogGame: { enum: "dogGame", call: true, cell: false, check: false },
-        rotation: { enum: "rotation", call: true, cell: false, check: false }
-      };
-      _vocabKeys = (seam) => Object.keys(CARD_VOCAB).filter(
-        (k) => CARD_VOCAB[k][seam] && !["front", "coverage", "bring", "look"].includes(k)
-      );
-      _FAMILY_SHELL = Object.fromEntries(
-        Object.entries(COV_FAMILY).filter(([, v]) => v.callable).map(([fam, v]) => [fam, { covShell: v.shell, covStyle: v.style }])
-      );
-      DEF_ANSWER_CLASSES = [
-        { key: "empty", label: "vs Empty" },
-        { key: "10", label: "vs 10 pers (4 WR)" },
-        { key: "11", label: "vs 11 pers (3 WR)" },
-        { key: "12", label: "vs 12 pers (2 TE)" },
-        { key: "heavy", label: "vs Heavy" },
-        { key: "option", label: "vs Option looks" }
-      ];
-      DEF_COVERAGE_SCHEMES = [
-        { id: "balanced", label: "Balanced", desc: "Mix man and zone, protect the middle." },
-        { id: "aggressive", label: "Aggressive", desc: "Retired \u2014 plays as Balanced (it always did).", retired: true },
-        { id: "conservative", label: "Conservative", desc: "Retired \u2014 plays as Balanced (it always did).", retired: true },
-        { id: "lockTop", label: "Lock the No. 1", desc: "Travel your best corner onto their best receiver." },
-        { id: "bracketTop", label: "Bracket the No. 1", desc: "Double their best receiver over the top." }
-      ];
-      COVERAGE_IDS = DEF_COVERAGE_SCHEMES.map((c) => c.id);
-    }
-  });
-
   // js/engine/customplay.js
   function baseConceptsForKind(kind) {
     return Object.keys(kind === "run" ? RUN_CONCEPTS : PASS_CONCEPTS);
@@ -42578,7 +42657,15 @@ var _CFB = (() => {
             base: [
               dcard("Assignment 44", "4-4", "c3", "4", null, { edgePlay: "contain", weight: 60 }),
               dcard("52 Wall", "5-2", "c1", "4", null, { edgePlay: "contain", weight: 50 }),
-              dcard("Split 44", "4-4", "c6", "4", null, { edgePlay: "contain", weight: 45 })
+              // 2026-08-21: this was on the 4-4 — a split-field TWO-HIGH coverage
+              // from a front that fields one safety, which it cannot play
+              // (callFitsFront caught it). Moved to the 4-3, which this book's own
+              // front mix already declares at 25 and which no call in the book was
+              // using. Football: against 12 personnel two tight ends threaten both
+              // seams, so you come OUT of the 4-4's eight-man box into a two-high
+              // look with real safety help — quarters to the field, Cover 2 to the
+              // boundary. The name follows the front, as every call here does.
+              dcard("Split 43", "4-3", "c6", "4", null, { edgePlay: "contain", weight: 45 })
             ],
             passing: [
               dcard("Nickel Match", "Nickel", "c3", "4", null, { weight: 58 }),
@@ -42598,7 +42685,7 @@ var _CFB = (() => {
               dcard("Dime Prevent", "Dime", "prevent", "3", null, { weight: 45 })
             ]
           },
-          { empty: "Dime Rush 3", "10": "Nickel 2-Trap", "11": "Nickel Match", "12": "Split 44", heavy: "Gap Sound", option: "Assignment 44" }
+          { empty: "Dime Rush 3", "10": "Nickel 2-Trap", "11": "Nickel Match", "12": "Split 43", heavy: "Gap Sound", option: "Assignment 44" }
         )
       ];
       DEFAULT_OFF_BOOKS = DEFAULT_OFF_BOOKS.filter((b) => {
@@ -44617,6 +44704,7 @@ var _CFB = (() => {
   // js/ui/views/routeart.js
   init_constants_field();
   init_constants();
+  init_formations();
   init_playcompose();
   var ROUTE_ART = {
     go: { color: "#ffd34d", pts: [[0, 0], [0, -38]] },
@@ -44853,53 +44941,132 @@ var _CFB = (() => {
   }
   function renderDefCallCard(call, opts) {
     const o = opts || {};
-    const W = o.w || 250, H = o.h || 170;
+    const _W0 = o.w || 250, _H0 = o.h || 170;
+    const _MIN_W = 150, _MIN_H = 100;
+    const _k = Math.max(1, _MIN_W / _W0, _MIN_H / _H0);
+    const W = Math.round(_W0 * _k), H = Math.round(_H0 * _k);
     const front = call.front || o.fallbackFront || "4-3";
     const layout = DEF_FIELD_LAYOUTS[front];
     if (!layout) return "";
     const art = o.art || { deep: null };
-    const padX = 14, topPad = 8, ySpan = H - 46;
+    const padX = 14, topPad = 8;
+    const ySpan = H - Math.round(H * 0.27);
     const sx = (x) => padX + x * (W - 2 * padX);
     const sy = (y) => topPad + y * ySpan;
     const losY = sy(0.86);
+    const _NODE_W = Math.max(11, Math.min(18, Math.round(W * 0.072)));
+    const _NODE_H = Math.max(8, Math.min(14, Math.round(H * 0.082)));
+    const _NODE_FS = Math.max(5, Math.min(8, Math.round(_NODE_H * 0.58)));
+    const _CLR = 3;
+    const _MIN_DX = (_NODE_W + _CLR) / (W - 2 * padX);
+    const _MIN_DY = (_NODE_H + _CLR) / ySpan;
+    const _clash = (a, b) => Math.abs(a.x - b.x) < _MIN_DX && Math.abs(a.y - b.y) < _MIN_DY;
+    const _dlFrontY = Math.min(...layout.slots.filter((s) => /DE|DT|NT/.test(s.pos)).map((s) => s.y));
+    const _CEIL = _dlFrontY - _MIN_DY;
+    const _placeClear = (ideal, taken) => {
+      if (!taken.some((t) => _clash(ideal, t))) return ideal;
+      const ring = [[1, 0], [-1, 0], [0, -1], [1, -1], [-1, -1], [0, 1], [1, 1], [-1, 1]];
+      for (let step = 1; step <= 10; step++) {
+        for (const [dx, dy] of ring) {
+          const p = { x: ideal.x + dx * step * _MIN_DX * 0.6, y: ideal.y + dy * step * _MIN_DY * 0.6 };
+          if (p.x < 0.04 || p.x > 0.96 || p.y < 0.02 || p.y > _CEIL) continue;
+          if (!taken.some((t) => _clash(p, t))) return p;
+        }
+      }
+      return ideal;
+    };
     const pressLvl = o.pressLevel || call.pressLevel || "auto";
     const _PRESS_SHIFT = { press: 0.1, off: -0.08 };
     const _pressable = (s) => /CB|NB/.test(s.pos) || /CB|NB/.test(s.label || "");
     const lookId = o.look || call.look || null;
     const _backer = (s) => /LB|OLB|MLB/.test(s.pos) || /WILL|MIKE|SAM/.test(s.label || "");
     const _AMOEBA_Y = 0.5;
-    const _lookY = (s) => {
+    const _lookIdeal = (s) => {
       if (!_backer(s)) return null;
-      if (lookId === "mug") return s.y + 0.16;
-      if (lookId === "amoeba") return _AMOEBA_Y;
+      if (lookId === "mug") {
+        const to = Math.min(s.y + 0.16, _CEIL);
+        return to > s.y + 5e-3 ? { x: s.x, y: to } : null;
+      }
+      if (lookId === "amoeba") return { x: s.x, y: _AMOEBA_Y };
       return null;
     };
     const rot = o.rotation || call.rotation || null;
-    const _isS = (s) => /^S$|^FS$|^SS$/.test(s.pos) || /FS|SS/.test(s.label || "");
     const _isCB = (s) => /CB/.test(s.pos) || /CB/.test(s.label || "");
-    const _rotXY = (s) => {
-      if (!rot) return null;
-      const right = s.x >= 0.5;
-      if (rot === "sky" && _isS(s) && right) return { x: 0.86, y: 0.5 };
-      if (rot === "buzz" && _isS(s) && right) return { x: 0.56, y: 0.46 };
-      if (rot === "cloud") {
-        if (_isCB(s) && right) return { x: s.x, y: 0.46 };
-        if (_isS(s) && right) return { x: 0.78, y: 0.04 };
+    const _role = (s) => s.role || "";
+    const _findId = (pred) => {
+      const s = layout.slots.find(pred);
+      return s ? s.id : null;
+    };
+    const _rotator = !rot ? null : _findId((s) => _role(s) === "S-Strong") || _findId((s) => _role(s) === "S-Hybrid" || _role(s) === "CB-Nickel");
+    const _deepMiddle = rot === "sky" || rot === "buzz" ? _findId((s) => _role(s) === "S-Free") : null;
+    const _cloudSquat = rot === "cloud" ? (() => {
+      const c = layout.slots.filter((s) => _isCB(s) && s.x >= 0.5).sort((a, b) => b.x - a.x);
+      return c.length ? c[0].id : null;
+    })() : null;
+    const _rotIdeal = (s) => {
+      if (s.id === _rotator) {
+        if (rot === "sky") return { x: 0.9, y: 0.46 };
+        if (rot === "buzz") return { x: 0.56, y: 0.42 };
+        if (rot === "cloud") return { x: 0.78, y: 0.04 };
       }
-      if ((rot === "sky" || rot === "buzz") && _isS(s) && !right) return { x: 0.5, y: 0.04 };
+      if (rot === "cloud" && s.id === _cloudSquat) return { x: s.x, y: 0.46 };
+      if (s.id === _deepMiddle) return { x: 0.5, y: 0.04 };
       return null;
     };
-    const slotX = (s) => {
-      const r = _rotXY(s);
-      return sx(r ? r.x : s.x);
+    const _POS = (() => {
+      const out2 = {};
+      const movers = [];
+      for (const s of layout.slots) {
+        const ideal = rot && _rotIdeal(s) || _lookIdeal(s);
+        if (ideal) {
+          movers.push({ s, ideal });
+          out2[s.id] = { x: s.x, y: s.y };
+        } else out2[s.id] = { x: s.x, y: s.y + (_pressable(s) ? _PRESS_SHIFT[pressLvl] || 0 : 0) };
+      }
+      movers.sort((a, b) => (rot && _rotIdeal(a.s) ? 1 : 0) - (rot && _rotIdeal(b.s) ? 1 : 0));
+      const placed = layout.slots.filter((s) => !movers.some((m) => m.s.id === s.id)).map((s) => out2[s.id]);
+      for (const { s, ideal } of movers) {
+        out2[s.id] = _placeClear(ideal, placed.slice());
+        placed.push(out2[s.id]);
+      }
+      return out2;
+    })();
+    const slotX = (s) => sx((_POS[s.id] || s).x);
+    const slotY = (s) => sy((_POS[s.id] || s).y);
+    const dl = layout.slots.filter((s) => _DPOS_CLASS[s.pos] === "fd-dl");
+    const lbs = layout.slots.filter((s) => _DPOS_CLASS[s.pos] === "fd-lb");
+    const _bringKey = String(call.bring == null ? "4" : call.bring);
+    const _seats = _bringKey === "5" ? 1 : _bringKey === "6" ? 2 : 0;
+    const _baseRush = dl.length + rushOlbCount(front);
+    const bring = _bringKey === "3" ? 3 : Math.max(3, _baseRush + _seats);
+    const edges = lbs.filter((s) => /Rush|Blitz/.test(String(s.role || "")));
+    const dogs = lbs.filter((s) => edges.indexOf(s) === -1);
+    const blitzIds = DEF_BLITZ_ELIGIBLE[front] || [];
+    const dbs = layout.slots.filter((s) => _DPOS_CLASS[s.pos] === "fd-db" && blitzIds.indexOf(s.id) !== -1).sort((a, b) => b.y - a.y);
+    let rushers = dl.slice(0, bring);
+    const droppers = dl.slice(bring);
+    const _eligRank = (s) => {
+      const i = blitzIds.indexOf(s.id);
+      return i === -1 ? 99 : i;
     };
-    const slotY = (s) => {
-      const r = _rotXY(s);
-      if (r) return sy(r.y);
-      const lk = _lookY(s);
-      if (lk != null) return sy(lk);
-      return sy(s.y + (_pressable(s) ? _PRESS_SHIFT[pressLvl] || 0 : 0));
-    };
+    const _pool = edges.concat(dogs, dbs).filter((s, i, a) => a.indexOf(s) === i);
+    const _resolved = Array.isArray(o.blitzers) && o.blitzers.length ? o.blitzers.map((id) => layout.slots.find((s) => s.id === id)).filter(Boolean) : null;
+    const _ordered = _resolved || _pool.slice().sort((a, b) => _eligRank(a) - _eligRank(b) || b.y - a.y);
+    let extra = rushers.length < bring ? _ordered.slice(0, bring - rushers.length) : [];
+    const _fzId = o.pressureIdentity || call.pressureIdentity || call.look || FRONT_PRESSURE_SIGNATURE[front];
+    const _fzSpec = _fzId && C.PRESS_IDENTITY ? C.PRESS_IDENTITY[_fzId] : null;
+    let fzDropped = null;
+    if (_seats > 0 && _fzSpec && _fzSpec.drop) {
+      const _cand = rushers.find((s) => /DE/.test(s.pos));
+      const _taken = new Set([...rushers, ...extra].map((x) => x.id));
+      const _sub = _ordered.find((s) => !_taken.has(s.id));
+      if (_cand && _sub) {
+        fzDropped = _cand;
+        rushers = rushers.filter((s) => s !== _cand);
+        extra = [...extra, _sub];
+      }
+    }
+    const _rushSet = new Set([...rushers, ...extra].map((x) => x.id));
     let svg = `<rect width="${W}" height="${H}" rx="0" class="play-card-turf"/>`;
     svg += `<line x1="0" y1="${_fmt(losY)}" x2="${W}" y2="${_fmt(losY)}" class="play-card-los"/>`;
     const zStyle = o.zoneStyle || call.zoneStyle || null;
@@ -44913,12 +45080,14 @@ var _CFB = (() => {
     } else if (art.deep === "halves") {
       const poleW = art.pole ? 34 : 0;
       const halfW = (W - 10 - poleW) / 2 - 3;
+      const deepDrop = art.prevent ? 8 : 0;
       for (let i = 0; i < 2; i++) {
         const hx = 5 + i * (halfW + 3 + poleW);
-        svg += zone(hx, zTop, halfW, zMid - zTop - 4, "DEEP \xBD", "dcz-deep");
+        svg += zone(hx, zTop, halfW, zMid - zTop - 4 + deepDrop, art.prevent ? "DEEP \xBD (soft)" : "DEEP \xBD", "dcz-deep");
       }
       if (art.pole) svg += zone(W / 2 - poleW / 2, zTop, poleW, zMid - zTop - 4, "POLE", "dcz-deep");
-      if (!art.man) for (let i = 0; i < 4; i++) svg += zone(7 + i * ((W - 14) / 4), zMid, (W - 14) / 4 - 3, underH, i === 0 || i === 3 ? "FLAT" : "CURL", "dcz-under");
+      const nUnder = art.prevent ? 6 : 4;
+      if (!art.man) for (let i = 0; i < nUnder; i++) svg += zone(7 + i * ((W - 14) / nUnder), zMid + deepDrop, (W - 14) / nUnder - 3, underH - deepDrop, i === 0 || i === nUnder - 1 ? "FLAT" : "CURL", "dcz-under");
     } else if (art.deep === "quarters") {
       for (let i = 0; i < 2; i++) svg += zone(5 + i * ((W - 10) / 4), zTop, (W - 10) / 4 - 3, zMid - zTop - 4, "\xBC", "dcz-deep");
       svg += zone(5 + 2 * ((W - 10) / 4), zTop, (W - 10) / 2 - 3, zMid - zTop - 4, "DEEP \xBD", "dcz-deep");
@@ -44935,6 +45104,7 @@ var _CFB = (() => {
       const inMan = layout.slots.filter((s) => {
         if (deepMen.includes(s)) return false;
         if (/DE|DT|NT|EDGE/.test(s.pos)) return false;
+        if (_rushSet.has(s.id)) return false;
         return /CB|NB|DB|S|FS|SS|LB|OLB|MLB/.test(s.pos) || /CB|NB|WILL|MIKE|SAM/.test(s.label || "");
       }).slice(0, 5);
       const n = inMan.length || 1;
@@ -44955,16 +45125,6 @@ var _CFB = (() => {
       const ex = x1 + ux * (L - 9), ey = y1 + uy * (L - 9);
       return `<line x1="${_fmt(x1)}" y1="${_fmt(y1)}" x2="${_fmt(ex)}" y2="${_fmt(ey)}" class="${cls}"/><polygon points="${_fmt(ex + uy * 3.6 - ux * 2)},${_fmt(ey - ux * 3.6 - uy * 2)} ${_fmt(ex - uy * 3.6 - ux * 2)},${_fmt(ey + ux * 3.6 - uy * 2)} ${_fmt(ex + ux * 5.5)},${_fmt(ey + uy * 5.5)}" class="${cls}-head"/>`;
     };
-    const dl = layout.slots.filter((s) => _DPOS_CLASS[s.pos] === "fd-dl");
-    const lbs = layout.slots.filter((s) => _DPOS_CLASS[s.pos] === "fd-lb");
-    const bring = Math.max(3, Math.min(6, parseInt(call.bring, 10) || 4));
-    const edges = lbs.filter((s) => /Rush|Blitz/.test(String(s.role || "")));
-    const dogs = lbs.filter((s) => edges.indexOf(s) === -1);
-    const blitzIds = DEF_BLITZ_ELIGIBLE[front] || [];
-    const dbs = layout.slots.filter((s) => _DPOS_CLASS[s.pos] === "fd-db" && blitzIds.indexOf(s.id) !== -1).sort((a, b) => b.y - a.y);
-    const rushers = dl.slice(0, bring);
-    const droppers = dl.slice(bring);
-    const extra = rushers.length < bring ? edges.concat(dogs, dbs).slice(0, bring - rushers.length) : [];
     const edge = o.edgePlay || call.edgePlay || null;
     const dog = o.dogGame || call.dogGame || null;
     const _isEdgeMan = (s) => /DE|EDGE|OLB/.test(s.pos);
@@ -44998,14 +45158,14 @@ var _CFB = (() => {
       const ry = robber === "rob" ? sy(0.42) : sy(0.16);
       svg += `<circle cx="${_fmt(W / 2)}" cy="${_fmt(ry)}" r="4.2" class="dc-drop-dot"/><text x="${_fmt(W / 2)}" y="${_fmt(ry - 7)}" text-anchor="middle" class="dcz-lbl">${robber === "rob" ? "ROB" : "OVER TOP"}</text>`;
     }
-    droppers.forEach((dropper, di) => {
+    (fzDropped ? [...droppers, fzDropped] : droppers).forEach((dropper, di) => {
       const dSide = dropper.x >= 0.5 ? 1 : -1;
       svg += `<path d="M${_fmt(sx(dropper.x))} ${_fmt(sy(dropper.y) - 6)} C ${_fmt(sx(dropper.x) + dSide * 8)} ${_fmt(sy(dropper.y) - 24)}, ${_fmt(sx(dropper.x) + dSide * 20)} ${_fmt(sy(dropper.y) - 30)}, ${_fmt(sx(dropper.x) + dSide * 26)} ${_fmt(sy(dropper.y) - 38)}" class="dc-drop"/><circle cx="${_fmt(sx(dropper.x) + dSide * 28)}" cy="${_fmt(sy(dropper.y) - 40)}" r="2.8" class="dc-drop-dot"/>`;
     });
     if (call.runCommit != null && call.runCommit > 0) svg += `<text x="${_fmt(W / 2)}" y="${_fmt(losY - 4)}" text-anchor="middle" class="dc-box-lbl">\u25BC +${call.runCommit} IN THE BOX</text>`;
     for (const s of layout.slots) {
       const cls = _DPOS_CLASS[s.pos] || "fd-lb";
-      svg += `<g><rect x="${_fmt(slotX(s) - 9)}" y="${_fmt(slotY(s) - 7)}" width="18" height="14" rx="3" class="fd-node ${cls}"/><text x="${_fmt(slotX(s))}" y="${_fmt(slotY(s) + 3)}" class="fd-lbl">${_esc(s.label)}</text></g>`;
+      svg += `<g><rect x="${_fmt(slotX(s) - _NODE_W / 2)}" y="${_fmt(slotY(s) - _NODE_H / 2)}" width="${_NODE_W}" height="${_NODE_H}" rx="${_fmt(Math.max(2, Math.round(_NODE_H * 0.21)))}" class="fd-node ${cls}"/><text x="${_fmt(slotX(s))}" y="${_fmt(slotY(s) + Math.round(_NODE_FS * 0.36))}"${_NODE_FS === 8 ? "" : ` font-size="${_NODE_FS}"`} class="fd-lbl">${_esc(s.label)}</text></g>`;
     }
     return `<svg class="play-card-svg def-call-card" viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${_esc(call.name || "Defensive call")}">${svg}</svg>`;
   }
@@ -45470,6 +45630,9 @@ var _CFB = (() => {
     const share = (k.parts || []).length ? deep / k.parts.length : 0;
     return share >= 0.5 ? "deep" : share > 0 ? "medium" : "short";
   }
+
+  // js/ui/app.js
+  init_defbook();
 
   // js/ui/views/conceptblurbs.js
   var CONCEPT_BLURBS = {
@@ -53176,7 +53339,7 @@ var _CFB = (() => {
     ["edgePlay", "Edge", [["contain", "Set it"], ["crash", "Crash"]]],
     ["runCommit", "Box", [["-8", "Lighten the box"], ["8", "Commit to the run"]]]
   ];
-  var MAX_DEF_CALLS = 12;
+  var MAX_DEF_CALLS = 40;
   var CALL_FIELDS = [
     ["front", "Front", [["4-3", "4-3"], ["3-4", "3-4"], ["Tite", "Tite"], ["Nickel", "Nickel"], ["Big Nickel", "Big Nickel"], ["3-3-5", "3-3-5"], ["Penny", "Penny"], ["Dime", "Dime"], ["4-4", "4-4"], ["46/Bear", "46/Bear"], ["5-2", "5-2"]]],
     ["aggression", "Pressure", [["bend", "Bend"], ["selective", "Selective"], ["balanced", "Balanced"], ["attacking", "Attacking"], ["house", "House"]]],
@@ -65146,6 +65309,7 @@ ${renderAutoRecruitLog()}`;
 
   // js/ui/app.js
   init_playbook();
+  var DEF_CALL_BRING_LBL = Object.fromEntries(Object.entries(DEF_CALL_BRING).map(([k, v]) => [k, v.label]));
   try {
     syncCustomFormations(listCreations("formations").map((e) => ({ name: e.name, data: e.data })));
   } catch (e) {
@@ -67679,11 +67843,15 @@ ${renderAutoRecruitLog()}`;
       state.ui.callConceptPreview = null;
       answerPlayCall(_decorateCall({ customPlay: b.dataset.csCallcustom, customPlayData: data }));
     }));
+    document.querySelectorAll("[data-dc-front]").forEach((b) => b.addEventListener("click", () => {
+      state.ui.defCallFront = b.dataset.dcFront;
+      rerender();
+    }));
     document.querySelectorAll("[data-dc-callname]").forEach((b) => b.addEventListener("click", () => {
       var _a3, _b3, _c3, _d4, _e2, _f3;
       var _a22, _b22, _c22;
       const nm = b.dataset.dcCallname;
-      if (nm === "__clear" || state.ui.defCallName === nm) {
+      if (state.ui.defCallName === nm) {
         state.ui.defCallName = null;
         rerender();
         return;
@@ -68236,6 +68404,35 @@ ${renderAutoRecruitLog()}`;
     ["runCommit", "BOX", [["-8", "Lighten \u22128"], ["8", "Commit +8"]]],
     ["pressureIdentity", "HEAT SHAPE", [["fireZone", "Fire Zone"], ["secondLevel", "2nd Level"], ["secondaryHeat", "DB Heat"], ["theHouse", "The House"]]]
   ];
+  function _dcCovOf(call) {
+    const c = call || {};
+    if (c.covFamily) {
+      const byFam = DEF_CALL_COVERAGES.find((x) => x.fields && x.fields.covFamily === c.covFamily);
+      if (byFam) return byFam;
+    }
+    if (c.covShell || c.covStyle) {
+      const byShell = DEF_CALL_COVERAGES.find((x) => x.fields && x.fields.covShell === c.covShell && x.fields.covStyle === c.covStyle);
+      if (byShell) return byShell;
+    }
+    return DEF_CALL_COVERAGES[DEF_CALL_COVERAGES.length - 1];
+  }
+  function _dcBringOf(call) {
+    const c = call || {};
+    if (c.rush3) return "3";
+    const seats = c.bringSeats;
+    return seats === 2 ? "6" : seats === 1 ? "5" : "4";
+  }
+  function _dcCardOf(name, call, fallbackFront) {
+    const c = call || {};
+    return {
+      name,
+      front: c.front || fallbackFront || null,
+      bring: _dcBringOf(c),
+      look: c.pressLook || null,
+      rotation: c.rotation || null,
+      pressLevel: c.pressLevel || null
+    };
+  }
   function defCallPanelHtml() {
     var _a, _b, _c;
     const token = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
@@ -68279,36 +68476,74 @@ ${renderAutoRecruitLog()}`;
     </div>
     <p class="cs-diagram-hint">They're breaking the huddle. Pin any dial for THIS SNAP ONLY \u2014 anything you don't touch rides your standing plan.</p>
     ${(() => {
-      var _s, _s2;
+      var _s2;
       const _dcSchool = getPlayerSchool();
       const lib = defBookCalls(_dcSchool);
       const _dbName = ((_s2 = _dcSchool == null ? void 0 : _dcSchool.defbook) == null ? void 0 : _s2.name) || null;
       const names = lib ? Object.keys(lib) : [];
       if (!names.length) return "";
       const cur = state.ui.defCallName || null;
-      const curSel = state.ui.defCall || {};
-      const ROT_LBL = { sky: "Sky", cloud: "Cloud", buzz: "Buzz" };
-      const LOOK_LBL = { mug: "Double-A Mug", amoeba: "Amoeba" };
-      const DOG_LBL = { green: "Green Dog", cross: "Cross Dog" };
-      const ing = [
-        curSel.covFamily ? `\u2601 ${curSel.covFamily === "Cover 2-Man" ? "2-Man" : curSel.covFamily}` : null,
-        curSel.rotation ? `\u21BA ${ROT_LBL[curSel.rotation] || curSel.rotation}` : null,
-        curSel.rush3 ? "\u2602 Rush 3 / Drop 8" : null,
-        curSel.pressLook ? `\u26A1 ${LOOK_LBL[curSel.pressLook] || curSel.pressLook}` : null,
-        curSel.dogGame ? `\u{1F415} ${DOG_LBL[curSel.dogGame] || curSel.dogGame}` : null
-      ].filter(Boolean);
+      const baseFront = (standing.defFront && standing.defFront !== "auto" ? standing.defFront : standing.baseFront) || "4-3";
+      const frontOf = (nm) => (lib[nm] || {}).front || baseFront;
+      const covIdOf = (c) => (_dcCovOf(c) || {}).id || "base";
+      const fronts = [];
+      for (const nm of names) {
+        const f = frontOf(nm);
+        if (!fronts.includes(f)) fronts.push(f);
+      }
+      const selFront = fronts.includes(state.ui.defCallFront) ? state.ui.defCallFront : fronts.length > 1 ? "__all" : fronts[0];
+      const shown = selFront === "__all" ? names : names.filter((nm) => {
+        const c = lib[nm] || {};
+        return c.front ? c.front === selFront : callFitsFront({ coverage: covIdOf(c) }, selFront);
+      });
+      const mixOrder = Object.entries(_dcSchool && _dcSchool.gameplan && _dcSchool.gameplan.defFrontMix || {}).sort((a, b) => b[1] - a[1]).map(([f]) => f);
+      const inMix = (f) => mixOrder.includes(f);
+      const isPkg = (f) => !inMix(f);
+      const ordered = [...fronts].sort((a, b) => {
+        const pa = isPkg(a) ? 1 : 0, pb = isPkg(b) ? 1 : 0;
+        if (pa !== pb) return pa - pb;
+        const ai = mixOrder.indexOf(a), bi = mixOrder.indexOf(b);
+        if (ai !== -1 && bi !== -1) return ai - bi;
+        return fronts.indexOf(a) - fronts.indexOf(b);
+      });
+      const countOf = (f) => names.filter((nm) => {
+        const c = lib[nm] || {};
+        return c.front ? c.front === f : callFitsFront({ coverage: covIdOf(c) }, f);
+      }).length;
+      const tabs = fronts.length > 1 ? `<div class="dc-fronttabs" role="tablist" aria-label="Front">
+          <button class="dc-ftab${selFront === "__all" ? " active" : ""}" data-dc-front="__all" role="tab" aria-selected="${selFront === "__all"}">All<b>${names.length}</b></button>
+          ${ordered.map((f) => `<button class="dc-ftab${selFront === f ? " active" : ""}" data-dc-front="${escapeHtml(f)}" role="tab" aria-selected="${selFront === f}">${escapeHtml(f)}<b>${countOf(f)}</b></button>`).join("")}
+        </div>` : "";
+      const tiles = shown.map((nm) => {
+        const call = lib[nm] || {};
+        const cov = _dcCovOf(call);
+        const card = _dcCardOf(nm, call, baseFront);
+        const art = renderDefCallCard(card, {
+          w: 250,
+          h: 170,
+          art: cov.art,
+          fallbackFront: baseFront,
+          pressLevel: card.pressLevel,
+          look: card.look,
+          rotation: card.rotation
+        });
+        const sub = `${escapeHtml(card.front || baseFront)} \xB7 ${escapeHtml(cov.label)} \xB7 ${escapeHtml(DEF_CALL_BRING_LBL[card.bring] || card.bring)}`;
+        return `<div class="cs-concept-tile"><button class="cs-concept cs-concept-card dc-card-btn${cur === nm ? " active" : ""}" data-dc-callname="${escapeHtml(nm)}" aria-label="Call ${escapeHtml(nm)} \u2014 ${sub}" title="${escapeHtml(cov.desc || "")}">${art}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-learn">${sub}</span></button></div>`;
+      }).join("");
       return `
-    <div class="dc-row">
+    <div class="dc-callhead">
       <span class="dc-row-label"${_dbName ? ` title="Named calls from your defensive book \u2014 \u201C${escapeHtml(_dbName)}\u201D"` : ""}>CALL${_dbName ? `<span class="dc-book-name">${escapeHtml(_dbName)}</span>` : ""}</span>
-      <span class="dc-plan${cur ? "" : " active"}" data-dc-callname="__clear" title="Drop the named call, keep your pins">ad-lib</span>
-      ${names.map((nm) => `<button class="dc-chip${cur === nm ? " active" : ""}" data-dc-callname="${escapeHtml(nm)}">${escapeHtml(nm)}</button>`).join("")}
-    </div>${cur && ing.length ? `
-    <div class="dc-row">
-      <span class="dc-row-label"></span>
-      <span class="dc-plan active" title="These ride the named call \u2014 adjust SHELL or STYLE to shed the coverage pin">${ing.map(escapeHtml).join(" \xB7 ")}</span>
-    </div>` : ""}`;
+    </div>
+    ${tabs}
+    <div class="cs-concepts dc-cards">${tiles}</div>`;
     })()}
-    ${rows}
+    <details class="dc-adjust"${state.ui.defCall && Object.keys(state.ui.defCall).length ? " open" : ""}>
+      <summary>Adjust \u2014 pin any dial for this snap${(() => {
+      const n = Object.keys(state.ui.defCall || {}).length;
+      return n ? ` <b>(${n} pinned)</b>` : "";
+    })()}</summary>
+      ${rows}
+    </details>
     ${timeControlBar()}
     <div class="cs-footer dc-footer">
       ${(() => {
