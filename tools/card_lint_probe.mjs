@@ -33,8 +33,9 @@
 //       renderDefCallCard draws EXACTLY `bring` rush arrows for bring 3–6 on
 //       every front (#33 graphic half), with one fire-zone drop squiggle per
 //       lineman over the bring, and everything in bounds.
-import { FORMATION_VARIATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, aliasFormation } from '../js/constants.js';
+import { C, FORMATION_VARIATIONS, FORMATION_PACKAGES, FORMATION_PLAYBOOK, aliasFormation } from '../js/constants.js';
 import { OFF_FIELD_LAYOUTS, DEF_FIELD_LAYOUTS, variationLayoutSlots } from '../js/constants_field.js';
+import { rushOlbCount, FRONT_PRESSURE_SIGNATURE } from '../js/engine/formations.js';
 //   C6  (D4/M2) THE BIG CARD + THE WORDS — run cards draw the LOOK (5 OL from
 //       the authored layout, one designed path, in bounds); the big-card jobs
 //       render (jobs:true) stays in bounds; playAssignments answers with all
@@ -238,10 +239,26 @@ hdr('C5 — defensive graphics: side-explicit end labels (#31), the arrow count 
         for (const size of [{ w: 250, h: 170 }, { w: 220, h: 150 }]) {
           cards++;
           const svg = renderDefCallCard({ name: 'probe', front: f, bring: String(bring), coverage: 'x' }, { ...size, art });
+          // ── THE ARROWS COUNT FROM THE FRONT, NOT FROM THE NUMBER ─────────
+          // Updated 2026-08-21. This asserted arrows === bring, which assumed
+          // every front rushes four. `bringSeats` has always meant EXTRA men
+          // beyond the front's own rush, and three fronts do not rush four —
+          // Tite and the 3-3-5 rush three by design, the 5-2 rushes five — so
+          // the old rule demanded the card draw a number the sim never sends.
+          // The labels now name the seat ("Base Rush", "Bring One") and the
+          // card counts the front's rush plus the seats. Rush 3 stays
+          // absolute because the engine's rush3 is.
+          const wantRush = bring === 3 ? 3 : Math.max(3, dlCount + rushOlbCount(f) + (bring - 4));
           const arrows = (svg.match(/class="dc-rush"\/>/g) || []).length + (svg.match(/class="dc-dog"\/>/g) || []).length;
-          if (arrows !== bring) bad.push(`${f} bring ${bring}: ${arrows} arrows`);
+          if (arrows !== wantRush) bad.push(`${f} bring ${bring}: ${arrows} arrows, front rushes ${wantRush}`);
+          // A fire-zone front that has bought a seat bends ONE MORE man back —
+          // the exchange: an end drops, a second-level body comes behind him.
+          // Squiggles are therefore the linemen past the rush count, plus that
+          // one when the front's identity is a fire zone and a seat was bought.
+          const fzSpec = C.PRESS_IDENTITY ? C.PRESS_IDENTITY[FRONT_PRESSURE_SIGNATURE[f]] : null;
+          const wantFz = (bring > 4 && fzSpec && fzSpec.drop) ? 1 : 0;
           const drops = (svg.match(/class="dc-drop"\/>/g) || []).length;
-          if (drops !== Math.max(0, dlCount - bring)) bad.push(`${f} bring ${bring}: ${drops} drop squiggles for ${dlCount}-man line`);
+          if (drops !== Math.max(0, dlCount - wantRush) + wantFz) bad.push(`${f} bring ${bring}: ${drops} drop squiggles for ${dlCount}-man line (want ${Math.max(0, dlCount - wantRush) + wantFz})`);
           const err = svgInBounds(svg, size.w, size.h, 2.5);
           if (err) bad.push(`${f} bring ${bring} @${size.w}×${size.h}: ${err}`);
         }

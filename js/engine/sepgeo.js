@@ -189,16 +189,33 @@ function routeDuel(receiver, defender, passDepth, coverageType, pressHot = false
   if (trace) trace.dist = dist;
   const m = QMAP[`${passDepth}/${coverageType}`] || QMAP["medium/zone"];
   let sep = qsep(m, dist);
-  // Deep-zone AWR fix (2026-08-14): the duel's DEEP arming is positional (the
-  // defender triggers when the receiver reaches his depth), which washes the
-  // defender's eyes out at depth and even slightly INVERTED awareness there
-  // (raising zone AWR 20→99 barely moved deep separation, wrong way). Short and
-  // medium zones read AWR correctly via the trigger, so this touches deep only:
-  // a direct, MEAN-NEUTRAL awareness term. It is exactly 0 at AWR 50, so the
-  // average defender is unchanged (stat_realism unmoved) and only the SPREAD
-  // tilts the right way — a heady deep defender gives up less, a raw one more.
+  // ── DEEP-ZONE AWR (2026-08-14, RESIZED 2026-08-21) ────────────────────────
+  // The duel's DEEP arming is positional — the defender triggers when the
+  // receiver reaches his depth — which washes his eyes out down the field and
+  // leaves raw separation INVERTED in awareness: measured on 40k duels per
+  // point, a deep zone defender at AWR 20 gave up 0.161 and at AWR 99 gave up
+  // 0.689. A heady deep safety was worse than a raw one, in a straight line.
+  // Short and medium zones read AWR correctly through the reaction trigger, so
+  // this touches deep only: a direct, MEAN-NEUTRAL awareness term, exactly 0 at
+  // AWR 50, so the average defender is unchanged and only the SPREAD moves.
+  //
+  // The 2026-08-14 coefficient (0.0019) was the right idea at roughly a fifth
+  // of the size it needed to be. It bent the curve by about 0.15 across the
+  // AWR range against a raw inversion of 0.53, so the net still ran the wrong
+  // way — 20→0.218 up to 99→0.596 — and `coverage_monotonicity_check` reported
+  // "HELPS THE RECEIVER (INVERTED)" on every run for seven months.
+  //
+  // 0.0103 is derived, not guessed: it is the value that gives deep zone the
+  // SAME awareness slope medium zone already has (-0.00362 vs -0.00365), so
+  // the two depths finally price a defender's eyes the same way.
+  //
+  // HONEST LIMIT: this corrects the direction and the slope, not the mechanism.
+  // The positional arming is still what makes deep coverage read awareness
+  // badly, and the middle of the curve stays bumpy (AWR 80 sits slightly above
+  // AWR 60). Fixing the arming is the real repair; this makes the football
+  // right while that waits.
   if (coverageType === "zone" && passDepth === "deep") {
-    sep -= (((da.AWR != null ? da.AWR : 50) - 50)) * 0.0019;
+    sep -= (((da.AWR != null ? da.AWR : 50) - 50)) * 0.0103;
   }
   return Math.max(0, Math.min(1, sep));
 }

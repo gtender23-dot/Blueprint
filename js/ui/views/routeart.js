@@ -1,5 +1,6 @@
 import { OFF_FIELD_LAYOUTS, DEF_FIELD_LAYOUTS, DEF_BLITZ_ELIGIBLE, variationLayoutSlots } from '../../constants_field.js';
-import { aliasFormation, FORMATION_VARIATIONS, FORMATION_PACKAGES } from '../../constants.js';
+import { aliasFormation, C, FORMATION_VARIATIONS, FORMATION_PACKAGES } from '../../constants.js';
+import { rushOlbCount, FRONT_PRESSURE_SIGNATURE } from '../../engine/formations.js';
 import { runCardParam } from '../../engine/playcompose.js';
 
 // ── Route art — the reusable play-graphics primitive ───────────────────────
@@ -310,15 +311,71 @@ function renderFrontDiagram(front, opts) {
 // man?, pole? }; bring = '3'|'4'|'5'|'6'; look = pressure identity id.
 function renderDefCallCard(call, opts) {
   const o = opts || {};
-  const W = o.w || 250, H = o.h || 170;
+  // ── A MINIMUM CANVAS (2026-08-20) ────────────────────────────────────────
+  // W and H are the viewBox, not the rendered size — the svg goes out at
+  // width:100% and takes whatever the container gives it. So a caller asking
+  // for a small card is asking for a small COORDINATE SPACE, and below about
+  // 140x95 there is not enough of it to seat eleven men at a legible node
+  // size: the alignment is correct and the boxes still collide. Scale the
+  // space up to the floor, preserving the caller's aspect ratio exactly, and
+  // let CSS size the result. Nothing renders differently above the floor.
+  const _W0 = o.w || 250, _H0 = o.h || 170;
+  const _MIN_W = 150, _MIN_H = 100;
+  const _k = Math.max(1, _MIN_W / _W0, _MIN_H / _H0);
+  const W = Math.round(_W0 * _k), H = Math.round(_H0 * _k);
   const front = call.front || o.fallbackFront || "4-3";
   const layout = DEF_FIELD_LAYOUTS[front];
   if (!layout) return "";
   const art = o.art || { deep: null };
-  const padX = 14, topPad = 8, ySpan = H - 46;
+  const padX = 14, topPad = 8;
+  // ── THE CARD SCALES (2026-08-20) ─────────────────────────────────────────
+  // ySpan was `H - 46`, a fixed pixel reserve for the backfield below the
+  // line. At the 250px Workshop card that reserve is 27% of the height; on a
+  // call-sheet grid tile it was most of the card, so the eleven defenders got
+  // squeezed into a band too short to hold them and drew as a pile. Same
+  // proportion, derived — at H=170 this is 124, exactly what it always was.
+  const ySpan = H - Math.round(H * 0.27);
   const sx = (x) => padX + x * (W - 2 * padX);
   const sy = (y) => topPad + y * ySpan;
   const losY = sy(0.86);
+  // The player box was a hard 18x14 whatever the card, which is right for the
+  // Workshop card and wrong everywhere else. Scale it, floor it so the label
+  // stays readable, and scale the label with it.
+  const _NODE_W = Math.max(11, Math.min(18, Math.round(W * 0.072)));
+  const _NODE_H = Math.max(8, Math.min(14, Math.round(H * 0.082)));
+  const _NODE_FS = Math.max(5, Math.min(8, Math.round(_NODE_H * 0.58)));
+  // ── TWO MEN NEVER SHARE A SPOT ───────────────────────────────────────────
+  // The node is a rectangle, so the test is a rectangle: a collision is an
+  // overlap on BOTH axes. (An ellipse test let corners through — 4-3 amoeba
+  // into buzz put the SS and the MIKE 5px inside each other and passed.) The
+  // footprint is in pixels and slots are in unit space, so the threshold is
+  // derived from THIS card: a grid tile and an editor card do not have the
+  // same crowding, and hard-coding either one breaks the other.
+  const _CLR = 3;
+  const _MIN_DX = (_NODE_W + _CLR) / (W - 2 * padX);
+  const _MIN_DY = (_NODE_H + _CLR) / ySpan;
+  const _clash = (a, b) => Math.abs(a.x - b.x) < _MIN_DX && Math.abs(a.y - b.y) < _MIN_DY;
+  // The shallowest down lineman. Nobody in the second level or the secondary
+  // is drawn in front of him — he is the front's own line of scrimmage.
+  const _dlFrontY = Math.min(...layout.slots.filter((s) => /DE|DT|NT/.test(s.pos)).map((s) => s.y));
+  const _CEIL = _dlFrontY - _MIN_DY;
+  // A landmark is an IDEAL, not a coordinate. The static alignment is the
+  // sim's; anything the CALL moves is an overlay on top of it, so a moved man
+  // who would land on somebody slides to the nearest clear spot instead. This
+  // is also what stops the next front anyone adds from quietly reintroducing
+  // a stack.
+  const _placeClear = (ideal, taken) => {
+    if (!taken.some((t) => _clash(ideal, t))) return ideal;
+    const ring = [[1, 0], [-1, 0], [0, -1], [1, -1], [-1, -1], [0, 1], [1, 1], [-1, 1]];
+    for (let step = 1; step <= 10; step++) {
+      for (const [dx, dy] of ring) {
+        const p = { x: ideal.x + dx * step * _MIN_DX * 0.6, y: ideal.y + dy * step * _MIN_DY * 0.6 };
+        if (p.x < 0.04 || p.x > 0.96 || p.y < 0.02 || p.y > _CEIL) continue;
+        if (!taken.some((t) => _clash(p, t))) return p;
+      }
+    }
+    return ideal;
+  };
   // ── PRESS LEVEL (2026-08-19) ─────────────────────────────────────────────
   // `pressLevel` is a real control — a standing Game Plan dial, a situation
   // cell field AND a card field — and the sim honours it (it flips a press
@@ -327,37 +384,39 @@ function renderDefCallCard(call, opts) {
   // the call never showed the leverage you had chosen.
   //
   // Press is an ALIGNMENT, not a line style, so alignment is what moves: a
-  // pressed corner walks up onto the receiver, an off corner backs off. The
-  // shift goes through ONE resolver so the man line, the node and the arrows
-  // can never disagree about where a man is standing.
-  //
-  // `opts.pressLevel` lets a LIVE call sheet pass the RESOLVED value (where the
-  // effective plan is known); a book card falls back to what the card itself
-  // states; "auto" draws neutral rather than inventing leverage the plan has
-  // not chosen yet. Corners and the nickel only — safeties do not press.
+  // pressed corner walks up onto the receiver, an off corner backs off.
+  // Corners and the nickel only — safeties do not press.
   const pressLvl = o.pressLevel || call.pressLevel || "auto";
   const _PRESS_SHIFT = { press: 0.1, off: -0.08 };
   const _pressable = (s) => /CB|NB/.test(s.pos) || /CB|NB/.test(s.label || "");
   // ── THE LOOK (2026-08-19) ────────────────────────────────────────────────
   // `look` is the pre-snap PICTURE — mug walks the backers up into the A gaps
   // to threaten the interior, amoeba stands everybody up so the offense cannot
-  // read a front at all. The sim honours both (mugCall/amoebaCall gate real
-  // pressure flavours), and the card — the one screen whose whole job is to
-  // show what the offense will see — drew them identically to a base look.
+  // read a front at all. The sim honours both, and the card — the one screen
+  // whose whole job is to show what the offense will see — drew them
+  // identically to a base look. Same treatment as press: a LOOK is an
+  // alignment, so alignment is what moves.
   //
-  // Same treatment as press, for the same reason: a LOOK is an alignment, so
-  // alignment is what moves. MUG pulls the second level down onto the ball.
-  // AMOEBA levels the second level to one depth — the picture with no picture.
+  // A MUG CANNOT WALK A MAN THROUGH HIS OWN LINE (2026-08-20). The +0.16
+  // walk-up was unconditional, so a front whose second level is ALREADY on the
+  // ball got shoved past its own down linemen. Penny's two stand-up EDGEs sit
+  // at y 0.68 — the 5-1 light box, they ARE the line — and a mug put them at
+  // 0.84 with the DL at 0.72 and the LOS at 0.86, drawing the edge rushers in
+  // FRONT of the linemen they align beside. A mug walks a man up to the ball;
+  // it never moves a man already there, and it never closes past _CEIL.
   const lookId = o.look || call.look || null;
   const _backer = (s) => /LB|OLB|MLB/.test(s.pos) || /WILL|MIKE|SAM/.test(s.label || "");
   const _AMOEBA_Y = 0.5;
-  const _lookY = (s) => {
+  const _lookIdeal = (s) => {
     if (!_backer(s)) return null;
-    if (lookId === "mug") return s.y + 0.16;      // walked up into the gaps
-    if (lookId === "amoeba") return _AMOEBA_Y;    // all one depth, no front to read
+    if (lookId === "mug") {
+      const to = Math.min(s.y + 0.16, _CEIL);
+      return to > s.y + 0.005 ? { x: s.x, y: to } : null;
+    }
+    if (lookId === "amoeba") return { x: s.x, y: _AMOEBA_Y };
     return null;
   };
-  // ── ROTATION: sky / cloud / buzz (2026-08-19) ────────────────────────────
+  // ── ROTATION: sky / cloud / buzz (2026-08-19, rewritten 2026-08-20) ──────
   // Standard coaching taxonomy — the three differ by WHO forces the edge and
   // where he ends up, which is a picture, not a number:
   //   SKY   — the SAFETY rotates down to the CURL/FLAT (outside). Two corners
@@ -369,33 +428,155 @@ function renderDefCallCard(call, opts) {
   // Rotation is toward the card's RIGHT by convention: a book card has no
   // offensive formation, so it cannot know the strength — the shape is what is
   // being shown, not the side.
+  //
+  // EXACTLY ONE MAN ROTATES. The first cut moved EVERY right-side safety to
+  // one hard-coded landmark, so any front carrying more than one safety-ish
+  // body on that side drew two men on the same pixel — Dime's SS and its third
+  // deep DB both landed on (0.86, 0.50), and so did 3-3-5's WAR, Big Nickel's
+  // ROV and Tite's JACK. Eight of eleven fronts stacked bodies on at least one
+  // rotation, and rotation rides three of the eight coverage pictures.
+  //
+  // Who rotates comes from the role the layout already states:
+  //   S-Strong — the rotator, the man who comes down in every coaching
+  //              description of sky, cloud and buzz.
+  //   S-Free   — takes the deep middle on a single-high rotation, never the
+  //              flat.
+  //   S-Ball   — Dime's third deep body. Stays deep; he is why it is Dime.
+  //   S-Hybrid — ROV, WAR: overhang players, already down.
+  // A front with NO strong safety rotates its overhang (the nickel or the
+  // hybrid) instead and leaves its lone deep man deep. The old rule sent the
+  // 4-4's only safety to the flat and left nobody over the top, which is not
+  // a coverage.
   const rot = o.rotation || call.rotation || null;
-  const _isS = (s) => /^S$|^FS$|^SS$/.test(s.pos) || /FS|SS/.test(s.label || "");
   const _isCB = (s) => /CB/.test(s.pos) || /CB/.test(s.label || "");
-  const _rotXY = (s) => {
-    if (!rot) return null;
-    const right = s.x >= 0.5;
-    if (rot === "sky" && _isS(s) && right) return { x: 0.86, y: 0.5 };   // down to the flat
-    if (rot === "buzz" && _isS(s) && right) return { x: 0.56, y: 0.46 }; // down to the middle hook
-    if (rot === "cloud") {
-      if (_isCB(s) && right) return { x: s.x, y: 0.46 };                 // corner squats the flat
-      if (_isS(s) && right) return { x: 0.78, y: 0.04 };                 // safety over the top behind him
+  const _role = (s) => s.role || "";
+  const _findId = (pred) => { const s = layout.slots.find(pred); return s ? s.id : null; };
+  const _rotator = !rot ? null
+    : (_findId((s) => _role(s) === "S-Strong")
+      || _findId((s) => _role(s) === "S-Hybrid" || _role(s) === "CB-Nickel"));
+  const _deepMiddle = (rot === "sky" || rot === "buzz") ? _findId((s) => _role(s) === "S-Free") : null;
+  const _cloudSquat = rot === "cloud"
+    ? (() => { const c = layout.slots.filter((s) => _isCB(s) && s.x >= 0.5).sort((a, b) => b.x - a.x); return c.length ? c[0].id : null; })()
+    : null;
+  const _rotIdeal = (s) => {
+    if (s.id === _rotator) {
+      if (rot === "sky") return { x: 0.9, y: 0.46 };    // outside, on the curl/flat
+      if (rot === "buzz") return { x: 0.56, y: 0.42 };  // inside, behind the backers
+      if (rot === "cloud") return { x: 0.78, y: 0.04 }; // over the top of the squat
     }
-    // the deep safety takes the middle third on any single-high rotation
-    if ((rot === "sky" || rot === "buzz") && _isS(s) && !right) return { x: 0.5, y: 0.04 };
+    if (rot === "cloud" && s.id === _cloudSquat) return { x: s.x, y: 0.46 };
+    if (s.id === _deepMiddle) return { x: 0.5, y: 0.04 };
     return null;
   };
-  const slotX = (s) => {
-    const r = _rotXY(s);
-    return sx(r ? r.x : s.x);
-  };
-  const slotY = (s) => {
-    const r = _rotXY(s);
-    if (r) return sy(r.y);
-    const lk = _lookY(s);
-    if (lk != null) return sy(lk);
-    return sy(s.y + (_pressable(s) ? (_PRESS_SHIFT[pressLvl] || 0) : 0));
-  };
+  // Resolve every body ONCE, so press, look and rotation can never disagree
+  // about where a man is standing and the clear-placement pass can see the
+  // whole picture instead of one slot at a time. Static bodies (plus press,
+  // which is a nudge, not a relocation) are placed first and have right of
+  // way; everything the call MOVES is then placed clear of them and of each
+  // other, rotation last because it is the biggest journey.
+  const _POS = (() => {
+    const out = {};
+    const movers = [];
+    for (const s of layout.slots) {
+      const ideal = (rot && _rotIdeal(s)) || _lookIdeal(s);
+      if (ideal) { movers.push({ s, ideal }); out[s.id] = { x: s.x, y: s.y }; }
+      else out[s.id] = { x: s.x, y: s.y + (_pressable(s) ? (_PRESS_SHIFT[pressLvl] || 0) : 0) };
+    }
+    movers.sort((a, b) => (rot && _rotIdeal(a.s) ? 1 : 0) - (rot && _rotIdeal(b.s) ? 1 : 0));
+    const placed = layout.slots.filter((s) => !movers.some((m) => m.s.id === s.id)).map((s) => out[s.id]);
+    for (const { s, ideal } of movers) {
+      out[s.id] = _placeClear(ideal, placed.slice());
+      placed.push(out[s.id]);
+    }
+    return out;
+  })();
+  const slotX = (s) => sx((_POS[s.id] || s).x);
+  const slotY = (s) => sy((_POS[s.id] || s).y);
+
+  // #33 (graphic half): the arrow count IS the bring. Rushers resolve in
+  // football order — the down linemen first, then the natural edge rushers
+  // (the odd front's OLBs, the Penny's EDGEs — role Rush/Blitz), then the
+  // second-level dogs — until exactly `bring` arrows are drawn. A bring BELOW
+  // the line count bends the extra linemen back into coverage (the fire-zone
+  // drop), one squiggle per dropped body. Before this, bring 4 on a 3-man
+  // line drew 3 arrows and bring 5 drew dl+1 whatever the front — the card
+  // and the call disagreed on every odd front.
+  const dl = layout.slots.filter((s) => _DPOS_CLASS[s.pos] === "fd-dl");
+  const lbs = layout.slots.filter((s) => _DPOS_CLASS[s.pos] === "fd-lb");
+  // ── THE ARROWS COUNT FROM THIS FRONT'S OWN RUSH (2026-08-21) ─────────────
+  // The card drew exactly `bring` arrows on every front, so it drew four for
+  // "Rush 4" whether the front rushed three, four or five. `bringSeats` counts
+  // EXTRA men beyond the front's rush, so the picture has to count the same
+  // way: the down linemen, plus the front's rush-backer seat if it has one,
+  // plus the seats the call buys. Bench-checked against the sim on all eleven
+  // fronts. Rush 3 stays absolute, because the engine's rush3 is.
+  const _bringKey = String(call.bring == null ? "4" : call.bring);
+  const _seats = _bringKey === "5" ? 1 : _bringKey === "6" ? 2 : 0;
+  const _baseRush = dl.length + rushOlbCount(front);
+  const bring = _bringKey === "3" ? 3 : Math.max(3, _baseRush + _seats);
+  const edges = lbs.filter((s) => /Rush|Blitz/.test(String(s.role || "")));
+  const dogs = lbs.filter((s) => edges.indexOf(s) === -1);
+  // A light box can owe more arrows than it has backers (Dime bring 6): the
+  // blitz-eligible DBs closest to the box fill out the pressure, same as the
+  // sim's blitz-eligibility table says they do.
+  const blitzIds = DEF_BLITZ_ELIGIBLE[front] || [];
+  const dbs = layout.slots.filter((s) => _DPOS_CLASS[s.pos] === "fd-db" && blitzIds.indexOf(s.id) !== -1).sort((a, b) => b.y - a.y);
+  let rushers = dl.slice(0, bring);
+  const droppers = dl.slice(bring);
+  // ── WHO THE EXTRA RUSHER IS (2026-08-20) ─────────────────────────────────
+  // The extras used to be ordered by a ROLE heuristic — backers tagged
+  // Rush/Blitz first, then the other backers, then blitz-eligible DBs last.
+  // That order is the card's own invention and it disagrees with the engine:
+  // measured on the bench, a 4-3 "Bring 5" sends the WILL on 100% of snaps
+  // and the card drew the SAM; a Nickel "Bring 5" sends the FREE SAFETY on
+  // 100% of snaps and the card drew a backer.
+  //
+  // DEF_BLITZ_ELIGIBLE is the engine's OWN declaration of who threatens from
+  // a front, in its own order, and the sim already filters on it. Reading it
+  // here makes the drawing agree with the table the game plays from instead
+  // of a second opinion kept next to it.
+  //
+  // It cannot be exact on its own: the sim picks among the eligible by pass
+  // rush grade, which needs a ROSTER a book card does not have. So a live
+  // call sheet — where the bodies ARE known — passes the resolved men in
+  // through `o.blitzers` and the card draws exactly those. Same contract as
+  // `o.pressLevel` above: resolved when the caller knows, honest default when
+  // it does not.
+  const _eligRank = (s) => { const i = blitzIds.indexOf(s.id); return i === -1 ? 99 : i; };
+  const _pool = edges.concat(dogs, dbs).filter((s, i, a) => a.indexOf(s) === i);
+  const _resolved = Array.isArray(o.blitzers) && o.blitzers.length
+    ? o.blitzers.map((id) => layout.slots.find((s) => s.id === id)).filter(Boolean)
+    : null;
+  const _ordered = _resolved || _pool.slice().sort((a, b) => _eligRank(a) - _eligRank(b) || b.y - a.y);
+  let extra = rushers.length < bring ? _ordered.slice(0, bring - rushers.length) : [];
+  // ── THE FIRE ZONE HAS TWO HALVES, AND THE CARD DREW ONE ──────────────────
+  // A fire zone bails a shown rusher into coverage and sends a second-level
+  // body behind him. The sim does both (the exchange). The card drew neither:
+  // it arrowed every man in the rush group, so a 3-4 fire zone showed the end
+  // rushing when he drops on 86% of snaps — measured — and showed no
+  // replacement for him.
+  //
+  // Gated on the call actually buying a seat, because that is when the sim's
+  // fire-zone drop fires: at Base Rush no pressure is called and only the
+  // 3-4's native 18% bail applies, which is a tendency, not a picture.
+  // An END drops, never the nose — he is the man the sim's own "worst rusher"
+  // pick lands on, and the one a fire zone is built to bail.
+  const _fzId = o.pressureIdentity || call.pressureIdentity || call.look || FRONT_PRESSURE_SIGNATURE[front];
+  const _fzSpec = _fzId && C.PRESS_IDENTITY ? C.PRESS_IDENTITY[_fzId] : null;
+  let fzDropped = null;
+  if (_seats > 0 && _fzSpec && _fzSpec.drop) {
+    const _cand = rushers.find((s) => /DE/.test(s.pos));
+    const _taken = new Set([...rushers, ...extra].map((x) => x.id));
+    const _sub = _ordered.find((s) => !_taken.has(s.id));
+    // Same rule the sim uses: nobody left to send means nobody drops, so the
+    // count can never come out short.
+    if (_cand && _sub) {
+      fzDropped = _cand;
+      rushers = rushers.filter((s) => s !== _cand);
+      extra = [...extra, _sub];
+    }
+  }
+  const _rushSet = new Set([...rushers, ...extra].map((x) => x.id));
   let svg = `<rect width="${W}" height="${H}" rx="0" class="play-card-turf"/>`;
   svg += `<line x1="0" y1="${_fmt(losY)}" x2="${W}" y2="${_fmt(losY)}" class="play-card-los"/>`;
   // coverage zones
@@ -424,14 +605,20 @@ function renderDefCallCard(call, opts) {
     // Now the halves SPLIT to leave him a lane, and he owns it cleanly.
     const poleW = art.pole ? 34 : 0;
     const halfW = ((W - 10) - poleW) / 2 - 3;
+    // PREVENT rides the two-high shell (COV_FAMILY says so) but is not Cover 2:
+    // three rush and EIGHT drop, and the halves sit deeper because nothing is
+    // allowed behind them. Same treatment the thirds branch already gave it.
+    const deepDrop = art.prevent ? 8 : 0;
     for (let i = 0; i < 2; i++) {
       const hx = 5 + i * (halfW + 3 + poleW);
-      svg += zone(hx, zTop, halfW, zMid - zTop - 4, "DEEP ½", "dcz-deep");
+      svg += zone(hx, zTop, halfW, zMid - zTop - 4 + deepDrop, art.prevent ? "DEEP ½ (soft)" : "DEEP ½", "dcz-deep");
     }
     if (art.pole) svg += zone(W / 2 - poleW / 2, zTop, poleW, zMid - zTop - 4, "POLE", "dcz-deep");
     // Underneath: Tampa keeps FOUR under (the Mike runs the pole, so the two
     // inside droppers become one wide CURL each side) — no deleted gap.
-    if (!art.man) for (let i = 0; i < 4; i++) svg += zone(7 + i * ((W - 14) / 4), zMid, (W - 14) / 4 - 3, underH, i === 0 || i === 3 ? "FLAT" : "CURL", "dcz-under");
+    // Prevent drops eight, so two deep leaves SIX underneath.
+    const nUnder = art.prevent ? 6 : 4;
+    if (!art.man) for (let i = 0; i < nUnder; i++) svg += zone(7 + i * ((W - 14) / nUnder), zMid + deepDrop, (W - 14) / nUnder - 3, underH - deepDrop, i === 0 || i === nUnder - 1 ? "FLAT" : "CURL", "dcz-under");
   } else if (art.deep === "quarters") {
     // Cover 6 is a SPLIT-FIELD coverage: quarters to the field, Cover 2 to the
     // boundary. The shape was right but the card drew three deep boxes and
@@ -464,6 +651,15 @@ function renderDefCallCard(call, opts) {
     const inMan = layout.slots.filter((s) => {
       if (deepMen.includes(s)) return false;                       // he has the deep zone
       if (/DE|DT|NT|EDGE/.test(s.pos)) return false;               // he is rushing
+      // ── A MAN CANNOT BLITZ AND COVER (2026-08-21, owner-reported) ────────
+      // The filter above only knew about DOWN LINEMEN, and the rush group was
+      // picked further down the file, so it could not see the EXTRA rushers.
+      // On any man-coverage call bringing five or more, the fifth man — a
+      // backer or a nickel — was drawn with a man line to a receiver AND a
+      // blitz arrow at the quarterback. Bear Down, Zero and the goal-line 3-4
+      // all showed it. The rush group is now resolved above this block, so
+      // the answer is simply: if he is coming, he is not covering.
+      if (_rushSet.has(s.id)) return false;
       return /CB|NB|DB|S|FS|SS|LB|OLB|MLB/.test(s.pos) || /CB|NB|WILL|MIKE|SAM/.test(s.label || "");
     }).slice(0, 5);
     const n = inMan.length || 1;
@@ -499,27 +695,6 @@ function renderDefCallCard(call, opts) {
     const ex = x1 + ux * (L - 9), ey = y1 + uy * (L - 9);
     return `<line x1="${_fmt(x1)}" y1="${_fmt(y1)}" x2="${_fmt(ex)}" y2="${_fmt(ey)}" class="${cls}"/><polygon points="${_fmt(ex + uy * 3.6 - ux * 2)},${_fmt(ey - ux * 3.6 - uy * 2)} ${_fmt(ex - uy * 3.6 - ux * 2)},${_fmt(ey + ux * 3.6 - uy * 2)} ${_fmt(ex + ux * 5.5)},${_fmt(ey + uy * 5.5)}" class="${cls}-head"/>`;
   };
-  // #33 (graphic half): the arrow count IS the bring. Rushers resolve in
-  // football order — the down linemen first, then the natural edge rushers
-  // (the odd front's OLBs, the Penny's EDGEs — role Rush/Blitz), then the
-  // second-level dogs — until exactly `bring` arrows are drawn. A bring BELOW
-  // the line count bends the extra linemen back into coverage (the fire-zone
-  // drop), one squiggle per dropped body. Before this, bring 4 on a 3-man
-  // line drew 3 arrows and bring 5 drew dl+1 whatever the front — the card
-  // and the call disagreed on every odd front.
-  const dl = layout.slots.filter((s) => _DPOS_CLASS[s.pos] === "fd-dl");
-  const lbs = layout.slots.filter((s) => _DPOS_CLASS[s.pos] === "fd-lb");
-  const bring = Math.max(3, Math.min(6, parseInt(call.bring, 10) || 4));
-  const edges = lbs.filter((s) => /Rush|Blitz/.test(String(s.role || "")));
-  const dogs = lbs.filter((s) => edges.indexOf(s) === -1);
-  // A light box can owe more arrows than it has backers (Dime bring 6): the
-  // blitz-eligible DBs closest to the box fill out the pressure, same as the
-  // sim's blitz-eligibility table says they do.
-  const blitzIds = DEF_BLITZ_ELIGIBLE[front] || [];
-  const dbs = layout.slots.filter((s) => _DPOS_CLASS[s.pos] === "fd-db" && blitzIds.indexOf(s.id) !== -1).sort((a, b) => b.y - a.y);
-  const rushers = dl.slice(0, bring);
-  const droppers = dl.slice(bring);
-  const extra = rushers.length < bring ? edges.concat(dogs, dbs).slice(0, bring - rushers.length) : [];
   // ── EDGE PLAY + DOG GAME (2026-08-19) ────────────────────────────────────
   // edgePlay is the biggest silent control in the engine (24 sim readers) and
   // it is a PATH: CONTAIN rushes upfield and turns in, keeping outside
@@ -564,7 +739,7 @@ function renderDefCallCard(call, opts) {
     svg += `<circle cx="${_fmt(W / 2)}" cy="${_fmt(ry)}" r="4.2" class="dc-drop-dot"/>` +
       `<text x="${_fmt(W / 2)}" y="${_fmt(ry - 7)}" text-anchor="middle" class="dcz-lbl">${robber === "rob" ? "ROB" : "OVER TOP"}</text>`;
   }
-  droppers.forEach((dropper, di) => {
+  (fzDropped ? [...droppers, fzDropped] : droppers).forEach((dropper, di) => {
     const dSide = dropper.x >= 0.5 ? 1 : -1; // bend toward his own hook, in bounds
     svg += `<path d="M${_fmt(sx(dropper.x))} ${_fmt(sy(dropper.y) - 6)} C ${_fmt(sx(dropper.x) + dSide * 8)} ${_fmt(sy(dropper.y) - 24)}, ${_fmt(sx(dropper.x) + dSide * 20)} ${_fmt(sy(dropper.y) - 30)}, ${_fmt(sx(dropper.x) + dSide * 26)} ${_fmt(sy(dropper.y) - 38)}" class="dc-drop"/><circle cx="${_fmt(sx(dropper.x) + dSide * 28)}" cy="${_fmt(sy(dropper.y) - 40)}" r="2.8" class="dc-drop-dot"/>`;
   });
@@ -572,7 +747,7 @@ function renderDefCallCard(call, opts) {
   // defenders on top
   for (const s of layout.slots) {
     const cls = _DPOS_CLASS[s.pos] || "fd-lb";
-    svg += `<g><rect x="${_fmt(slotX(s) - 9)}" y="${_fmt(slotY(s) - 7)}" width="18" height="14" rx="3" class="fd-node ${cls}"/><text x="${_fmt(slotX(s))}" y="${_fmt(slotY(s) + 3)}" class="fd-lbl">${_esc(s.label)}</text></g>`;
+    svg += `<g><rect x="${_fmt(slotX(s) - _NODE_W / 2)}" y="${_fmt(slotY(s) - _NODE_H / 2)}" width="${_NODE_W}" height="${_NODE_H}" rx="${_fmt(Math.max(2, Math.round(_NODE_H * 0.21)))}" class="fd-node ${cls}"/><text x="${_fmt(slotX(s))}" y="${_fmt(slotY(s) + Math.round(_NODE_FS * 0.36))}"${_NODE_FS === 8 ? "" : ` font-size="${_NODE_FS}"`} class="fd-lbl">${_esc(s.label)}</text></g>`;
   }
   return `<svg class="play-card-svg def-call-card" viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${_esc(call.name || "Defensive call")}">${svg}</svg>`;
 }

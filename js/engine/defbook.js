@@ -1,5 +1,6 @@
 import { DEF_FRONTS, C, COV_FAMILY, aggrStopFromBlitzPct } from '../constants.js';
 import { normalizeFrontMix } from './formations.js';
+import { DEF_FIELD_LAYOUTS } from '../constants_field.js';
 
 // ── customDefBook shape (Creativity Tools — the defensive playbook, Aug 2026) ─
 // The defensive twin of playbook.js. Where an offensive playbook is formation +
@@ -30,6 +31,10 @@ var DEFBOOK_SCHEMA_VERSION = 2;
 // weight, + coach-mode extras }. Every field maps 1:1 onto the engine's
 // existing defCall / situation-cell / formCheck vocabulary — compiling a v2
 // book writes ONLY seams the sim already consumes (no new sim paths).
+// The headset library cap. Was 12 — "a real sheet" — which is right for a
+// paper call sheet and wrong for a call GRID you tab by front: twelve calls
+// spread across five or six fronts is two per tab. 40 (owner, 2026-08-21).
+var MAX_HEADSET_CALLS = 40;
 var DEF_SHELVES = [
   { key: "base", label: "Base Downs", desc: "Your everyday answer — most snaps live here.", cells: ["base", "first_ten"] },
   { key: "passing", label: "Passing Downs", desc: "Get off the field on 3rd & long and late trailing downs.", cells: ["third_long", "third_medium", "second_long", "two_min_trail"] },
@@ -37,7 +42,7 @@ var DEF_SHELVES = [
   { key: "gamble", label: "The Gamble", desc: "Your pressure package — headset calls, never automatic.", cells: [] },
   { key: "protect", label: "Protect", desc: "Late with a lead — keep everything in front.", cells: ["four_min_lead"] }
 ];
-var DEF_SHELF_CARD_CAP = 3; // raised 2→3 (owner, 2026-08-17): more than one named call per shelf. 5×3=15 > the 12-call headset library, so applyDefBookToGameplan's compile independently caps the headset at 12 distinct calls (the n>=12 guard) — a book carries at most 12 named calls no matter how full its shelves.
+var DEF_SHELF_CARD_CAP = 10; // 2→3 (2026-08-17), 3→10 (2026-08-21: a book carries a playbook, not a sheet — 5 shelves x 10 = 50 authored calls against the 40-call headset cap below). Prior note: raised 2→3 (owner, 2026-08-17): more than one named call per shelf. 5×3=15 > the 12-call headset library, so applyDefBookToGameplan's compile independently caps the headset at 12 distinct calls (the n>=12 guard) — a book carries at most 12 named calls no matter how full its shelves.
 // The eight coverage pictures a card can call, mapped to the exact engine
 // fields the call system consumes (shell/style primitives or a covFamily).
 var DEF_CALL_COVERAGES = [
@@ -51,7 +56,11 @@ var DEF_CALL_COVERAGES = [
   // "thirds" with Cover 3 and rendered a byte-identical picture, which made two
   // completely different calls — rush four vs rush three and drop eight — look
   // like the same defense on the shelf.
-  { id: "prevent", label: "Prevent", desc: "Rush three, everything stays in front.", fields: { covFamily: "Prevent", rush3: true }, art: { deep: "thirds", prevent: true } },
+  // 2026-08-21: the art drew THREE deep thirds while COV_FAMILY["Prevent"] is
+  // a TWO-high shell — picture and engine disagreed about the coverage, and
+  // check C2 could not see it because both agree it is zone. Owner: fix the
+  // art. Two deep halves pushed back, six underneath — rush three, drop eight.
+  { id: "prevent", label: "Prevent", desc: "Rush three, everything stays in front.", fields: { covFamily: "Prevent", rush3: true }, art: { deep: "halves", prevent: true } },
   { id: "base", label: "Match the identity", desc: "Play the book's standing coverage identity.", fields: {}, art: { deep: null } }
 ];
 var DEF_CALL_COVERAGE_IDS = DEF_CALL_COVERAGES.map((c) => c.id);
@@ -69,11 +78,23 @@ var DEF_CALL_COVERAGE_IDS = DEF_CALL_COVERAGES.map((c) => c.id);
 // count is what the card says. Seats 0 is a real four-man rush that cannot
 // blitz. The aggression stop keeps owning HOW OFTEN pressure comes when nothing
 // is called; it no longer moonlights as a count.
+// ── THE LABEL COUNTS SEATS, NOT MEN (2026-08-21, owner) ────────────────────
+// `bringSeats` has always meant "extra rushers BEYOND the front's own rush",
+// but the labels named absolute numbers — which is only true for the fronts
+// that happen to rush four. Measured on the bench: "Rush 4" delivered THREE
+// out of a Tite or a 3-3-5 (both three-down fronts by design) and FIVE out of
+// a 5-2 (five down linemen by design). Every one of those is the front
+// behaving correctly and the button lying about it.
+//
+// Naming the seat instead of the man makes the label true on all eleven
+// fronts without touching a single front's identity. "Rush 3" stays a number
+// because it is genuinely absolute — rush3 cuts to three everywhere, measured
+// true on every front.
 var DEF_CALL_BRING = {
   "3": { label: "Rush 3", desc: "Drop eight — coverage wins this down.", fields: { rush3: true } },
-  "4": { label: "Rush 4", desc: "The front wins or nobody does.", fields: { bringSeats: 0 } },
-  "5": { label: "Bring 5", desc: "A second-level player comes too.", fields: { bringSeats: 1 } },
-  "6": { label: "Bring the House", desc: "No help — get there or get beat.", fields: { bringSeats: 2 } }
+  "4": { label: "Base Rush", desc: "Whatever the front rushes, and nobody else.", fields: { bringSeats: 0 } },
+  "5": { label: "Bring One", desc: "The front, plus one more from the second level.", fields: { bringSeats: 1 } },
+  "6": { label: "Bring Two", desc: "The front plus two — no help behind it.", fields: { bringSeats: 2 } }
 };
 function emptyDefCard(name) {
   return { name: String(name || "New Call").slice(0, 24), front: null, coverage: "base", bring: "4", look: null, weight: 50 };
@@ -217,6 +238,49 @@ function cardToFormCheck(card) {
   // D14: derived from CARD_VOCAB (front/coverage/bring/look handled above).
   for (const k of _vocabKeys("check")) if (call[k] != null) chk[k] = call[k];
   return chk;
+}
+// ── WHICH FRONTS CAN RUN THIS CALL (2026-08-21) ─────────────────────────────
+// The defensive twin of fittingConceptsForFormation. An offensive playbook
+// only offers a play from a formation whose personnel can run it; the
+// defensive book had no equivalent, so a call was silently pinned to the one
+// front it named and nothing checked that the front could play it.
+//
+// The binding constraint is the SHELL. A two-high coverage needs two safeties
+// to be two-high, and exactly one shipped front does not have them — the 4-4
+// fields a single free safety between two corners. Cover 2, 2-Man, Tampa 2 and
+// Cover 6 are therefore not things a 4-4 can run, whatever a card says.
+// Single-high shells and the identity default fit everywhere.
+//
+// The rush count is deliberately NOT a constraint: the engine already caps
+// extra rushers at coverBodies - AGGRESSION.minCoverBodies, and the widest
+// call any front can make (a 5-2 bringing two) leaves exactly the four cover
+// bodies that cap allows. Adding a second rule here would only restate it.
+function _covShellOf(coverage) {
+  const cov = DEF_CALL_COVERAGES.find((c) => c.id === coverage) || DEF_CALL_COVERAGES[DEF_CALL_COVERAGES.length - 1];
+  if (cov.fields.covShell) return cov.fields.covShell;
+  const fam = cov.fields.covFamily && COV_FAMILY[cov.fields.covFamily];
+  return (fam && fam.shell) || null;
+}
+function callFitsFront(card, frontId) {
+  const layout = DEF_FIELD_LAYOUTS[frontId];
+  if (!layout) return false;
+  if (_covShellOf((card && card.coverage) || "base") !== "two") return true;
+  return layout.slots.filter((s) => /^S$/.test(s.pos)).length >= 2;
+}
+// A call that NAMES a front belongs to that front. A call that names none is
+// front-agnostic — it belongs to every front that can run it, and the card
+// draws it in whichever front you are looking at. That is where a book gets
+// more calls than it has authored: one authored answer, every legal picture.
+function fittingCallsForFront(calls, frontId, fallbackFront) {
+  const out = [];
+  for (const [name, c] of Object.entries(calls || {})) {
+    const named = c && c.front;
+    if (named) { if (named === frontId) out.push(name); continue; }
+    if (frontId === fallbackFront || callFitsFront(c, frontId)) {
+      if (callFitsFront(c, frontId)) out.push(name);
+    }
+  }
+  return out;
 }
 var DEF_ANSWER_CLASSES = [
   { key: "empty", label: "vs Empty" }, { key: "10", label: "vs 10 pers (4 WR)" },
@@ -406,7 +470,7 @@ function applyDefBookToGameplan(db, gameplan) {
     const calls = {};
     let n = 0;
     for (const { card } of bookCards(db)) {
-      if (!card || !card.name || n >= 12) continue;
+      if (!card || !card.name || n >= MAX_HEADSET_CALLS) continue;
       if (calls[card.name]) continue;
       calls[card.name] = cardToDefCall(card);
       n++;
@@ -530,10 +594,11 @@ function repairDefBook(db) {
 
 export {
   DEFBOOK_SCHEMA_VERSION, DEF_COVERAGE_SCHEMES, COVERAGE_IDS,
-  DEF_SHELVES, DEF_SHELF_CARD_CAP, DEF_CALL_COVERAGES, DEF_CALL_BRING, DEF_ANSWER_CLASSES,
+  DEF_SHELVES, DEF_SHELF_CARD_CAP, MAX_HEADSET_CALLS, DEF_CALL_COVERAGES, DEF_CALL_BRING, DEF_ANSWER_CLASSES,
   CARD_EXTRA_ENUMS, CARD_EXTRA_LEGACY, CARD_VOCAB,
   frontIds, isFront, aggressionStops, pressIdentities,
   emptyDefBook, emptyDefCard, cardToDefCall, cardToCell, cardToFormCheck, bookCards,
   validateDefBook, applyDefBookToGameplan, defBookFromGameplan, repairDefBook,
+  callFitsFront, fittingCallsForFront,
   pruneCallSheet
 };

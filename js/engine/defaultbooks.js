@@ -269,7 +269,15 @@ var DEFAULT_DEF_BOOKS = [
       base: [
         dcard("Assignment 44", "4-4", "c3", "4", null, { edgePlay: "contain", weight: 60 }),
         dcard("52 Wall", "5-2", "c1", "4", null, { edgePlay: "contain", weight: 50 }),
-        dcard("Split 44", "4-4", "c6", "4", null, { edgePlay: "contain", weight: 45 })
+        // 2026-08-21: this was on the 4-4 — a split-field TWO-HIGH coverage
+        // from a front that fields one safety, which it cannot play
+        // (callFitsFront caught it). Moved to the 4-3, which this book's own
+        // front mix already declares at 25 and which no call in the book was
+        // using. Football: against 12 personnel two tight ends threaten both
+        // seams, so you come OUT of the 4-4's eight-man box into a two-high
+        // look with real safety help — quarters to the field, Cover 2 to the
+        // boundary. The name follows the front, as every call here does.
+        dcard("Split 43", "4-3", "c6", "4", null, { edgePlay: "contain", weight: 45 })
       ],
       passing: [
         dcard("Nickel Match", "Nickel", "c3", "4", null, { weight: 58 }),
@@ -288,7 +296,7 @@ var DEFAULT_DEF_BOOKS = [
         dcard("Two High", "Nickel", "c2", "4", null, { weight: 55 }),
         dcard("Dime Prevent", "Dime", "prevent", "3", null, { weight: 45 })
       ]
-    }, { empty: "Dime Rush 3", "10": "Nickel 2-Trap", "11": "Nickel Match", "12": "Split 44", heavy: "Gap Sound", option: "Assignment 44" })
+    }, { empty: "Dime Rush 3", "10": "Nickel 2-Trap", "11": "Nickel Match", "12": "Split 43", heavy: "Gap Sound", option: "Assignment 44" })
 ];
 
 // Validate at load in dev-ish spirit: a broken starter would otherwise brick

@@ -1,7 +1,7 @@
 import { __spreadProps, __spreadValues } from '../_spread.js';
 import { PASS_CONCEPTS, RUN_CONCEPTS } from '../concepts.js';
 import { DEF_FIELD_LAYOUTS, OFF_FIELD_LAYOUTS, variationLayoutSlots } from '../constants_field.js';
-import { ATTRIBUTES, C, FORMATION_PACKAGES, FORMATION_VARIATIONS, PASS_TENDENCY, aliasFormation, attrLabel } from '../constants.js';
+import { ATTRIBUTES, C, DEF_FRONTS, FORMATION_PACKAGES, FORMATION_VARIATIONS, PASS_TENDENCY, aliasFormation, attrLabel } from '../constants.js';
 import { gameHighlights, linescore } from '../engine/highlights.js';
 import { flushSaveSync, gamePauseIsLive, saveGame } from '../engine/persistence.js';
 import { saveReplay } from '../engine/replays.js';
@@ -12,7 +12,9 @@ import { callContext, decisionContext, midGameReport, setPenaltyScale } from '..
 import { defBookCalls } from '../engine/teamplan.js';
 import { listCreations, loadCreationData } from '../engine/creator.js';
 import { repairComposedPlay } from '../engine/playcompose.js';
-import { renderConceptThumb, renderFormationDiagram, renderPlayCard, resolveComposedReceivers, renderComposedCard, playAssignments, conceptKind, routeColor } from './views/routeart.js';
+import { renderConceptThumb, renderFormationDiagram, renderFrontDiagram, renderDefCallCard, renderPlayCard, resolveComposedReceivers, renderComposedCard, playAssignments, conceptKind, routeColor } from './views/routeart.js';
+import { DEF_CALL_COVERAGES as _DC_COVS, DEF_CALL_BRING as _DC_BRING, callFitsFront as _dcFits } from '../engine/defbook.js';
+const DEF_CALL_BRING_LBL = Object.fromEntries(Object.entries(_DC_BRING).map(([k, v]) => [k, v.label]));
 import { conceptBlurb, composedBlurb } from './views/conceptblurbs.js';
 import { SITUATION_KEYS, SITUATION_LABELS } from '../engine/situations.js';
 import { isTreeGame, lockstepBlock, treeSnapshot } from '../engine/tree.js';
@@ -2218,7 +2220,7 @@ function setupGlobalListeners() {
         renderApp();
       });
     });
-    wireDefaultsListeners(gp, { root: htRoot });
+    wireDefaultsListeners(gp, { root: htRoot, inPlace: true });
     if (state.ui.halftimeTab === "situations") {
       wireSituationListeners(gp, {
         getOpenKey: () => state.ui.halftimeOpenSitKey,
@@ -2435,7 +2437,7 @@ function setupGlobalListeners() {
   {
     const root = document.getElementById("kickoff-adjust");
     const gp = state._pregamePlan || ((_D = getPlayerSchool()) == null ? void 0 : _D.gameplan);
-    if (root && gp) wireDefaultsListeners(gp, { root });
+    if (root && gp) wireDefaultsListeners(gp, { root, inPlace: !!state._pregamePlan });
   }
   document.querySelectorAll("[data-cs-form]").forEach((b) => b.addEventListener("click", () => {
     state.ui.callFormation = b.dataset.csForm === "__auto" ? null : b.dataset.csForm;
@@ -2543,7 +2545,7 @@ function setupGlobalListeners() {
     {
       const root = document.getElementById("to-adjust-root");
       const gpL = _liveGPMine();
-      if (root && gpL) wireDefaultsListeners(gpL, { root });
+      if (root && gpL) wireDefaultsListeners(gpL, { root, inPlace: true });
     }
   }
   document.querySelectorAll("[data-cs-st-toggle]").forEach((b) => b.addEventListener("click", () => {
@@ -2621,10 +2623,18 @@ function setupGlobalListeners() {
   // PASS 2: named-call chips on the headset — one tap pre-fills every dial
   // the call names (BOX translated to the panel's relative shove); the coach
   // can still adjust any dial on top before sending.
+  // Front tabs above the call grid — presentation only, no plan is written.
+  document.querySelectorAll("[data-dc-front]").forEach((b) => b.addEventListener("click", () => {
+    state.ui.defCallFront = b.dataset.dcFront;
+    rerender();
+  }));
   document.querySelectorAll("[data-dc-callname]").forEach((b) => b.addEventListener("click", () => {
     var _a2, _b2, _c2;
     const nm = b.dataset.dcCallname;
-    if (nm === "__clear" || state.ui.defCallName === nm) {
+    // Re-tapping the live card drops the call — there is no separate clear
+    // button any more (owner, 2026-08-21), so the "__clear" sentinel that fed
+    // the old ad-lib chip has no writer and is gone with it.
+    if (state.ui.defCallName === nm) {
       state.ui.defCallName = null;
       rerender();
       return;
@@ -3069,8 +3079,15 @@ function _liveGPMine() {
 }
 function renderTimeoutAdjustOverlay() {
   var _a, _b, _c, _d, _e, _f;
-  if (!state.ui.showCallSheet || !state.ui.callTimeout || !state.ui.timeoutAdjust) return "";
-  const token = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
+  // 2026-08-21: the gate used to read state.ui.showCallSheet ALONE, and the
+  // dominant live path never sets it — state.js:613 sets state.ui.liveWatch
+  // instead. So on a live coached game the timeout chip armed, the flag rode
+  // the call, and the ADJUSTMENTS SCREEN simply never rendered: the coach saw
+  // nothing happen. It only appeared if showCallSheet had been left true by an
+  // earlier non-live stop. Accept either call surface.
+  const _onCallSurface = state.ui.showCallSheet || ((_a = state.ui.liveWatch) == null ? void 0 : _a.stage) === "call";
+  if (!_onCallSurface || !state.ui.callTimeout || !state.ui.timeoutAdjust) return "";
+  const token = (_b = state.pendingHalftime) == null ? void 0 : _b.token;
   if (!(token == null ? void 0 : token.pending)) return "";
   const playerSchool = getPlayerSchool();
   // Owner build 2026-08-17: defcall-aware side (see _liveGPMine) — the modal
@@ -3304,6 +3321,34 @@ var DEF_CALL_ROWS = [
   ["runCommit", "BOX", [["-8", "Lighten \u22128"], ["8", "Commit +8"]]],
   ["pressureIdentity", "HEAT SHAPE", [["fireZone", "Fire Zone"], ["secondLevel", "2nd Level"], ["secondaryHeat", "DB Heat"], ["theHouse", "The House"]]]
 ];
+// ── DRAWING A STORED CALL (2026-08-21) ───────────────────────────────────
+// A book's defCalls entry is the COMPILED payload (covShell/covStyle or
+// covFamily, bringSeats or rush3) — not the card a coach authored. The card
+// renderer wants the card's own vocabulary, so map back through the SAME
+// table the compile used, never a second copy of it.
+function _dcCovOf(call) {
+  const c = call || {};
+  if (c.covFamily) {
+    const byFam = _DC_COVS.find((x) => x.fields && x.fields.covFamily === c.covFamily);
+    if (byFam) return byFam;
+  }
+  if (c.covShell || c.covStyle) {
+    const byShell = _DC_COVS.find((x) => x.fields && x.fields.covShell === c.covShell && x.fields.covStyle === c.covStyle);
+    if (byShell) return byShell;
+  }
+  return _DC_COVS[_DC_COVS.length - 1];              // "match the identity"
+}
+function _dcBringOf(call) {
+  const c = call || {};
+  if (c.rush3) return "3";
+  const seats = c.bringSeats;
+  return seats === 2 ? "6" : seats === 1 ? "5" : "4";
+}
+function _dcCardOf(name, call, fallbackFront) {
+  const c = call || {};
+  return { name, front: c.front || fallbackFront || null, bring: _dcBringOf(c),
+    look: c.pressLook || null, rotation: c.rotation || null, pressLevel: c.pressLevel || null };
+}
 function defCallPanelHtml() {
   var _a, _b, _c;
   const token = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
@@ -3347,44 +3392,106 @@ function defCallPanelHtml() {
     </div>
     <p class="cs-diagram-hint">They're breaking the huddle. Pin any dial for THIS SNAP ONLY — anything you don't touch rides your standing plan.</p>
     ${(() => {
-    // PASS 2 (Aug 2026): the headset speaks your call sheet. One tap loads a
-    // named call's whole package into the dials below; adjust on top or send.
-    var _s, _s2;
-    // Stage 4: the chip row reads the defensive BOOK (defBookCalls), and says
-    // whose calls these are.
+    // ── THE CALL SHEET IS A GRID OF PICTURES (2026-08-21) ─────────────────
+    // This was a row of text chips: the coach read a NAME and had to remember
+    // what it looked like. The offense has drawn cards you tap; the defense
+    // had "Bear Down" in a button. renderDefCallCard already drew the real
+    // thing — the front's true alignment, coverage zones, man lines, the rush
+    // — and was only ever called from the Workshop editor, so the one screen
+    // whose whole job is calling a defense never showed it.
+    //
+    // The markup deliberately reuses the OFFENSIVE sheet's classes
+    // (cs-concepts / cs-concept-tile / cs-concept-card / cs-c-name) so the two
+    // sides look and behave the same and the grid inherits its phone layout
+    // instead of growing a second copy of it.
+    var _s2;
     const _dcSchool = getPlayerSchool();
     const lib = defBookCalls(_dcSchool);
     const _dbName = ((_s2 = _dcSchool == null ? void 0 : _dcSchool.defbook) == null ? void 0 : _s2.name) || null;
     const names = lib ? Object.keys(lib) : [];
     if (!names.length) return "";
     const cur = state.ui.defCallName || null;
-    // PASS 3: the loaded call's family/rotation/rush render as passive chips
-    // (they ride the package; only shell/style adjustments can shed them).
-    const curSel = state.ui.defCall || {};
-    const ROT_LBL = { sky: "Sky", cloud: "Cloud", buzz: "Buzz" };
-    // PASS 4: the pressure-flavor ingredients ride the same chip row (Heat
-    // Shape adjustments shed them \u2014 you overrode the pressure design).
-    const LOOK_LBL = { mug: "Double-A Mug", amoeba: "Amoeba" };
-    const DOG_LBL = { green: "Green Dog", cross: "Cross Dog" };
-    const ing = [
-      curSel.covFamily ? `\u2601 ${curSel.covFamily === "Cover 2-Man" ? "2-Man" : curSel.covFamily}` : null,
-      curSel.rotation ? `\u21ba ${ROT_LBL[curSel.rotation] || curSel.rotation}` : null,
-      curSel.rush3 ? "\u2602 Rush 3 / Drop 8" : null,
-      curSel.pressLook ? `\u26a1 ${LOOK_LBL[curSel.pressLook] || curSel.pressLook}` : null,
-      curSel.dogGame ? `\u{1F415} ${DOG_LBL[curSel.dogGame] || curSel.dogGame}` : null
-    ].filter(Boolean);
+    const baseFront = (standing.defFront && standing.defFront !== "auto" ? standing.defFront : standing.baseFront) || "4-3";
+    // Front tabs, in the order the book's calls use them — the offense tabs
+    // formations, so the defense tabs fronts.
+    const frontOf = (nm) => (lib[nm] || {}).front || baseFront;
+    // the stored call is compiled; recover which coverage picture it names
+    const covIdOf = (c) => (_dcCovOf(c) || {}).id || "base";
+    const fronts = [];
+    for (const nm of names) { const f = frontOf(nm); if (!fronts.includes(f)) fronts.push(f); }
+    const selFront = fronts.includes(state.ui.defCallFront) ? state.ui.defCallFront : (fronts.length > 1 ? "__all" : fronts[0]);
+    // A call that NAMES a front belongs to that front. A call that names none
+    // is front-agnostic and belongs to every front that can run it — one
+    // authored answer, every legal picture, which is where a book gets more
+    // calls than it has authored.
+    const shown = selFront === "__all" ? names : names.filter((nm) => {
+      const c = lib[nm] || {};
+      return c.front ? c.front === selFront : _dcFits({ coverage: covIdOf(c) }, selFront);
+    });
+    // ── THE TABS ARE TEXT (2026-08-21, owner-reported) ───────────────────
+    // They were a 46x30 front diagram: eleven labelled bodies inside a chip,
+    // which is not legible at any size a tab can be. A front's NAME is what a
+    // coach reads anyway.
+    //
+    // Order: the book's own front mix first, in the order the book weights
+    // them, because that is the package the book says it plays. Any front a
+    // CALL reaches that the mix does not carry is shown after them and marked
+    // — see the note in the header. Surfacing the split beats hiding it.
+    // ── THE MIX IS BASE DOWNS, NOT THE WHOLE PACKAGE (2026-08-21) ────────
+    // `defFrontMix` is the BASE-DOWN distribution — how the plan spreads its
+    // normal-down calls — and a book's calls deliberately reach past it into
+    // situational packages: a Dime against five wide, a 46 or a 5-2 on the
+    // goal line. An earlier cut of these tabs read those as a defect and
+    // dashed them. They are the point (owner, 2026-08-21).
+    //
+    // So the tabs GROUP instead of warning. Which group a front belongs to is
+    // read off its own personnel against the base front — more defensive
+    // backs is a sub package, more linemen (or fewer backs) is a heavy one —
+    // so no new field has to be authored and no book has to be re-tagged.
+    const mixOrder = Object.entries((_dcSchool && _dcSchool.gameplan && _dcSchool.gameplan.defFrontMix) || {})
+      .sort((a, b) => b[1] - a[1]).map(([f]) => f);
+    const inMix = (f) => mixOrder.includes(f);
+    // Base-down fronts first, then the situational packages, in the order the
+    // book weights them. Ordering only — the tabs carry no role label (owner,
+    // 2026-08-21): the front's NAME is what a coach reads, and a coach already
+    // knows what a Dime is for.
+    const isPkg = (f) => !inMix(f);
+    const ordered = [...fronts].sort((a, b) => {
+      const pa = isPkg(a) ? 1 : 0, pb = isPkg(b) ? 1 : 0;
+      if (pa !== pb) return pa - pb;
+      const ai = mixOrder.indexOf(a), bi = mixOrder.indexOf(b);
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      return fronts.indexOf(a) - fronts.indexOf(b);
+    });
+    const countOf = (f) => names.filter((nm) => {
+      const c = lib[nm] || {};
+      return c.front ? c.front === f : _dcFits({ coverage: covIdOf(c) }, f);
+    }).length;
+    const tabs = fronts.length > 1
+      ? `<div class="dc-fronttabs" role="tablist" aria-label="Front">
+          <button class="dc-ftab${selFront === "__all" ? " active" : ""}" data-dc-front="__all" role="tab" aria-selected="${selFront === "__all"}">All<b>${names.length}</b></button>
+          ${ordered.map((f) => `<button class="dc-ftab${selFront === f ? " active" : ""}" data-dc-front="${escapeHtml(f)}" role="tab" aria-selected="${selFront === f}">${escapeHtml(f)}<b>${countOf(f)}</b></button>`).join("")}
+        </div>` : "";
+    const tiles = shown.map((nm) => {
+      const call = lib[nm] || {};
+      const cov = _dcCovOf(call);
+      const card = _dcCardOf(nm, call, baseFront);
+      const art = renderDefCallCard(card, { w: 250, h: 170, art: cov.art, fallbackFront: baseFront,
+        pressLevel: card.pressLevel, look: card.look, rotation: card.rotation });
+      const sub = `${escapeHtml(card.front || baseFront)} \xB7 ${escapeHtml(cov.label)} \xB7 ${escapeHtml((DEF_CALL_BRING_LBL[card.bring] || card.bring))}`;
+      return `<div class="cs-concept-tile"><button class="cs-concept cs-concept-card dc-card-btn${cur === nm ? " active" : ""}" data-dc-callname="${escapeHtml(nm)}" aria-label="Call ${escapeHtml(nm)} — ${sub}" title="${escapeHtml(cov.desc || "")}">${art}<span class="cs-c-name">${escapeHtml(nm)}</span><span class="cs-c-learn">${sub}</span></button></div>`;
+    }).join("");
     return `
-    <div class="dc-row">
-      <span class="dc-row-label"${_dbName ? ` title="Named calls from your defensive book — “${escapeHtml(_dbName)}”"` : ""}>CALL${_dbName ? `<span class="dc-book-name">${escapeHtml(_dbName)}</span>` : ""}</span>
-      <span class="dc-plan${cur ? "" : " active"}" data-dc-callname="__clear" title="Drop the named call, keep your pins">ad-lib</span>
-      ${names.map((nm) => `<button class="dc-chip${cur === nm ? " active" : ""}" data-dc-callname="${escapeHtml(nm)}">${escapeHtml(nm)}</button>`).join("")}
-    </div>${cur && ing.length ? `
-    <div class="dc-row">
-      <span class="dc-row-label"></span>
-      <span class="dc-plan active" title="These ride the named call — adjust SHELL or STYLE to shed the coverage pin">${ing.map(escapeHtml).join(" \xb7 ")}</span>
-    </div>` : ""}`;
+    <div class="dc-callhead">
+      <span class="dc-row-label"${_dbName ? ` title="Named calls from your defensive book — \u201C${escapeHtml(_dbName)}\u201D"` : ""}>CALL${_dbName ? `<span class="dc-book-name">${escapeHtml(_dbName)}</span>` : ""}</span>
+    </div>
+    ${tabs}
+    <div class="cs-concepts dc-cards">${tiles}</div>`;
   })()}
-    ${rows}
+    <details class="dc-adjust"${state.ui.defCall && Object.keys(state.ui.defCall).length ? " open" : ""}>
+      <summary>Adjust \u2014 pin any dial for this snap${(() => { const n = Object.keys(state.ui.defCall || {}).length; return n ? ` <b>(${n} pinned)</b>` : ""; })()}</summary>
+      ${rows}
+    </details>
     ${timeControlBar()}
     <div class="cs-footer dc-footer">
       ${(() => {
@@ -3795,10 +3902,29 @@ function renderLiveWatchOverlay() {
      </div>` : "";
   const headerBtn = !boardDone && !auto ? `<button class="bc-btn bc-text" id="watch-live-skip">Skip \u23E9</button>` : "";
   const helpBtn = helpButtonHtml(HELP_CHAPTER_LIVEGAME);
+  // 2026-08-21 (owner ask): THE SAFETY VALVE. The ⏱️ chip lived only on the two
+  // call sheets, so a coach who forgot it when he sent the play in had nowhere
+  // to reach for it — he had to sit and watch the clock run. This puts the same
+  // chip in the live bar, armed at any point in the call stage (mid-board or on
+  // the sheet), and it fires by itself at the whistle of the snap it is armed
+  // for. Same [data-cs-timeout] hook and the same state.ui.callTimeout as the
+  // sheet chip, so the two are one control shown twice and can never disagree.
+  const toBtn = isCall ? (() => {
+    var _t, _p;
+    const tok = (_t = state.pendingHalftime) == null ? void 0 : _t.token;
+    const p = tok == null ? void 0 : tok.pending;
+    if (!p || p.kind !== "playcall" && p.kind !== "defcall") return "";
+    // defcall: possession is the OPPONENT's, so the coach is the other side.
+    const side = (p.kind === "defcall" ? p.possession === "home" ? "away" : "home" : p.possession) || tok.playerSide || "home";
+    const left = (_p = (tok.timeouts || {})[side]) != null ? _p : C.TIMEOUTS_PER_HALF;
+    const on = !!state.ui.callTimeout;
+    const dead = left <= 0;
+    return `<button class="bc-btn watch-to-btn${on ? " active" : ""}" data-cs-timeout="1" ${dead ? "disabled" : ""} title="${dead ? "No timeouts left this half" : on ? "Timeout armed \u2014 tap to cancel" : `Call timeout \u2014 stops the clock at the whistle. ${left} left this half.`}">\u23F1\uFE0F ${on ? "TIMEOUT ON" : "Timeout"} (${left})</button>`;
+  })() : "";
   return `
   <div class="modal-overlay watch-live-overlay">
     <div class="modal game-result-modal${embed ? " watch-call-mode" : ""}${boardDone ? " watch-board-collapsed" : ""}">
-      <div class="modal-header"><h2>\u25B6 ${label}</h2>${helpBtn}${headerBtn}</div>
+      <div class="modal-header"><h2>\u25B6 ${label}</h2>${helpBtn}${toBtn}${headerBtn}</div>
       <div class="result-tab-body">
       ${boardDone ? "" : `<div id="watch-root" class="watch-root"></div>`}
       ${embed ? `<div class="watch-call-embed">${embed}</div>` : ""}${recover}</div>

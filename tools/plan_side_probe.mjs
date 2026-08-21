@@ -26,7 +26,10 @@ ok(OFF_FIELDS.length > 0 && DEF_FIELDS.length > 0, `both sides carry fields (off
 const expect = {
   offFormations: 'off', formationPlaybooks: 'off', tendency: 'off', passDepth: 'off', targetShares: 'off',
   defBaseFront: 'def', coverageScheme: 'def', pressureIdentity: 'def', blitzPct: 'def', defFrontMix: 'def',
-  fourthDown: 'team', maxFGDist: 'team', baseTempo: 'team', situations: 'team',
+  fourthDown: 'team', maxFGDist: 'team', situations: 'team',
+  // 2026-08-21 (owner call): tempo belongs to the OFFENSE, not the team — the
+  // defense never sets it, and an offensive book should carry its own pace.
+  baseTempo: 'off',
   // D11 (OD-11): the audited manifest gaps, now sided by decision.
   screenRate: 'off', paRate: 'off', chipHelp: 'off', wildcatPassRate: 'off',
   rpoKeepPct: 'off', rbCarryShares: 'off', runDirection: 'off',
@@ -47,7 +50,7 @@ const SIM_CONSUMED = [
   'offFormations', 'formationPlaybooks', 'tendency', 'passDepth', 'rushInPct',
   'conceptWeights', 'rpoRate', 'gadgetRate', 'qbRunPct', 'optionRate', 'optionMix',
   'pitchAggr', 'jetRate', 'drawRate', 'motionRate', 'qbAggr', 'protIdentity',
-  'protEmphasis', 'losFreedom', 'targetShares',
+  'protEmphasis', 'losFreedom', 'targetShares', 'baseTempo',
   'screenRate', 'paRate', 'chipHelp', 'wildcatPassRate', 'rpoKeepPct',
   'rbCarryShares', 'runDirection',
   // defense
@@ -56,7 +59,7 @@ const SIM_CONSUMED = [
   'optionKey', 'robberCall', 'zoneStyle', 'tackleStyle', 'subPhilosophy',
   'bracketWho', 'greenDog', 'spyQB', 'defCalls', 'callSheet', 'formChecks',
   // team
-  'fourthDown', 'maxFGDist', 'baseTempo', 'situations',
+  'fourthDown', 'maxFGDist', 'situations',
   'stFakes', 'puntDef', 'retScheme', 'patApproach', 'surpriseOnside'
 ];
 const missing = SIM_CONSUMED.filter((f) => !(f in PLAN_FIELD_SIDE));

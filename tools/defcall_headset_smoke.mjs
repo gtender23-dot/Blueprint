@@ -2,7 +2,8 @@
 // Serves the module source over http, injects a dynasty whose player gameplan
 // carries two named calls, drives a live game to a defensive headset ask, and
 // asserts: the CALL row renders the library, one tap pre-fills the dials
-// (front + shell chips light), SEND counts the pre-filled pins, ad-lib clears
+// (front + shell chips light), SEND counts the pre-filled pins, re-tapping
+// the live card clears
 // the highlight, and the game still completes.
 // Run: node tools/defcall_headset_smoke.mjs
 import { chromium } from 'playwright-core';
@@ -106,11 +107,29 @@ g('switching calls swaps the package (Tite + two-high light, house clears)',
   && await page.locator('.dc-chip.active[data-dc-field="covShell"][data-dc-val="two"]').count() === 1
   && await page.locator('.dc-chip.active[data-dc-field="aggression"]').count() === 0);
 
-// Ad-lib clears the highlight but keeps the pins.
-await page.locator('[data-dc-callname="__clear"]').dispatchEvent('click');
+// ── THE CALL SHEET IS A GRID NOW (2026-08-21) ─────────────────────────────
+// The headset was a row of text chips plus an "ad-lib" button. It is now front
+// tabs over drawn call cards, with the nine dial rows folded into an Adjust
+// drawer, and the ad-lib button is gone — RE-TAPPING THE LIVE CARD drops the
+// call. This smoke clicked the retired clear-sentinel button, and
+// dispatchEvent on a zero-match locator throws: that is the crash the full
+// gate reported, and it was right to.
+//
+// Two of these checks also had to stop keying on `.dc-chip`. The named calls
+// are `.cs-concept-card` buttons now (they share the OFFENSIVE sheet's classes
+// on purpose), so `.dc-chip[data-dc-callname]` matches nothing and asserting
+// it counts ZERO would have passed for the wrong reason — vacuously true
+// whether the product worked or not.
+g('the calls render as drawn cards, not text chips',
+  await page.locator('.dc-cards .cs-concept-card[data-dc-callname]').count() >= 2
+  && await page.locator('.dc-cards svg.def-call-card').count() >= 2);
+g('the nine dials moved into the Adjust drawer', await page.locator('details.dc-adjust .dc-row').count() >= 5);
+
+// Re-tapping the LIVE card drops the call and keeps the pins.
+await page.locator('[data-dc-callname="Tite Mint"]').dispatchEvent('click');
 await page.waitForTimeout(300);
-g('ad-lib clears the call highlight, pins survive',
-  await page.locator('.dc-chip[data-dc-callname].active').count() === 0
+g('re-tapping the live card clears the call highlight, pins survive',
+  await page.locator('[data-dc-callname].active').count() === 0
   && await page.locator('.dc-chip.active[data-dc-field="front"][data-dc-val="Tite"]').count() === 1);
 
 // Send it; then autopilot the rest — the game must complete.

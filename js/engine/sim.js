@@ -1702,10 +1702,28 @@ function resolvePassPlay(playType, offPersonnel, defPersonnel, offRoster, defRos
           worst = i;
         }
       }
+      // ── AN EXCHANGE, NOT A SUBTRACTION (2026-08-21) ─────────────────────
+      // The 3-4's NATIVE drop (above) already obeys this: the rusher bails and
+      // a backer comes behind him, because "letting him bail unanswered would
+      // drop the front to a three-man rush … which is not a fire zone, it is
+      // just fewer rushers." This generic path — the one every OTHER front's
+      // fire zone runs — spliced a rusher out and sent nobody, so the called
+      // count was simply lost. Measured on the bench before this: on all four
+      // fronts with a rush backer, "Bring 5" delivered four and "Bring 6"
+      // delivered five, on roughly three snaps in four.
+      //
+      // The replacement is chosen BEFORE the drop is committed, so a front
+      // with nobody left to send does not drop at all — the count can never
+      // come out short. Body-neutral by construction: one man leaves the rush
+      // for coverage, one leaves coverage for the rush.
       if (worst != null && passRushers.length > 3) {
-        const [dropped] = passRushers.splice(worst, 1);
-        droppedIds.push(dropped.player.id);
-        lbIds.push(dropped.player.id);
+        const _sub = pick(lbIds, lbGrade);
+        if (_sub) {
+          const [dropped] = passRushers.splice(worst, 1);
+          droppedIds.push(dropped.player.id);
+          send(_sub);
+          lbIds.push(dropped.player.id);
+        }
       }
     }
     // Zero behind it (§2 risk tiers: fire zone < safety/CB heat < zero).
@@ -1744,6 +1762,19 @@ function resolvePassPlay(playType, offPersonnel, defPersonnel, offRoster, defRos
     const _bl = passRushers.filter((r) => r.blitzer).map((r) => r.player.id);
     if (_bl.length) result.blitzerIds = _bl;
   }
+  // ── CARD FIDELITY observability (2026-08-20): WHICH men rushed ──────────
+  // The COUNT is already covered: `rushN` (below) records it and both
+  // defsheet_probe and pressure_cohesion_probe already gate on it. What has
+  // never been recorded is IDENTITY — blitzerIds carries only the EXTRA men,
+  // so the four-man front that always comes is invisible, and nothing could
+  // answer "was it the SAM or the WILL who came on this snap".
+  // The defensive call card draws its arrows on specific bodies, so checking
+  // the drawing against the snap needs the names, not the tally. Coverage
+  // already has its half of this join (covSlots); this is the rush half.
+  // Recording only, same contract as covSlots/contactSlots/beatenDefSlot:
+  // nothing reads it.
+  result.rusherIds = passRushers.map((r) => r.player.id);
+  if (droppedIds.length) result.droppedRushIds = [...droppedIds];
   // PASS 4: the look's post-snap truth — a mug that fires is interior heat, a
   // mug that doesn't is the bail; amoeba is presentation on every snap of the
   // call. (Flags feed the mechanics below + per-play accounting/probes.)
@@ -1852,6 +1883,10 @@ function resolvePassPlay(playType, offPersonnel, defPersonnel, offRoster, defRos
       rush3DroppedIds.push(cut.player.id);
     }
     result.rushN = passRushers.length;
+    // rusherIds is stamped earlier, BEFORE this cut — restamp it here for the
+    // same reason rushN is restamped: on a rush-3 snap the group that actually
+    // came is the one left standing after the cut.
+    result.rusherIds = passRushers.map((r) => r.player.id);
     result.rush3 = true;
     // M5 bring-3 audit (2026-08-17): record WHO dropped — the card draws a
     // lineman bending back into coverage on bring 3, and this is the sim-side
@@ -5931,13 +5966,24 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
       // Slot-level truth stamps (recording only): the beaten cover
       // man and the coverage matchups, translated player→slot so the
       // viewer animates the SIM'S assignments, not proximity guesses.
+      // ── THE FILM STAMPS FOLLOW THE CALLED FRONT (2026-08-20) ─────────
+      // These read `defBaseField.bySlot`, and defBaseField is NULL whenever
+      // the snap's front differs from the team's base front and no depth pins
+      // force a resolve (see the ternary where it is built). So every film
+      // stamp — who covered whom, who got beaten, who made the tackle — went
+      // BLANK on exactly the snaps a named call changed the front, which is
+      // most of what a named call is for. Measured on the bench: covSlots
+      // present on 33 of 37 base-front snaps and 0 of 37 Nickel or 3-4 snaps.
+      // `_defViewerSlots` (built above) is the same slotId->playerId shape
+      // with the front-aware fallback the viewer already relies on. Recording
+      // only; no outcome path reads any of these.
       beatenDefSlot: (() => {
-        const bs = defBaseField == null ? void 0 : defBaseField.bySlot;
+        const bs = _defViewerSlots;
         if (!bs || !playResult.beatenDefId) return null;
         return Object.keys(bs).find((sid) => bs[sid] === playResult.beatenDefId) || null;
       })(),
       covSlots: (() => {
-        const ob2 = offField == null ? void 0 : offField.bySlot, db = defBaseField == null ? void 0 : defBaseField.bySlot;
+        const ob2 = offField == null ? void 0 : offField.bySlot, db = _defViewerSlots;
         if (!ob2 || !db || !playResult.covAssign) return null;
         const inv = (m) => {
           const o = {};
@@ -5953,7 +5999,7 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
       // broken tackle instead of a proximity guess. No outcome path reads
       // these — same contract as beatenDefSlot/covSlots above.
       contactSlots: (() => {
-        const db = defBaseField == null ? void 0 : defBaseField.bySlot;
+        const db = _defViewerSlots;
         if (!db) return null;
         const inv = {};
         for (const k of Object.keys(db)) inv[db[k]] = k;
@@ -5991,6 +6037,29 @@ function simulateDrive(offense, defense, gameState, log, opts = {}) {
       blitzFired: (_za = playResult.blitzFired) != null ? _za : false,
       // BLITZ PIE: who came (ids), when a blitz fired — probe/film surface
       blitzerIds: playResult.blitzerIds || null,
+      // The rush group, translated player -> defensive SLOT so a probe can
+      // join it against what the call card drew (the card draws by slot).
+      // Recording only; no outcome path reads it.
+      rushSlots: (() => {
+        const db = _defViewerSlots;
+        if (!db || !playResult.rusherIds) return null;
+        const inv = {};
+        for (const k of Object.keys(db)) inv[db[k]] = k;
+        const out = playResult.rusherIds.map((id) => inv[id]).filter(Boolean);
+        return out.length ? out : null;
+      })(),
+      // BOTH kinds of drop: the fire-zone exchange (droppedRushIds) and the
+      // bring-3 cut (rush3DroppedIds). A reader should not have to know which
+      // internal list a dropped man came from.
+      dropSlots: (() => {
+        const db = _defViewerSlots;
+        const src = [...(playResult.droppedRushIds || []), ...(playResult.rush3DroppedIds || [])];
+        if (!db || !src.length) return null;
+        const inv = {};
+        for (const k of Object.keys(db)) inv[db[k]] = k;
+        const out = src.map((id) => inv[id]).filter(Boolean);
+        return out.length ? out : null;
+      })(),
       fireZone: playResult.fireZone || false,
       clock: gameState.clock,
       half: gameState.half,

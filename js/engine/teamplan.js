@@ -49,6 +49,13 @@ const PLAN_FIELD_SIDE = {
   offFormations: "off",
   formationPlaybooks: "off",
   tendency: "off",
+  // 2026-08-21 (owner call): tempo is the OFFENSE's, not the team's. A coach
+  // picks it with the ball in his hands; the defense never sets it. Moving it
+  // to the book also means an offensive playbook CARRIES its tempo, which is
+  // what a "Hurry-up spread" book ought to mean. Old saves keep the value in
+  // the overlay and still compile correctly (book layers over overlay, and an
+  // absent book field does not mask it); the first new write moves it home.
+  baseTempo: "off",
   passDepth: "off",
   rushInPct: "off",
   conceptWeights: "off",
@@ -106,7 +113,6 @@ const PLAN_FIELD_SIDE = {
   // ── TEAM — stays in the overlay (the game plan is its controller) ──────────
   fourthDown: "team",
   maxFGDist: "team",
-  baseTempo: "team",
   situations: "team",
   // D11: the special-teams standing knobs, audited as sim-consumed but
   // unlisted. Team-side — the overlay keeps them, now by decision, not drift.

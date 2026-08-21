@@ -13,7 +13,7 @@
 // formChecks; (9) a v1 book repairs into v2 losslessly (empty shelves, zero
 // changes); (10) every starter book round-trips (repair is byte-stable on
 // shelves+answers; apply→extract preserves the identity spine).
-import { emptyDefBook, emptyDefCard, validateDefBook, applyDefBookToGameplan, defBookFromGameplan, repairDefBook, cardToDefCall, cardToCell, cardToFormCheck, bookCards, DEF_COVERAGE_SCHEMES, COVERAGE_IDS, DEF_SHELVES, DEF_SHELF_CARD_CAP, DEF_CALL_COVERAGES, DEF_CALL_BRING, frontIds, aggressionStops, pressIdentities } from '../js/engine/defbook.js';
+import { emptyDefBook, emptyDefCard, validateDefBook, applyDefBookToGameplan, defBookFromGameplan, repairDefBook, cardToDefCall, cardToCell, cardToFormCheck, bookCards, DEF_COVERAGE_SCHEMES, COVERAGE_IDS, DEF_SHELVES, DEF_SHELF_CARD_CAP, DEF_CALL_COVERAGES, DEF_CALL_BRING, frontIds, aggressionStops, pressIdentities, MAX_HEADSET_CALLS } from '../js/engine/defbook.js';
 import { DEFAULT_DEF_BOOKS } from '../js/engine/defaultbooks.js';
 import { DEF_FRONTS, C } from '../js/constants.js';
 
@@ -93,15 +93,19 @@ const vWarn = validateDefBook({ ...e, shelves: { base: [card('A')] }, answers: {
 ok(vWarn.ok && vWarn.warnings.some((w) => w.includes('Missing')), 'answer naming an off-shelf call warns, does not error');
 
 // ── (6) shelf → defCalls: shelf order, name dedupe, the 12-call cap ─────────
-// The shelf cap (3) x 5 shelves = 15 can now exceed the 12-call headset, so the
-// guarantee lives in the COMPILE: applyDefBookToGameplan caps the library at 12
-// distinct names regardless of how full the shelves are (cap raised 2->3,
-// 2026-08-17). Prove it by overflowing every shelf to the cap and counting.
+// The shelf cap x 5 shelves can exceed the headset library, so the guarantee
+// lives in the COMPILE: applyDefBookToGameplan caps the library at
+// MAX_HEADSET_CALLS distinct names regardless of how full the shelves are.
+// Prove it by overflowing every shelf to the cap and counting.
+// 2026-08-21: caps raised (shelf 3->10, headset 12->40) so a book can carry a
+// playbook rather than a paper sheet. This assertion now READS the constants
+// instead of restating them — the literal 12 is what went stale here.
 {
   const over = {}; let _oi = 0;
   for (const sh of DEF_SHELVES) over[sh.key] = Array.from({ length: DEF_SHELF_CARD_CAP }, () => card('OC' + (_oi++), { coverage: 'c3' }));
   const gpOver = applyDefBookToGameplan({ ...emptyDefBook('Over'), shelves: over }, {});
-  ok(Object.keys(gpOver.defCalls || {}).length === 12, `compile caps the headset at 12 even when shelves hold ${DEF_SHELVES.length * DEF_SHELF_CARD_CAP} (${Object.keys(gpOver.defCalls || {}).length})`);
+  const _wantCap = Math.min(MAX_HEADSET_CALLS, DEF_SHELVES.length * DEF_SHELF_CARD_CAP);
+  ok(Object.keys(gpOver.defCalls || {}).length === _wantCap, `compile caps the headset at ${MAX_HEADSET_CALLS} even when shelves hold ${DEF_SHELVES.length * DEF_SHELF_CARD_CAP} (${Object.keys(gpOver.defCalls || {}).length})`);
 }
 const shelves10 = {}; let _ci = 0;
 for (const sh of DEF_SHELVES) shelves10[sh.key] = [card(`Call${_ci++}`, { coverage: 'c3' }), card(`Call${_ci++}`, { coverage: 'c1', bring: '5' })];

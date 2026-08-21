@@ -127,23 +127,24 @@ function resolveDefPersonnel(frontId, depthChart, roster = null, blitzers = null
   // SAME table that fields the eleven — the two can never drift. The 46/Bear
   // ten-man bug (S: 1) lived in a stale local copy of this table.
   const FRONT_COUNTS = DEF_FRONT_COUNTS;
-  const RUSH_SLOTS = {
-    "4-3": ["DE", "DT"],
-    "3-4": ["DE", "DT", "OLB"],
-    "Nickel": ["DE", "DT"],
-    "Dime": ["DE", "DT"],
-    "46/Bear": ["DE", "DT"],
-    "5-2": ["DE", "DT"],
-    // 3-3-5: a three-man rush baseline — the stack backers cover; the heat
-    // comes from the blitz machinery (any of six second-level hats).
-    "3-3-5": ["DE", "DT"],
-    // Wave 2: Tite/4-4 overhangs play space; Big Nickel is a 4-down nickel;
-    // Penny's stand-up EDGEs are ON the line — they rush like 3-4 OLBs.
-    "Tite": ["DE", "DT"],
-    "4-4": ["DE", "DT"],
-    "Big Nickel": ["DE", "DT"],
-    "Penny": ["DE", "DT", "OLB"]
-  };
+  // ── DERIVED, NOT RESTATED (2026-08-21) ──────────────────────────────────
+  // This was a hand-written map of which position groups rush, per front —
+  // the very duplication the comment at the top of this file says was removed
+  // ("all three now derive from here"). Two of the three did. This one did
+  // not, and it is the copy the sim actually fields from when the called front
+  // differs from the base front.
+  //
+  // The cost: Tite and the 3-3-5 were given a Jack seat in FRONT_ROLES and
+  // nothing changed, because this table still said their outside backers do
+  // not rush. Both fronts kept sending THREE men on a called four-man rush.
+  //
+  // Derived from rushOlbCount, it reproduces all eleven previous entries
+  // exactly — 4-3, Nickel, Dime, 46/Bear, 5-2, 4-4 and Big Nickel have no
+  // OLB-Rush and stay ["DE","DT"]; 3-4 and Penny have one and keep their OLB —
+  // and the next front anyone adds gets the right answer for free.
+  const RUSH_SLOTS = Object.fromEntries(Object.keys(FRONT_ROLES).map(
+    (f) => [f, rushOlbCount(f) > 0 ? ["DE", "DT", "OLB"] : ["DE", "DT"]]
+  ));
   const counts = FRONT_COUNTS[frontId] || FRONT_COUNTS["4-3"];
   const used = /* @__PURE__ */ new Set();
   const ratingOf = roster ? (id) => {

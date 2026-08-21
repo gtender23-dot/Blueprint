@@ -1615,17 +1615,33 @@ function normalizeDistTo100(obj, keys) {
     obj[tgt] += drift;
   }
 }
-function wireDefaultsListeners(gp, { root = document } = {}) {
+function wireDefaultsListeners(gp, { root = document, inPlace = false } = {}) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
   // D17 BATCH C-1: write a dial (or a group of dials) through the parts. The
   // `gp` BINDING is reassigned to the freshly compiled plan so every handler in
   // this closure keeps reading the live plan — a recompile returns a NEW object,
   // and a captured stale one would silently render yesterday's values.
   // Falls back to a plain write when there is no school (harness/detached use).
+  // 2026-08-21: `inPlace` is for the THREE game-scoped roots — the pregame
+  // kickoff modal, halftime, and the live timeout overlay. Those screens render
+  // from a GAME-LOCAL plan (state._pregamePlan, or the token's homeGP/awayGP),
+  // not from school.gameplan. Routing their dials through setPlanFields wrote
+  // the SEASON plan instead: the chip never lit (the render re-read the
+  // game-local copy, which had not changed), the change never reached the game
+  // in progress, and it silently persisted into next week's plan. Writing the
+  // object the screen actually renders from fixes all three at once.
   const writeDial = (patch) => {
-    const sch = getPlayerSchool();
+    const sch = inPlace ? null : getPlayerSchool();
     if (sch) gp = setPlanFields(sch, patch);
-    else Object.assign(gp, patch);
+    else {
+      // `undefined` DELETES, matching setPlanFields — several dials clear by
+      // deleting, and Object.assign would have stored the undefined.
+      for (const k in patch) {
+        if (!Object.prototype.hasOwnProperty.call(patch, k)) continue;
+        if (patch[k] === undefined) delete gp[k];
+        else gp[k] = patch[k];
+      }
+    }
     return gp;
   };
   // D17 C-3: the STRUCTURAL editors (named calls, the matchup call sheet,
@@ -2166,7 +2182,7 @@ var CHK_FIELDS = [
 // gp.defCalls  = { name → sparse dial payload } (max MAX_DEF_CALLS)
 // gp.callSheet = { sitKey → { persClass|any → [[name, weight], …] } }
 // Absent = auto = today's game; empty structures are deleted (old-save law).
-var MAX_DEF_CALLS = 12;
+var MAX_DEF_CALLS = 40;   // 12 → 40 (2026-08-21), matching defbook's MAX_HEADSET_CALLS
 var CALL_FIELDS = [
   ["front", "Front", [["4-3", "4-3"], ["3-4", "3-4"], ["Tite", "Tite"], ["Nickel", "Nickel"], ["Big Nickel", "Big Nickel"], ["3-3-5", "3-3-5"], ["Penny", "Penny"], ["Dime", "Dime"], ["4-4", "4-4"], ["46/Bear", "46/Bear"], ["5-2", "5-2"]]],
   ["aggression", "Pressure", [["bend", "Bend"], ["selective", "Selective"], ["balanced", "Balanced"], ["attacking", "Attacking"], ["house", "House"]]],
