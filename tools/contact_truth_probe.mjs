@@ -22,7 +22,11 @@ import { DEF_FIELD_LAYOUTS } from '../js/constants_field.js';
 import { buildPlayScript } from '../js/ui/watchphys.js';
 
 let _s = 20260809;
-Math.random = () => { _s = (_s * 1103515245 + 12345) & 0x7fffffff; return _s / 0x7fffffff; };
+// 2026-08-22: was a hand-rolled LCG whose state cycled every 10,466 draws — the
+// multiply overflowed Number.MAX_SAFE_INTEGER and the mask then kept the bits
+// that had been rounded away. An N-game arm draws millions of values, so it was
+// replaying one short loop, not sampling. See tools/_seed.mjs.
+Math.random = mulberry32(_s);
 
 const N = parseInt(process.argv[2] || '8', 10);
 
@@ -39,6 +43,7 @@ const mk = (o = {}) => ({ offFormations: [{ id: 'Spread', weight: 30 }, { id: 'S
   blitzPct: 30, fourthDown: 'Moderate', baseTempo: 'Normal', maxFGDist: 42, jetRate: 25, drawRate: 20, ...o });
 
 import { OFF_FIELD_LAYOUTS } from '../js/constants_field.js';
+import { mulberry32 } from './_seed.mjs';
 const layoutFor = (p) => [OFF_FIELD_LAYOUTS[p.offFormation]?.slots, (DEF_FIELD_LAYOUTS[p.defFront] || DEF_FIELD_LAYOUTS['4-3'])?.slots];
 
 const plays = [];

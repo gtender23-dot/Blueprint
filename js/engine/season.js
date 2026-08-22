@@ -43,11 +43,11 @@ function calendarWeek(day) {
   }
   if (d === PHASES.CONFCHAMP.days[1]) {
     return {
-      kind: "selection",
+      kind: "confchamp",
       num: REG_WEEK_COUNT,
       total: REG_WEEK_COUNT,
-      label: "Selection Week",
-      short: "SEL"
+      label: "Championship Week",
+      short: "CHAMP"
     };
   }
   if (d <= PHASES.CONFCHAMP.days[1]) {
@@ -340,6 +340,13 @@ function advanceDay(state2, dispatch2) {
   const phase = getPhase(day);
   const events = [];
   if (carriedStageEvents) events.push(...carriedStageEvents);
+  // 2026-08-22: day 19 is TITLE-GAME day now. Schedule them before anything
+  // reads the day's slate — the coached-week path and the day loop both just
+  // filter state.schedule, so putting ordinary game entries in first is the
+  // whole integration: the player can call his own title game, standings and
+  // stats book themselves, and buildAllBrackets (which runs later in this same
+  // advance) sees the results it needs to name champions.
+  if (day === PHASES.CONFCHAMP.days[1] && !state2.allPlayoffs) scheduleConfTitleGames(state2);
   if (day >= PHASES.PLAYOFFS.days[0] && day <= PHASES.PLAYOFFS.days[1]) {
     if (day === PHASES.PLAYOFFS.days[0] && !state2.allPlayoffs) buildAllBrackets(state2, events);
     if (day === PHASES.PLAYOFFS.days[0] && (state2.bowls || []).some((b) => !b.result)) {
@@ -625,7 +632,7 @@ function advanceDay(state2, dispatch2) {
     }
   }
   if (day === PHASES.CONFCHAMP.days[1] && !state2.allPlayoffs && !state2.pendingHalftime) {
-    events.push({ type: "info", text: "\u{1F3C6} Selection Week — the regular season is over. Conference titles go to the league champions on record, and the postseason field is set." });
+    events.push({ type: "info", text: "\u{1F3C6} Championship Week — the conference title games are in the books and the postseason field is set." });
     buildAllBrackets(state2, events);
     const div = getPlayerDivision(state2);
     const seeds = ((_q = (_p = state2.allPlayoffs) == null ? void 0 : _p[div]) == null ? void 0 : _q.seeds) || [];
@@ -1336,6 +1343,66 @@ function accumTeamStats(teamStats, gameStats, pf, pa, oppGameStats = null) {
   if (pf > pa) teamStats.wins++;
   else teamStats.losses++;
 }
+// ── CONFERENCE TITLE GAMES (2026-08-22, owner build) ────────────────────────
+// Day 19 used to be empty: CONF_GAME_DAYS ends at 18, so no game was ever
+// scheduled, and conference champions were awarded on regular-season conference
+// win pct alone. The week was called "Selection Week" for exactly that reason.
+// Now each conference's two halves (school.confDiv — "West"/"East", set in
+// worldgen; NOT school.division, which is D1/D2/D3) send their leader to a title
+// game, and the WINNER is the champion and takes the automatic playoff berth.
+// The loser drops into the at-large pool and gets in on merit or not at all —
+// owner's call, and it means a title game can genuinely end a season.
+//
+// The games are appended to state.schedule as ordinary entries with the SAME
+// shape every other game has, which is the whole trick: the day loop sims them,
+// the coached-week path lets the player call one, standings and stats book
+// themselves, and none of that needed a special case.
+function _confRank(state2, list) {
+  const h2h = (a, b) => {
+    const g = (state2.schedule || []).find((x) => x.result && x.result.winner
+      && [x.homeId, x.awayId].includes(a.id) && [x.homeId, x.awayId].includes(b.id));
+    if (!g) return 0;
+    return g.result.winner === a.id ? -1 : g.result.winner === b.id ? 1 : 0;
+  };
+  // Same ladder the champion pick has always used: conference win pct, then
+  // overall wins, then head-to-head, then roster strength as the last resort.
+  return [...list].sort((a, b) => {
+    const aG = Math.max(1, a.record.confWins + a.record.confLosses);
+    const bG = Math.max(1, b.record.confWins + b.record.confLosses);
+    return (b.record.confWins / bG) - (a.record.confWins / aG)
+      || b.record.wins - a.record.wins
+      || h2h(a, b)
+      || avgTop22Composite(b.roster) - avgTop22Composite(a.roster);
+  });
+}
+// The two teams that meet for a conference's title, best half-leader first.
+function confTitlePair(state2, conf) {
+  const inConf = (state2.world.schools || []).filter((s) => s.conf === conf);
+  const west = _confRank(state2, inConf.filter((s) => s.confDiv === "West"))[0] || null;
+  const east = _confRank(state2, inConf.filter((s) => s.confDiv === "East"))[0] || null;
+  if (!west || !east || west.id === east.id) return null;
+  // Better record hosts.
+  const [home, away] = _confRank(state2, [west, east]);
+  return { home, away };
+}
+function scheduleConfTitleGames(state2) {
+  state2.schedule = state2.schedule || [];
+  const day = PHASES.CONFCHAMP.days[1];
+  if (state2.schedule.some((g) => g.day === day && g.confTitle)) return 0;   // idempotent
+  const confs = [...new Set((state2.world.schools || []).map((s) => s.conf).filter(Boolean))];
+  let made = 0;
+  for (const conf of confs) {
+    const pair = confTitlePair(state2, conf);
+    if (!pair) continue;
+    state2.schedule.push({
+      day, homeId: pair.home.id, awayId: pair.away.id,
+      conf, confTitle: true, neutral: true, result: null
+    });
+    made++;
+  }
+  return made;
+}
+
 function buildAllBrackets(state2, events) {
   const playerDiv = getPlayerDivision(state2);
   state2.allPlayoffs = {
@@ -1361,13 +1428,21 @@ function buildPlayoffBracket(state2, division, events = null) {
   const confChamps = [];
   const champIds = /* @__PURE__ */ new Set();
   for (const conf of confs) {
-    const top = divSchools.filter((s) => s.conf === conf).sort((a, b) => {
-      const aG = Math.max(1, a.record.confWins + a.record.confLosses);
-      const bG = Math.max(1, b.record.confWins + b.record.confLosses);
-      const aPct = a.record.confWins / aG;
-      const bPct = b.record.confWins / bG;
-      return bPct - aPct || b.record.wins - a.record.wins || h2h(a, b) || avgTop22Composite(b.roster) - avgTop22Composite(a.roster);
-    })[0];
+    // 2026-08-22: the TITLE GAME decides it. Fall back to the old
+    // best-conference-record pick only when no title game was played — a league
+    // too small to field two halves, or a bracket rebuilt on a save from before
+    // title games existed.
+    const title = (state2.schedule || []).find((g) => g.confTitle && g.conf === conf && g.result && g.result.winner);
+    let top = title ? divSchools.find((s) => s.id === title.result.winner) : null;
+    if (!top) {
+      top = divSchools.filter((s) => s.conf === conf).sort((a, b) => {
+        const aG = Math.max(1, a.record.confWins + a.record.confLosses);
+        const bG = Math.max(1, b.record.confWins + b.record.confLosses);
+        const aPct = a.record.confWins / aG;
+        const bPct = b.record.confWins / bG;
+        return bPct - aPct || b.record.wins - a.record.wins || h2h(a, b) || avgTop22Composite(b.roster) - avgTop22Composite(a.roster);
+      })[0];
+    }
     if (top) {
       confChamps.push(top);
       champIds.add(top.id);
@@ -2968,11 +3043,13 @@ PHASES = {
   PRESEASON: { days: [1, 4], label: "Preseason" },
   NONCONF: { days: [5, 8], label: "Non-Conference" },
   CONFERENCE: { days: [9, 18], label: "Conference Play" },
-  // No game is scheduled on day 19 — CONF_GAME_DAYS ends at 18. Conference
-  // champions are decided on conference record and the postseason field is
-  // announced here, so the week is Selection Week, not a title-game week. (Real
-  // title games are a separate pass: see Ref/PLAYTEST_2026-08-12.md item 17.)
-  CONFCHAMP: { days: [19, 19], label: "Selection Week" },
+  // 2026-08-22: day 19 IS a title-game week now (PLAYTEST_2026-08-12 item 17,
+  // option L). CONF_GAME_DAYS still ends at 18 — the title games are appended to
+  // the schedule by scheduleConfTitleGames at the top of the day-19 advance, so
+  // no regular-season generator had to learn about them. Each conference's two
+  // halves (school.confDiv) send their leader; the winner is champion and takes
+  // the automatic berth, the loser falls to the at-large pool.
+  CONFCHAMP: { days: [19, 19], label: "Championship Week" },
   PLAYOFFS: { days: [20, 23], label: "Playoffs" },
   JOBS: { days: [24, 30], label: "Offseason" }
 };

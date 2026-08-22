@@ -14,6 +14,7 @@
 // Usage: node tools/calendar_display_probe.mjs [built.html]   (default dist/index.html)
 import { chromium } from 'playwright';
 import { calendarWeek } from '../js/engine/season.js';
+import { pinPageRandom } from './_seed.mjs';
 
 const target = process.argv[2] || 'dist/index.html';
 const path   = target.startsWith('/') ? target : process.cwd() + '/' + target;
@@ -36,10 +37,12 @@ try {
   const p = await b.newPage();
   const errs = [];
   p.on('pageerror', e => errs.push(e.message.split('\n')[0]));
-  await p.addInitScript(() => {
-    let s = 20260726;
-    Math.random = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
-  });
+  // 2026-08-22: was a hand-rolled LCG whose state cycled every 10,466 draws (the
+  // multiply overflowed Number.MAX_SAFE_INTEGER and the mask kept the bits that
+  // had been rounded away), so a walked dynasty replayed one short loop instead
+  // of playing a season. pinPageRandom installs a sound one, still before the
+  // bundle's first line. Same seed as before, so the walk is comparable.
+  await pinPageRandom(p, 20260726);
   await p.goto('file://' + path, { waitUntil: 'load' });
   await p.waitForTimeout(1200);
 
@@ -113,7 +116,12 @@ try {
     .innerText().catch(() => '').then(t => (t || '').replace(/\s+/g, ' ').trim());
   const subtitleText = () => p.locator('.view-subtitle').evaluateAll(nodes => {
     const texts = nodes.map(e => (e.textContent || '').replace(/\s+/g, ' ').trim());
-    return texts.find(t => /^Season \d+ · (?:Preseason Week|Week \d+|Playoff Round|Offseason)/.test(t)) || '';
+    // 2026-08-22: the day-19 week name was missing from this list, so on day 19 the
+    // filter matched nothing, returned '', and the probe reported SUBTITLE-MISS —
+    // which reads as the app printing the wrong week and is the probe failing to
+    // recognise a legitimate one. Third probe-side bug in this file; the app was
+    // right every time.
+    return texts.find(t => /^Season \d+ · (?:Preseason Week|Week \d+|Championship Week|Playoff Round|Offseason)/.test(t)) || '';
   }).catch(() => '');
 
   // Compare the badge's week SEGMENT, not the whole string. A substring test passes
@@ -145,6 +153,13 @@ try {
     '#btn-resume-halftime',   // locker room
     '#btn-rec-skip',          // "your recruiting board is empty"
     '#btn-rs-bench',          // redshirt burn warning
+    // 2026-08-22: the preseason position-battle gate. It is NOT a modal — it is
+    // an in-page step that hides #btn-advance-day, so the overlay-based clears
+    // above never saw it and the walk died on Preseason Week 3->4 reporting
+    // BADGE-MISS, which reads as the calendar printing the wrong week. It was
+    // the probe failing to answer a takeover, exactly as the note below warns.
+    '#btn-pos-confirm',       // preseason position battles: confirm the depth chart
+    '#btn-spring-play',       // spring game gate
     '.modal-footer .btn-ghost',
     '.modal-footer .btn-primary',
     '.modal-close',

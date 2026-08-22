@@ -3,7 +3,7 @@
 > ## ⚑ START HERE
 > **Before doing anything, read `Ref/STATUS.md`** — it is the living record of
 > where the project actually is right now (what's done, what's open) and, most
-> importantly, the **two-repo layout** that trips up fresh sessions. This file
+> importantly, the **deploy layout** that trips up fresh sessions. This file
 > (`CLAUDE.md`) is the *stable* architecture/build reference; `Ref/STATUS.md` is
 > the *current* state. If a request is vague ("check on the merge", "where are
 > we"), `Ref/STATUS.md` is the answer. Keep it updated as you finish work.
@@ -42,8 +42,22 @@ The site is a GitHub Pages **project site** at `https://gtender23-dot.github.io/
 — note it's served from a subpath, not the domain root, so every path in the deployed
 files must be relative (`./…`), never absolute (`/…`).
 
+**The layout, stated plainly (corrected 2026-08-22 — this file used to call it a
+"two-repo layout", and it is not one):** there is ONE repo,
+`gtender23-dot/Blueprint`, with two branches that hold completely different
+files. `source` is the code — everything under `js/`, `tools/`, `Ref/`, this
+file. `main` is the deployed site — the seven files below and nothing else.
+Pages serves `main`.
+
+**Never check out `main` in the source working folder.** Switching branches does
+not remove untracked files, so git offers to add the entire source tree to the
+website branch; the owner hit exactly this and was shown ~2100 files to commit.
+Worse, any *uncommitted* work is gone the moment the switch succeeds. Deploy from
+a different folder, or upload the seven files through github.com in a browser.
+
 1. `node tools/build.mjs`
-2. Extract `blueprint-pages.zip` over the local clone of the Pages repo
+2. Put the contents of `blueprint-pages.zip` on `main` — from a separate folder,
+   or via the GitHub web uploader. Not by switching this folder to `main`.
 3. Commit and push
 
 The seven files are:
@@ -69,7 +83,7 @@ npx serve dist
 GitHub Pages would happily serve `index.html` + the `js/` folder directly; ES modules work
 fine over https. The bundle exists for the phone: the service worker has to cache the app
 for offline use, and caching **one** file with a content hash is trivial and reliable,
-whereas enumerating ~57 module files is fragile and silently breaks when one is missed. It
+whereas enumerating the ~110 module files is fragile and silently breaks when one is missed. It
 also costs one HTTP round-trip on cellular instead of 57.
 
 So the bundle is output, not source. Nobody edits it.
@@ -140,8 +154,8 @@ screen, hashing the rendered DOM at each step. Run it against two builds and dif
 transcripts — identical output means identical behaviour. This is how the reconciliation was
 proved: 34 checkpoints, byte-identical.
 
-**Sim / generation / balance changes: always get numbers.** `tools/` holds ~100 probe
-harnesses that import directly from `js/`. Write or run one and print before/after
+**Sim / generation / balance changes: always get numbers.** `tools/` holds ~250 probe
+harnesses that import directly from `js/` (239 of them registered in the gate). Write or run one and print before/after
 distributions. Do not ship a balance change without them.
 
 > This is the whole reason the reconciliation mattered. 11 of 16 sampled probes import from
@@ -149,16 +163,17 @@ distributions. Do not ship a balance change without them.
 > wasn't shipping.** They work now — keep them working. If you change a module a probe
 > imports, run that probe.
 
-Known-good after reconciliation: `worldgen_check`, `playcall_probe` (RUNG 6 PASS),
-`watchphys_probe` (RUNG 7A PASS), `emergency_qb_probe`, `tendency_probe`,
-`recruit_tier_gate_probe`, `save_migration_check`, `balance_probe`.
+Known-good after reconciliation: `worldgen_check`, `watchphys_probe`,
+`emergency_qb_probe`, `tendency_probe`, `recruit_tier_gate_probe`,
+`save_migration_check`, `balance_probe`. (`playcall_probe` was on this list and
+no longer exists — corrected 2026-08-22.)
 
-Three probes fail against current code, and **none is a regression** — they encode
-pre-rework expectations, plus one real bug. See the reconciliation report. In short:
-`Calhoun State` and `Calloway College` both take the abbr `CAL` in every world (the static
-D1 table is registered outside the procedural dedup pass); `portal_balance_probe` and
-`recruit_assist_probe` assert the old portal economy and old needs-only recruiting;
-`balance_probe` still prints a `heisman` row for a key now called `legend`.
+**The "three probes fail and none is a regression" note that used to sit here is
+gone (2026-08-22): all three now pass.** `portal_balance_probe` and
+`recruit_assist_probe` were re-pointed at the current portal economy and
+recruiting model at some point and nobody updated this file; `balance_probe`
+exits clean. Re-verified by running them. Do not carry a stale "known red" list —
+it makes a fresh session wave off a real failure.
 
 ## Reconciliation tooling (still in `tools/`)
 
@@ -259,3 +274,69 @@ normal working directory.
 
 Run `npm install` once so the pinned esbuild is local; the build falls back to
 `npx esbuild@0.28.1` if it isn't, which works but is slower.
+
+### Playwright in a cloud sandbox — read this before touching a `pw` probe
+
+Sessions that run in Anthropic's cloud container hit the same wall every time,
+and it is always the same cause. This is here for the same reason the manifest
+carries `envKnown`: so nobody re-diagnoses it.
+
+**Chromium is already installed. Never run `npx playwright install`.** It lives
+at `$PLAYWRIGHT_BROWSERS_PATH` (`/opt/pw-browsers`), and `/opt/pw-browsers/chromium`
+is a symlink to the real binary. Downloading it is blocked, slow, or both, and it
+is never the fix.
+
+**The one real failure mode is version drift, and it does not look like it.**
+The `playwright` npm package hard-codes which Chromium *build number* it expects.
+If `package.json` asks for a version wanting a build the sandbox does not carry,
+every launch dies with:
+
+```
+Executable doesn't exist at …/chrome-linux/chrome
+```
+
+which reads like a missing browser and is actually a mismatched one. That is the
+trap: the error sends you off installing a browser, and installing a browser
+cannot fix it.
+
+**Check the pairing in two lines** (repo root, after `npm i`):
+
+```
+ls /opt/pw-browsers
+node -e "console.log(JSON.parse(require('fs').readFileSync('node_modules/playwright-core/browsers.json','utf8')).browsers.find(b=>b.name==='chromium').revision)"
+```
+
+The revision the second line prints must appear in the first line's listing.
+As of 2026-08-22 the sandbox carries **chromium-1194**, and **playwright /
+playwright-core 1.56.0** is the version that asks for 1194 — which is why both
+are pinned `^1.56.0`. Re-derive the pairing rather than trusting those numbers;
+the sandbox image changes.
+
+**If they disagree, two ways out — prefer the second:**
+
+1. `npm i -D playwright@<version that wants the installed build>`, sandbox only.
+   Do **not** commit that bump unless it also suits the local Windows machine.
+2. Leave the version alone and point Playwright at the binary:
+   `PW_CHROMIUM=/opt/pw-browsers/chromium node tools/<probe>.mjs …`
+   Every `pw` probe already honours it — they launch with
+   `executablePath: process.env.PW_CHROMIUM || undefined`. Nothing to commit,
+   nothing to remember to revert.
+
+**Seeding, while you are in here.** `tools/_seed.mjs` is the one way a probe pins
+`Math.random` — `pinRandom()` for node arms, `pinPageRandom(page)` for a `pw`
+probe (the page owns its own dice; overriding them in this process reaches
+nothing). Do NOT hand-roll `s = (s * 1103515245 + 12345) & 0x7fffffff`: that
+idiom spread through eleven files and its state cycles every **10,466 draws** at
+every seed, because the multiply overflows `Number.MAX_SAFE_INTEGER` and the
+mask then keeps the bits that were rounded away. An N-game arm replays one short
+loop instead of sampling. `seed_hygiene_probe` (core) fails on any new copy.
+
+**Two more sandbox time-wasters:**
+
+- A `pw` probe wants an **absolute** path to the built page:
+  `node tools/<probe>.mjs /home/claude/<repo>/dist/index.html`. A relative path
+  loads nothing and the probe fails on its first assertion, which reads as a
+  product bug.
+- Rebuild first. `node tools/build.mjs` writes `dist/index.html`; a probe run
+  against a stale bundle tests yesterday's code, and that failure looks exactly
+  like a real regression.

@@ -83,7 +83,7 @@ function seasonRailHtml(school, next) {
     const g = (state.schedule || []).find((g2) => g2.day === w && (g2.homeId === (school == null ? void 0 : school.id) || g2.awayId === (school == null ? void 0 : school.id)));
     if (!g) {
       if (w === PHASES.CONFCHAMP.days[1]) {
-        steps.push(`<span class="event-rail-step${w <= state.day ? " done" : ""}" title="Selection Week \u2014 conference titles settle and the field is announced">SEL</span>`);
+        steps.push(`<span class="event-rail-step${w <= state.day ? " done" : ""}" title="Championship Week \u2014 the conference title games, then the field is announced">CHAMP</span>`);
         continue;
       }
       steps.push(`<span class="event-rail-step${w <= state.day ? " done" : ""}" title="${escapeHtml(weekLabel(w))} \u2014 bye">${escapeHtml(weekShort(w))} BYE</span>`);
@@ -330,7 +330,7 @@ function gameWeekContent(school) {
   const isOpener = played === 0 && !next.postseason;
   const isRival = !!(state.rivalry && opp && state.rivalry.schoolId === opp.id && (next.rivalry === true || next.rivalry === void 0 && next.day === C.RIVALRY_DAY));
   const gPhase = getPhase(next.day);
-  const tag = next.postseason ? "Playoffs" : gPhase === "CONFCHAMP" ? "Selection Week" : isRival ? `Rivalry Week \u2014 ${state.rivalry.trophy}` : isOpener ? "Season Opener" : gPhase === "CONFERENCE" ? "Conference" : "Non-Conference";
+  const tag = next.postseason ? "Playoffs" : gPhase === "CONFCHAMP" ? "Conference Championship" : isRival ? `Rivalry Week \u2014 ${state.rivalry.trophy}` : isOpener ? "Season Opener" : gPhase === "CONFERENCE" ? "Conference" : "Non-Conference";
   const byeAhead = next.day > state.day + 1;
   return {
     railHtml,

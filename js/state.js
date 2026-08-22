@@ -524,8 +524,24 @@ function getWeekLabel() {
 function getWeekShort() {
   return weekShort(state.day);
 }
+// THE SEASON-PHASE NAME. Corrected 2026-08-22 (owner) to agree with the engine's
+// own PHASES table in js/engine/season.js, which this had been quietly
+// contradicting: it called day 19 "Conf. Championship" for a week the engine
+// deliberately schedules NO game on — conference titles are decided on
+// conference record and the postseason field is announced, which is why the
+// engine calls it Selection Week. The game was announcing a championship that
+// does not exist. CONFERENCE and JOBS were off too ("Conference" / "Offseason
+// /Jobs" against the engine's "Conference Play" / "Offseason").
+//
+// NOT the same vocabulary as a GAME tag. js/ui/views/schedule.js and the
+// dashboard's next-game tag say "Conference" for a single game, which is right
+// there and wrong here — a period of the season and one game in it are
+// different nouns. Do not unify those into this table.
+//
+// Conference title games shipped 2026-08-22, so CONFCHAMP reads Championship
+// Week — the games are real and day 19 is no longer an empty selection week.
 function getPhaseLabel() {
-  return { RECRUITING: "Recruiting Open", PRESEASON: "Preseason", NONCONF: "Non-Conference", CONFERENCE: "Conference", CONFCHAMP: "Conf. Championship", PLAYOFFS: "Playoffs", JOBS: "Offseason/Jobs", OFFSEASON: "Offseason" }[getPhase(state.day)] || "Offseason";
+  return { RECRUITING: "Recruiting Open", PRESEASON: "Preseason", NONCONF: "Non-Conference", CONFERENCE: "Conference Play", CONFCHAMP: "Championship Week", PLAYOFFS: "Playoffs", JOBS: "Offseason", OFFSEASON: "Offseason" }[getPhase(state.day)] || "Offseason";
 }
 async function advanceDay2() {
   var _a, _b;

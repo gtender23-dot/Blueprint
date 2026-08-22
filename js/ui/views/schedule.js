@@ -45,7 +45,7 @@ function renderGameCard(game, school) {
   const played = !!game.result;
   const isCurrent = game.day === state.day;
   const phase = getPhase(game.day);
-  const phaseLabel = { NONCONF: "Non-Conference", CONFERENCE: "Conference", CONFCHAMP: "Selection Week", PLAYOFFS: "Playoffs" }[phase] || "Game";
+  const phaseLabel = { NONCONF: "Non-Conference", CONFERENCE: "Conference", CONFCHAMP: "Conference Championship", PLAYOFFS: "Playoffs" }[phase] || "Game";
   let resultClass = "";
   let resultText = "";
   let myScore = "", oppScore = "";

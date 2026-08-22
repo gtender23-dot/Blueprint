@@ -1569,6 +1569,35 @@ function assembleWorldSources(sources) {
   }
   return { schools: outSchools, conferences: outConfs, warnings };
 }
+// ── CONFERENCE HALVES (2026-08-22, owner) ───────────────────────────────────
+// Real title games need two halves to send a winner each, so every conference
+// is split in two. NOTE THE FIELD NAME: `school.division` is already taken — it
+// means D1/D2/D3 — so the half is `confDiv`. Getting those two confused would
+// be a very quiet bug.
+//
+// Split by LONGITUDE, west half and east half. Conferences are already built
+// around a region, so the halves come out geographically sensible without any
+// new authored data, and a custom league gets them for free. Conference sizes
+// are forced even upstream (`if (PER_CONF % 2 !== 0) PER_CONF++`), so the split
+// is clean; an odd conference from a custom league gives the extra team to the
+// west, which is arbitrary but stable.
+//
+// Ties on longitude are broken by school id so the same world always splits the
+// same way — worldgen is seeded and this must not add a second source of drift.
+function assignConfDivisions(schools) {
+  const byConf = {};
+  for (const s of schools || []) {
+    if (!s || !s.conf) continue;
+    (byConf[s.conf] = byConf[s.conf] || []).push(s);
+  }
+  for (const list of Object.values(byConf)) {
+    list.sort((a, b) => (a.lng || 0) - (b.lng || 0) || String(a.id).localeCompare(String(b.id)));
+    const half = Math.ceil(list.length / 2);
+    list.forEach((s, i) => { s.confDiv = i < half ? "West" : "East"; });
+  }
+  return schools;
+}
+
 function generateWorld(opts = {}) {
   // ── The world-source seam (Creativity Tools, Aug 2026) ──────────────────
   // generateWorld now takes an options bag whose ONLY job today is to name the
@@ -1621,6 +1650,7 @@ function generateWorld(opts = {}) {
     school.lore = generateProgramLore(school);
   }
   generateRivalries(schools, distanceMiles);
+  assignConfDivisions(schools);
   return {
     schools,
     conferences: sourceConferences,
@@ -3744,4 +3774,4 @@ CONFERENCES = Object.fromEntries(
 NONCONF_GAME_DAYS = [5, 6, 7, 8];
 CONF_GAME_DAYS = [9, 10, 11, 13, 14, 15, 16, 17, 18];
 
-export { CONFERENCES, SCHOOL_DATA, WORLDGEN_INFO, STAR_CALIBER, applyIdentityToSchool, applyTeamStars, availableStates, buildDepthChart, buildRoleSortedDepthOrder, assembleWorldSources, cityInState, coinStarPlayer, coinTeamIdentity, compileLeague, defaultGameplan, generateAICoach, generateExhibitionTeam, generatePlayerProgram, generateRecruitPool, generateSchedule, generateWorld, hashStr, repairRecruitLocations, rosterHintsFromBooks };
+export { CONFERENCES, SCHOOL_DATA, WORLDGEN_INFO, STAR_CALIBER, applyIdentityToSchool, applyTeamStars, availableStates, buildDepthChart, buildRoleSortedDepthOrder, assembleWorldSources, cityInState, coinStarPlayer, coinTeamIdentity, compileLeague, defaultGameplan, generateAICoach, generateExhibitionTeam, generatePlayerProgram, generateRecruitPool, generateSchedule, generateWorld, hashStr, repairRecruitLocations, rosterHintsFromBooks, assignConfDivisions };
