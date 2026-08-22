@@ -50,6 +50,57 @@ const w2 = generateWorld();
 const key = (world) => world.schools.map((s) => `${s.id}:${s.confDiv}`).sort().join('|');
 ok(key(w) === key(w2), 'the same seed splits the same way twice');
 
+// ── F. THE SCHEDULE PLAYS THE HALVES (2026-08-22) ───────────────────────────
+// A half-leader that never played its own half is a fiction, so the conference
+// schedule is now everyone-in-your-half plus crossovers. The counts land exactly
+// on the existing CONF_GAMES (8): a half of 6 gives 5 intra + 3 cross, a half of
+// 5 gives 4 intra + 4 cross. These pin that, and pin the three laws the old
+// round-robin guaranteed and a rewrite could quietly break.
+{
+  const { generateSchedule: genSched } = await import('../js/engine/world.js');
+  const { C } = await import('../js/constants.js');
+  reseed();
+  const sw = generateWorld();
+  const sched = genSched(sw, 1);
+  const sBy = new Map(sw.schools.map((s) => [s.id, s]));
+  const confOpp = {};
+  for (const s of sw.schools) confOpp[s.id] = new Set();
+  const perDay = {};
+  for (const g of sched) {
+    const h = sBy.get(g.homeId), a = sBy.get(g.awayId);
+    if (!h || !a) continue;
+    (perDay[g.day] = perDay[g.day] || []).push(g.homeId, g.awayId);
+    if (h.conf !== a.conf) continue;
+    confOpp[h.id].add(a.id); confOpp[a.id].add(h.id);
+  }
+  const wrongCount = sw.schools.filter((s) => confOpp[s.id].size !== C.CONF_GAMES);
+  ok(wrongCount.length === 0, `every team plays exactly ${C.CONF_GAMES} conference games (${wrongCount.length} do not)`);
+
+  const missedHalf = sw.schools.filter((s) => sw.schools.some((o) =>
+    o.id !== s.id && o.conf === s.conf && o.confDiv === s.confDiv && !confOpp[s.id].has(o.id)));
+  ok(missedHalf.length === 0, `every team plays its ENTIRE half (${missedHalf.length} did not)`);
+
+  const doubled = Object.entries(perDay).filter(([, ids]) => new Set(ids).size !== ids.length);
+  ok(doubled.length === 0, `no team is booked twice on a day (${doubled.length} days)`);
+
+  // the crossovers must rotate, or every season is the same schedule
+  const keyOf = (season) => genSched(sw, season)
+    .filter((g) => { const h = sBy.get(g.homeId), a = sBy.get(g.awayId); return h && a && h.conf === a.conf; })
+    .map((g) => [g.homeId, g.awayId].sort().join('>')).sort().join('|');
+  ok(keyOf(1) !== keyOf(2), 'the conference slate is not identical two seasons running');
+
+  // home/away stays balanced — the old scheduler's quiet guarantee
+  const homeN = {};
+  for (const s of sw.schools) homeN[s.id] = 0;
+  for (const g of sched) {
+    const h = sBy.get(g.homeId), a = sBy.get(g.awayId);
+    if (h && a && h.conf === a.conf) homeN[g.homeId]++;
+  }
+  const hv = sw.schools.map((s) => homeN[s.id]);
+  ok(Math.max(...hv) - Math.min(...hv) <= 2,
+    `conference home games stay balanced (spread ${Math.min(...hv)}-${Math.max(...hv)}; the old round robin ran 3-5)`);
+}
+
 // ── B–E. a full season through the real engine ──────────────────────────────
 // Imported lazily: season.js pulls in a large graph and the checks above stand
 // on their own if it ever fails to load.

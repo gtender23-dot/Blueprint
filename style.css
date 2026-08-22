@@ -10118,6 +10118,8 @@ body *::after {
 .dc-live-sub { font-size: 0.78em; color: var(--text-1, #cfd6e4); letter-spacing: 0.02em; }
 .dc-live-note { font-size: 0.72em; color: var(--text-2, #97a3b6); }
 .dc-live-bz { font-size: 0.72em; color: var(--team-1, #ffd54a); cursor: help; }
+.dc-live-also { font-size: 0.72em; color: var(--text-1, #cfd6e4); }
+.dc-live-warn { font-size: 0.72em; color: #ffb347; }
 .dc-auto { white-space: nowrap; }
 @media (max-width: 520px) {
   .dc-live { flex-direction: column; align-items: flex-start; gap: 8px; }

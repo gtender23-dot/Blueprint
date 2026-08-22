@@ -117,6 +117,14 @@ const SUBJECTS = [
   { front: 'Nickel',     cov: 'tampa2', bring: '4' },
   { front: 'Nickel',     cov: 'c2man',  bring: '5' },
   { front: 'Dime',       cov: 'prevent',bring: '3' },
+  // 2026-08-22 (owner-reported: "this didn't blitz anyone"). A Prevent call
+  // authored with bring '4' — which is what a book actually stores when the
+  // author never touched the rush. sim.js's applyDefCall forces rush3 off the
+  // covFamily, so the SNAP sends three; the card read "Base Rush" and drew four
+  // until the coverage table's own fields.rush3 was wired into the drawing.
+  // Every prevent subject before this one declared bring '3' explicitly, so the
+  // gap between "authored 4" and "played 3" was never exercised.
+  { front: '4-3',        cov: 'prevent',bring: '4' },
   { front: '3-4',        cov: 'c3',     bring: '5' },
   { front: '46/Bear',    cov: 'c1',     bring: '6' },
   { front: 'Tite',       cov: 'c6',     bring: '4' }

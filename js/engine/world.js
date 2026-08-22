@@ -1924,9 +1924,59 @@ function stripeByConf(teams, seed) {
   }
   return result;
 }
-function scheduleConference(teamIds, confGames, confDaySlots, add, seasonSeed, season = 1) {
+// ── THE CONFERENCE SCHEDULE PLAYS THE HALVES (2026-08-22, owner) ────────────
+// Title games ask the two halves of a conference to send a leader each, and a
+// leader that never played its own half is a fiction. So the conference
+// schedule is now: EVERYONE in your half, then crossovers to fill.
+//
+// The counts land exactly, which is why this was worth doing rather than
+// retuning anything. CONF_GAMES is 8 over 9 day slots, and conferences are 10
+// or 12 teams (sizes are forced even upstream), so halves are 5 or 6:
+//
+//   half of 6 -> 5 intra rounds (you play all 5) + 3 crossover rounds = 8 games
+//                in 8 slots, leaving one spare for the existing bye-week pick
+//   half of 5 -> 5 intra rounds (odd, so one bye each: 4 games) + 4 crossover
+//                rounds = 8 games in 9 slots, no spare
+//
+// Both hit CONF_GAMES on the nose with no constant touched.
+//
+// Season rotation moves to the CROSSOVERS, which is the football-true place for
+// it: your division schedule is fixed and you play it every year, while which
+// teams you draw from the other side rotates.
+//
+// A conference whose halves are missing, empty or unequal — a hand-authored
+// league, an odd size — falls back to the old whole-conference round robin. It
+// is a real fallback, not an error: the title game degrades to champion-by-
+// record for that conference too, and the two behaviours agree.
+function _rrRounds(ids) {
+  // circle method; a null is the bye when the count is odd
+  const circle = ids.length % 2 === 1 ? [...ids, null] : [...ids];
+  const m = circle.length, half = m / 2, totalRounds = m - 1;
+  const fixed = circle[0];
+  let rotating = circle.slice(1);
+  const rounds = [];
+  for (let r = 0; r < totalRounds; r++) {
+    const lineup = [fixed, ...rotating];
+    const pairs = [];
+    for (let i = 0; i < half; i++) {
+      const a = lineup[i], b = lineup[m - 1 - i];
+      if (a !== null && b !== null) pairs.push([a, b]);
+    }
+    rounds.push(pairs);
+    rotating = [rotating[rotating.length - 1], ...rotating.slice(0, -1)];
+  }
+  return rounds;
+}
+function scheduleConference(teamIds, confGames, confDaySlots, add, seasonSeed, season = 1, divOf = null) {
   const n = teamIds.length;
   if (n < 2 || confGames <= 0) return;
+  if (divOf) {
+    const west = teamIds.filter((id) => divOf[id] === "West");
+    const east = teamIds.filter((id) => divOf[id] === "East");
+    if (west.length >= 2 && west.length === east.length && west.length + east.length === n) {
+      return _scheduleByHalves(west, east, confGames, confDaySlots, add, seasonSeed, season);
+    }
+  }
   const confStableHash = (seasonSeed ^ Math.imul(season, 1000003) >>> 0) >>> 0;
   const ids = seededShuffle([...teamIds], (confStableHash ^ 12648430) >>> 0);
   const circle = ids.length % 2 === 1 ? [...ids, null] : [...ids];
@@ -1974,6 +2024,51 @@ function scheduleConference(teamIds, confGames, confDaySlots, add, seasonSeed, s
     }
   }
 }
+function _scheduleByHalves(west, east, confGames, confDaySlots, add, seasonSeed, season) {
+  const stable = (seasonSeed ^ Math.imul(season, 1000003) >>> 0) >>> 0;
+  const W = seededShuffle([...west], (stable ^ 12648430) >>> 0);
+  const E = seededShuffle([...east], (stable ^ 2489012) >>> 0);
+  const h = W.length;
+  const intraRounds = _rrRounds(W).map((pairs, r) => [...pairs, ..._rrRounds(E)[r]]);
+  const intraPerTeam = h - 1;                       // odd halves take a bye each round
+  const crossPerTeam = Math.max(0, confGames - intraPerTeam);
+  // Crossover round k pairs W[i] against E[(i + k) % h]: every team plays once
+  // per round and never draws the same opponent twice across h rounds.
+  const allCross = [];
+  for (let k = 0; k < h; k++) allCross.push(W.map((a, i) => [a, E[(i + k) % h]]));
+  // WHICH crossovers you draw rotates by season — the division slate does not.
+  const phase = (stable ^ Math.imul(season, 2654435761) >>> 0) >>> 0;
+  const start = h > 0 ? (season - 1 + phase) % h : 0;
+  const crossRounds = [];
+  for (let k = 0; k < crossPerTeam; k++) crossRounds.push(allCross[(start + k) % h]);
+  // Interleave so a conference is not five division weeks then three crossovers.
+  const rounds = [];
+  const iN = intraRounds.length, cN = crossRounds.length, total = iN + cN;
+  let ii = 0, ci = 0;
+  for (let r = 0; r < total; r++) {
+    const takeCross = cN > 0 && (ii >= iN || Math.floor((r + 1) * cN / total) > Math.floor(r * cN / total));
+    if (takeCross && ci < cN) rounds.push(crossRounds[ci++]);
+    else if (ii < iN) rounds.push(intraRounds[ii++]);
+    else if (ci < cN) rounds.push(crossRounds[ci++]);
+  }
+  let daySlots = confDaySlots;
+  const spare = confDaySlots.length - rounds.length;
+  if (spare > 0) {
+    const byeIdx = ((stable ^ Math.imul(season, 40503) >>> 0) >>> 0) % confDaySlots.length;
+    daySlots = confDaySlots.filter((_, i2) => i2 !== byeIdx);
+  }
+  const homeCount = {};
+  for (const id of [...W, ...E]) homeCount[id] = 0;
+  for (let r = 0; r < rounds.length && r < daySlots.length; r++) {
+    for (const [a, b] of rounds[r]) {
+      let home = a, away = b;
+      if (homeCount[a] > homeCount[b] || (homeCount[a] === homeCount[b] && r % 2 === 1)) { home = b; away = a; }
+      homeCount[home]++;
+      add(daySlots[r], home, away);
+    }
+  }
+}
+
 function generateSchedule(world, season = 1, preCommitted = []) {
   const divOf = {};
   for (const s of world.schools) divOf[s.id] = s.division;
@@ -2113,9 +2208,11 @@ function generateSchedule(world, season = 1, preCommitted = []) {
   for (const school of world.schools) {
     (conferences[school.conf] = conferences[school.conf] || []).push(school.id);
   }
+  const confDivOf = {};
+  for (const school of world.schools) if (school.confDiv) confDivOf[school.id] = school.confDiv;
   for (const [confId, ids] of Object.entries(conferences)) {
     const seed = (season * 1000003 ^ hashStr(confId)) >>> 0;
-    scheduleConference(ids, C.CONF_GAMES, CONF_GAME_DAYS, add, seed, season);
+    scheduleConference(ids, C.CONF_GAMES, CONF_GAME_DAYS, add, seed, season, confDivOf);
   }
   return schedule;
 }

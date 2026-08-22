@@ -171,6 +171,27 @@ g('FRONT offers the book\'s fronts, not every front in the game', frontOpts > 0 
   g(`every card sends itself (${cards.length} checked)`, bad.length === 0, bad.join(' | '));
 }
 
+// ── EVERY PIN IS NAMED (2026-08-22, owner-reported) ────────────────────────
+// The SENDING headline is front · coverage · rush, and it used to stop there.
+// The owner sent a screenshot reading "(5 PINNED)" over a line that described
+// three of them — PRESSURE House and HEAT SHAPE The House were nowhere, and
+// those two take the rush from a measured 4.27 men a snap to 5.41, with seven
+// coming on 45% of snaps. A summary that omits the pins doing the most work is
+// the same defect this panel was rebuilt to kill.
+{
+  await page.evaluate(() => document.querySelector('.dc-chip[data-dc-field="aggression"][data-dc-val="house"]').click());
+  await page.waitForTimeout(300);
+  const also = await page.locator('.dc-live-also').count()
+    ? (await page.locator('.dc-live-also').innerText()).trim() : '';
+  g('a pin outside front/coverage/rush is still named on the card', /House/i.test(also), also || '(no also-pinned line)');
+  const pinned = await page.locator('.dc-chip.active').count();
+  const named = also ? also.split('·').length : 0;
+  // front + coverage pins live in the headline; the rest must all appear here
+  g('the card names every pin the headline does not carry', named > 0 && named >= pinned - 4, `${pinned} pinned, ${named} named below`);
+  await page.evaluate(() => document.querySelector('.dc-chip[data-dc-field="aggression"][data-dc-val="house"]').click());
+  await page.waitForTimeout(250);
+}
+
 // the quick call is always reachable
 g("Coordinator's call is on the panel", await page.locator('#dc-auto').count() === 1);
 

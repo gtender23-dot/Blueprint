@@ -3326,15 +3326,29 @@ function _dcCovOf(call) {
   }
   return _DC_COVS[_DC_COVS.length - 1];              // "match the identity"
 }
-function _dcBringOf(call) {
+// 2026-08-22 (owner-reported: "this didn't blitz anyone"). PREVENT BUNDLES A
+// THREE-MAN RUSH — sim.js applyDefCall: `if (o.covFamily === "Prevent")
+// defEff.rush3 = true`, an owner ruling from 2026-08-08 ("one ingredient, the
+// whole posture: 3-man rush, 8-deep umbrella"). And once rush3 is on, the sim
+// ignores bringSeats entirely (sim.js:1595).
+//
+// The card did not know that. A Prevent call whose stored payload carries only
+// `covFamily: "Prevent"` read "Base Rush" and drew four rushers, while the snap
+// sent three — and any pressure the coach pinned on top could not add a man.
+// The game was right and the picture was wrong, which is the exact defect this
+// panel was rebuilt to end.
+//
+// Read the implication off the COVERAGE TABLE's own `fields.rush3` rather than
+// restating the rule, so the card and the engine cannot drift apart.
+function _dcBringOf(call, cov) {
   const c = call || {};
-  if (c.rush3) return "3";
+  if (c.rush3 || (cov && cov.fields && cov.fields.rush3)) return "3";
   const seats = c.bringSeats;
   return seats === 2 ? "6" : seats === 1 ? "5" : "4";
 }
 function _dcCardOf(name, call, fallbackFront) {
   const c = call || {};
-  return { name, front: c.front || fallbackFront || null, bring: _dcBringOf(c),
+  return { name, front: c.front || fallbackFront || null, bring: _dcBringOf(c, _dcCovOf(c)),
     look: c.pressLook || null, rotation: c.rotation || null, pressLevel: c.pressLevel || null };
 }
 // ── ONE EXPLODE, USED TWICE (2026-08-22) ────────────────────────────────────
@@ -3391,8 +3405,11 @@ function _dcLiveCard(sel, standing) {
   const cov = _dcCovOf({ covFamily: sel.covFamily, covShell: sel.covShell || standing.covShell,
                          covStyle: sel.covStyle || standing.covStyle });
   const seats = sel.bringSeats != null ? Number(sel.bringSeats) : null;
-  const bring = sel.rush3 ? "3" : seats === 2 ? "6" : seats === 1 ? "5" : "4";
-  return { front, cov, bring,
+  // The coverage can FORCE the rush — Prevent bundles rush-3 and the sim then
+  // ignores bringSeats. Ask the coverage entry, same source the engine uses.
+  const forced3 = !!(cov && cov.fields && cov.fields.rush3);
+  const bring = (sel.rush3 || forced3) ? "3" : seats === 2 ? "6" : seats === 1 ? "5" : "4";
+  return { front, cov, bring, forced3,
     card: { name: null, front, bring, look: sel.pressLook || null,
             rotation: sel.rotation || null, pressLevel: sel.pressLevel || null } };
 }
@@ -3594,6 +3611,32 @@ function defCallPanelHtml() {
       ? "No card tapped \u2014 this is your standing plan for this down."
       : edited ? "You've changed the call. This is what goes out."
                : "Straight off the card.";
+    // ── THE HEADLINE DOES NOT COVER EVERY PIN (2026-08-22, owner-reported) ──
+    // "4-3 · Prevent · Base Rush" names the front, the coverage and the rush —
+    // and silently drops everything else. The owner sent a screenshot reading
+    // "(5 PINNED)" above a line that described three of them: PRESSURE House and
+    // HEAT SHAPE The House were nowhere, and those two are worth a measured
+    // 5.41 rushers a snap against 4.27 on the plan, with seven coming on 45% of
+    // them. A summary that omits the pins doing the most work is the same defect
+    // this panel was rebuilt to kill, one level up.
+    //
+    // So: name the rest. The headline keeps front/coverage/rush because that is
+    // how a defense is called; anything else the coach pinned is listed under it
+    // in his own words, using the dial row's own labels so the two always agree.
+    const _covered = new Set(["front", "covShell", "covStyle", "covFamily", "bringSeats", "rush3"]);
+    const _restPins = DEF_CALL_ROWS
+      .filter(([f]) => !_covered.has(f) && sel[f] != null)
+      .map(([f, label, opts]) => {
+        const hit = (opts || []).find(([v]) => String(v) === String(sel[f]));
+        return `${label} ${hit ? hit[1] : sel[f]}`;
+      });
+    const alsoPinned = _restPins.length
+      ? `<span class="dc-live-also">also pinned \u2014 ${escapeHtml(_restPins.join(" \xB7 "))}</span>` : "";
+    // A coverage that forces the rush OVERRULES the pressure dials, and saying
+    // so is the difference between "the game ignored me" and "that call cannot
+    // blitz". Prevent is the case: three rush, eight drop, nobody extra comes.
+    const overruled = live.forced3 && (sel.aggression || sel.pressureIdentity || sel.pressLook || sel.dogGame)
+      ? `<span class="dc-live-warn">\u26A0 ${escapeHtml(live.cov.label)} rushes three and drops eight \u2014 your pressure pins cannot add a man to this call.</span>` : "";
     const bzNote = _bz && _bz.length && live.bring !== "4" && live.bring !== "3"
       ? `<span class="dc-live-bz" title="Your blitzer list is a preference, not an assignment \u2014 the game draws from it by weight, your DC's Blitz Design sets how often he goes off-script, and an unavailable man falls through to the identity picking by grade.">\u{1F3AF} your blitzers, where they line up</span>` : "";
     return `
@@ -3604,6 +3647,8 @@ function defCallPanelHtml() {
         <span class="dc-live-name">${title}</span>
         <span class="dc-live-sub">${sub}</span>
         <span class="dc-live-note">${note}</span>
+        ${alsoPinned}
+        ${overruled}
         ${bzNote}
       </div>
     </div>`;

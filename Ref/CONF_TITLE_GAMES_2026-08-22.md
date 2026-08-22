@@ -124,18 +124,59 @@ Aligned (owner's call on both).
 - **D** every champion won its title game;
 - **E** no title-game loser is a champion.
 
-14 pass / 0 fail on the first honest run: 29 conferences, 29 title games,
-29 champions.
+19 pass / 0 fail: 29 conferences, 29 title games, 29 champions. Section F adds
+the schedule laws — exact game count, everyone plays their whole half, no team
+booked twice in a day, the slate is not identical two seasons running, and home
+and away stay balanced (the old round robin's quiet guarantee, which a rewrite
+is exactly the thing that would break it).
+
+## The conference schedule now plays the halves
+
+Shipped the same day, on the owner's call, because a half-leader that never
+played its own half is a fiction — you could win your division without beating
+anyone in it.
+
+**The counts land exactly, which is why it was worth doing rather than
+retuning anything.** `CONF_GAMES` is 8 across 9 day slots, and conferences are
+10 or 12 teams (sizes forced even upstream), so halves are 5 or 6:
+
+| half | intra | crossover | total | slots used |
+|---|---|---|---|---|
+| 6 | 5 rounds, you play all 5 | 3 rounds | **8** | 8 of 9 (one spare keeps the bye-week pick) |
+| 5 | 5 rounds, one bye each → 4 games | 4 rounds | **8** | 9 of 9 |
+
+Both hit `CONF_GAMES` on the nose. No constant moved.
+
+**Season rotation moved to the crossovers**, which is the football-true place for
+it: your division slate is fixed and you play it every year, while which teams
+you draw from the other side rotates. Rounds are interleaved so a conference is
+not five division weeks followed by three crossovers.
+
+A conference whose halves are missing, empty or unequal falls back to the old
+whole-conference round robin — a real fallback, not an error, and it agrees with
+the title game's own fallback to champion-by-record.
+
+### Measured against the old scheduler, same seed
+
+| | old | new |
+|---|---|---|
+| conference games per team | 8 (all 340) | **8 (all 340)** |
+| conference home games | 3/4/5, mean 4.00 | **3/4/5, mean 4.00** (fewer at the extremes: 31 vs 35) |
+| slate-strength spread (sd) | 11.07 | **10.83** |
+| S1→S2 matchup repeat | 84% | **83%** |
+| teams booked twice in a day | 0 | **0** |
+| teams missing someone in their own half | — | **0** |
+
+Balance-neutral on every measure, marginally tighter on two, and it delivers the
+property it was built for. Stat bands re-checked after: plays/team 71.7,
+run% 52.7, sacks/team 2.06, yds/attempt 6.93, INT% 1.99, turnovers 1.49 — all
+inside their real-football ranges, as expected, since this changes who plays
+whom and not how a snap resolves.
 
 ## Still open
-- **Intra-division scheduling.** Teams do not yet play their own half more often
-  than the other, so a "half leader" is really "best conference record among
-  these six". Football-truer would be to weight the conference schedule toward
-  the half. That is a schedule-generation change with real balance and SOS
-  consequences — deliberately not bundled here.
-- **Small conferences.** A conference that cannot field two halves silently falls
-  back to champion-by-record. No default world produces one; a hand-authored
-  league could.
+- **Small or hand-authored conferences.** One that cannot field two equal halves
+  silently takes the old round robin and champion-by-record. No default world
+  produces one; a custom league could.
 
 ## Verification
 `conf_title_probe` 14/0 · `calendar_display_probe` PASS end to end (it was one of

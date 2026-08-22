@@ -51,6 +51,16 @@ const OFF = { offFormation: 'Spread', offFormations: [{ id: 'Spread', weight: 60
   tendency: 'Balanced', rushInPct: 55, passDepth: { short: 40, medium: 40, deep: 20 },
   fourthDown: 'Moderate', maxFGDist: 42 };
 
+// 2026-08-22: the BOX arm needs a RUN offense. Against the neutral spread above
+// it read "FLAT — 4.30 vs 4.34 ypc (Δ 0.04)" and had been doing so for a while,
+// which is worse than no report: a false FLAT trains you to skim the list. The
+// dial is fine. Measured against this offense at N=24, ypc runs monotonically
+// 4.49 / 4.31 / 4.22 / 4.16 / 3.99 across runCommit -25/-8/0/+8/+25 — a clean
+// half-yard gradient. A box dial can only be judged when someone is running.
+const RUN_OFF = { offFormation: 'Power-I', offFormations: [{ id: 'Power-I', weight: 100 }],
+  tendency: 'Heavy Run', rushInPct: 70, passDepth: { short: 45, medium: 35, deep: 20 },
+  fourthDown: 'Moderate', maxFGDist: 42 };
+
 const OPTION_OFF = { offFormation: 'Flexbone', offFormations: [{ id: 'Flexbone', weight: 70 }, { id: 'Wishbone', weight: 30 }],
   tendency: 'Heavy Run', rushInPct: 78, passDepth: { short: 50, medium: 35, deep: 15 },
   optionRate: 70, optionMix: { dive: 40, keep: 30, pitch: 30 }, pitchAggr: 55,
@@ -128,7 +138,7 @@ ab('coverage shell single vs two',     { covShell: 'single' }, { covShell: 'two'
 ab('coverage style man vs zone',       { covStyle: 'man' }, { covStyle: 'zone' }, 'coverages');
 ab('coverage scheme lockTop vs bracketTop', { coverageScheme: 'lockTop' }, { coverageScheme: 'bracketTop' }, 'compPct');
 ab('cushion press vs off',             { pressLevel: 'press' }, { pressLevel: 'off' }, 'compPct');
-ab('box -25 vs +25',                   { runCommit: -25 }, { runCommit: 25 }, 'rushYPC', { min: 0.15 });
+ab('box -25 vs +25 (vs a run offense)', { runCommit: -25 }, { runCommit: 25 }, 'rushYPC', { min: 0.15, off: RUN_OFF });
 ab('edge discipline crash vs contain', { edgePlay: 'crash' }, { edgePlay: 'contain' }, 'rushYPC', { min: 0.10 });
 ab('tackling wrap vs strip',           { tackleStyle: 'wrap' }, { tackleStyle: 'strip' }, 'forcedFumbles', { min: 0.004 });
 ab('QB spy off vs on',                 { spyQB: false }, { spyQB: true }, 'compPct');

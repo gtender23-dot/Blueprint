@@ -510,7 +510,20 @@ function renderDefCallCard(call, opts) {
   // way: the down linemen, plus the front's rush-backer seat if it has one,
   // plus the seats the call buys. Bench-checked against the sim on all eleven
   // fronts. Rush 3 stays absolute, because the engine's rush3 is.
-  const _bringKey = String(call.bring == null ? "4" : call.bring);
+  // ── PREVENT BUNDLES A THREE-MAN RUSH (2026-08-22, owner-reported) ─────────
+  // sim.js applyDefCall: `if (o.covFamily === "Prevent") defEff.rush3 = true`,
+  // an owner ruling from 2026-08-08 — "one ingredient, the whole posture: 3-man
+  // rush, 8-deep umbrella" — and once rush3 is on the sim ignores bringSeats
+  // entirely. A book that stores a Prevent call with the default bring of "4"
+  // therefore PLAYS a three-man rush while this drew four, and every pressure
+  // dial pinned on top of it was overruled without a word on screen. The owner
+  // watched a House-pressure prevent call rush nobody and asked, reasonably,
+  // whether it had run his call. It had.
+  //
+  // Fixed here rather than at the call sites so the book grid, the workshop
+  // preview and the live headset all inherit it from one place. `art.prevent`
+  // is the same signal the umbrella below already draws from.
+  const _bringKey = art && art.prevent ? "3" : String(call.bring == null ? "4" : call.bring);
   const _seats = _bringKey === "5" ? 1 : _bringKey === "6" ? 2 : 0;
   const _baseRush = dl.length + rushOlbCount(front);
   const bring = _bringKey === "3" ? 3 : Math.max(3, _baseRush + _seats);
