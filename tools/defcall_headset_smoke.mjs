@@ -2,7 +2,7 @@
 // Serves the module source over http, injects a dynasty whose player gameplan
 // carries two named calls, drives a live game to a defensive headset ask, and
 // asserts: the CALL row renders the library, one tap pre-fills the dials
-// (front + shell chips light), SEND counts the pre-filled pins, re-tapping
+// (front + shell chips light), the SENDING card and SEND button agree, re-tapping
 // the live card clears
 // the highlight, and the game still completes.
 // Run: node tools/defcall_headset_smoke.mjs
@@ -96,8 +96,83 @@ g('call pre-fills the dial chips (front + shell + style + pressure light up)',
   && await page.locator('.dc-chip.active[data-dc-field="covShell"][data-dc-val="single"]').count() === 1
   && await page.locator('.dc-chip.active[data-dc-field="covStyle"][data-dc-val="man"]').count() === 1
   && await page.locator('.dc-chip.active[data-dc-field="aggression"][data-dc-val="house"]').count() === 1);
-const sendTxt = await page.locator('#dc-send').innerText();
-g('SEND counts the pre-filled pins', /SEND IT \(\d+ calls?\)/.test(sendTxt), sendTxt.trim());
+// ── 2026-08-22: THE PICTURE AND THE BUTTON TELL THE SAME TRUTH ─────────────
+// This used to assert `SEND IT (N calls)` — a label that counted PINNED DIALS
+// and called them "calls", so one card and four knobs read as four calls. The
+// owner reported the whole screen as incoherent: tapping a card copied it into
+// the dials and then forgot the card, leaving the highlight lit while the dials
+// underneath were free to contradict it. A 3-4 two-high card could send Big
+// Nickel single-high man with nothing on screen admitting it.
+//
+// Now a SENDING card is drawn from the live pins and the button names the same
+// defense. These checks pin that they can never disagree.
+const sendTxt = (await page.locator('#dc-send').innerText()).trim();
+g('SEND names the defense instead of counting knobs',
+  /SEND\s*[—-]\s*\S+ · .+ · .+/.test(sendTxt) && !/\(\d+ calls?\)/.test(sendTxt), sendTxt);
+g('a SENDING card is drawn', await page.locator('.dc-live .dc-live-art svg').count() === 1);
+const liveSub = (await page.locator('.dc-live-sub').innerText()).trim();
+g('the SENDING card and the SEND button agree', sendTxt.includes(liveSub), `${liveSub}  vs  ${sendTxt}`);
+g('the SENDING card names the tapped call, unedited',
+  (await page.locator('.dc-live-name').innerText()).trim() === 'Bear Down' ||
+  !/\(edited\)/.test(await page.locator('.dc-live-name').innerText()),
+  (await page.locator('.dc-live-name').innerText()).trim());
+
+// contradict the card by hand — the picture must admit it
+await page.evaluate(() => document.querySelector('.dc-chip[data-dc-field="covStyle"][data-dc-val="zone"]').click());
+await page.waitForTimeout(300);
+g('changing a dial marks the call edited',
+  /\(edited\)/.test(await page.locator('.dc-live-name').innerText()),
+  (await page.locator('.dc-live-name').innerText()).trim());
+const sendTxt2 = (await page.locator('#dc-send').innerText()).trim();
+g('and the SEND button follows the change', sendTxt2 !== sendTxt, `${sendTxt} -> ${sendTxt2}`);
+const liveSub2 = (await page.locator('.dc-live-sub').innerText()).trim();
+g('the picture still agrees with the button after the edit', sendTxt2.includes(liveSub2), `${liveSub2}  vs  ${sendTxt2}`);
+await page.evaluate(() => document.querySelector('.dc-chip[data-dc-field="covStyle"][data-dc-val="zone"]').click());
+await page.waitForTimeout(300);
+
+// the FRONT row offers the BOOK's fronts, not all eleven in the game
+const frontOpts = await page.locator('.dc-chip[data-dc-field="front"]').count();
+g('FRONT offers the book\'s fronts, not every front in the game', frontOpts > 0 && frontOpts < 11, `${frontOpts} offered`);
+
+// ── EVERY CARD, TAPPED, MUST SEND ITSELF (2026-08-22) ──────────────────────
+// The strongest form of the owner's complaint, as one loop: tap each card and
+// require the SENDING line to equal that card's OWN tile line. The tile is read
+// from the stored call; SENDING is read from the exploded pins. If the explode
+// drops a field, the two disagree here and this goes red.
+//
+// It is not hypothetical. The explode was a hand-kept list of fourteen field
+// names that had forgotten `bringSeats` — 29 of the 71 shipped calls drew five
+// or six men rushing and sent a base four.
+{
+  const cards = await page.evaluate(() => [...document.querySelectorAll('[data-dc-callname]')]
+    .map((n) => [n.dataset.dcCallname, (n.querySelector('.cs-c-learn')?.textContent || '').trim()]));
+  let bad = [];
+  for (const [nm, tile] of cards) {
+    // Re-tapping the LIVE card clears it instead of selecting it, so make sure
+    // nothing is selected before the measuring tap. (Getting this wrong reads
+    // the previous card's pins and invents a mismatch — it did, once.)
+    const alreadyOn = await page.evaluate((n) =>
+      document.querySelector(`[data-dc-callname="${n}"]`).classList.contains('active'), nm);
+    if (alreadyOn) {
+      await page.evaluate((n) => document.querySelector(`[data-dc-callname="${n}"]`).click(), nm);
+      await page.waitForTimeout(150);
+    }
+    await page.evaluate((n) => document.querySelector(`[data-dc-callname="${n}"]`).click(), nm);
+    await page.waitForTimeout(220);
+    const sending = (await page.locator('.dc-live-sub').innerText()).trim();
+    if (sending !== tile) {
+      const pins = await page.evaluate(() => [...document.querySelectorAll('.dc-chip.active')]
+        .map((n) => `${n.dataset.dcField}=${n.dataset.dcVal}`).join(','));
+      bad.push(`${nm}: tile "${tile}" vs sending "${sending}"  [pins ${pins || 'none'}]`);
+    }
+    await page.evaluate((n) => document.querySelector(`[data-dc-callname="${n}"]`).click(), nm);
+    await page.waitForTimeout(120);
+  }
+  g(`every card sends itself (${cards.length} checked)`, bad.length === 0, bad.join(' | '));
+}
+
+// the quick call is always reachable
+g("Coordinator's call is on the panel", await page.locator('#dc-auto').count() === 1);
 
 // Switching calls swaps the package.
 await page.locator('[data-dc-callname="Tite Mint"]').dispatchEvent('click');

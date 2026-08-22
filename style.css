@@ -10096,6 +10096,34 @@ body *::after {
    real call — so both sides of the ball are read the same way. Layout comes
    from .cs-concepts / .cs-concept-card, shared with offense on purpose. */
 .dc-callhead { display: flex; align-items: center; gap: 8px; margin: 2px 0 6px; }
+/* ── THE SENDING CARD (2026-08-22) ──────────────────────────────────────────
+   The live picture of the defense about to be snapped, drawn from the pins and
+   redrawn on every touch. It sits between the call grid and the dials on
+   purpose: whichever one you are using, it is in view. */
+.dc-live {
+  display: flex; gap: 12px; align-items: center;
+  margin: 10px 12px 2px; padding: 10px;
+  border: 1px solid var(--team-1, #ffd54a);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.04);
+}
+.dc-live-art { flex: 0 0 auto; line-height: 0; }
+.dc-live-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.dc-live-tag {
+  font-size: 0.66em; font-weight: 800; letter-spacing: 0.14em;
+  color: var(--team-1, #ffd54a);
+}
+.dc-live-name { font-size: 1.02em; font-weight: 800; line-height: 1.15; }
+.dc-live-name i { font-style: normal; font-weight: 600; opacity: 0.72; }
+.dc-live-sub { font-size: 0.78em; color: var(--text-1, #cfd6e4); letter-spacing: 0.02em; }
+.dc-live-note { font-size: 0.72em; color: var(--text-2, #97a3b6); }
+.dc-live-bz { font-size: 0.72em; color: var(--team-1, #ffd54a); cursor: help; }
+.dc-auto { white-space: nowrap; }
+@media (max-width: 520px) {
+  .dc-live { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .dc-live-art svg { max-width: 100%; height: auto; }
+}
+
 .dc-fronttabs { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 5px; margin-bottom: 7px; scrollbar-width: thin; }
 .dc-ftab { flex: 0 0 auto; display: inline-flex; align-items: baseline; gap: 5px;
   padding: 6px 10px 7px; background: var(--px-panel-2, #111827); color: var(--text-1);

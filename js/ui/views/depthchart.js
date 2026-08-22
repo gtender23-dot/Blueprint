@@ -1626,4 +1626,9 @@ function setupListeners9() {
   });
 }
 
-export { formationPlaybookSet, renderDepthChart, setupListeners9 };
+// buildActiveDepth/posById/byId/buildRatingById are exported for the live
+// defensive headset (2026-08-22): its SENDING card resolves the coach's named
+// blitzers onto real slots through the SAME resolveDefField the sim uses, so
+// the picture cannot draw a different blitz from the one the game will run.
+export { formationPlaybookSet, renderDepthChart, setupListeners9,
+         buildActiveDepth, posById, byId, buildRatingById };

@@ -14,6 +14,7 @@ import { listCreations, loadCreationData } from '../engine/creator.js';
 import { repairComposedPlay } from '../engine/playcompose.js';
 import { renderConceptThumb, renderFormationDiagram, renderFrontDiagram, renderDefCallCard, renderPlayCard, resolveComposedReceivers, renderComposedCard, playAssignments, conceptKind, routeColor } from './views/routeart.js';
 import { DEF_CALL_COVERAGES as _DC_COVS, DEF_CALL_BRING as _DC_BRING, callFitsFront as _dcFits } from '../engine/defbook.js';
+import { DEF_CALL_ROWS, _dcExplode, _dcSameSel } from './defcallpins.js';
 const DEF_CALL_BRING_LBL = Object.fromEntries(Object.entries(_DC_BRING).map(([k, v]) => [k, v.label]));
 import { conceptBlurb, composedBlurb } from './views/conceptblurbs.js';
 import { SITUATION_KEYS, SITUATION_LABELS } from '../engine/situations.js';
@@ -24,7 +25,10 @@ import { tipById, tipTerm } from './manual/tips.js';
 import { renderAwards, setupListeners4 } from './views/awards.js';
 import { renderCoachOffice, setupListeners18 } from './views/coachoffice.js';
 import { renderDashboard, setupListeners6 } from './views/dashboard.js';
-import { formationPlaybookSet, renderDepthChart, setupListeners9 } from './views/depthchart.js';
+import { formationPlaybookSet, renderDepthChart, setupListeners9,
+         buildActiveDepth as _dcDepth, posById as _dcPosById, byId as _dcById,
+         buildRatingById as _dcRatingById } from './views/depthchart.js';
+import { resolveDefField as _dcResolveField } from '../engine/fieldassign.js';
 import { renderGameplan, renderHalftimeAdjust, renderSituationsSection, setupListeners, wireDefaultsListeners, wireSituationListeners } from './views/gameplan.js';
 import { renderHistory, setupListeners16 } from './views/history.js';
 import { renderMainMenu } from './views/mainmenu.js';
@@ -2644,25 +2648,12 @@ function setupGlobalListeners() {
     // today, the flat gameplan for pre-book saves).
     const call = (_a2 = defBookCalls(getPlayerSchool())) == null ? void 0 : _a2[nm];
     if (!call) return;
-    const sel = {};
-    for (const f of ["front", "aggression", "covShell", "covStyle", "edgePlay", "robberCall", "zoneStyle", "pressureIdentity"]) {
-      if (call[f] != null && call[f] !== "auto") sel[f] = String(call[f]);
-    }
-    // PASS 3: the call's family/rotation/rush ride the package invisibly —
-    // ingredients of the CALL, not dials of the panel (owner call: display
-    // chips only). Touching SHELL or STYLE below clears the family pin.
-    if (call.covFamily != null) sel.covFamily = String(call.covFamily);
-    if (call.rotation != null) sel.rotation = String(call.rotation);
-    if (call.rush3) sel.rush3 = true;
-    // PASS 4: the pressure flavors ride the package the same way.
-    if (call.pressLook != null) sel.pressLook = String(call.pressLook);
-    if (call.dogGame != null) sel.dogGame = String(call.dogGame);
-    if (call.runCommit != null) {
-      // A call's BOX is absolute; the panel's runCommit is a relative shove
-      // (dc-send adds the standing plan back before answering).
-      const standingRC = state.pendingHalftime?.token?.pending?.drive?.sit?.standing?.runCommit || 0;
-      sel.runCommit = String(call.runCommit - standingRC);
-    }
+    // 2026-08-22: ONE explode, shared with the EDITED test (see _dcExplode).
+    // It copies the whole call — the old hand-kept field list had dropped
+    // `bringSeats`, so 29 of the 71 shipped calls sent a base rush while their
+    // card drew five or six men coming.
+    const standingRC = state.pendingHalftime?.token?.pending?.drive?.sit?.standing?.runCommit || 0;
+    const sel = _dcExplode(call, standingRC);
     state.ui.defCall = sel;
     state.ui.defCallName = nm;
     rerender();
@@ -2689,6 +2680,14 @@ function setupGlobalListeners() {
     delete sel[b.dataset.dcClear];
     rerender();
   }));
+  (document.getElementById("dc-auto") || {}).onclick = () => {
+    // The staff's own call for this down — the exact path a non-coached snap
+    // takes ({concept:"sheet"} = ride the plan). Pins are dropped on purpose.
+    if (!callTapOk()) return;
+    state.ui.defCallName = null;
+    state.ui.defCall = {};
+    answerPlayCall(state.ui.callTimeout ? { concept: "sheet", timeout: true } : { concept: "sheet" });
+  };
   (document.getElementById("dc-send") || {}).onclick = () => {
     if (!callTapOk()) return;
     state.ui.defCallName = null;
@@ -3310,17 +3309,6 @@ function _composedCallData(id) {
 // F1 (Aug 2026): the defensive headset. Same pending machinery as the offensive
 // call sheet — the panel just speaks defense: pin the front, lean the shell,
 // pick the heat. Empty selections = ride the plan = today's auto exactly.
-var DEF_CALL_ROWS = [
-  ["front", "FRONT", [["4-3", "4-3"], ["3-4", "3-4"], ["Tite", "Tite"], ["Nickel", "Nickel"], ["Big Nickel", "Big Nickel"], ["3-3-5", "3-3-5"], ["Penny", "Penny"], ["Dime", "Dime"], ["4-4", "4-4"], ["46/Bear", "46/Bear"], ["5-2", "5-2"]]],
-  ["aggression", "PRESSURE", [["bend", "Bend"], ["selective", "Selective"], ["balanced", "Balanced"], ["attacking", "Attacking"], ["house", "House"]]],
-  ["covShell", "SHELL", [["single", "Single-high"], ["two", "Two-high"]]],
-  ["covStyle", "STYLE", [["man", "Man"], ["zone", "Zone"]]],
-  ["edgePlay", "EDGE", [["contain", "Set it"], ["crash", "Crash"]]],
-  ["robberCall", "ROBBER", [["rob", "Rob the middle"], ["overtop", "Stay over top"]]],
-  ["zoneStyle", "ZONE RULES", [["spot", "Spot-drop"], ["match", "Match"]]],
-  ["runCommit", "BOX", [["-8", "Lighten \u22128"], ["8", "Commit +8"]]],
-  ["pressureIdentity", "HEAT SHAPE", [["fireZone", "Fire Zone"], ["secondLevel", "2nd Level"], ["secondaryHeat", "DB Heat"], ["theHouse", "The House"]]]
-];
 // ── DRAWING A STORED CALL (2026-08-21) ───────────────────────────────────
 // A book's defCalls entry is the COMPILED payload (covShell/covStyle or
 // covFamily, bringSeats or rush3) — not the card a coach authored. The card
@@ -3349,6 +3337,65 @@ function _dcCardOf(name, call, fallbackFront) {
   return { name, front: c.front || fallbackFront || null, bring: _dcBringOf(c),
     look: c.pressLook || null, rotation: c.rotation || null, pressLevel: c.pressLevel || null };
 }
+// ── ONE EXPLODE, USED TWICE (2026-08-22) ────────────────────────────────────
+// Tapping a card copies it into the per-snap pins. That copy used to be a
+// hand-kept list of fourteen field names — and it had forgotten `bringSeats`,
+// the extra rushers. Measured across the six shipped books: 29 of 71 calls drew
+// five or six men rushing on the card and sent a base four at the snap. That is
+// exactly the "I can send different heat than the play shows" the owner
+// reported, and a list somebody has to remember to update is how it happened.
+//
+// So: copy the WHOLE call. It cannot drift. `runCommit` is the one field that
+// is not a straight copy — a card's BOX is absolute while the panel's chip is a
+// shove relative to the standing plan, so it is converted here and converted
+// back in dc-send.
+//
+// The second caller is the EDITED test: re-explode the named call and compare
+// with the live pins. Same function both times, so "edited" can never disagree
+// with what tapping the card would have produced.
+// WHICH SLOTS DO THE COACH'S NAMED BLITZERS OCCUPY?
+// The blitzer list is keyed by PLAYER; the card draws SLOTS. resolveDefField is
+// the same resolution the sim runs, so asking it — rather than guessing from
+// positions — is what keeps the drawing and the snap from being two opinions.
+//
+// Honest about what it is: the list is a PREFERENCE, not an assignment. The sim
+// draws from it by weight (often 3, sometimes 1), the DC's Blitz Design sets how
+// often he goes off-script, and an unavailable man falls through to the
+// identity picking by grade. So this returns "the men you named, where they line
+// up" — the most likely blitz, not a promise.
+function _dcNamedBlitzSlots(front) {
+  try {
+    const school = getPlayerSchool();
+    const list = school?.gameplan?.blitzers;
+    if (!school || !list || !Object.keys(list).length) return null;
+    const fa = school.fieldAssignments?.def?.[front] || null;
+    const r = _dcResolveField(front, fa?.slots, fa?.blitzShares, _dcDepth(school),
+      _dcRatingById(school), _dcPosById(school), _dcById(school), list);
+    if (!r?.bySlot) return null;
+    const slotOf = {};
+    for (const [slotId, pid] of Object.entries(r.bySlot)) if (pid) slotOf[pid] = slotId;
+    const W = { often: 3, sometimes: 1 };
+    return Object.entries(list)
+      .filter(([pid, tag]) => W[tag] && slotOf[pid])
+      .sort((a, b) => W[b[1]] - W[a[1]])
+      .map(([pid]) => slotOf[pid]);
+  } catch (e) { return null; }
+}
+// THE CARD THE SNAP WILL ACTUALLY BE. Built from the live pins layered over the
+// standing plan — never from the tapped card's stored payload — so the picture
+// tracks every dial the coach touches instead of freezing at the moment he
+// tapped. This is the fix for the whole complaint: the thing on screen is the
+// thing being sent.
+function _dcLiveCard(sel, standing) {
+  const front = sel.front || (standing.defFront && standing.defFront !== "auto" ? standing.defFront : standing.baseFront) || "4-3";
+  const cov = _dcCovOf({ covFamily: sel.covFamily, covShell: sel.covShell || standing.covShell,
+                         covStyle: sel.covStyle || standing.covStyle });
+  const seats = sel.bringSeats != null ? Number(sel.bringSeats) : null;
+  const bring = sel.rush3 ? "3" : seats === 2 ? "6" : seats === 1 ? "5" : "4";
+  return { front, cov, bring,
+    card: { name: null, front, bring, look: sel.pressLook || null,
+            rotation: sel.rotation || null, pressLevel: sel.pressLevel || null } };
+}
 function defCallPanelHtml() {
   var _a, _b, _c;
   const token = (_a = state.pendingHalftime) == null ? void 0 : _a.token;
@@ -3376,13 +3423,43 @@ function defCallPanelHtml() {
     runCommit: (standing.runCommit || 0) > 0 ? `+${standing.runCommit} committed` : (standing.runCommit || 0) < 0 ? `${standing.runCommit} light` : "even box",
     pressureIdentity: standing.pressureIdentity || "front's signature"
   };
-  const nSel = Object.keys(sel).length;
-  const rows = DEF_CALL_ROWS.map(([field, label, opts]) => `
+  // ── THE DIALS OFFER WHAT THE BOOK CARRIES (2026-08-22, owner-reported) ────
+  // The FRONT row was a hardcoded list of all eleven fronts in the game. It
+  // never asked the playbook, so a coach could pin a front his defense does not
+  // carry and does not have a card for — the same defect the owner caught on
+  // the card preview, fixed there and missed here. The book's own front mix
+  // first (in the order it weights them), then any front one of its CALLS
+  // reaches, which is how situational packages — a Dime, a goal-line 46 — stay
+  // reachable without being authored into the base-down mix.
+  const _dcBookFronts = (() => {
+    const sch = getPlayerSchool();
+    const out = [];
+    const base = (standing.baseFront || "").trim();
+    if (base) out.push(base);
+    // defFrontMix ships in TWO shapes — a { front: weight } map (what a book
+    // stores) and an [{ id, weight }] array (what the slider hands back before
+    // it is normalized). Reading only the map put array indices in the row as
+    // front names the first time it hit one, so handle both.
+    const _mix = (sch && sch.gameplan && sch.gameplan.defFrontMix) || {};
+    const _pairs = Array.isArray(_mix)
+      ? _mix.map((e) => [e && e.id, e && e.weight])
+      : Object.entries(_mix);
+    for (const [f] of _pairs.filter(([f]) => typeof f === "string" && f)
+      .sort((a, b) => (b[1] || 0) - (a[1] || 0))) if (!out.includes(f)) out.push(f);
+    for (const c of Object.values(defBookCalls(sch) || {})) if (c.front && !out.includes(c.front)) out.push(c.front);
+    return out;
+  })();
+  const rows = DEF_CALL_ROWS.map(([field, label, opts0]) => {
+    // A book with no fronts at all (a bare save, a harness) keeps the full list
+    // rather than rendering a dead row.
+    const opts = field === "front" && _dcBookFronts.length ? _dcBookFronts.map((f) => [f, f]) : opts0;
+    return `
     <div class="dc-row">
       <span class="dc-row-label">${label}</span>
       <span class="dc-plan${sel[field] ? "" : " active"}" data-dc-clear="${field}" title="Tap to ride the plan for this dial">plan: ${escapeHtml(String(planLabel[field]))}</span>
       ${opts.map(([v, lbl]) => `<button class="dc-chip${sel[field] === v ? " active" : ""}" data-dc-field="${field}" data-dc-val="${escapeHtml(v)}">${escapeHtml(lbl)}</button>`).join("")}
-    </div>`).join("");
+    </div>`;
+  }).join("");
   return `
   <div class="cs-panel dc-panel">
     <div class="cs-head">
@@ -3488,12 +3565,65 @@ function defCallPanelHtml() {
     ${tabs}
     <div class="cs-concepts dc-cards">${tiles}</div>`;
   })()}
+    ${(() => {
+    // ── THE PICTURE CANNOT LIE (2026-08-22, owner call) ──────────────────
+    // Tapping a card copied it into the dials and then forgot the card. The
+    // highlight stayed lit while the dials underneath were free to contradict
+    // it, so the coach could be looking at a 3-4 two-high 2-man card while the
+    // snap went out as Big Nickel single-high man. He reported exactly that.
+    //
+    // This draws the call from the LIVE PINS layered over the standing plan,
+    // every render. Touch a dial and the art redraws; contradict the card you
+    // tapped and its name goes to "(edited)". Whatever is drawn here is what
+    // SEND sends — there is no second copy of the truth to drift.
+    const live = _dcLiveCard(sel, standing);
+    const named = state.ui.defCallName || null;
+    const _lib = defBookCalls(getPlayerSchool()) || {};
+    const _standingRC = standing.runCommit || 0;
+    const edited = named && !_dcSameSel(sel, _dcExplode(_lib[named], _standingRC));
+    const title = named ? `${escapeHtml(named)}${edited ? " <i>(edited)</i>" : ""}` : "Your call";
+    const bringLbl = DEF_CALL_BRING_LBL[live.bring] || live.bring;
+    const sub = `${escapeHtml(live.front)} \xB7 ${escapeHtml(live.cov.label)} \xB7 ${escapeHtml(bringLbl)}`;
+    // The named blitzers, resolved onto real slots, so the arrows are YOUR men
+    // and not a generic eligibility order. Null when no list is set (auto).
+    const _bz = _dcNamedBlitzSlots(live.front);
+    const art = renderDefCallCard(live.card, { w: 250, h: 170, art: live.cov.art,
+      fallbackFront: live.front, pressLevel: live.card.pressLevel,
+      look: live.card.look, rotation: live.card.rotation, blitzers: _bz || void 0 });
+    const note = !named
+      ? "No card tapped \u2014 this is your standing plan for this down."
+      : edited ? "You've changed the call. This is what goes out."
+               : "Straight off the card.";
+    const bzNote = _bz && _bz.length && live.bring !== "4" && live.bring !== "3"
+      ? `<span class="dc-live-bz" title="Your blitzer list is a preference, not an assignment \u2014 the game draws from it by weight, your DC's Blitz Design sets how often he goes off-script, and an unavailable man falls through to the identity picking by grade.">\u{1F3AF} your blitzers, where they line up</span>` : "";
+    return `
+    <div class="dc-live">
+      <div class="dc-live-art">${art}</div>
+      <div class="dc-live-txt">
+        <span class="dc-live-tag">SENDING</span>
+        <span class="dc-live-name">${title}</span>
+        <span class="dc-live-sub">${sub}</span>
+        <span class="dc-live-note">${note}</span>
+        ${bzNote}
+      </div>
+    </div>`;
+  })()}
     <details class="dc-adjust"${state.ui.defCall && Object.keys(state.ui.defCall).length ? " open" : ""}>
       <summary>Adjust \u2014 pin any dial for this snap${(() => { const n = Object.keys(state.ui.defCall || {}).length; return n ? ` <b>(${n} pinned)</b>` : ""; })()}</summary>
       ${rows}
     </details>
     ${timeControlBar()}
     <div class="cs-footer dc-footer">
+      ${(() => {
+    // ── THE QUICK CALL (2026-08-22, owner ask) ────────────────────────────
+    // "A quick call button that calls what the sim would if you weren't
+    // coaching." One tap, no reading: whatever the staff would have sent on
+    // this down. It deliberately IGNORES anything pinned — that is the point of
+    // it, and the title says so, so it can never be mistaken for SEND. The
+    // timeout still rides, because arming a timeout and then letting the staff
+    // call it is a real thing a coach does.
+    return `<button class="btn-secondary dc-auto" id="dc-auto" title="One tap — send whatever your staff would have called here if you weren't on the headset. Ignores anything you've pinned.">\u{1F3A7} Coordinator's call</button>`;
+  })()}
       ${(() => {
     // Owner build 2026-08-17: the defensive timeout door — same ⏱️ chip as
     // the offensive sheet ([data-cs-timeout] wires it), burning THIS side's
@@ -3504,7 +3634,16 @@ function defCallPanelHtml() {
     const _dcOn = !!state.ui.callTimeout;
     return `<button class="cs-tag-btn dc-timeout${_dcOn ? " active" : ""}" data-cs-timeout="1" ${_dcLeft <= 0 ? "disabled" : ""} title="Call timeout — stops the clock this snap (saves the run-off). ${_dcLeft} left this half.">⏱️ Timeout (${_dcLeft})</button>`;
   })()}
-      <button class="btn primary dc-send" id="dc-send">${nSel ? `\u{1F6E1} SEND IT (${nSel} call${nSel > 1 ? "s" : ""})` : "\u{1F6E1} RIDE THE PLAN →"}</button>
+      ${(() => {
+    // ── THE BUTTON SAYS WHAT IS GOING OUT (2026-08-22) ────────────────────
+    // It used to read "SEND IT (4 calls)" while counting PINNED DIALS — one
+    // card up and four knobs touched was reported to the coach as four calls.
+    // Name the defense instead; it is the same string the SENDING card carries,
+    // built from the same live pins.
+    const _lv = _dcLiveCard(sel, standing);
+    const _bl = DEF_CALL_BRING_LBL[_lv.bring] || _lv.bring;
+    return `<button class="btn primary dc-send" id="dc-send" title="Send the defense drawn above.">\u{1F6E1} SEND — ${escapeHtml(_lv.front)} \xB7 ${escapeHtml(_lv.cov.label)} \xB7 ${escapeHtml(_bl)}</button>`;
+  })()}
     </div>
   </div>`;
 }
