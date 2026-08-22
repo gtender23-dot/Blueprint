@@ -6,11 +6,19 @@ import { createPlayer, refreshRatings } from '../js/engine/player.js';
 import { buildDepthChart } from '../js/engine/world.js';
 import { simulateGame } from '../js/engine/sim.js';
 import { ROSTER_TARGETS, CLASS_YEARS, C } from '../js/constants.js';
+import { pinRandom } from './_seed.mjs';
+
+// 2026-08-21: PINNED. This probe was unseeded, and it was PROVED noisy: check A passed and failed across runs on byte-identical code.
+// Every arm below re-seeds, so an arm's numbers depend on the CODE and nothing
+// else — a red here now means a regression, not dice. Sweep other seeds with
+// BP_SEED=<n> to confirm a bar is not sitting on a knife edge.
+const reseed = pinRandom();
 function gen(t,s){const r=[];for(const[p,c]of Object.entries(ROSTER_TARGETS))for(let i=0;i<c;i++){const q=createPlayer(p,CLASS_YEARS[i%4],t);q.schoolId=s;r.push(q);}return r;}
 const sH={id:'H',name:'Home'},sA={id:'A',name:'Away'};
 const base=()=>({offFormation:'Single Back',tendency:'Balanced',rushInPct:60,passDepth:{short:40,medium:40,deep:20},defBaseFront:'4-3',coverageScheme:'balanced',fourthDown:'Moderate',maxFGDist:42});
 const N=parseInt(process.argv[2]||'200',10);
 function cell(defMut,offMut,qbSpec){
+  reseed();
   const t={g:0,patt:0,sk:0,comp:0,yds:0,ints:0,expl:0};
   for(let i=0;i<N;i++){
     const rH=gen(1,'H'),rA=gen(1,'A');
@@ -58,7 +66,15 @@ chk('A: secondaryHeat opens more than secondLevel (DB hole)', idA.secondaryHeat.
     `2nd=${f2(idA.secondLevel.ypa)} heat=${f2(idA.secondaryHeat.ypa)}`);
 chk('B: sharp QB completes more vs the house than raw QB', sharp.comp > raw.comp,
     `sharp=${f2(sharp.comp)} raw=${f2(raw.comp)}`);
-chk('C: empty set draws more pressure than heavy set', empty.sackPct > heavy.sackPct,
-    `empty=${f2(empty.sackPct)} heavy=${f2(heavy.sackPct)}`);
+// 2026-08-21 (owner ruling): RETIRED AS A GATE. "Blitz the formation" — an empty
+// set drawing more pressure than a heavy set — was check C. Once the dice were
+// pinned it failed on every seed tried (empty 5.84 vs heavy 5.96; 5.69/5.72;
+// 5.87/6.07), i.e. the heavy set draws EQUAL OR MORE pressure, consistently. The
+// arms are sound: the probe's offFormation genuinely reaches the field (verified
+// off the play stamps, 406 Empty snaps vs 404 Power-I over six games), so this
+// was the engine, not the probe. Owner's call is that the game is fine as it
+// plays and the claim goes rather than the behaviour. Kept as a REPORTED line so
+// the number stays visible if the pass rush is ever reworked.
+console.log(`  ..    C: pressure by look (reported, not gated)  empty=${f2(empty.sackPct)} heavy=${f2(heavy.sackPct)}`);
 console.log('\n'+(pass?'ALL BLITZ-REALITY CHECKS PASSED':'*** SOME CHECKS FAILED ***'));
 process.exit(pass?0:1);

@@ -25,6 +25,12 @@
 // Usage: node tools/robber_probe.mjs [games]
 import { catchResolution } from '../js/engine/sim.js';
 import { createPlayer } from '../js/engine/player.js';
+import { pinRandom } from './_seed.mjs';
+// 2026-08-21: PINNED. This probe was unseeded — every arm drew live Math.random, so a bar could pass or fail on dice.
+// Each arm re-seeds, making every comparison a MATCHED-RNG one: the only
+// difference between two arms is the code path. Sweep BP_SEED=<n> to confirm
+// a bar is not sitting on a knife edge.
+const reseed = pinRandom();
 
 // One fixed matchup, many trials: the only thing that changes is the robber flag.
 const QB   = createPlayer('QB', 'JR', 3);
@@ -36,6 +42,7 @@ const TRIALS = 60000;
 const SEP = 0.42; // a medium in-breaker, ball out on rhythm
 
 function rates(robberFlag, robPlayer = ROB) {
+  reseed();
   let comp = 0, int = 0;
   for (let i = 0; i < TRIALS; i++) {
     const r = catchResolution(SEP, QB, COVER, 'medium', false, REC, false, false, robPlayer, 0, robberFlag);

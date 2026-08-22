@@ -9,6 +9,7 @@
 //
 //   PW_CHROMIUM=... node tools/watch_live_probe.mjs <built.html> [shotPrefix]
 import { chromium } from 'playwright';
+import { pinPageRandom } from './_seed.mjs';
 
 const target = process.argv[2];
 const prefix = process.argv[3] || '_watchlive';
@@ -19,6 +20,10 @@ const browser = await chromium.launch(exe ? { executablePath: exe } : {});
 const page = await browser.newPage({ viewport: { width: 1180, height: 820 } });
 const errs = [];
 page.on('pageerror', (e) => errs.push(String(e)));
+// 2026-08-21: pin the PAGE's dice before the bundle boots. Overriding
+// Math.random in the probe process does nothing here — the game's randomness
+// lives inside the browser. Sweep with BP_SEED=<n>. See tools/_seed.mjs.
+await pinPageRandom(page);
 await page.goto('file://' + target, { waitUntil: 'load' });
 await page.waitForTimeout(900);
 

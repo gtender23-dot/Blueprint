@@ -54,6 +54,8 @@ export const MANIFEST = [
   // ── core: Playbook-Root refactor foundation (Stages 1–2, 2026-08-15) ───────
   { name: 'playbook_root_probe.mjs', tier: 'core', kind: 'node', timeoutSec: 180,
     note: 'Stage 1 equivalence proof: split∘compile of a team plan is byte-identical to the gameplan the sim reads, across a full generated world of AI plans + the pb:/dd: load writers. The node-level stand-in for _equiv_walk on the plan object; a red here means the compile seam changed sim inputs.' },
+  { name: 'gate_teeth_probe.mjs', tier: 'core', kind: 'node', timeoutSec: 60,
+    note: 'DOES THE GATE HAVE TEETH? (2026-08-21) Static sweep of every manifest entry for a probe that can reach a failure conclusion without reaching a non-zero exit — _gate.mjs judges by exit code and nothing else, so such a file is a log, not a gate. Written after TWO were found by eye within days: coverage_monotonicity_check (printing "INVERTED" through seven months of green) and time_to_throw_probe (sack-neutrality failing unseen). The first honest run found EIGHT more; four were real gates missing their exit (checkdown, read_conflict, scramble_style, qb_mobility — all wired, all green) and four are genuine reports now excused BY NAME WITH A REASON in the ALLOW map. That is the point: "this one only reports" becomes a decision somebody wrote down instead of an accident nobody noticed. Add to ALLOW with a reason, or add the exit.' },
   { name: 'plan_side_probe.mjs', tier: 'core', kind: 'node', timeoutSec: 180,
     note: 'Stage 1 side-manifest guard (PLAN_FIELD_SIDE): sides disjoint, every sim-consumed standing field covered, partition is a clean cover on real AI plans. Catches the next dead-field or cross-side write.' },
   { name: 'plan_cohesion_probe.mjs', tier: 'core', kind: 'node', timeoutSec: 420,
@@ -171,6 +173,10 @@ export const MANIFEST = [
   // ── core: M25 finish-the-open-list (2026-08-10) — newest surface; demote
   //    to full once settled a few passes ──────────────────────────────────────
   { name: 'tipdrill_probe.mjs', tier: 'core', kind: 'node', args: ['12'], timeoutSec: 400,
+    // 2026-08-21: its hand-rolled LCG cycled every 10,466 draws (the multiply
+    // overflowed MAX_SAFE_INTEGER and the mask kept the rounded-away bits), so
+    // "deterministic by construction" meant replaying one short loop. Moved onto
+    // tools/_seed.mjs (mulberry32). Still green.
     note: 'M25 tip-drill INT chain. CORRECTED 2026-08-17 (FULLGATE_TRIAGE item 12): the probe is deterministic END TO END (PRNG re-pinned per arm — its header was right, the old "live games unseeded" seedFlaky note was wrong; a retry can never clear its reds, so the flag is dropped). The famous logged "[3/78]" was NEVER the failing check — the gate keeps only the LAST stdout line, and that is the PASSING live-rate report; the real 08-16 red was the staging-share check (47.4% vs the old 0.5 bar), healed at HEAD (52.8%). Bar re-centered 0.5→0.4 (observed per-tree values 47–62%) and args 6→12 (61.5% with real margin, ~4s cost).' },
   { name: 'tipdrill_ab.mjs', tier: 'core', kind: 'node', args: ['120'], timeoutSec: 900, seedFlaky: true,
     note: 'M25 feature A/B (NOT the per-pass swap A/B): INT drift up-and-small, PBU bounded by INTs gained, pts/comp%/plays flat. UNSEEDED (a pinned LCG phase-shifts the arms into different games) — hence seedFlaky.' },
@@ -210,9 +216,11 @@ export const MANIFEST = [
   { name: 'amoeba_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 400 },
   { name: 'creeper_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 600 },
   { name: 'pressure_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 900, note: '~10 min in cloud' },
-  { name: 'blitz_reality_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 300 },
-  { name: 'covsack_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 400, seedFlaky: true },
-  { name: 'robber_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 400 },
+  { name: 'blitz_reality_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 600,
+    note: '2026-08-21 SEEDED (tools/_seed.mjs) — and it was the PROOF CASE: check A passed and failed across runs on byte-identical code. Each arm re-seeds, so every A/B is matched-RNG. Timeout raised 300->600 (measured 3m18s at N=200). CHECK C RETIRED BY OWNER RULING the same day: "empty set draws more pressure than heavy set" failed on every seed once pinned (empty 5.84 vs heavy 5.96; 5.69/5.72; 5.87/6.07 — the heavy set draws equal or more, consistently). The arms were sound (the probe\'s offFormation genuinely reaches the field: 406 Empty snaps vs 404 Power-I over six games, verified off the play stamps), so this was the ENGINE and not the probe. Owner: the game is fine as it plays, so the CLAIM goes, not the behaviour. C is now a reported line — the number stays visible if the pass rush is ever reworked. A and B still gate.' },
+  { name: 'covsack_probe.mjs', tier: 'full', kind: 'node', args: ['150'], timeoutSec: 600,
+    note: '2026-08-21 SEEDED (tools/_seed.mjs) + N raised 60->150 (measured 1m48s). At 60 the escape arm compared counts in the twenties and flipped on noise (4/5 seeds); at 150 it is 48 vs 32 and passes 5/5. The sixth check — "a scrambler eats fewer coverage sacks than a statue" — is REPORTED, NOT GATED, by owner ruling: real but small, and there is a plain football reason it stays small (a QB who escapes more also holds the ball longer, so the two effects fight). seedFlaky DROPPED: with that check demoted and N at 150 the file is clean on five seeds (default, 7, 991, 4242, 31337), zero failures.' },
+  { name: 'robber_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 400, note: '2026-08-21 SEEDED (tools/_seed.mjs). Was unseeded — every arm drew live Math.random, so a bar could pass or fail on dice. Each arm now re-seeds, making every A/B a matched-RNG comparison. Sweep BP_SEED=<n> before re-centering any bar.' },
   { name: 'zone_void_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 300, envKnown: true, seedFlaky: true },
   { name: 'motion_struct_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 300, envKnown: true, seedFlaky: true },
   { name: 'shell_identity_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 300, seedFlaky: true },
@@ -225,15 +233,17 @@ export const MANIFEST = [
   // ── full: offense engine (pass 5) + QB play ────────────────────────────────
   { name: 'rpo_conflict_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 400 },
   { name: 'choice_route_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 400 },
-  { name: 'gadget_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 400, seedFlaky: true, note: 'pass-5 whole-game reads on the standing flaky list' },
-  { name: 'checkdown_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 300 },
-  { name: 'read_conflict_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 300 },
-  { name: 'scramble_style_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 300 },
-  { name: 'time_to_throw_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 300 },
-  { name: 'qb_mobility_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 300 },
+  { name: 'gadget_probe.mjs', tier: 'full', kind: 'node', args: ['130'], timeoutSec: 900, seedFlaky: true,
+    note: '2026-08-21 SEEDED (tools/_seed.mjs) + N raised 40->130 (~110s/seed). The comp% check was not measuring a missing effect, it was UNDER-SAMPLED: at GAMES=40 the flea-flicker gap vs a run-committed front read -1.4pp on one seed; at 130 it reads +9.7 / +8.7 / +1.7 pp across three seeds — always the right sign. Its label also printed "A%% > B%%" while the check quietly required a +3pp MARGIN, so a passing-looking line printed FAIL; the label now states the bar and the measured gap. seedFlaky KEPT for one reason only: that +3 bar still clips the low tail (seed 991 landed +1.7). Either raise N again or have the owner rule the bar too fine — the effect itself is not in doubt.' },
+  { name: 'checkdown_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 300, note: '2026-08-21 (GATE TEETH): this file printed its verdict and exited 0, so a red here could never fail the gate — the hole that let coverage_monotonicity_check print \'INVERTED\' through seven months of green runs. Exit wired; green on the first honest run. tools/gate_teeth_probe.mjs now enforces this for the whole manifest.' },
+  { name: 'read_conflict_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 300, note: '2026-08-21 (GATE TEETH): this file printed its verdict and exited 0, so a red here could never fail the gate — the hole that let coverage_monotonicity_check print \'INVERTED\' through seven months of green runs. Exit wired; green on the first honest run. tools/gate_teeth_probe.mjs now enforces this for the whole manifest.' },
+  { name: 'scramble_style_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 300, note: '2026-08-21 (GATE TEETH): this file printed its verdict and exited 0, so a red here could never fail the gate — the hole that let coverage_monotonicity_check print \'INVERTED\' through seven months of green runs. Exit wired; green on the first honest run. tools/gate_teeth_probe.mjs now enforces this for the whole manifest.' },
+  { name: 'time_to_throw_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 300,
+    note: 'GATE TEETH + SEEDED 2026-08-21. This file printed "⚠ FAIL" and then exited 0 — it could never fail the gate, and its sack-neutrality check HAD been failing unseen. 2026-08-21 SEEDED (tools/_seed.mjs). Was unseeded — every arm drew live Math.random, so a bar could pass or fail on dice. Each arm now re-seeds, making every A/B a matched-RNG comparison. Sweep BP_SEED=<n> before re-centering any bar. Bar re-centered 0.15->0.50 on a seven-seed measurement (gaps 0.06 0.26 0.01 0.02 0.34 0.06 0.06 sacks/team at GAMES=120); the old bar sat inside that spread. Fix A moves the HURRY rate 15-28pp, so a version of it that leaked into sacks would blow past 0.50. Runs in 59s.' },
+  { name: 'qb_mobility_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 300, note: '2026-08-21 (GATE TEETH): this file printed its verdict and exited 0, so a red here could never fail the gate — the hole that let coverage_monotonicity_check print \'INVERTED\' through seven months of green runs. Exit wired; green on the first honest run. tools/gate_teeth_probe.mjs now enforces this for the whole manifest.' },
   { name: 'qb_power_rush_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 300 },
   { name: 'emergency_qb_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 300 },
-  { name: 'run_scheme_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 400 },
+  { name: 'run_scheme_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 400, note: '2026-08-21 SEEDED (tools/_seed.mjs). Was unseeded — every arm drew live Math.random, so a bar could pass or fail on dice. Each arm now re-seeds, making every A/B a matched-RNG comparison. Sweep BP_SEED=<n> before re-centering any bar.' },
   { name: 'yac_split_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 300 },
   { name: 'broken_tackle_check.mjs', tier: 'full', kind: 'node', timeoutSec: 300 },
   { name: 'snap_timing_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 240 },
@@ -315,7 +325,8 @@ export const MANIFEST = [
   { name: 'action_animation_probe.mjs', tier: 'full', kind: 'pw-noarg', timeoutSec: 300 },
   { name: 'rb_anatomy_probe.mjs', tier: 'full', kind: 'pw-noarg', timeoutSec: 300 },
   { name: 'watchphys_probe.mjs', tier: 'full', kind: 'node', timeoutSec: 400 },
-  { name: 'watch_live_probe.mjs', tier: 'full', kind: 'pw', timeoutSec: 400, note: 'm14 version takes the built html arg' },
+  { name: 'watch_live_probe.mjs', tier: 'full', kind: 'pw', timeoutSec: 400,
+    note: 'm14 version takes the built html arg. 2026-08-21 PAGE-SEEDED (tools/_seed.mjs pinPageRandom). This probe computes nothing in the node process — it boots the built game in a real browser and watches a play happen, so the dice live INSIDE THE PAGE and the seeding pass earlier that day reached nothing here. addInitScript now installs a pinned Math.random before the bundle\'s first line runs. PROVEN, not assumed: tools/_pagedet.mjs boots the same seed twice and diffs what the broadcast says — same teams, same play calls, same yardage at the same game clock; a different seed gives a different matchup, also reproducible. Sweep BP_SEED=<n>. CAVEAT worth knowing: a pinned page plays ONE specific game, so if a check needs a situation that game never creates, the fix is to pick a seed that contains it AND SAY SO in this note — never to widen the check. It was the measured offender: 1 failure in 4 runs on byte-identical code before, 10 clean runs after.' },
 
   // ── full: viewer M7–17 (Codex college-presentation chain, merged 2026-08-09)
   // galleries build their own bundle from js/ (no arg); *_live probes drive a
@@ -371,7 +382,8 @@ export const MANIFEST = [
     note: 'M24 regression laws from the goals doc: NO animation-state leakage into a fresh play (gated), both orientations, end-zone stability. Variant/panning/lite are sightings — absence under throttled rAF never fails.' },
   { name: 'pocket_live_probe.mjs', tier: 'full', kind: 'pw', timeoutSec: 400, seedFlaky: true },
   { name: 'route_live_probe.mjs', tier: 'full', kind: 'pw', timeoutSec: 400, seedFlaky: true, note: 'needs a pass-heavy game; retries clear it' },
-  { name: 'qb_live_probe.mjs', tier: 'full', kind: 'pw', timeoutSec: 400, seedFlaky: true },
+  { name: 'qb_live_probe.mjs', tier: 'full', kind: 'pw', timeoutSec: 400,
+    note: '2026-08-21 PAGE-SEEDED (tools/_seed.mjs pinPageRandom). This probe computes nothing in the node process — it boots the built game in a real browser and watches a play happen, so the dice live INSIDE THE PAGE and the seeding pass earlier that day reached nothing here. addInitScript now installs a pinned Math.random before the bundle\'s first line runs. PROVEN, not assumed: tools/_pagedet.mjs boots the same seed twice and diffs what the broadcast says — same teams, same play calls, same yardage at the same game clock; a different seed gives a different matchup, also reproducible. Sweep BP_SEED=<n>. CAVEAT worth knowing: a pinned page plays ONE specific game, so if a check needs a situation that game never creates, the fix is to pick a seed that contains it AND SAY SO in this note — never to widen the check. seedFlaky DROPPED: 5 clean runs after pinning.' },
   { name: 'tackle_live_probe.mjs', tier: 'full', kind: 'pw', timeoutSec: 400, seedFlaky: true },
   { name: 'special_teams_live_probe.mjs', tier: 'full', kind: 'pw', timeoutSec: 400, seedFlaky: true, envKnown: true,
     note: 'M18 narrowed kick-phase windows (±0.13t); throttled cloud rAF jumps them — each phase verified individually in cloud, all four together verified on a local machine 2026-08-09' },

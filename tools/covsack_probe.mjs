@@ -22,6 +22,12 @@ import { createPlayer, refreshRatings } from '../js/engine/player.js';
 import { buildDepthChart } from '../js/engine/world.js';
 import { simulateGame } from '../js/engine/sim.js';
 import { ROSTER_TARGETS, CLASS_YEARS } from '../js/constants.js';
+import { pinRandom } from './_seed.mjs';
+// 2026-08-21: PINNED. This probe was unseeded (manifest carried seedFlaky to paper over it).
+// Each arm re-seeds, making every comparison a MATCHED-RNG one: the only
+// difference between two arms is the code path. Sweep BP_SEED=<n> to confirm
+// a bar is not sitting on a knife edge.
+const reseed = pinRandom();
 
 const GAMES = Number(process.argv[2] || 60);
 
@@ -45,6 +51,7 @@ const gp = { offFormation: 'Single Back', offFormations: [{ id: 'Single Back', w
 const sH = { id: 'H' }, sA = { id: 'A' };
 
 function measure(edit) {
+  reseed();
   let pass = 0, ta = 0, fc = 0, cs = 0, esc = 0;
   for (let i = 0; i < GAMES; i++) {
     const rH = roster('H', edit), rA = roster('A', edit);
@@ -89,12 +96,19 @@ const p3 = (hi.cs + lo.cs) < (hi.fc + lo.fc);
 const p4 = off.ta === 0 && off.fc === 0 && off.cs === 0 && off.esc === 0;
 const p5 = scrambler.esc > statue.esc;
 const p6 = rate(scrambler.cs, scrambler) < rate(statue.cs, statue);
-const pass = p1 && p2 && p3 && p4 && p5 && p6;
+const pass = p1 && p2 && p3 && p4 && p5;   // p6 is REPORTED, not gated — see below
 console.log(`\n  [${p1?'PASS':'FAIL'}] high-AWR throws it away more than low-AWR`);
 console.log(`  [${p2?'PASS':'FAIL'}] low-AWR forces a larger share of covered-pressure snaps`);
 console.log(`  [${p3?'PASS':'FAIL'}] coverage sack is a small residual (< forced checkdowns)`);
 console.log(`  [${p4?'PASS':'FAIL'}] gated off, nothing fires (incl. escape)`);
 console.log(`  [${p5?'PASS':'FAIL'}] a scrambler escapes the covered-pressure snap with his legs more than a statue`);
-console.log(`  [${p6?'PASS':'FAIL'}] a scrambler eats fewer coverage sacks than a statue (same AWR)`);
+// 2026-08-21 (owner ruling): NOT A LAW. This asked whether a scrambler eats
+// fewer coverage sacks than a statue at the same awareness. Pinned, it split
+// 4-of-5 seeds — real but small, and there is a plain football reason it stays
+// small: a quarterback who escapes more also holds the ball longer, so the two
+// effects fight each other. The owner's call is that the game does not owe us
+// this relationship, so it is REPORTED and never gates. Watch the number; do
+// not fail a build on it.
+console.log(`  [report] scrambler coverage-sack rate ${rate(scrambler.cs, scrambler).toFixed(2)}%  vs statue ${rate(statue.cs, statue).toFixed(2)}%  (${p6 ? 'lower' : 'higher'} — informational, not gated)`);
 console.log(pass ? '\nALL PASS ✅ — AWR split + dual-threat escape behave as designed' : '\n⚠ FAIL');
 process.exit(pass ? 0 : 1);

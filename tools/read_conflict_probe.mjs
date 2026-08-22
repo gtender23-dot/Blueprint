@@ -49,3 +49,7 @@ const pass = p1 && p2;
 console.log(`\n  [${p1?'PASS':'FAIL'}] high-AWR QB takes the open man more than low-AWR`);
 console.log(`  [${p2?'PASS':'FAIL'}] the fix widens the awareness gap vs gated-off`);
 console.log(pass ? '\nALL PASS ✅ — the QB reads the open man, not just the star' : '\n⚠ FAIL');
+// 2026-08-21 (GATE TEETH): this file printed its verdict and exited 0, so a
+// red here could never fail the gate — the same hole that let
+// coverage_monotonicity_check print "INVERTED" for seven months of green runs.
+process.exit(pass ? 0 : 1);

@@ -83,3 +83,7 @@ console.log(`\n  [${p1?'PASS':'FAIL'}] scrambles become throws (on), never when 
 console.log(`  [${p2?'PASS':'FAIL'}] aggressive plan throws more than conservative`);
 console.log(`  [${p3?'PASS':'FAIL'}] completed scramble-throws carry downfield yards`);
 console.log(pass ? '\nALL PASS ✅ — the scramble can become a throw now' : '\n⚠ FAIL');
+// 2026-08-21 (GATE TEETH): this file printed its verdict and exited 0, so a
+// red here could never fail the gate — the same hole that let
+// coverage_monotonicity_check print "INVERTED" for seven months of green runs.
+process.exit(pass ? 0 : 1);

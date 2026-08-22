@@ -19,10 +19,13 @@ import { simulateGame } from '../js/engine/sim.js';
 import { ROSTER_TARGETS, CLASS_YEARS, C } from '../js/constants.js';
 import { OFF_FIELD_LAYOUTS, DEF_FIELD_LAYOUTS } from '../js/constants_field.js';
 import { buildPlayScript } from '../js/ui/watchphys.js';
+import { pinRandom } from './_seed.mjs';
 
-let _s = 20260810;
-Math.random = () => { _s = (_s * 1103515245 + 12345) & 0x7fffffff; return _s / 0x7fffffff; };
-const reseed = () => { _s = 20260810; };
+// 2026-08-21: was a hand-rolled LCG whose state cycled every 10,466 draws (the
+// multiply overflowed Number.MAX_SAFE_INTEGER and `& 0x7fffffff` then kept the
+// rounded-away bits). Deterministic, yes — but replaying one short loop, not a
+// random stream. Moved onto tools/_seed.mjs, which explains the whole thing.
+const reseed = pinRandom(20260810);
 
 const N_AMP = parseInt(process.argv[2] || '6', 10);
 

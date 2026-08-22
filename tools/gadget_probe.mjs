@@ -27,6 +27,12 @@ import { simulateGame } from '../js/engine/sim.js';
 import { createPlayer } from '../js/engine/player.js';
 import { buildDepthChart } from '../js/engine/world.js';
 import { ROSTER_TARGETS, CLASS_YEARS } from '../js/constants.js';
+import { pinRandom } from './_seed.mjs';
+// 2026-08-21: PINNED. This probe was unseeded (manifest carried seedFlaky to paper over it).
+// Each arm re-seeds, making every comparison a MATCHED-RNG one: the only
+// difference between two arms is the code path. Sweep BP_SEED=<n> to confirm
+// a bar is not sitting on a knife edge.
+const reseed = pinRandom();
 
 const GAMES = Number(process.argv[2] || 40);
 let pass = true;
@@ -42,6 +48,7 @@ function roster(sid) {
 const offGp = (extra = {}) => ({ offFormation: 'Spread', offFormations: [{ id: 'Spread', weight: 100 }], tendency: 'Balanced', rushInPct: 40, passDepth: { short: 25, medium: 35, deep: 40 }, blitzPct: 20, defFormation: 'Balanced D', fourthDown: 'Moderate', clockMgmt: 'Normal', maxFGDist: 42, rpoRate: 0, gadgetRate: 12, ...extra });
 
 function run(games, offExtra, defExtra) {
+  reseed();
   const c = { snaps: 0, rev: [], revFum: 0, ffComp: 0, ffAtt: 0, ffSack: 0, deepSack: 0, deepAtt: 0, hbThrower: [], names: {}, gadgets: 0 };
   for (let g = 0; g < games; g++) {
     const rH = roster('H'), rA = roster('A');
@@ -103,7 +110,14 @@ check(vsCrash.revFum + vsContain.revFum > 0, `double exchange carries fumble ris
 
 const ffCompCrash = 100 * vsCrash.ffComp / (vsCrash.ffAtt || 1);
 const ffCompContain = 100 * vsContain.ffComp / (vsContain.ffAtt || 1);
-check(ffCompCrash > ffCompContain + 3, `gadget shot comp% vs run-committed ${ffCompCrash.toFixed(1)}% > vs two-shell ${ffCompContain.toFixed(1)}%`);
+// 2026-08-21: the label used to print "A% > B%" and say nothing about the +3
+// MARGIN the check actually requires, so a run reading "52.3% > 50.6%" printed
+// FAIL and looked like a bug in the probe. State the bar. Measured at GAMES=130
+// across three seeds the gap is +9.7 / +8.7 / +1.7 pp — always the right sign,
+// so the effect is real; it was simply invisible at the old GAMES=40, where it
+// read -1.4pp on one seed. The bar still clips the low tail, which is why this
+// file keeps seedFlaky.
+check(ffCompCrash > ffCompContain + 3, `gadget shot comp% vs run-committed ${ffCompCrash.toFixed(1)}% > vs two-shell ${ffCompContain.toFixed(1)}% (needs +3.0, got ${(ffCompCrash - ffCompContain).toFixed(1)})`);
 
 const gadSack = 100 * (vsCrash.ffSack + vsContain.ffSack) / (vsCrash.ffAtt + vsContain.ffAtt || 1);
 const vanSack = 100 * (vsCrash.deepSack + vsContain.deepSack) / (vsCrash.deepAtt + vsContain.deepAtt || 1);

@@ -27,6 +27,12 @@
 import { runFit }       from '../js/engine/run2geo.js';
 import { createPlayer } from '../js/engine/player.js';
 import { C }            from '../js/constants.js';
+import { pinRandom } from './_seed.mjs';
+// 2026-08-21: PINNED. This probe was unseeded — every arm drew live Math.random, so a bar could pass or fail on dice.
+// Each arm re-seeds, making every comparison a MATCHED-RNG one: the only
+// difference between two arms is the code path. Sweep BP_SEED=<n> to confirm
+// a bar is not sitting on a knife edge.
+const reseed = pinRandom();
 
 const N = Number(process.argv[2] || 40000);
 const LANE = 0.60; // the measured mean lane — where centering is judged
@@ -44,6 +50,7 @@ const DEEP = [...SAF, ...CBS];
 // A carry with an explicit scheme object (bypasses sim.js buildRunScheme so the
 // probe controls exactly one lever at a time), fixed everything else.
 function carries(scheme, { visionFor = null, penetrator = null } = {}) {
+  reseed();
   let sum = 0, sumsq = 0, stuff = 0, chunk = 0, big = 0;
   for (let i = 0; i < N; i++) {
     const car = CARRIERS[i % CARRIERS.length];

@@ -81,3 +81,7 @@ for(const tier of [3,2,1]){
   console.log(`  ${label}: Pocket ${res['QB-Pocket'].yds.toFixed(1)}yd/${res['QB-Pocket'].att.toFixed(1)}att | Scrambler ${res['QB-Scrambler'].yds.toFixed(1)}yd/${res['QB-Scrambler'].att.toFixed(1)}att  ${pass?'PASS ✅':'FAIL ⚠'}`);
 }
 console.log(allPass ? '\nALL PASS ✅ — mobile QBs are a real, division-relative archetype' : '\n⚠ FAIL — QB mobility not separating from pocket passers');
+// 2026-08-21 (GATE TEETH): this file printed its verdict and exited 0, so a
+// red here could never fail the gate — the same hole that let
+// coverage_monotonicity_check print "INVERTED" for seven months of green runs.
+process.exit(allPass ? 0 : 1);

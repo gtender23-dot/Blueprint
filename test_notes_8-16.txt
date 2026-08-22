@@ -1,0 +1,57 @@
+Add a test Play Button to Play composer let Player Pick What Front and watch an even matched team run the play live. should allow multiple tries.  formation designer should also auto install all the concepts that fit the personal and give the player a chance to test see them right away and test them like in the play composers viewer.
+
+Formation usage in game plan should have collapsed graphics
+
+New game start custom divisions need to fit mobile screen conference header runs off screen
+
+can we make it so when watching the game the screen stays active? currently dims without touching the screen
+
+need a toggle to turn off replays
+
+The Current state of Playbook feels Bolted on probably because of the way we structured
+how coaches call Plays as Concepts. It does not matter if this is how its really done, because the player whose actually Coaching has been Calling Plays in madden not real life. The way we bridge this gap is making Every Play card feel like an individual Play drawn for that specific variant of the formation they are about to call. everyone has a job. The coach needs to Know what these jobs are which they trust us to show them on these play cards. The current state would make me Refund because i wouldn't trust the sim based soley on the play card accuracy in the sim and from what I'm expecting to see after playing madden
+
+EVERY PLAY GRAPHIC NEEDS TO BE DRAWN FOR THE SPECIFIC VARIATION OF THE SELECTED FORMATION
+
+Need a Give Play books more Real estate Multiple screens or nested tables to give The Play graphics more room for things like OL blocking.
+
+spread Ace shows shotgun qb with RB behind him which is wrong
+Red zone Fade looks wrong 
+pistol diamond has a slot wr in the FB spot
+why did sluggo seam change and what is the play reverse suppose to be? I also dont trust flea flicker and hb pass
+
+When creating a playbook selecting a formation should auto select all the plays and the player can deselect what they dont want.
+
+Figure out landscape Button and replace it with the new Camera views when ready
+
+Seasons need Play book Selection and Starting options
+
+Seasons settings need to Remove Recruiting options
+
+Defense Play book formation graphics need Consistency Labeling DE Or Re and LE
+Pressure Controls drift off Phone screen
+Bring 3 vs Bring 4 should Change Play graphic and audit bring 3 on 4 man DL
+
+whats wired cheap that deserves more attention?
+
+Need to add runs and blocking to the composer 
+
+give selected playbooks embedded screens in dynasty and seasons that you can edit.  make this save to the league save but need to press a button to save it to the workshop version.  move offensive Identity here make a defensive version too.  this is also where formation usage dials should live.  we should brainstorm dial home redistribution after this.
+
+simple game planning needs a better look
+
+Formations and Variants Selecting all plays in one Selects them all in the other Variants. Which means there's no play variation with the different personal 
+
+Bring RPO's into the playbook. RPO's need routes not just reusing run plays 
+RPO + QB run Should exist
+Also cant just make any run play a qb run play this seems like a gap in knowledge on how the sim should handle it. we need to audit how much a mobile qb gets designed runs vs how often any pass play becomes an rpo for them in real life vs our game.
+
+Plays are drawn flipped vs the Viewer orientation.
+
+Time controls for viewer need Work. 2 Buttons With FF Emogi only 1 works. 2 Ride the plan Buttons Calling defense. Tempo is not a time Control its The hurry up offense or Chew clock that coaching strategy.
+
+Time Buttons should be
+-Sim possession skipping the Animation (i would use this in madden to skip playing defense and just staying with the offense)
+- Sim to half time or end of game skipping the animation
+there should be a 3 level toggle for watching every play < coaching just the big moments < coaching every play
+the point of the toggles is to let the coach jump in and out of the game at any point.
